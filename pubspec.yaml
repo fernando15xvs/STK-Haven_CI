@@ -1,0 +1,8 @@
+name: gym_tracker_workspace
+environment:
+  sdk: ^3.10.8
+
+workspace:
+  - apps/app_mobile
+  - apps/app_web
+  - packages/core

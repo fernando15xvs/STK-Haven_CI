@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!--
+    The placeholder below is replaced by Flutter's --base-href value.
+    Relative PWA resources keep GitHub Pages deployments working under a
+    repository sub-path.
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="STK Haven: entrenamiento, progreso y bienestar personal.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090A0C">
+
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="STK Haven">
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/stk-haven-180.png">
+
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon-stk-haven.png">
+  <link rel="manifest" href="manifest.json">
+  <title>STK Haven</title>
+
+  <style id="splash-screen-style">
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: #090A0C;
+    }
+
+    body {
+      overflow: hidden;
+      touch-action: none;
+      overscroll-behavior-y: none;
+      font-family: Outfit, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #090A0C;
+      color: #F0F0F3;
+      opacity: 1;
+      transition: opacity 800ms ease;
+    }
+
+    #splash.splash-exit {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .splash-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      opacity: 0;
+      transform: translateY(30px);
+      animation: splash-enter 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) 300ms forwards;
+    }
+
+    .splash-logo-wrap {
+      width: min(82vw, 287px);
+    }
+
+    .splash-logo {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .splash-title {
+      margin-top: 20px;
+      color: #FFFFFF;
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1.3;
+      letter-spacing: 1.5px;
+    }
+
+    .splash-subtitle {
+      margin-top: 5px;
+      padding: 0 20px;
+      color: #BDBDBD;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1.3;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+
+    .splash-loader {
+      width: 20px;
+      height: 20px;
+      margin-top: 50px;
+      border: 2.5px solid rgba(41, 98, 255, 0.20);
+      border-top-color: #2962FF;
+      border-radius: 50%;
+      animation: splash-spin 850ms linear infinite;
+    }
+
+    .splash-footer {
+      position: absolute;
+      right: 0;
+      bottom: 30px;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #BDBDBD;
+      opacity: 0;
+      animation: splash-fade 2s ease 300ms forwards;
+    }
+
+    .splash-version {
+      font-size: 11px;
+      font-weight: 400;
+      line-height: 1.3;
+    }
+
+    .splash-brand {
+      margin-top: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.3;
+      letter-spacing: 0.8px;
+    }
+
+    @keyframes splash-enter {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes splash-fade {
+      to { opacity: 1; }
+    }
+
+    @keyframes splash-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #splash {
+        transition: none;
+      }
+
+      .splash-content,
+      .splash-footer {
+        opacity: 1;
+        transform: none;
+        animation: none;
+      }
+    }
+  </style>
+
+  <script id="splash-screen-script">
+    const STK_SPLASH_MIN_MS = 3000;
+    const STK_SPLASH_FADE_MS = 800;
+    const stkSplashStartedAt = performance.now();
+    let stkFlutterReady = false;
+    let stkSplashExitScheduled = false;
+
+    function finishSplashWhenReady() {
+      if (!stkFlutterReady || stkSplashExitScheduled) return;
+      stkSplashExitScheduled = true;
+
+      const elapsed = performance.now() - stkSplashStartedAt;
+      const remaining = Math.max(0, STK_SPLASH_MIN_MS - elapsed);
+
+      window.setTimeout(() => {
+        const splash = document.getElementById('splash');
+        if (!splash) return;
+
+        splash.classList.add('splash-exit');
+
+        window.setTimeout(() => {
+          splash.remove();
+          document.body.style.background = 'transparent';
+        }, STK_SPLASH_FADE_MS);
+      }, remaining);
+    }
+
+    // This is the only visible web splash. Flutter renders WebLayout behind it.
+    // Once the first Flutter frame exists, keep the splash only long enough to
+    // reach the same ~3 second presentation used by the mobile experience.
+    window.addEventListener('flutter-first-frame', () => {
+      stkFlutterReady = true;
+      finishSplashWhenReady();
+    }, { once: true });
+  </script>
+</head>
+<body>
+  <div id="splash" aria-hidden="true">
+    <div class="splash-content">
+      <div class="splash-logo-wrap">
+        <img class="splash-logo" src="splash/slf_logo.png" alt="">
+      </div>
+      <div class="splash-title">STK Haven</div>
+      <div class="splash-subtitle">Tu compañero de entrenamiento</div>
+      <div class="splash-loader"></div>
+    </div>
+
+    <div class="splash-footer">
+      <div class="splash-version">Versión 1.0.0</div>
+      <div class="splash-brand">SLF 2026</div>
+    </div>
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('sw.js', {
+            scope: './',
+            updateViaCache: 'none',
+          });
+          await registration.update();
+        } catch (error) {
+          console.warn('STK Haven service worker registration failed:', error);
+        }
+      });
+    }
+  </script>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>
