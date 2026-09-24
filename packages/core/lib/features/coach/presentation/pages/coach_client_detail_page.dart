@@ -1,5 +1,6 @@
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/features/coach/application/coach_client_provider.dart';
+import 'package:core/features/coach/presentation/pages/coach_client_progress_page.dart';
 import 'package:core/features/coach/presentation/pages/coach_program_assignments_page.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:flutter/material.dart';
@@ -180,10 +181,28 @@ class CoachClientDetailPage extends ConsumerWidget {
                             ? relationship.allows(
                                     CoachPermission.viewProgress,
                                   )
-                                ? 'Disponible cuando D7 active datos compartidos con RLS.'
+                                ? 'Ver frecuencia, minutos, volumen, RIR y resúmenes permitidos.'
                                 : 'El cliente no compartió progreso.'
-                            : 'Tus datos no se comparten hasta que D7 esté activo.',
-                        enabled: false,
+                            : 'Revisa la misma vista resumida que puede consultar tu entrenador.',
+                        enabled: !asCoach ||
+                            relationship.allows(
+                              CoachPermission.viewProgress,
+                            ),
+                        onTap: !asCoach ||
+                                relationship.allows(
+                                  CoachPermission.viewProgress,
+                                )
+                            ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        CoachClientProgressPage(
+                                      clientUserId:
+                                          relationship!.clientUserId,
+                                      clientDisplayName: displayName,
+                                    ),
+                                  ),
+                                )
+                            : null,
                       ),
                       const Divider(height: 1),
                       _CapabilityTile(

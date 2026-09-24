@@ -19,6 +19,7 @@ import 'package:core/features/workout/application/exercise_performance_memory.da
 import 'package:core/domain/models/workout_analysis.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/core/services/workout_notification_service.dart';
+import 'package:core/features/coach/application/coach_progress_provider.dart';
 import 'package:core/features/profile/application/gamification_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 
@@ -778,6 +779,17 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     try {
       await ref.read(workoutRepositoryProvider).saveWorkoutSession(finalSession);
       ref.read(workoutHistoryProvider.notifier).refresh();
+
+      // Shared progress is best-effort and must never block workout completion.
+      // The backend itself controls who may read this snapshot through
+      // relationship consent and RLS.
+      unawaited(
+        ref.read(coachProgressProvider.notifier).syncOwnProgress(
+              ref.read(workoutHistoryProvider),
+              silent: true,
+            ),
+      );
+
       await ref
           .read(gamificationProvider.notifier)
           .addWorkoutSession(finalSession);
