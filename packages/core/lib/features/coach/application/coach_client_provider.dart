@@ -1,5 +1,6 @@
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
+import 'package:core/features/coach/application/coach_progress_provider.dart';
 import 'package:core/features/coach/data/coach_client_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -234,6 +235,12 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
         relationshipId: relationshipId,
         permissions: permissions,
       );
+      final previous = _relationshipById(relationshipId);
+      if (previous != null) {
+        ref
+            .read(coachProgressProvider.notifier)
+            .clearClient(previous.clientUserId);
+      }
       final relationships = await _service.getRelationships();
       state = state.copyWith(
         relationships: relationships,
@@ -260,7 +267,13 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
     );
 
     try {
+      final previous = _relationshipById(relationshipId);
       await _service.revokeRelationship(relationshipId);
+      if (previous != null) {
+        ref
+            .read(coachProgressProvider.notifier)
+            .clearClient(previous.clientUserId);
+      }
       final relationships = await _service.getRelationships();
       state = state.copyWith(
         relationships: relationships,
@@ -276,6 +289,13 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
       _fail('No se pudo revocar la relación.');
       return false;
     }
+  }
+
+  CoachClientRelationship? _relationshipById(String id) {
+    for (final relationship in state.relationships) {
+      if (relationship.id == id) return relationship;
+    }
+    return null;
   }
 
   Future<bool> _prepareCoachAccount() async {

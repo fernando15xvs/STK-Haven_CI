@@ -781,14 +781,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       ref.read(workoutHistoryProvider.notifier).refresh();
 
       // Shared progress is best-effort and must never block workout completion.
-      // The backend itself controls who may read this snapshot through
-      // relationship consent and RLS.
-      unawaited(
-        ref.read(coachProgressProvider.notifier).syncOwnProgress(
-              ref.read(workoutHistoryProvider),
-              silent: true,
-            ),
-      );
+      // Tests/local-only flows may not initialize Supabase at all, so even
+      // obtaining the cloud provider is isolated from the local save path.
+      _syncSharedProgressBestEffort();
 
       await ref
           .read(gamificationProvider.notifier)
@@ -807,6 +802,22 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       return WorkoutFinished(analysisResult);
     } catch (_) {
       return null;
+    }
+  }
+
+  void _syncSharedProgressBestEffort() {
+    try {
+      final notifier = ref.read(coachProgressProvider.notifier);
+      final history = ref.read(workoutHistoryProvider);
+      unawaited(
+        notifier.syncOwnProgress(
+          history,
+          silent: true,
+        ),
+      );
+    } catch (_) {
+      // Remote sharing is optional. A cloud/bootstrap failure must never turn
+      // a successfully saved local workout into a failed completion.
     }
   }
 
