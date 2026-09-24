@@ -182,8 +182,8 @@ class _WebOnboardingPageState extends ConsumerState<WebOnboardingPage> {
           const SizedBox(height: 24),
           Expanded(
             child: SingleChildScrollView(
-              child: Wrap(
-                runSpacing: 10,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: children,
               ),
             ),

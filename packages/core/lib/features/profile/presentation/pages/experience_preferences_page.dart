@@ -273,9 +273,9 @@ class _ExperiencePreferencesPageState
       decoration: InputDecoration(labelText: label),
       items: [
         if (allowNull)
-          const DropdownMenuItem<T?>(
+          DropdownMenuItem<T?>(
             value: null,
-            child: Text('Por decidir'),
+            child: const Text('Por decidir'),
           ),
         ...values.map(
           (item) => DropdownMenuItem<T?>(
