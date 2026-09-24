@@ -4,6 +4,7 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/platform/platform_capabilities.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/settings_state.dart';
+import 'package:core/features/coach/presentation/pages/coach_connections_page.dart';
 import 'package:core/features/habits/application/habit_study_timer_provider.dart';
 import 'package:core/features/habits/application/habit_tasks_provider.dart';
 import 'package:core/features/habits/application/study_plan_provider.dart';
@@ -83,6 +84,34 @@ class ProfilePage extends ConsumerWidget {
                 context,
                 MaterialPageRoute(
                   builder: (_) => const ExperiencePreferencesPage(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          PremiumCard(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              leading: const Icon(
+                Icons.groups_2_outlined,
+                color: AppColors.primary,
+              ),
+              title: Text(
+                'Coach & Clientes',
+                style: AppTypography.headlineMedium,
+              ),
+              subtitle: Text(
+                'Invitaciones, permisos y relaciones vinculadas',
+                style: AppTypography.bodySmall,
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: AppColors.textSecondary,
+              ),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CoachConnectionsPage(),
                 ),
               ),
             ),

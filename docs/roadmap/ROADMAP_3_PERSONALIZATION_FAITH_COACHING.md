@@ -47,7 +47,15 @@
 - La migración `20260924052000_stk_user_profiles_and_capabilities.sql` forma parte del snapshot y pasó revisión estática/compilación del repositorio, pero **no se considera aplicada ni validada dinámicamente contra Supabase**.
 - UX física, PWA y comportamiento real de notificaciones/background siguen diferidos a `ROADMAP_3_FINAL_LOCAL_TEST_AUDIT.md`.
 
----
+## Evidencia automática Fase C — identidad/RLS aislado — 2026-09-24
+
+- Fuente privada validada: `f0176f62cb7cdb55e76a750682bbe649cd88d8d0`.
+- Snapshot público equivalente: `1a599b4514ba0021f1be8521b9120166e6a24b35`.
+- GitHub Actions: `STK Haven Public CI` run #7, ID `35961842261`.
+- Resultado global: `success`.
+- Verdes: Supabase DB + RLS tests, Analyze + Core tests, Mobile tests, Android debug/profile/release/AAB/split ABI, Web tests + dart2js + WASM, iOS release/profile sin codesign.
+- La migración de identidad se aplicó y probó en un **Supabase efímero aislado de CI**, incluyendo pgTAP de RLS, aislamiento entre usuarios, rechazo de sesión anónima y dominio `athlete/coach`.
+- **No se aplicó ninguna migración al Supabase remoto**; el despliegue real sigue reservado para una autorización explícita futura.
 
 ---
 
@@ -763,25 +771,25 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 **Gate B:** tareas sobreviven cierre/reapertura y backup; Fe tasks no aparecen con Fe OFF.
 
 ## Fase C — Identidad y roles
-- [~] C1 Perfil cloud: migración preparada, no aplicada.
-- [~] C2 Capacidades athlete/coach: migración preparada, no aplicada.
-- [ ] C3 Sesión permanente como identidad de aplicación.
-- [ ] C4 Migración de Cloud Sync.
-- [~] C5 RLS base incluida en migración; pendiente prueba dinámica.
-- [ ] C6 Tests de aislamiento.
+- [x] C1 Perfil cloud: esquema/RPC validado en Supabase efímero; despliegue remoto diferido.
+- [x] C2 Capacidades athlete/coach: contrato local + persistencia cloud/RLS validados en Supabase efímero.
+- [x] C3 Sesión permanente separada de la sesión anónima de Haven Faith.
+- [x] C4 Cloud Sync migrado para consumir la identidad compartida.
+- [x] C5 RLS base validada dinámicamente en Supabase aislado.
+- [x] C6 Tests pgTAP de aislamiento y rechazo de sesión anónima.
 
-**Gate C:** un usuario sin rol coach no puede consultar endpoints/datos coach.
+**Gate C:** VERDE automático en entorno Supabase aislado. Esto valida implementación y seguridad base; no significa que las migraciones estén desplegadas en producción.
 
 ## Fase D — Coach/Client MVP
-- [ ] D1 Relaciones/invitaciones.
-- [ ] D2 Consentimiento.
-- [ ] D3 Lista de clientes.
+- [~] D1 Relaciones/invitaciones: código hasheado/expirable preparado, pendiente CI del bloque.
+- [~] D2 Consentimiento + permisos configurables preparado, pendiente CI del bloque.
+- [~] D3 Lista de relaciones/clientes vinculados mediante RPC restringido, pendiente CI.
 - [ ] D4 Cliente detalle.
 - [ ] D5 Asignar programa.
 - [ ] D6 Cliente recibe programa.
 - [ ] D7 Progreso compartido.
-- [ ] D8 Revocar acceso.
-- [ ] D9 Auditoría.
+- [~] D8 Revocar acceso preparado, pendiente CI.
+- [~] D9 Auditoría RLS/pgTAP preparada, pendiente ejecución del bloque.
 
 **Gate D:** entrenador A jamás puede leer Cliente B no vinculado.
 
@@ -868,4 +876,4 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [ ] Gate G.
 - [ ] Gate H.
 
-**Estado:** EN IMPLEMENTACIÓN — Fase A cerrada automáticamente. Fase B tiene núcleo, persistencia, backup, planes y UI compilados con CI completamente verde; solo conserva el smoke UX/local final y funciones B adicionales explícitamente pendientes. Fase C acaba de iniciar con la migración de perfiles/capacidades/RLS base, todavía sin aplicarla a Supabase.
+**Estado:** EN IMPLEMENTACIÓN — Fases A y C tienen gate automático verde; Fase B mantiene únicamente sus pendientes explícitos/smoke final. Fase D está en desarrollo con invitación por código, consentimiento, permisos y revocación. Ninguna migración Roadmap 3 ha sido aplicada al Supabase remoto.

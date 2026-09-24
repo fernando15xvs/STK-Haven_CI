@@ -129,3 +129,25 @@ Alcance relevante del candidato:
 - Migración inicial de perfiles/capacidades/RLS incluida como código, **sin aplicarse al Supabase remoto** y sin considerarse todavía validación dinámica de aislamiento.
 
 Las pruebas manuales/locales continúan concentradas en el gate final definido por Roadmap 3.0.
+
+
+## Roadmap 3 — Identidad + RLS aislado — CI verde — 2026-09-24
+
+- Fuente privada validada: `f0176f62cb7cdb55e76a750682bbe649cd88d8d0`.
+- Snapshot público equivalente: `1a599b4514ba0021f1be8521b9120166e6a24b35`.
+- Workflow: `STK Haven Public CI`.
+- Run: `35961842261` (#7).
+- Resultado global: `success`.
+
+Jobs confirmados verdes:
+
+- Supabase DB + RLS tests.
+- Analyze + Core tests.
+- Mobile tests.
+- Android debug/profile/release APK, AAB y split ABI.
+- Web tests + dart2js + WASM.
+- iOS release + profile en macOS sin codesign.
+
+El job Supabase levantó un proyecto efímero aislado, reconstruyó la base desde las migraciones y ejecutó pgTAP. Se validó el contrato de `stk_user_profiles`, `stk_user_capabilities`, rechazo de JWT anónimo, aislamiento por `auth.uid()` y capacidades `athlete/coach`.
+
+**No se conectó ni modificó el Supabase remoto.**

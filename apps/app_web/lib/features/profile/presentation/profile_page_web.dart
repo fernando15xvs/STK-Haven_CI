@@ -7,6 +7,7 @@ import 'package:core/domain/models/preset_program.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/onboarding/application/program_service.dart';
+import 'package:core/features/coach/presentation/pages/coach_connections_page.dart';
 import 'package:core/features/habits/application/habit_study_timer_provider.dart';
 import 'package:core/features/habits/application/habit_tasks_provider.dart';
 import 'package:core/features/habits/application/study_plan_provider.dart';
@@ -75,6 +76,21 @@ class ProfilePageWeb extends ConsumerWidget {
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const ExperiencePreferencesPage(),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _Section(
+                  title: 'Coach & Clientes',
+                  child: _ActionTile(
+                    icon: Icons.groups_2_outlined,
+                    title: 'Conexiones',
+                    subtitle:
+                        'Invitaciones, consentimiento, permisos y relaciones vinculadas.',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CoachConnectionsPage(),
                       ),
                     ),
                   ),
