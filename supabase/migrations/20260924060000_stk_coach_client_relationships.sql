@@ -85,8 +85,8 @@ create index if not exists stk_coach_client_client_status_idx
 alter table public.stk_coach_invitations enable row level security;
 alter table public.stk_coach_client_relationships enable row level security;
 
-revoke all on public.stk_coach_invitations from anon;
-revoke all on public.stk_coach_client_relationships from anon;
+revoke all on public.stk_coach_invitations from anon, authenticated;
+revoke all on public.stk_coach_client_relationships from anon, authenticated;
 
 grant select on public.stk_coach_invitations to authenticated;
 grant select on public.stk_coach_client_relationships to authenticated;

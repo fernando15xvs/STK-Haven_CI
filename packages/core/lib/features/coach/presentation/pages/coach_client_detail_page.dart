@@ -1,5 +1,6 @@
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/features/coach/application/coach_client_provider.dart';
+import 'package:core/features/coach/presentation/pages/coach_program_assignments_page.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -143,15 +144,33 @@ class CoachClientDetailPage extends ConsumerWidget {
                     children: [
                       _CapabilityTile(
                         icon: Icons.fitness_center_outlined,
-                        title: 'Programa asignado',
+                        title: 'Programas asignados',
                         subtitle: asCoach
                             ? relationship.allows(
                                     CoachPermission.assignPrograms,
                                   )
-                                ? 'Disponible cuando D5/D6 active asignaciones seguras.'
+                                ? 'Enviar una copia versionada de un programa local.'
                                 : 'El cliente no concedió permiso para asignar programas.'
-                            : 'Las asignaciones aparecerán aquí cuando D5/D6 estén activas.',
-                        enabled: false,
+                            : 'Revisar, aceptar e instalar programas recibidos.',
+                        enabled: !asCoach ||
+                            relationship.allows(
+                              CoachPermission.assignPrograms,
+                            ),
+                        onTap: !asCoach ||
+                                relationship.allows(
+                                  CoachPermission.assignPrograms,
+                                )
+                            ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        CoachProgramAssignmentsPage(
+                                      clientUserId:
+                                          relationship!.clientUserId,
+                                      clientDisplayName: displayName,
+                                    ),
+                                  ),
+                                )
+                            : null,
                       ),
                       const Divider(height: 1),
                       _CapabilityTile(
@@ -232,12 +251,14 @@ class _CapabilityTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool enabled;
+  final VoidCallback? onTap;
 
   const _CapabilityTile({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.enabled,
+    this.onTap,
   });
 
   @override
@@ -249,6 +270,7 @@ class _CapabilityTile extends StatelessWidget {
       title: Text(title),
       subtitle: Text(subtitle),
       trailing: enabled ? const Icon(Icons.chevron_right) : null,
+      onTap: enabled ? onTap : null,
     );
   }
 }
