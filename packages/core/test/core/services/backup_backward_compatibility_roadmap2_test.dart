@@ -33,6 +33,7 @@ void main() {
     await Hive.openBox(HiveBoxes.gamification);
     await Hive.openBox(HiveBoxes.hydration);
     await Hive.openBox(HiveBoxes.recovery);
+    await Hive.openBox(HiveBoxes.habitTasks);
   });
 
   tearDownAll(() async {
