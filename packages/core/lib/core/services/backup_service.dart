@@ -24,7 +24,7 @@ class BackupValidationResult {
 }
 
 class BackupService {
-  static const int currentBackupSchemaVersion = 9;
+  static const int currentBackupSchemaVersion = 10;
 
   String createBackup() {
     final metaBox = Hive.box(HiveBoxes.metadata);
@@ -37,6 +37,7 @@ class BackupService {
     final gamificationBox = Hive.box(HiveBoxes.gamification);
     final hydrationBox = Hive.box(HiveBoxes.hydration);
     final recoveryBox = Hive.box(HiveBoxes.recovery);
+    final habitTasksBox = Hive.box(HiveBoxes.habitTasks);
 
     final settings = _normalizeMap(metaBox.toMap())..remove('db_version');
 
@@ -52,6 +53,7 @@ class BackupService {
       'gamification': _normalizeMap(gamificationBox.toMap()),
       'hydration': _normalizeMap(hydrationBox.toMap()),
       'recovery': _normalizeMap(recoveryBox.toMap()),
+      'habitTasksStore': _habitTasksBackupMap(habitTasksBox.toMap()),
     };
 
     final backup = <String, dynamic>{
@@ -127,6 +129,7 @@ class BackupService {
     final gamificationBox = Hive.box(HiveBoxes.gamification);
     final hydrationBox = Hive.box(HiveBoxes.hydration);
     final recoveryBox = Hive.box(HiveBoxes.recovery);
+    final habitTasksBox = Hive.box(HiveBoxes.habitTasks);
 
     final snapshotMeta = metaBox.toMap();
     final snapshotExercises = exercisesBox.toMap();
@@ -138,6 +141,7 @@ class BackupService {
     final snapshotGamification = gamificationBox.toMap();
     final snapshotHydration = hydrationBox.toMap();
     final snapshotRecovery = recoveryBox.toMap();
+    final snapshotHabitTasks = habitTasksBox.toMap();
     final installedDbVersion = snapshotMeta['db_version'];
 
     try {
@@ -151,6 +155,7 @@ class BackupService {
       await gamificationBox.clear();
       await hydrationBox.clear();
       await recoveryBox.clear();
+      await habitTasksBox.clear();
 
       final settings = parsed['settings'] as Map<String, dynamic>;
       if (settings.isNotEmpty) await metaBox.putAll(settings);
@@ -186,6 +191,11 @@ class BackupService {
       if (hydration.isNotEmpty) await hydrationBox.putAll(hydration);
       final recovery = parsed['recovery'] as Map<String, dynamic>;
       if (recovery.isNotEmpty) await recoveryBox.putAll(recovery);
+      final habitTasksStore =
+          parsed['habitTasksStore'] as Map<String, dynamic>;
+      if (habitTasksStore.isNotEmpty) {
+        await habitTasksBox.putAll(habitTasksStore);
+      }
     } catch (e) {
       await metaBox.clear();
       await exercisesBox.clear();
@@ -197,6 +207,7 @@ class BackupService {
       await gamificationBox.clear();
       await hydrationBox.clear();
       await recoveryBox.clear();
+      await habitTasksBox.clear();
 
       await metaBox.putAll(snapshotMeta);
       await exercisesBox.putAll(snapshotExercises);
@@ -208,6 +219,7 @@ class BackupService {
       await gamificationBox.putAll(snapshotGamification);
       await hydrationBox.putAll(snapshotHydration);
       await recoveryBox.putAll(snapshotRecovery);
+      await habitTasksBox.putAll(snapshotHabitTasks);
 
       throw Exception(
         'Fallo al restaurar, se ha revertido a la base de datos original. Error: $e',
@@ -544,6 +556,9 @@ class BackupService {
     final recovery = data['recovery'] is Map
         ? _normalizeMap(data['recovery'] as Map)
         : <String, dynamic>{};
+    final habitTasksStore = data['habitTasksStore'] is Map
+        ? _normalizeMap(data['habitTasksStore'] as Map)
+        : <String, dynamic>{};
 
     if (schemaVersion < 1 || schemaVersion > currentBackupSchemaVersion) {
       throw StateError('Versión de backup no compatible: $schemaVersion');
@@ -560,7 +575,20 @@ class BackupService {
       'gamification': gamification,
       'hydration': hydration,
       'recovery': recovery,
+      'habitTasksStore': habitTasksStore,
     };
+  }
+
+  Map<String, dynamic> _habitTasksBackupMap(
+    Map<dynamic, dynamic> source,
+  ) {
+    final filtered = <dynamic, dynamic>{};
+    for (final entry in source.entries) {
+      final key = entry.key.toString();
+      if (key.startsWith('runtime::')) continue;
+      filtered[entry.key] = entry.value;
+    }
+    return _normalizeMap(filtered);
   }
 
   Map<String, dynamic> _normalizeMap(Map<dynamic, dynamic> source) {

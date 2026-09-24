@@ -1,4 +1,5 @@
 import 'package:core/domain/models/settings_state.dart';
+import 'package:core/features/habits/presentation/pages/study_habits_page.dart';
 import 'package:core/features/profile/presentation/pages/training_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -343,6 +344,11 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                           icon: Icons.settings_backup_restore_rounded,
                           label: 'Copias',
                           onTap: () => _openPage(const BackupStatusPage()),
+                        ),
+                        _MenuOption(
+                          icon: Icons.task_alt_outlined,
+                          label: 'Hábitos',
+                          onTap: () => _openPage(const StudyHabitsPage()),
                         ),
                         if (widget.faithEnabled) ...[
                           _MenuOption(

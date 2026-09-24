@@ -40,6 +40,7 @@ class HiveDatabase {
       Hive.openBox(HiveBoxes.hydration),
       Hive.openBox(HiveBoxes.bible),
       Hive.openBox(HiveBoxes.recovery),
+      Hive.openBox(HiveBoxes.habitTasks),
       Hive.openBox(HiveBoxes.trainingPrograms),
       Hive.openBox(HiveBoxes.analyticsCache),
     ]);

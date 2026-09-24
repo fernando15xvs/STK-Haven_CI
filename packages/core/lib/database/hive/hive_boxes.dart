@@ -11,6 +11,7 @@ class HiveBoxes {
   static const String hydration = 'hydrationBox';
   static const String bible = 'bibleBox';
   static const String recovery = 'recoveryBox';
+  static const String habitTasks = 'habitTasksBox_v1';
 
   /// Roadmap 2.0 user-owned A/B/C programs. Stored as JSON-compatible maps so
   /// program schema can evolve without consuming/changing Hive TypeAdapter IDs.

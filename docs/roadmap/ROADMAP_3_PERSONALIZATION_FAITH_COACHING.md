@@ -27,6 +27,15 @@
   `docs/roadmap/ROADMAP_3_FINAL_LOCAL_TEST_AUDIT.md`.
 - Un punto puede quedar implementado en `[~]` hasta que CI o la validación final aporte evidencia suficiente.
 
+## Evidencia automática Fase A — 2026-09-24
+
+- Fuente privada validada: `323c672198f33ba5cea95a2f7605bcf701327b28`.
+- Snapshot público equivalente: `14c8362e3502a0d435eac1783e9b2347e12ebc38`.
+- GitHub Actions: `STK Haven Public CI` run #3, ID `35956941186`.
+- Resultado global: `success`.
+- Verdes: Analyze + Core tests, Mobile tests, Android debug/profile/release/AAB/split ABI, Web tests + dart2js + WASM, iOS release/profile sin codesign.
+- Los smoke manuales de dispositivo/PWA siguen diferidos a `ROADMAP_3_FINAL_LOCAL_TEST_AUDIT.md`.
+
 ---
 
 # 0. Gate previo — preservar Roadmap 2.0
@@ -43,13 +52,13 @@
 
 ## 1.1 Principios
 
-- [~] Mantener una sola lógica compartida en `packages/core`.
-- [ ] Mantener UI específica donde aporte valor: móvil y web pueden presentar flujos distintos sin duplicar reglas de negocio.
+- [x] Mantener una sola lógica compartida en `packages/core`.
+- [x] Mantener UI específica donde aporte valor: móvil y web presentan onboarding propio sobre contratos/reglas compartidas.
 - [x] Mantener entrypoints Android/iOS separados.
-- [~] Introducir una capa compartida de **perfil/preferencias de producto**.
-- [~] Separar preferencias de entrenamiento, fe, hábitos y rol/capacidades.
+- [x] Introducir una capa compartida de **perfil/preferencias de producto**.
+- [x] Separar preferencias de entrenamiento, fe, hábitos y rol/capacidades.
 - [ ] No cargar proveedores/repositorios pesados de módulos desactivados.
-- [ ] Diseñar migraciones backward-compatible para usuarios existentes.
+- [x] Diseñar migraciones backward-compatible para usuarios existentes.
 
 ## 1.2 Perfil de producto
 
@@ -71,12 +80,12 @@ Campos propuestos:
 - hábitos/estudio habilitados;
 - onboardingVersion.
 
-- [~] Definir contrato del modelo.
-- [~] Persistencia local Hive.
-- [~] Serialización/backups.
-- [~] Migración segura desde `SettingsState` actual.
-- [~] Tests de defaults para instalaciones existentes.
-- [~] Tests de restore de backups antiguos.
+- [x] Definir contrato del modelo.
+- [x] Persistencia local Hive.
+- [x] Serialización/backups.
+- [x] Migración segura desde `SettingsState` actual.
+- [x] Tests de defaults para instalaciones existentes.
+- [x] Tests de restore de backups antiguos.
 
 ---
 
@@ -90,45 +99,45 @@ El onboarding deja de preguntar únicamente objetivo/experiencia/días. Debe per
 
 ### Bloque A — Entrenamiento
 
-- [ ] Objetivo principal:
+- [x] Objetivo principal:
   - ganar masa muscular;
   - ganar fuerza;
   - mantenerme activo;
   - mejorar condición física;
   - crear mis propias rutinas sin recomendación automática.
 
-- [ ] Experiencia:
+- [x] Experiencia:
   - principiante;
   - intermedio;
   - avanzado.
 
-- [ ] Días disponibles por semana:
+- [x] Días disponibles por semana:
   - 2–6;
   - permitir “todavía no lo sé”.
 
-- [ ] Duración habitual disponible:
+- [x] Duración habitual disponible:
   - 30 min;
   - 45 min;
   - 60 min;
   - 75+ min;
   - variable.
 
-- [ ] Lugar/equipamiento:
+- [x] Lugar/equipamiento:
   - gimnasio completo;
   - casa con pesas;
   - casa/equipamiento mínimo;
   - mixto.
 
-- [ ] Preferencia de planificación:
+- [x] Preferencia de planificación:
   - quiero una recomendación;
   - quiero crear mis propias rutinas;
   - decidir después.
 
 ### Bloque B — Personalización de experiencia
 
-- [ ] Unidad de peso: kg/lb.
-- [ ] ¿Quieres recordatorios de entrenamiento?
-- [ ] Si responde sí, solicitar hora después del onboarding, no pedir permisos del sistema antes de necesitarlo.
+- [x] Unidad de peso: kg/lb.
+- [x] ¿Quieres recordatorios de entrenamiento?
+- [x] Si responde sí, solicitar hora después del onboarding, no pedir permisos del sistema antes de necesitarlo.
 - [ ] Preguntar por Reduce Motion / modo ahorro solo desde ajustes, no sobrecargar onboarding inicial.
 
 ### Bloque C — Fe cristiana opcional
@@ -143,7 +152,7 @@ Opciones:
 - No, prefiero mantenerlo oculto.
 - Decidir después.
 
-- [ ] Guardar `faithEnabled` separado de `showDailyVerse`.
+- [x] Guardar `faithEnabled` separado de `showDailyVerse`.
 - [ ] Si es Sí:
   - habilitar versículo diario;
   - habilitar Biblia;
@@ -164,15 +173,15 @@ Opciones:
 
 ## 2.3 UX
 
-- [ ] Máximo 5–6 pantallas cortas.
-- [ ] Permitir volver atrás sin perder respuestas.
-- [ ] Barra de progreso clara.
-- [ ] Resumen final de preferencias.
-- [ ] Permitir editar todas las respuestas después.
-- [ ] No volver a mostrar onboarding completo por una actualización.
-- [ ] Versionar onboarding para futuras preguntas.
-- [ ] Mobile: UI compacta.
-- [ ] Web: onboarding responsive antes del `WebLayout`.
+- [x] Máximo 5–6 pantallas cortas.
+- [x] Permitir volver atrás sin perder respuestas.
+- [x] Barra de progreso clara.
+- [x] Resumen final de preferencias.
+- [x] Permitir editar todas las respuestas después.
+- [x] No volver a mostrar onboarding completo por una actualización.
+- [x] Versionar onboarding para futuras preguntas.
+- [x] Mobile: UI compacta.
+- [x] Web: onboarding responsive antes del `WebLayout`.
 - [ ] Tests de navegación/estado.
 - [ ] Tests responsive web.
 - [ ] Smoke Android.
@@ -230,30 +239,30 @@ La secuencia **no se reinicia al comenzar una semana nueva**.
 
 ## 2A.2 Reglas funcionales
 
-- [ ] El orden de `TrainingProgram.routineIds` es la fuente de verdad de la secuencia.
-- [ ] Los días semanales solo indican disponibilidad/calendario, no mapeo fijo rutina↔día.
-- [ ] El siguiente día de entrenamiento muestra `nextRoutineId`.
-- [ ] Completar la rutina esperada avanza exactamente una posición.
-- [ ] Un día de descanso no avanza ni reinicia la secuencia.
-- [ ] Cambiar de semana no reinicia la secuencia.
-- [ ] Si el usuario falta un día, la rutina pendiente se conserva para el próximo día disponible.
-- [ ] Un workout libre no avanza la secuencia del programa.
-- [ ] Una rutina del programa completada fuera de secuencia no avanza silenciosamente el índice.
-- [ ] Cerrar/reabrir mantiene la posición exacta.
-- [ ] Backup/restore conserva la posición exacta.
-- [ ] Cambiar los días disponibles no cambia el orden de las rutinas.
+- [x] El orden de `TrainingProgram.routineIds` es la fuente de verdad de la secuencia.
+- [x] Los días semanales solo indican disponibilidad/calendario, no mapeo fijo rutina↔día.
+- [x] El siguiente día de entrenamiento muestra `nextRoutineId`.
+- [x] Completar la rutina esperada avanza exactamente una posición.
+- [x] Un día de descanso no avanza ni reinicia la secuencia.
+- [x] Cambiar de semana no reinicia la secuencia.
+- [x] Si el usuario falta un día, la rutina pendiente se conserva para el próximo día disponible.
+- [x] Un workout libre no avanza la secuencia del programa.
+- [x] Una rutina del programa completada fuera de secuencia no avanza silenciosamente el índice.
+- [x] Cerrar/reabrir mantiene la posición exacta.
+- [x] Backup/restore conserva la posición exacta.
+- [x] Cambiar los días disponibles no cambia el orden de las rutinas.
 - [ ] Pausar/reanudar programa no pierde la posición.
-- [ ] Duplicar un programa nuevo empieza en su primera rutina, sin compartir estado mutable.
+- [x] Duplicar un programa nuevo empieza en su primera rutina, sin compartir estado mutable.
 - [ ] Deload/mesociclo no altera el orden salvo una acción explícita del usuario.
 
 ## 2A.3 Integración UI
 
-- [ ] Inicio muestra claramente “Próxima sesión: Upper/Lower ...”.
-- [ ] Programas muestra secuencia y posición actual.
-- [ ] Calendario proyecta futuras sesiones respetando días disponibles y continuidad entre semanas.
-- [ ] Workout iniciado desde “Próxima sesión” usa la rutina esperada.
+- [x] Inicio muestra claramente “Próxima sesión: Upper/Lower ...”.
+- [x] Programas muestra secuencia y posición actual.
+- [x] Calendario proyecta futuras sesiones respetando días disponibles y continuidad entre semanas.
+- [x] Workout iniciado desde “Próxima sesión” usa la rutina esperada.
 - [ ] Si el usuario abre manualmente otra rutina, la UI deja claro que no avanzará la rotación esperada.
-- [ ] Mobile y Web presentan la misma fuente de verdad.
+- [x] Mobile y Web presentan la misma fuente de verdad.
 
 ## 2A.4 Validación automática obligatoria
 
@@ -263,14 +272,14 @@ Agregar tests con la secuencia exacta:
 
 sobre lunes/martes/jueves/viernes/sábado durante varias semanas.
 
-- [ ] Test exacto del ejemplo de 3 semanas.
-- [ ] Test de semana nueva sin reset.
+- [x] Test exacto del ejemplo de 3 semanas.
+- [x] Test de semana nueva sin reset.
 - [ ] Test de día omitido.
 - [ ] Test de cambio de días disponibles.
-- [ ] Test de workout libre/off-sequence.
-- [ ] Test de persistencia/rehidratación.
+- [x] Test de workout libre/off-sequence.
+- [x] Test de persistencia/rehidratación.
 - [ ] Test de backup/restore.
-- [ ] Test de proyección de calendario.
+- [x] Test de proyección de calendario.
 - [ ] Test mobile/web del texto “Próxima sesión”.
 
 > Nota técnica: Roadmap 2.0 ya contiene un `ProgramRotationCoordinator` secuencial e independiente del weekday. Roadmap 3.0 debe auditar y conectar **toda la UI/calendario/lanzamiento de workout** a esa fuente de verdad, porque el comportamiento actual visible no cumple todavía el caso Upper A/Lower A/Upper B/Lower B descrito arriba.
@@ -285,13 +294,13 @@ sobre lunes/martes/jueves/viernes/sábado durante varias semanas.
 
 Actualmente existen preferencias como `showDailyVerse`, pero el concepto de “mostrar el versículo” no debe ser equivalente a “habilitar todo el módulo Fe”.
 
-- [~] Crear `faithEnabled` mediante `UserExperienceProfile.faithEnabled` + preferencia triestado.
+- [x] Crear `faithEnabled` mediante `UserExperienceProfile.faithEnabled` + preferencia triestado.
 - [ ] Mantener `showDailyVerse` como subpreferencia.
 - [ ] Mantener notificaciones como subpreferencia independiente.
-- [~] Condicionar inicialización de Biblia a `faithEnabled == true`.
-- [ ] Condicionar providers de versículo a módulo habilitado.
-- [ ] Condicionar accesos rápidos en mobile.
-- [ ] Condicionar navegación lateral/secciones en web.
+- [x] Condicionar inicialización de Biblia a `faithEnabled == true`.
+- [x] Condicionar providers de versículo a módulo habilitado.
+- [x] Condicionar accesos rápidos en mobile.
+- [x] Condicionar navegación lateral/secciones en web.
 - [ ] Deshabilitar limpiamente sin borrar notas/favoritos del usuario.
 - [ ] Permitir reactivar y recuperar contenido local anterior.
 - [ ] Tests de “Fe OFF” sin inicialización de DB.
@@ -717,26 +726,26 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 # 16. Secuencia recomendada de implementación
 
 ## Fase A — Fundación de personalización
-- [~] A1 Modelo `UserExperienceProfile`.
-- [ ] A2 Onboarding 2.0 mobile.
-- [ ] A3 Onboarding 2.0 web.
-- [~] A4 `faithEnabled` + migración.
-- [~] A5 Lazy Bible init.
-- [~] A6 Tests/backups.
-- [ ] A7 Rotación continua Upper/Lower independiente de semana/weekday.
+- [x] A1 Modelo `UserExperienceProfile`.
+- [x] A2 Onboarding 2.0 mobile.
+- [x] A3 Onboarding 2.0 web.
+- [x] A4 `faithEnabled` + migración.
+- [x] A5 Lazy Bible init.
+- [x] A6 Tests/backups.
+- [x] A7 Rotación continua Upper/Lower independiente de semana/weekday.
 
 **Gate A:** usuario nuevo puede completar onboarding en Mobile/Web; Fe OFF no carga recursos de Fe; la programación usa una secuencia continua de sesiones y no un mapeo fijo rutina↔weekday.
 
 ## Fase B — Study & Habits
-- [ ] B1 Modelo `HabitTask`.
-- [ ] B2 CRUD.
-- [ ] B3 Timer de estudio.
-- [ ] B4 Recurrencia.
-- [ ] B5 Historial/racha.
-- [ ] B6 Plantilla Biblia 10 min.
-- [ ] B7 Planes de estudio.
-- [ ] B8 Backup/restore.
-- [ ] B9 Mobile/Web.
+- [~] B1 Modelo `HabitTask`.
+- [~] B2 CRUD.
+- [~] B3 Timer de estudio.
+- [~] B4 Recurrencia.
+- [~] B5 Historial/racha.
+- [~] B6 Plantilla Biblia 10 min.
+- [~] B7 Planes de estudio.
+- [~] B8 Backup/restore.
+- [~] B9 Mobile/Web.
 
 **Gate B:** tareas sobreviven cierre/reapertura y backup; Fe tasks no aparecen con Fe OFF.
 
@@ -837,7 +846,7 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [x] Riesgos principales identificados.
 - [x] Orden de fases definido.
 - [x] Implementación iniciada.
-- [ ] Gate A.
+- [x] Gate A automático (smoke manual final diferido).
 - [ ] Gate B.
 - [ ] Gate C.
 - [ ] Gate D.
@@ -846,4 +855,4 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [ ] Gate G.
 - [ ] Gate H.
 
-**Estado:** EN IMPLEMENTACIÓN — Fase A iniciada. A1/A4/A5/A6 tienen código y tests preparados, pendientes de validación CI antes de marcarlos `[x]`. A2/A3 y A7 forman parte del siguiente bloque. Las pruebas locales del usuario quedan diferidas al gate final; durante implementación se prioriza CI público y automatización.
+**Estado:** EN IMPLEMENTACIÓN — Fase A cerrada automáticamente en CI. Fase B (Study & Habits) está implementándose y sus pruebas locales permanecen diferidas al gate final.

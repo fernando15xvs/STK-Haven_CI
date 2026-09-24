@@ -1,4 +1,5 @@
 import 'package:core/domain/models/settings_state.dart';
+import 'package:core/features/habits/presentation/pages/study_habits_page.dart';
 import 'package:core/features/profile/presentation/pages/training_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -130,7 +131,7 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
                 const SizedBox(height: 14),
                 _QuickMenuTile(
                   icon: Icons.layers_outlined,
-                  title: 'Programas 2.0',
+                  title: 'Programas 3.0',
                   subtitle: 'Rotación A/B/C, mesociclos y descarga.',
                   onTap: () => open(const TrainingProgramsPage()),
                 ),
@@ -140,6 +141,13 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
                   title: 'Inteligencia de progreso',
                   subtitle: 'Última vs anterior, tendencias y unilateral.',
                   onTap: () => open(const ProgressIntelligencePage()),
+                ),
+                const SizedBox(height: 10),
+                _QuickMenuTile(
+                  icon: Icons.task_alt_outlined,
+                  title: 'Study & Hábitos',
+                  subtitle: 'Tareas, recurrencia, lectura y sesiones de estudio.',
+                  onTap: () => open(const StudyHabitsPage()),
                 ),
                 if (faithEnabled) ...[
                   const SizedBox(height: 10),

@@ -7,9 +7,14 @@ import 'package:core/domain/models/preset_program.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/onboarding/application/program_service.dart';
+import 'package:core/features/habits/application/habit_study_timer_provider.dart';
+import 'package:core/features/habits/application/habit_tasks_provider.dart';
+import 'package:core/features/habits/application/study_plan_provider.dart';
 import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/programs/data/training_program_repository.dart';
+import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
@@ -444,7 +449,13 @@ class ProfilePageWeb extends ConsumerWidget {
 
     try {
       await _backupService.restoreBackup(parsed);
+      await TrainingProgramRepository.fromHive().hydrateFromBackupMetadata();
       ref.invalidate(settingsProvider);
+      ref.invalidate(userExperienceProfileProvider);
+      ref.invalidate(habitTasksProvider);
+      ref.invalidate(habitStudyTimerProvider);
+      ref.invalidate(studyPlanEnrollmentsProvider);
+      ref.invalidate(trainingProgramListProvider);
       ref.invalidate(routineListProvider);
       ref.invalidate(exerciseListProvider);
       ref.invalidate(workoutHistoryProvider);

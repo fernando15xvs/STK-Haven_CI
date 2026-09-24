@@ -4,9 +4,14 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/platform/platform_capabilities.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/settings_state.dart';
+import 'package:core/features/habits/application/habit_study_timer_provider.dart';
+import 'package:core/features/habits/application/habit_tasks_provider.dart';
+import 'package:core/features/habits/application/study_plan_provider.dart';
 import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/programs/data/training_program_repository.dart';
+import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/core/services/backup_service.dart';
 import 'package:core/core/services/backup_file_service.dart';
 import 'package:core/features/onboarding/application/program_service.dart';
@@ -390,7 +395,14 @@ class ProfilePage extends ConsumerWidget {
                     if (confirm == true) {
                       try {
                         await _backupService.restoreBackup(parsed);
+                        await TrainingProgramRepository.fromHive()
+                            .hydrateFromBackupMetadata();
                         ref.invalidate(settingsProvider);
+                        ref.invalidate(userExperienceProfileProvider);
+                        ref.invalidate(habitTasksProvider);
+                        ref.invalidate(habitStudyTimerProvider);
+                        ref.invalidate(studyPlanEnrollmentsProvider);
+                        ref.invalidate(trainingProgramListProvider);
                         ref.invalidate(routineListProvider);
                         ref.invalidate(exerciseListProvider);
                         ref.invalidate(workoutHistoryProvider);
