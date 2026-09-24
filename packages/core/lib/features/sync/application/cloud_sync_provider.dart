@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:core/core/services/backup_activity_service.dart';
 import 'package:core/core/services/backup_service.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/habits/application/habit_study_timer_provider.dart';
 import 'package:core/features/habits/application/habit_tasks_provider.dart';
 import 'package:core/features/habits/application/study_plan_provider.dart';
@@ -73,17 +74,13 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
 
   SupabaseClient get _client => Supabase.instance.client;
 
-  bool _hasPermanentAccount(User? user) {
-    return user != null && (user.email?.trim().isNotEmpty ?? false);
-  }
-
   @override
   CloudSyncState build() {
-    final user = _client.auth.currentUser;
+    final identity = ref.watch(appIdentityProvider);
     Future.microtask(refreshRemoteMetadata);
     return CloudSyncState(
-      signedIn: _hasPermanentAccount(user),
-      email: _hasPermanentAccount(user) ? user?.email : null,
+      signedIn: identity.signedIn,
+      email: identity.email,
     );
   }
 
@@ -94,30 +91,23 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       clearMessage: true,
       isError: false,
     );
-    try {
-      if (!_hasPermanentAccount(_client.auth.currentUser) &&
-          _client.auth.currentUser != null) {
-        await _client.auth.signOut();
-      }
-      final response = await _client.auth.signInWithPassword(
-        email: email.trim(),
-        password: password,
-      );
-      final user = response.user;
-      if (!_hasPermanentAccount(user)) {
-        throw const AuthException('No se pudo iniciar sesión.');
-      }
-      state = CloudSyncState(
-        signedIn: true,
-        email: user!.email,
-        message: 'Sesión de sincronización iniciada.',
-      );
-      await refreshRemoteMetadata();
-    } on AuthException catch (error) {
-      _fail(_friendlyAuthMessage(error));
-    } catch (_) {
-      _fail('No se pudo iniciar sesión. Verifica tu conexión.');
+
+    final ok = await ref.read(appIdentityProvider.notifier).signIn(
+          email: email,
+          password: password,
+        );
+    final identity = ref.read(appIdentityProvider);
+    if (!ok || !identity.signedIn) {
+      _fail(identity.message ?? 'No se pudo iniciar sesión.');
+      return;
     }
+
+    state = CloudSyncState(
+      signedIn: true,
+      email: identity.email,
+      message: 'Sesión de STK Haven iniciada.',
+    );
+    await refreshRemoteMetadata();
   }
 
   Future<void> signUp({required String email, required String password}) async {
@@ -127,53 +117,47 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       clearMessage: true,
       isError: false,
     );
-    try {
-      if (!_hasPermanentAccount(_client.auth.currentUser) &&
-          _client.auth.currentUser != null) {
-        await _client.auth.signOut();
-      }
-      final response = await _client.auth.signUp(
-        email: email.trim(),
-        password: password,
-      );
-      final user = response.user;
-      if (user == null) throw const AuthException('No se pudo crear la cuenta.');
-      final hasSession = response.session != null;
-      state = CloudSyncState(
-        signedIn: hasSession && _hasPermanentAccount(user),
-        email: user.email,
-        message: hasSession
-            ? 'Cuenta creada. Ya puedes sincronizar.'
-            : 'Cuenta creada. Confirma tu correo y luego inicia sesión.',
-      );
-      if (hasSession) await refreshRemoteMetadata();
-    } on AuthException catch (error) {
-      _fail(_friendlyAuthMessage(error));
-    } catch (_) {
-      _fail('No se pudo crear la cuenta. Verifica tu conexión.');
+
+    final ok = await ref.read(appIdentityProvider.notifier).signUp(
+          email: email,
+          password: password,
+        );
+    final identity = ref.read(appIdentityProvider);
+    if (!ok) {
+      _fail(identity.message ?? 'No se pudo crear la cuenta.');
+      return;
+    }
+
+    state = CloudSyncState(
+      signedIn: identity.signedIn,
+      email: identity.email,
+      message: identity.message,
+    );
+    if (identity.signedIn) {
+      await refreshRemoteMetadata();
     }
   }
 
   Future<void> signOut() async {
     if (state.busy) return;
-    await _client.auth.signOut();
+    await ref.read(appIdentityProvider.notifier).signOut();
     ref.read(settingsProvider.notifier).setCloudSyncEnabled(false);
     state = const CloudSyncState(message: 'Sesión cerrada.');
   }
 
   Future<void> refreshRemoteMetadata() async {
-    final user = _client.auth.currentUser;
-    if (!_hasPermanentAccount(user)) return;
+    final identity = ref.read(appIdentityProvider);
+    if (!identity.signedIn || identity.userId == null) return;
     try {
       final row = await _client
           .from(_table)
           .select('updated_at')
-          .eq('user_id', user!.id)
+          .eq('user_id', identity.userId!)
           .maybeSingle();
       final updatedRaw = row?['updated_at']?.toString();
       state = state.copyWith(
         signedIn: true,
-        email: user.email,
+        email: identity.email,
         remoteUpdatedAt:
             updatedRaw == null ? null : DateTime.tryParse(updatedRaw)?.toLocal(),
         clearRemoteUpdatedAt: updatedRaw == null,
@@ -185,8 +169,8 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
   }
 
   Future<bool> uploadCurrentDevice() async {
-    final user = _client.auth.currentUser;
-    if (!_hasPermanentAccount(user)) {
+    final identity = ref.read(appIdentityProvider);
+    if (!identity.signedIn || identity.userId == null) {
       _fail('Inicia sesión antes de subir una copia.');
       return false;
     }
@@ -206,7 +190,7 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
 
       final now = DateTime.now().toUtc();
       await _client.from(_table).upsert({
-        'user_id': user!.id,
+        'user_id': identity.userId!,
         'backup_payload': decoded,
         'schema_version': BackupService.currentBackupSchemaVersion,
         'updated_at': now.toIso8601String(),
@@ -214,7 +198,7 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       ref.read(settingsProvider.notifier).setCloudSyncEnabled(true);
       state = state.copyWith(
         signedIn: true,
-        email: user.email,
+        email: identity.email,
         remoteUpdatedAt: now.toLocal(),
         operation: CloudSyncOperation.idle,
         message: 'Copia de este dispositivo guardada en la nube.',
@@ -228,8 +212,8 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
   }
 
   Future<bool> restoreFromCloud() async {
-    final user = _client.auth.currentUser;
-    if (!_hasPermanentAccount(user)) {
+    final identity = ref.read(appIdentityProvider);
+    if (!identity.signedIn || identity.userId == null) {
       _fail('Inicia sesión antes de restaurar desde la nube.');
       return false;
     }
@@ -244,7 +228,7 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       final row = await _client
           .from(_table)
           .select('backup_payload, updated_at')
-          .eq('user_id', user!.id)
+          .eq('user_id', identity.userId!)
           .maybeSingle();
       if (row == null || row['backup_payload'] == null) {
         _fail('Todavía no existe una copia en la nube para esta cuenta.');
@@ -271,7 +255,7 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       ref.read(settingsProvider.notifier).setCloudSyncEnabled(true);
       state = state.copyWith(
         signedIn: true,
-        email: user.email,
+        email: identity.email,
         remoteUpdatedAt:
             updatedRaw == null ? null : DateTime.tryParse(updatedRaw)?.toLocal(),
         operation: CloudSyncOperation.idle,
@@ -307,17 +291,4 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
     );
   }
 
-  String _friendlyAuthMessage(AuthException error) {
-    final raw = error.message.toLowerCase();
-    if (raw.contains('invalid login') || raw.contains('invalid credentials')) {
-      return 'Correo o contraseña incorrectos.';
-    }
-    if (raw.contains('already registered') || raw.contains('already exists')) {
-      return 'Ese correo ya tiene una cuenta.';
-    }
-    if (raw.contains('password')) {
-      return 'La contraseña no cumple los requisitos de Supabase.';
-    }
-    return error.message;
-  }
 }

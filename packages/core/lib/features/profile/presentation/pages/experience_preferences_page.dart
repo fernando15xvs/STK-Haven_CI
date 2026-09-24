@@ -1,5 +1,6 @@
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
+import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ class _ExperiencePreferencesPageState
   @override
   Widget build(BuildContext context) {
     final asyncProfile = ref.watch(userExperienceProfileProvider);
+    final identity = ref.watch(appIdentityProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Personalización')),
@@ -115,6 +117,53 @@ class _ExperiencePreferencesPageState
               ),
               const SizedBox(height: 24),
               Text(
+                'Modo de uso',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Puedes usar STK Haven para ti, como entrenador, o en ambos modos. '
+                'El modo entrenador no da acceso a ningún cliente por sí solo.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilterChip(
+                    label: const Text('Atleta'),
+                    selected:
+                        draft.capabilities.contains(UserCapability.athlete),
+                    onSelected: (selected) => _toggleCapability(
+                      draft,
+                      UserCapability.athlete,
+                      selected,
+                    ),
+                  ),
+                  FilterChip(
+                    label: const Text('Entrenador'),
+                    selected:
+                        draft.capabilities.contains(UserCapability.coach),
+                    onSelected: (selected) => _toggleCapability(
+                      draft,
+                      UserCapability.coach,
+                      selected,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                identity.signedIn
+                    ? 'Cuenta STK Haven: ${identity.email ?? 'sesión permanente'}'
+                    : 'Sin cuenta permanente: esta preferencia se mantiene local.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 24),
+              Text(
                 'Experiencia de la app',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
@@ -181,6 +230,23 @@ class _ExperiencePreferencesPageState
         },
       ),
     );
+  }
+
+  void _toggleCapability(
+    UserExperienceProfile draft,
+    UserCapability capability,
+    bool selected,
+  ) {
+    final next = Set<UserCapability>.from(draft.capabilities);
+    if (selected) {
+      next.add(capability);
+    } else {
+      next.remove(capability);
+    }
+    if (next.isEmpty) {
+      next.add(UserCapability.athlete);
+    }
+    setState(() => _draft = draft.copyWith(capabilities: next));
   }
 
   Future<void> _save() async {

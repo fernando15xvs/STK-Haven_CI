@@ -103,3 +103,29 @@ Jobs confirmados verdes:
 - iOS release + profile en macOS, sin codesign.
 
 El mirror quedó operativo como infraestructura de validación. La fuente de verdad sigue siendo el repositorio privado. Cualquier corrección futura debe hacerse primero en `STK-Haven` y luego publicarse como un nuevo snapshot sanitizado.
+
+
+## Roadmap 3 — Study & Habits / identidad base — CI verde — 2026-09-24
+
+- Fuente privada: `bfb420f30dc2c162174d0356dbcf3d8b2c850f16`.
+- Snapshot público equivalente: `406fa4314d59c272473ba75c5b3638f29b9b0db2`.
+- Workflow: `STK Haven Public CI`.
+- Run: `35958325688` (#5).
+- Resultado global: `success`.
+
+Jobs confirmados verdes:
+
+- Analyze + Core tests.
+- Mobile tests.
+- Android artifacts: debug/profile/release APK, release AAB y split ABI.
+- Web tests + dart2js + WASM.
+- iOS release + profile en macOS sin codesign.
+
+Alcance relevante del candidato:
+
+- Study & Habits: modelo, persistencia Hive, recurrencia, rachas, timer por timestamps, historial y planes de estudio por referencias.
+- Backup schema v10 con compatibilidad de lectura para v9 y harness legacy corregido.
+- UI compartida Study & Habits compilada para Mobile/Web.
+- Migración inicial de perfiles/capacidades/RLS incluida como código, **sin aplicarse al Supabase remoto** y sin considerarse todavía validación dinámica de aislamiento.
+
+Las pruebas manuales/locales continúan concentradas en el gate final definido por Roadmap 3.0.

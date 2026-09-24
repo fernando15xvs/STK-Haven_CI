@@ -111,6 +111,14 @@ begin
     v_capabilities := array['athlete']::text[];
   end if;
 
+  if array_position(v_capabilities, null) is not null then
+    raise exception 'STK capabilities cannot contain null values';
+  end if;
+
+  select array_agg(distinct capability order by capability)
+    into v_capabilities
+    from unnest(v_capabilities) as capability;
+
   foreach v_capability in array v_capabilities loop
     if v_capability not in ('athlete', 'coach') then
       raise exception 'Unsupported STK capability: %', v_capability;

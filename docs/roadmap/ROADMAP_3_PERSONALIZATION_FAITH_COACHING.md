@@ -36,6 +36,19 @@
 - Verdes: Analyze + Core tests, Mobile tests, Android debug/profile/release/AAB/split ABI, Web tests + dart2js + WASM, iOS release/profile sin codesign.
 - Los smoke manuales de dispositivo/PWA siguen diferidos a `ROADMAP_3_FINAL_LOCAL_TEST_AUDIT.md`.
 
+## Evidencia automática Fase B + fundación C — 2026-09-24
+
+- Fuente privada validada: `bfb420f30dc2c162174d0356dbcf3d8b2c850f16`.
+- Snapshot público equivalente: `406fa4314d59c272473ba75c5b3638f29b9b0db2`.
+- GitHub Actions: `STK Haven Public CI` run #5, ID `35958325688`.
+- Resultado global: `success`.
+- Verdes: Analyze + Core tests, Mobile tests, Android debug/profile/release/AAB/split ABI, Web tests + dart2js + WASM, iOS release/profile sin codesign.
+- Este run valida automáticamente el código de Study & Habits, backup schema v10 y compatibilidad del harness legacy.
+- La migración `20260924052000_stk_user_profiles_and_capabilities.sql` forma parte del snapshot y pasó revisión estática/compilación del repositorio, pero **no se considera aplicada ni validada dinámicamente contra Supabase**.
+- UX física, PWA y comportamiento real de notificaciones/background siguen diferidos a `ROADMAP_3_FINAL_LOCAL_TEST_AUDIT.md`.
+
+---
+
 ---
 
 # 0. Gate previo — preservar Roadmap 2.0
@@ -341,26 +354,26 @@ Campos:
 - origen (usuario / plan / entrenador);
 - visibilidad privada/compartible.
 
-- [ ] Definir modelo.
-- [ ] Repositorio local.
-- [ ] Provider.
-- [ ] Backup/restore.
-- [ ] Tests de recurrencia.
-- [ ] Tests de zona horaria/cambio de día.
-- [ ] No castigar al usuario por perder una racha: mostrar progreso, no culpa.
+- [x] Definir modelo.
+- [x] Repositorio local.
+- [x] Provider.
+- [x] Backup/restore mediante schema v10, compatible con v9.
+- [x] Tests de recurrencia.
+- [~] Tests de calendario local/cambio de día cubiertos; cambio real de zona horaria queda para el gate final.
+- [x] No castigar al usuario por perder una racha: mostrar progreso, no culpa.
 
 ## 4.2 “Estudiar la Biblia 10 minutos”
 
 Si `faithEnabled == true`:
 
-- [ ] Plantilla “Leer la Biblia — 10 min”.
-- [ ] Timer simple.
-- [ ] Elegir libro/capítulo antes o durante la sesión.
-- [ ] Marcar sesión completada.
-- [ ] Añadir nota/reflexión.
-- [ ] Guardar pasaje de referencia sin duplicar grandes textos.
+- [x] Plantilla “Leer la Biblia — 10 min”.
+- [x] Timer persistente basado en timestamps, resistente a background/reapertura.
+- [ ] Elegir libro/capítulo manualmente antes o durante una sesión libre.
+- [x] Marcar sesión completada.
+- [x] Añadir nota/reflexión.
+- [x] Guardar pasaje de referencia sin duplicar grandes textos en planes.
 - [ ] Estadística semanal de minutos de lectura.
-- [ ] Historial de estudio.
+- [x] Historial de estudio.
 - [ ] Recordatorio opcional.
 
 ## 4.3 Planes de estudio bíblico
@@ -373,12 +386,12 @@ Ideas:
 - Lectura cronológica (solo si se define y valida el plan).
 - Temas: gratitud, disciplina, sabiduría, perseverancia.
 
-- [ ] Motor de planes independiente del texto bíblico.
-- [ ] Plan define referencias, no copia masiva de texto.
-- [ ] Progreso por día/sesión.
-- [ ] Pausar/reanudar.
-- [ ] Cambiar de plan sin perder historial.
-- [ ] Offline cuando el contenido esté disponible localmente.
+- [x] Motor de planes independiente del texto bíblico.
+- [x] Plan define referencias, no copia masiva de texto.
+- [x] Progreso por día/sesión.
+- [x] Pausar/reanudar.
+- [x] Múltiples inscripciones conservan el progreso ya guardado; no se borra historial al iniciar otro plan.
+- [ ] Offline del texto cuando el contenido esté disponible localmente.
 
 ## 4.4 Libros y material adicional
 
@@ -428,8 +441,8 @@ Un usuario puede tener capacidades:
 - `coach` — administra asesorados;
 - opcionalmente ambas.
 
-- [ ] Crear `user_profiles` ligado a Supabase Auth.
-- [ ] Crear capacidades/roles.
+- [~] Migración preparada para `stk_user_profiles` ligada a Supabase Auth; pendiente aplicación/validación dinámica.
+- [~] Migración preparada para capacidades `athlete`/`coach`; pendiente aplicación/validación dinámica.
 - [ ] Migrar el login actual de Cloud Sync hacia identidad de aplicación reutilizable.
 - [ ] Mantener modo local sin cuenta para usuario normal cuando no use funciones cloud.
 - [ ] Requerir cuenta permanente para funciones entrenador/cliente.
@@ -737,24 +750,24 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 **Gate A:** usuario nuevo puede completar onboarding en Mobile/Web; Fe OFF no carga recursos de Fe; la programación usa una secuencia continua de sesiones y no un mapeo fijo rutina↔weekday.
 
 ## Fase B — Study & Habits
-- [~] B1 Modelo `HabitTask`.
-- [~] B2 CRUD.
-- [~] B3 Timer de estudio.
-- [~] B4 Recurrencia.
-- [~] B5 Historial/racha.
-- [~] B6 Plantilla Biblia 10 min.
-- [~] B7 Planes de estudio.
-- [~] B8 Backup/restore.
-- [~] B9 Mobile/Web.
+- [x] B1 Modelo `HabitTask`.
+- [x] B2 CRUD local/persistencia.
+- [x] B3 Timer de estudio persistente.
+- [x] B4 Recurrencia.
+- [x] B5 Historial/racha.
+- [x] B6 Plantilla Biblia 10 min.
+- [x] B7 Planes de estudio por referencias.
+- [x] B8 Backup/restore schema v10 + compatibilidad v9.
+- [~] B9 Mobile/Web implementado y compilado; smoke UX final diferido.
 
 **Gate B:** tareas sobreviven cierre/reapertura y backup; Fe tasks no aparecen con Fe OFF.
 
 ## Fase C — Identidad y roles
-- [ ] C1 Perfil cloud.
-- [ ] C2 Capacidades athlete/coach.
-- [ ] C3 Sesión permanente.
+- [~] C1 Perfil cloud: migración preparada, no aplicada.
+- [~] C2 Capacidades athlete/coach: migración preparada, no aplicada.
+- [ ] C3 Sesión permanente como identidad de aplicación.
 - [ ] C4 Migración de Cloud Sync.
-- [ ] C5 RLS base.
+- [~] C5 RLS base incluida en migración; pendiente prueba dinámica.
 - [ ] C6 Tests de aislamiento.
 
 **Gate C:** un usuario sin rol coach no puede consultar endpoints/datos coach.
@@ -847,12 +860,12 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [x] Orden de fases definido.
 - [x] Implementación iniciada.
 - [x] Gate A automático (smoke manual final diferido).
-- [ ] Gate B.
-- [ ] Gate C.
+- [~] Gate B — automático verde; smoke UX/local final diferido.
+- [ ] Gate C — migración base preparada, aún sin validación dinámica.
 - [ ] Gate D.
 - [ ] Gate E.
 - [ ] Gate F.
 - [ ] Gate G.
 - [ ] Gate H.
 
-**Estado:** EN IMPLEMENTACIÓN — Fase A cerrada automáticamente en CI. Fase B (Study & Habits) está implementándose y sus pruebas locales permanecen diferidas al gate final.
+**Estado:** EN IMPLEMENTACIÓN — Fase A cerrada automáticamente. Fase B tiene núcleo, persistencia, backup, planes y UI compilados con CI completamente verde; solo conserva el smoke UX/local final y funciones B adicionales explícitamente pendientes. Fase C acaba de iniciar con la migración de perfiles/capacidades/RLS base, todavía sin aplicarla a Supabase.
