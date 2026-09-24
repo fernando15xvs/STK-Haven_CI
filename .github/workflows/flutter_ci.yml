@@ -37,6 +37,26 @@ jobs:
         working-directory: packages/core
         run: flutter test
 
+
+  supabase-db:
+    name: Supabase DB + RLS tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start isolated Supabase
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+      - name: Rebuild database from migrations
+        run: supabase db reset
+      - name: Run pgTAP database tests
+        run: supabase test db
+      - name: Stop isolated Supabase
+        if: always()
+        run: supabase stop --no-backup
+
   mobile-tests:
     name: Mobile tests
     runs-on: ubuntu-latest

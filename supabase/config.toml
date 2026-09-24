@@ -1,2 +1,4 @@
+project_id = "stk-haven-local"
+
 [functions.haven-faith-ai]
 verify_jwt = true

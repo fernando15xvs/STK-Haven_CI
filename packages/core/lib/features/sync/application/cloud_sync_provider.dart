@@ -76,7 +76,22 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
 
   @override
   CloudSyncState build() {
-    final identity = ref.watch(appIdentityProvider);
+    final identity = ref.read(appIdentityProvider);
+
+    ref.listen(appIdentityProvider, (previous, next) {
+      final sessionChanged =
+          previous?.sessionKind != next.sessionKind ||
+          previous?.email != next.email;
+      if (!sessionChanged) return;
+
+      state = state.copyWith(
+        signedIn: next.signedIn,
+        email: next.email,
+        clearEmail: next.email == null,
+        clearRemoteUpdatedAt: !next.signedIn,
+      );
+    });
+
     Future.microtask(refreshRemoteMetadata);
     return CloudSyncState(
       signedIn: identity.signedIn,
