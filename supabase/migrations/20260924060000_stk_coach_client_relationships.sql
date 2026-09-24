@@ -315,7 +315,7 @@ language plpgsql
 stable
 security definer
 set search_path = ''
-as $
+as $$
 declare
   v_user_id uuid := auth.uid();
 begin
@@ -349,7 +349,7 @@ begin
      or relationship.client_user_id = v_user_id
   order by relationship.updated_at desc;
 end;
-$;
+$$;
 
 create or replace function public.stk_set_coach_permissions(
   p_relationship_id uuid,

@@ -1,6 +1,7 @@
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/coach/application/coach_client_provider.dart';
+import 'package:core/features/coach/presentation/pages/coach_client_detail_page.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
@@ -169,6 +170,13 @@ class _CoachConnectionsPageState
                           relationship: relationship,
                           currentUserId: userId,
                           busy: coachState.busy,
+                          onOpen: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => CoachClientDetailPage(
+                                relationshipId: relationship.id,
+                              ),
+                            ),
+                          ),
                           onPermissions: relationship.isClient(userId) &&
                                   relationship.isActive
                               ? () => _editPermissions(relationship)
@@ -566,6 +574,7 @@ class _RelationshipCard extends StatelessWidget {
   final CoachClientRelationship relationship;
   final String? currentUserId;
   final bool busy;
+  final VoidCallback onOpen;
   final VoidCallback? onPermissions;
   final VoidCallback? onRevoke;
 
@@ -573,6 +582,7 @@ class _RelationshipCard extends StatelessWidget {
     required this.relationship,
     required this.currentUserId,
     required this.busy,
+    required this.onOpen,
     this.onPermissions,
     this.onRevoke,
   });
@@ -630,6 +640,11 @@ class _RelationshipCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  OutlinedButton.icon(
+                    onPressed: busy ? null : onOpen,
+                    icon: const Icon(Icons.open_in_new_rounded),
+                    label: const Text('Ver detalle'),
+                  ),
                   if (onPermissions != null)
                     OutlinedButton.icon(
                       onPressed: busy ? null : onPermissions,
