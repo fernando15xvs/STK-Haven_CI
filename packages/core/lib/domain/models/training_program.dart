@@ -43,6 +43,7 @@ class TrainingProgram {
   final DateTime createdAt;
   final DateTime startedAt;
   final int durationWeeks;
+  final Set<int> trainingWeekdays;
   final Set<int> deloadWeeks;
   final int nextRotationIndex;
   final bool isActive;
@@ -56,6 +57,7 @@ class TrainingProgram {
     required this.createdAt,
     required this.startedAt,
     this.durationWeeks = 8,
+    this.trainingWeekdays = const <int>{},
     this.deloadWeeks = const <int>{},
     this.nextRotationIndex = 0,
     this.isActive = true,
@@ -134,6 +136,7 @@ class TrainingProgram {
       createdAt: now,
       startedAt: now,
       durationWeeks: durationWeeks,
+      trainingWeekdays: Set<int>.from(trainingWeekdays),
       deloadWeeks: Set<int>.from(deloadWeeks),
       nextRotationIndex: 0,
       isActive: false,
@@ -149,6 +152,7 @@ class TrainingProgram {
     DateTime? createdAt,
     DateTime? startedAt,
     int? durationWeeks,
+    Set<int>? trainingWeekdays,
     Set<int>? deloadWeeks,
     int? nextRotationIndex,
     bool? isActive,
@@ -162,6 +166,7 @@ class TrainingProgram {
       createdAt: createdAt ?? this.createdAt,
       startedAt: startedAt ?? this.startedAt,
       durationWeeks: durationWeeks ?? this.durationWeeks,
+      trainingWeekdays: trainingWeekdays ?? this.trainingWeekdays,
       deloadWeeks: deloadWeeks ?? this.deloadWeeks,
       nextRotationIndex: nextRotationIndex ?? this.nextRotationIndex,
       isActive: isActive ?? this.isActive,
@@ -177,6 +182,7 @@ class TrainingProgram {
         'createdAt': createdAt.toIso8601String(),
         'startedAt': startedAt.toIso8601String(),
         'durationWeeks': durationWeeks,
+        'trainingWeekdays': trainingWeekdays.toList()..sort(),
         'deloadWeeks': deloadWeeks.toList()..sort(),
         'nextRotationIndex': nextRotationIndex,
         'isActive': isActive,
@@ -193,6 +199,10 @@ class TrainingProgram {
       createdAt: DateTime.parse(json['createdAt'] as String),
       startedAt: DateTime.parse(json['startedAt'] as String),
       durationWeeks: (json['durationWeeks'] as num?)?.toInt() ?? 8,
+      trainingWeekdays: (json['trainingWeekdays'] as List? ?? const [])
+          .map((value) => (value as num).toInt())
+          .where((value) => value >= DateTime.monday && value <= DateTime.sunday)
+          .toSet(),
       deloadWeeks: (json['deloadWeeks'] as List? ?? const [])
           .map((value) => (value as num).toInt())
           .where((value) => value > 0)

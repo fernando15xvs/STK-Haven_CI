@@ -1,9 +1,12 @@
-﻿# Public CI snapshot
+# Public CI snapshot
 
-This repository is a history-free CI mirror of the private STK Haven source.
+This repository is a CI mirror of the private STK Haven source.
 
-Source commit: f382134decdee0690176d886538e6b462f60c5cc
-Source branch: feat/roadmap-2-complete
+Source commit: ddb45d81c58284c74d98052094f7c4fa3e426637
+Source branch: feat/roadmap-3-foundation
 
 The private Git history, local signing material, environment files, credentials,
 backups and other excluded local files are intentionally not mirrored.
+
+Roadmap 3 development is synchronized as public CI-only content. The private
+repository remains the source of truth.

@@ -9,6 +9,8 @@ import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/home/application/hydration_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
@@ -53,17 +55,36 @@ class HomePageWeb extends ConsumerWidget {
     final history = ref.watch(workoutHistoryProvider);
     final active = ref.watch(activeWorkoutProvider);
     final hydration = ref.watch(hydrationProvider);
-    final verseAsync = ref.watch(dailyVerseProvider);
-    final bibleInit = ref.watch(bibleInitProvider);
+    final faithEnabled = ref.watch(
+      userExperienceProfileProvider.select(
+        (profile) => profile.value?.faithEnabled ?? false,
+      ),
+    );
+    final verseAsync = faithEnabled ? ref.watch(dailyVerseProvider) : null;
+    final bibleInit = faithEnabled ? ref.watch(bibleInitProvider) : null;
+    final nextProgramSession = ref.watch(nextProgramSessionProvider);
     final prs = ref.watch(personalRecordRepositoryProvider).getAllPRs()
       ..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
 
     final now = DateTime.now();
     Routine? todayRoutine;
-    for (final routine in routines) {
-      if (routine.scheduledDays.contains(now.weekday)) {
-        todayRoutine = routine;
-        break;
+    String? todayLabel;
+    String? restSubtitle;
+
+    if (nextProgramSession != null) {
+      todayLabel = 'SIGUIENTE SESIÓN · ${nextProgramSession.program.name}';
+      if (nextProgramSession.isTrainingDay) {
+        todayRoutine = nextProgramSession.routine;
+      } else {
+        restSubtitle =
+            'Próxima sesión: ${nextProgramSession.routine.name}. La secuencia continúa en tu próximo día de entrenamiento.';
+      }
+    } else {
+      for (final routine in routines) {
+        if (routine.scheduledDays.contains(now.weekday)) {
+          todayRoutine = routine;
+          break;
+        }
       }
     }
 
@@ -100,7 +121,8 @@ class HomePageWeb extends ConsumerWidget {
               padding: EdgeInsets.fromLTRB(horizontal, 26, horizontal, 110),
               children: [
                 const _GreetingHeader(),
-                if (settings.showDailyVerse) ...[
+                if (faithEnabled && settings.showDailyVerse &&
+                    verseAsync != null && bibleInit != null) ...[
                   const SizedBox(height: 20),
                   _DailyMessageCard(
                     verseAsync: verseAsync,
@@ -124,6 +146,8 @@ class HomePageWeb extends ConsumerWidget {
                 ] else ...[
                   _TodayRoutineCard(
                     routine: todayRoutine,
+                    label: todayLabel,
+                    restSubtitle: restSubtitle,
                     onStart: todayRoutine == null
                         ? null
                         : () => _startRoutine(context, ref, todayRoutine!, exercises),
@@ -183,28 +207,48 @@ class HomePageWeb extends ConsumerWidget {
                     );
                   },
                 ),
-                const SizedBox(height: 24),
-                Text('Fe y enfoque', style: AppTypography.headlineLarge),
-                const SizedBox(height: 10),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final stacked = constraints.maxWidth < 620;
-                    final bible = _FeatureCard(
-                      icon: Icons.menu_book_outlined,
-                      title: 'La Biblia',
-                      subtitle: 'Lee por libro y capítulo.',
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BibleReaderPageWeb())),
-                    );
-                    final faith = _FeatureCard(
-                      icon: Icons.auto_awesome_outlined,
-                      title: 'Haven Faith',
-                      subtitle: 'Asistente espiritual y físico.',
-                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AiChatPageWeb())),
-                    );
-                    if (stacked) return Column(children: [bible, const SizedBox(height: 12), faith]);
-                    return Row(children: [Expanded(child: bible), const SizedBox(width: 14), Expanded(child: faith)]);
-                  },
-                ),
+                if (faithEnabled) ...[
+                  const SizedBox(height: 24),
+                  Text('Fe y enfoque', style: AppTypography.headlineLarge),
+                  const SizedBox(height: 10),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stacked = constraints.maxWidth < 620;
+                      final bible = _FeatureCard(
+                        icon: Icons.menu_book_outlined,
+                        title: 'La Biblia',
+                        subtitle: 'Lee por libro y capítulo.',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const BibleReaderPageWeb(),
+                          ),
+                        ),
+                      );
+                      final faith = _FeatureCard(
+                        icon: Icons.auto_awesome_outlined,
+                        title: 'Haven Faith',
+                        subtitle: 'Asistente espiritual y físico.',
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const AiChatPageWeb(),
+                          ),
+                        ),
+                      );
+                      if (stacked) {
+                        return Column(
+                          children: [bible, const SizedBox(height: 12), faith],
+                        );
+                      }
+                      return Row(
+                        children: [
+                          Expanded(child: bible),
+                          const SizedBox(width: 14),
+                          Expanded(child: faith),
+                        ],
+                      );
+                    },
+                  ),
+                ],
               ],
             ),
           ),
@@ -330,7 +374,15 @@ class _ActiveWorkoutCard extends StatelessWidget {
 class _TodayRoutineCard extends StatelessWidget {
   final Routine? routine;
   final VoidCallback? onStart;
-  const _TodayRoutineCard({required this.routine, required this.onStart});
+  final String? label;
+  final String? restSubtitle;
+
+  const _TodayRoutineCard({
+    required this.routine,
+    required this.onStart,
+    this.label,
+    this.restSubtitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -340,7 +392,7 @@ class _TodayRoutineCard extends StatelessWidget {
           children: [
             const Icon(Icons.self_improvement, color: AppColors.textSecondary, size: 30),
             const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Día de descanso', style: AppTypography.headlineLarge), Text('No hay una rutina programada para hoy.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary))])),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Día de descanso', style: AppTypography.headlineLarge), Text(restSubtitle ?? 'No hay una rutina programada para hoy.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary))])),
           ],
         ),
       );
@@ -356,7 +408,7 @@ class _TodayRoutineCard extends StatelessWidget {
             child: const Icon(Icons.fitness_center, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('ENTRENAR AHORA', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)), Text(routine!.name, style: AppTypography.headlineLarge), Text('${routine!.exercises.length} ejercicios', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary))])),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label ?? 'ENTRENAR AHORA', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)), Text(routine!.name, style: AppTypography.headlineLarge), Text('${routine!.exercises.length} ejercicios', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary))])),
           FilledButton.icon(onPressed: onStart, icon: const Icon(Icons.play_arrow), label: const Text('Comenzar')),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_rotation_coordinator.dart';
+import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
@@ -42,6 +43,7 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
     required String name,
     required List<String> routineIds,
     int durationWeeks = 8,
+    Set<int> trainingWeekdays = const {},
     Set<int> deloadWeeks = const {},
     String notes = '',
     bool activate = true,
@@ -61,6 +63,7 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
       createdAt: now,
       startedAt: now,
       durationWeeks: durationWeeks,
+      trainingWeekdays: Set<int>.from(trainingWeekdays),
       deloadWeeks: Set<int>.from(deloadWeeks),
       notes: notes.trim(),
       isActive: activate,
@@ -139,12 +142,16 @@ class NextProgramSession {
   final Routine routine;
   final int week;
   final bool isDeloadWeek;
+  final bool isTrainingDay;
+  final Set<int> trainingWeekdays;
 
   const NextProgramSession({
     required this.program,
     required this.routine,
     required this.week,
     required this.isDeloadWeek,
+    required this.isTrainingDay,
+    required this.trainingWeekdays,
   });
 }
 
@@ -168,10 +175,20 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
   if (routine == null) return null;
 
   final now = DateTime.now();
+  final trainingWeekdays = ProgramScheduleProjector.effectiveTrainingWeekdays(
+    reconciled,
+    routines,
+  );
   return NextProgramSession(
     program: reconciled,
     routine: routine,
     week: reconciled.weekAt(now),
     isDeloadWeek: reconciled.isDeloadWeekAt(now),
+    isTrainingDay: ProgramScheduleProjector.isTrainingDay(
+      reconciled,
+      routines,
+      now,
+    ),
+    trainingWeekdays: trainingWeekdays,
   );
 });

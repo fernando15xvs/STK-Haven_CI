@@ -4,7 +4,7 @@
 
 Usar un repositorio público separado y sin historial privado para ejecutar GitHub Actions con runners estándar, manteniendo fernando15xvs/STK-Haven como fuente privada de verdad.
 
-Repositorio público previsto: fernando15xvs/STK-Haven_CI
+Repositorio público activo: fernando15xvs/STK-Haven_CI
 
 ## Fuente auditada
 
@@ -84,3 +84,22 @@ No implementar cambios directamente en STK-Haven_CI. Toda corrección debe:
 Publicar un snapshot hace visible el código fuente contenido en ese snapshot. El hecho de no copiar el historial reduce el riesgo de exponer archivos borrados en commits anteriores, pero no vuelve privado el código actual.
 
 La auditoría automatizada reduce riesgos, pero no debe considerarse una garantía absoluta de ausencia total de secretos. Antes de un cambio sustancial en configuración/credenciales, repetir revisión manual.
+
+
+## Primer snapshot publicado y CI verde — 2026-09-23
+
+- Fuente privada: `f382134decdee0690176d886538e6b462f60c5cc`.
+- Commit raíz del snapshot público: `cc4029927da8f03657c04703ffc97a28e611e5ce`.
+- Workflow: `STK Haven Public CI`.
+- Run: `35887125248` (#1).
+- Resultado global: `success`.
+
+Jobs confirmados verdes:
+
+- Analyze + Core tests.
+- Mobile tests.
+- Android artifacts: debug/profile/release APK, AAB y split ABI.
+- Web tests + dart2js + WASM.
+- iOS release + profile en macOS, sin codesign.
+
+El mirror quedó operativo como infraestructura de validación. La fuente de verdad sigue siendo el repositorio privado. Cualquier corrección futura debe hacerse primero en `STK-Haven` y luego publicarse como un nuevo snapshot sanitizado.

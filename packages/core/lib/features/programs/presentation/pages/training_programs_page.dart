@@ -1,6 +1,7 @@
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_volume_planner.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
@@ -26,7 +27,7 @@ class TrainingProgramsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Programas 2.0'),
+        title: const Text('Programas 3.0'),
         actions: [
           IconButton(
             tooltip: 'Reconciliar con historial',
@@ -95,6 +96,9 @@ class TrainingProgramsPage extends ConsumerWidget {
     final notes = TextEditingController(text: existing?.notes ?? '');
     var durationWeeks = existing?.durationWeeks ?? 8;
     var routineIds = List<String>.from(existing?.routineIds ?? const []);
+    var trainingWeekdays = existing == null
+        ? <int>{}
+        : ProgramScheduleProjector.effectiveTrainingWeekdays(existing, routines);
     var deloadWeeks = Set<int>.from(existing?.deloadWeeks ?? const {});
     final currentWeek = existing?.weekAt(DateTime.now()) ?? 1;
 
@@ -150,6 +154,54 @@ class TrainingProgramsPage extends ConsumerWidget {
                         }
                       },
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Días de entrenamiento',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Estos días indican cuándo entrenas. La rutina que toca sigue la secuencia y no se reinicia cada semana.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: const [
+                        (DateTime.monday, 'L'),
+                        (DateTime.tuesday, 'M'),
+                        (DateTime.wednesday, 'X'),
+                        (DateTime.thursday, 'J'),
+                        (DateTime.friday, 'V'),
+                        (DateTime.saturday, 'S'),
+                        (DateTime.sunday, 'D'),
+                      ].map((entry) {
+                        final day = entry.$1;
+                        final label = entry.$2;
+                        return FilterChip(
+                          label: Text(label),
+                          selected: trainingWeekdays.contains(day),
+                          onSelected: (selected) => setDialogState(() {
+                            final next = Set<int>.from(trainingWeekdays);
+                            if (selected) {
+                              next.add(day);
+                            } else {
+                              next.remove(day);
+                            }
+                            trainingWeekdays = next;
+                          }),
+                        );
+                      }).toList(),
+                    ),
+                    if (trainingWeekdays.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Sin días específicos: podrás iniciar la siguiente sesión cualquier día.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
                     const SizedBox(height: 12),
                     SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
@@ -177,7 +229,7 @@ class TrainingProgramsPage extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'El orden A → B → C es independiente de los días programados en cada rutina.',
+                      'La secuencia continúa entre semanas: por ejemplo Upper A → Lower A → Upper B → Lower B → Upper A…',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
@@ -288,6 +340,7 @@ class TrainingProgramsPage extends ConsumerWidget {
               name: name.text,
               routineIds: routineIds,
               durationWeeks: durationWeeks,
+              trainingWeekdays: trainingWeekdays,
               deloadWeeks: deloadWeeks,
               notes: notes.text,
               activate: true,
@@ -306,6 +359,7 @@ class TrainingProgramsPage extends ConsumerWidget {
                 notes: notes.text.trim(),
                 durationWeeks: durationWeeks,
                 routineIds: routineIds,
+                trainingWeekdays: trainingWeekdays,
                 deloadWeeks: deloadWeeks,
                 nextRotationIndex: safeNext,
               ),

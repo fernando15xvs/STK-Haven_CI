@@ -1,7 +1,9 @@
 # STK Haven — Roadmap 3.0
 ## Personalización, Fe opcional, Hábitos/Estudio y Modo Entrenador
 
-> Rama de planificación: `feat/roadmap-2-complete`
+> Rama de implementación: `feat/roadmap-3-foundation`
+>
+> Base de origen preservada: `feat/roadmap-2-complete` en `84b64ce0bb6b09275d59f3551d6b46731e6edb18`.
 >
 > Este documento es el checklist de implementación para las funciones posteriores a Roadmap 2.0.
 > Roadmap 2.0 conserva sus pruebas manuales pendientes; no se consideran cerradas ni reemplazadas por este roadmap.
@@ -16,14 +18,23 @@
 - No marcar `[x]` por haber escrito código: debe existir test/análisis/smoke acorde al punto.
 - Android, iOS y Web se validan por separado cuando el comportamiento o integración de plataforma difiera.
 
+## Política de pruebas durante Roadmap 3.0
+
+- Las pruebas locales/manuales del usuario se concentran **al final**.
+- Durante implementación, usar primero GitHub Actions/mirror público y tests automatizados.
+- No pedir al usuario repetir analyze/tests/builds que CI pueda ejecutar.
+- La lista mínima de pruebas locales finales vive en:
+  `docs/roadmap/ROADMAP_3_FINAL_LOCAL_TEST_AUDIT.md`.
+- Un punto puede quedar implementado en `[~]` hasta que CI o la validación final aporte evidencia suficiente.
+
 ---
 
 # 0. Gate previo — preservar Roadmap 2.0
 
-- [ ] Mantener pendientes las pruebas manuales restantes de Roadmap 2.0.
-- [ ] No hacer merge a `main` por iniciar Roadmap 3.0.
+- [x] Mantener pendientes las pruebas manuales restantes de Roadmap 2.0.
+- [x] No hacer merge a `main` por iniciar Roadmap 3.0.
 - [ ] No romper Exercise Memory, Unilateral Pro, Programas 2.0, Progreso 2.0 ni backups.
-- [ ] Ejecutar matriz Roadmap 2.0 sobre el candidato post-hardening antes de un merge futuro.
+- [x] Candidato Roadmap 2.0 post-hardening/post-split validado por CI público antes de abrir la rama Roadmap 3.0.
 - [ ] Mantener iOS pendiente hasta disponer de macOS/iPhone para validación real.
 
 ---
@@ -32,11 +43,11 @@
 
 ## 1.1 Principios
 
-- [ ] Mantener una sola lógica compartida en `packages/core`.
+- [~] Mantener una sola lógica compartida en `packages/core`.
 - [ ] Mantener UI específica donde aporte valor: móvil y web pueden presentar flujos distintos sin duplicar reglas de negocio.
-- [ ] Mantener entrypoints Android/iOS separados.
-- [ ] Introducir una capa compartida de **perfil/preferencias de producto**.
-- [ ] Separar preferencias de entrenamiento, fe, hábitos y rol/capacidades.
+- [x] Mantener entrypoints Android/iOS separados.
+- [~] Introducir una capa compartida de **perfil/preferencias de producto**.
+- [~] Separar preferencias de entrenamiento, fe, hábitos y rol/capacidades.
 - [ ] No cargar proveedores/repositorios pesados de módulos desactivados.
 - [ ] Diseñar migraciones backward-compatible para usuarios existentes.
 
@@ -60,12 +71,12 @@ Campos propuestos:
 - hábitos/estudio habilitados;
 - onboardingVersion.
 
-- [ ] Definir contrato del modelo.
-- [ ] Persistencia local Hive.
-- [ ] Serialización/backups.
-- [ ] Migración segura desde `SettingsState` actual.
-- [ ] Tests de defaults para instalaciones existentes.
-- [ ] Tests de restore de backups antiguos.
+- [~] Definir contrato del modelo.
+- [~] Persistencia local Hive.
+- [~] Serialización/backups.
+- [~] Migración segura desde `SettingsState` actual.
+- [~] Tests de defaults para instalaciones existentes.
+- [~] Tests de restore de backups antiguos.
 
 ---
 
@@ -170,16 +181,114 @@ Opciones:
 
 ---
 
+# 2A. Programas 3.0 — Rotación continua por sesión
+
+## 2A.1 Problema que debe resolver
+
+La planificación semanal no debe fijar una rutina concreta a cada día de la semana.
+
+Ejemplo de secuencia del usuario:
+
+`Upper A → Lower A → Upper B → Lower B → repetir`
+
+Días disponibles:
+
+`lunes, martes, jueves, viernes, sábado`
+
+El calendario solo decide **cuándo existe una oportunidad de entrenar**. La rutina que toca viene siempre de la siguiente posición de la secuencia pendiente.
+
+### Resultado esperado
+
+Semana 1:
+
+- lunes → Upper A;
+- martes → Lower A;
+- miércoles → descanso;
+- jueves → Upper B;
+- viernes → Lower B;
+- sábado → Upper A.
+
+Semana 2:
+
+- lunes → Lower A;
+- martes → Upper B;
+- miércoles → descanso;
+- jueves → Lower B;
+- viernes → Upper A;
+- sábado → Lower A.
+
+Semana 3:
+
+- lunes → Upper B;
+- martes → Lower B;
+- miércoles → descanso;
+- jueves → Upper A;
+- viernes → Lower A;
+- sábado → Upper B.
+
+La secuencia **no se reinicia al comenzar una semana nueva**.
+
+## 2A.2 Reglas funcionales
+
+- [ ] El orden de `TrainingProgram.routineIds` es la fuente de verdad de la secuencia.
+- [ ] Los días semanales solo indican disponibilidad/calendario, no mapeo fijo rutina↔día.
+- [ ] El siguiente día de entrenamiento muestra `nextRoutineId`.
+- [ ] Completar la rutina esperada avanza exactamente una posición.
+- [ ] Un día de descanso no avanza ni reinicia la secuencia.
+- [ ] Cambiar de semana no reinicia la secuencia.
+- [ ] Si el usuario falta un día, la rutina pendiente se conserva para el próximo día disponible.
+- [ ] Un workout libre no avanza la secuencia del programa.
+- [ ] Una rutina del programa completada fuera de secuencia no avanza silenciosamente el índice.
+- [ ] Cerrar/reabrir mantiene la posición exacta.
+- [ ] Backup/restore conserva la posición exacta.
+- [ ] Cambiar los días disponibles no cambia el orden de las rutinas.
+- [ ] Pausar/reanudar programa no pierde la posición.
+- [ ] Duplicar un programa nuevo empieza en su primera rutina, sin compartir estado mutable.
+- [ ] Deload/mesociclo no altera el orden salvo una acción explícita del usuario.
+
+## 2A.3 Integración UI
+
+- [ ] Inicio muestra claramente “Próxima sesión: Upper/Lower ...”.
+- [ ] Programas muestra secuencia y posición actual.
+- [ ] Calendario proyecta futuras sesiones respetando días disponibles y continuidad entre semanas.
+- [ ] Workout iniciado desde “Próxima sesión” usa la rutina esperada.
+- [ ] Si el usuario abre manualmente otra rutina, la UI deja claro que no avanzará la rotación esperada.
+- [ ] Mobile y Web presentan la misma fuente de verdad.
+
+## 2A.4 Validación automática obligatoria
+
+Agregar tests con la secuencia exacta:
+
+`UA, LA, UB, LB, UA, LA, UB, LB, UA, LA, UB...`
+
+sobre lunes/martes/jueves/viernes/sábado durante varias semanas.
+
+- [ ] Test exacto del ejemplo de 3 semanas.
+- [ ] Test de semana nueva sin reset.
+- [ ] Test de día omitido.
+- [ ] Test de cambio de días disponibles.
+- [ ] Test de workout libre/off-sequence.
+- [ ] Test de persistencia/rehidratación.
+- [ ] Test de backup/restore.
+- [ ] Test de proyección de calendario.
+- [ ] Test mobile/web del texto “Próxima sesión”.
+
+> Nota técnica: Roadmap 2.0 ya contiene un `ProgramRotationCoordinator` secuencial e independiente del weekday. Roadmap 3.0 debe auditar y conectar **toda la UI/calendario/lanzamiento de workout** a esa fuente de verdad, porque el comportamiento actual visible no cumple todavía el caso Upper A/Lower A/Upper B/Lower B descrito arriba.
+
+**Gate 2A:** la secuencia continúa correctamente entre semanas, descansos y ausencias sin depender de un mapeo fijo por weekday.
+
+---
+
 # 3. Módulo Fe opcional — hard opt-in
 
 ## 3.1 Estado actual a corregir
 
 Actualmente existen preferencias como `showDailyVerse`, pero el concepto de “mostrar el versículo” no debe ser equivalente a “habilitar todo el módulo Fe”.
 
-- [ ] Crear `faithEnabled`.
+- [~] Crear `faithEnabled` mediante `UserExperienceProfile.faithEnabled` + preferencia triestado.
 - [ ] Mantener `showDailyVerse` como subpreferencia.
 - [ ] Mantener notificaciones como subpreferencia independiente.
-- [ ] Condicionar inicialización de Biblia a `faithEnabled == true`.
+- [~] Condicionar inicialización de Biblia a `faithEnabled == true`.
 - [ ] Condicionar providers de versículo a módulo habilitado.
 - [ ] Condicionar accesos rápidos en mobile.
 - [ ] Condicionar navegación lateral/secciones en web.
@@ -608,14 +717,15 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 # 16. Secuencia recomendada de implementación
 
 ## Fase A — Fundación de personalización
-- [ ] A1 Modelo `UserExperienceProfile`.
+- [~] A1 Modelo `UserExperienceProfile`.
 - [ ] A2 Onboarding 2.0 mobile.
 - [ ] A3 Onboarding 2.0 web.
-- [ ] A4 `faithEnabled` + migración.
-- [ ] A5 Lazy Bible init.
-- [ ] A6 Tests/backups.
+- [~] A4 `faithEnabled` + migración.
+- [~] A5 Lazy Bible init.
+- [~] A6 Tests/backups.
+- [ ] A7 Rotación continua Upper/Lower independiente de semana/weekday.
 
-**Gate A:** usuario nuevo puede completar onboarding en Mobile/Web; Fe OFF no carga recursos de Fe.
+**Gate A:** usuario nuevo puede completar onboarding en Mobile/Web; Fe OFF no carga recursos de Fe; la programación usa una secuencia continua de sesiones y no un mapeo fijo rutina↔weekday.
 
 ## Fase B — Study & Habits
 - [ ] B1 Modelo `HabitTask`.
@@ -726,7 +836,7 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [x] Plan de producto/arquitectura documentado.
 - [x] Riesgos principales identificados.
 - [x] Orden de fases definido.
-- [ ] Implementación iniciada.
+- [x] Implementación iniciada.
 - [ ] Gate A.
 - [ ] Gate B.
 - [ ] Gate C.
@@ -736,4 +846,4 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [ ] Gate G.
 - [ ] Gate H.
 
-**Estado:** PLANIFICADO — aún no iniciar implementación hasta confirmar que este alcance es el deseado.
+**Estado:** EN IMPLEMENTACIÓN — Fase A iniciada. A1/A4/A5/A6 tienen código y tests preparados, pendientes de validación CI antes de marcarlos `[x]`. A2/A3 y A7 forman parte del siguiente bloque. Las pruebas locales del usuario quedan diferidas al gate final; durante implementación se prioriza CI público y automatización.

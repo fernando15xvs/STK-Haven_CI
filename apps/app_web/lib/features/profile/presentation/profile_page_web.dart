@@ -7,7 +7,9 @@ import 'package:core/domain/models/preset_program.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/onboarding/application/program_service.dart';
+import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
@@ -34,6 +36,11 @@ class ProfilePageWeb extends ConsumerWidget {
     final routines = ref.watch(routineListProvider);
     final measurements = ref.watch(bodyMeasurementProvider);
     final active = ref.watch(activeWorkoutProvider);
+    final faithEnabled = ref.watch(
+      userExperienceProfileProvider.select(
+        (profile) => profile.value?.faithEnabled ?? false,
+      ),
+    );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -52,6 +59,21 @@ class ProfilePageWeb extends ConsumerWidget {
                 ),
                 const SizedBox(height: 20),
                 _ProfileHeader(settings: settings),
+                const SizedBox(height: 18),
+                _Section(
+                  title: 'Personalización',
+                  child: _ActionTile(
+                    icon: Icons.tune_rounded,
+                    title: 'Tu experiencia',
+                    subtitle:
+                        'Objetivo, días, duración, entorno, unidad, recordatorios y Fe.',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ExperiencePreferencesPage(),
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 18),
                 _Section(
                   title: 'Programa de entrenamiento',
@@ -96,28 +118,37 @@ class ProfilePageWeb extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
-                _Section(
-                  title: 'Fortaleza',
-                  child: Column(
-                    children: [
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Mostrar mensaje diario en Inicio'),
-                        subtitle: const Text('Muestra el versículo o fortaleza del día en el dashboard web.'),
-                        value: settings.showDailyVerse,
-                        onChanged: notifier.setShowDailyVerse,
-                      ),
-                      const Divider(height: 1),
-                      _ActionTile(
-                        icon: Icons.bookmarks_outlined,
-                        title: 'Versículos favoritos',
-                        subtitle: 'Consulta y administra los versículos que guardaste.',
-                        onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const FavoritesPageWeb())),
-                      ),
-                    ],
+                if (faithEnabled) ...[
+                  const SizedBox(height: 18),
+                  _Section(
+                    title: 'Fortaleza',
+                    child: Column(
+                      children: [
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Mostrar mensaje diario en Inicio'),
+                          subtitle: const Text(
+                            'Muestra el versículo o fortaleza del día en el dashboard web.',
+                          ),
+                          value: settings.showDailyVerse,
+                          onChanged: notifier.setShowDailyVerse,
+                        ),
+                        const Divider(height: 1),
+                        _ActionTile(
+                          icon: Icons.bookmarks_outlined,
+                          title: 'Versículos favoritos',
+                          subtitle:
+                              'Consulta y administra los versículos que guardaste.',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const FavoritesPageWeb(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 18),
                 _Section(
                   title: 'Unidades',

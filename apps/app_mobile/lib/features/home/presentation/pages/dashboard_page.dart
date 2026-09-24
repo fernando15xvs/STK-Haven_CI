@@ -8,6 +8,8 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/routines/data/routine_repository.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
@@ -32,7 +34,13 @@ class DashboardPage extends ConsumerWidget {
     final prRepo = ref.watch(personalRecordRepositoryProvider);
     final routineRepo = ref.watch(routineRepositoryProvider);
     final settings = ref.watch(settingsProvider);
+    final faithEnabled = ref.watch(
+      userExperienceProfileProvider.select(
+        (profile) => profile.value?.faithEnabled ?? false,
+      ),
+    );
     final activeWorkout = ref.watch(activeWorkoutProvider);
+    final nextProgramSession = ref.watch(nextProgramSessionProvider);
 
     final lastWorkout = history.isNotEmpty ? history.first : null;
     final allPRs = prRepo.getAllPRs()..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
@@ -51,7 +59,7 @@ class DashboardPage extends ConsumerWidget {
           ),
           children: [
             const _GreetingHeader(),
-            if (settings.showDailyVerse) ...[
+            if (faithEnabled && settings.showDailyVerse) ...[
               const SizedBox(height: AppSpacing.lg),
               const _DailyMessageCard(),
             ],
@@ -67,6 +75,7 @@ class DashboardPage extends ConsumerWidget {
               _TodayRoutineCard(
                 routineRepo: routineRepo,
                 activeProgram: settings.activeProgram,
+                programSession: nextProgramSession,
               ),
             const SizedBox(height: AppSpacing.md),
             const RecoveryCheckInCard(),
@@ -264,30 +273,47 @@ class _ActiveWorkoutHero extends StatelessWidget {
 class _TodayRoutineCard extends ConsumerWidget {
   final RoutineRepository routineRepo;
   final ActiveProgramState? activeProgram;
+  final NextProgramSession? programSession;
 
-  const _TodayRoutineCard({required this.routineRepo, this.activeProgram});
+  const _TodayRoutineCard({
+    required this.routineRepo,
+    this.activeProgram,
+    this.programSession,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final todayWeekday = DateTime.now().weekday;
     final routines = routineRepo.getAllRoutines();
     Routine? todayRoutine;
+    String? programLabel;
+    String? restSubtitle;
 
-    if (activeProgram != null) {
-      for (final routine in routines) {
-        if (activeProgram!.generatedRoutineIds.contains(routine.id) &&
-            routine.scheduledDays.contains(todayWeekday)) {
-          todayRoutine = routine;
-          break;
+    if (programSession != null) {
+      programLabel = programSession!.program.name;
+      if (programSession!.isTrainingDay) {
+        todayRoutine = programSession!.routine;
+      } else {
+        restSubtitle =
+            'Próxima sesión: ${programSession!.routine.name}. La secuencia continúa en tu próximo día de entrenamiento.';
+      }
+    } else {
+      if (activeProgram != null) {
+        for (final routine in routines) {
+          if (activeProgram!.generatedRoutineIds.contains(routine.id) &&
+              routine.scheduledDays.contains(todayWeekday)) {
+            todayRoutine = routine;
+            break;
+          }
         }
       }
-    }
 
-    if (todayRoutine == null) {
-      for (final routine in routines) {
-        if (routine.scheduledDays.contains(todayWeekday)) {
-          todayRoutine = routine;
-          break;
+      if (todayRoutine == null) {
+        for (final routine in routines) {
+          if (routine.scheduledDays.contains(todayWeekday)) {
+            todayRoutine = routine;
+            break;
+          }
         }
       }
     }
@@ -309,7 +335,7 @@ class _TodayRoutineCard extends ConsumerWidget {
                 children: [
                   Text('Día de descanso', style: AppTypography.headlineMedium),
                   const SizedBox(height: 3),
-                  Text('No tienes una rutina programada para hoy.', style: AppTypography.bodySmall),
+                  Text(restSubtitle ?? 'No tienes una rutina programada para hoy.', style: AppTypography.bodySmall),
                 ],
               ),
             ),
@@ -345,7 +371,7 @@ class _TodayRoutineCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ENTRENAR AHORA', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
+                    Text(programLabel == null ? 'ENTRENAR AHORA' : 'SIGUIENTE SESIÓN · $programLabel', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
                     const SizedBox(height: 3),
                     Text(routine.name, style: AppTypography.headlineLarge),
                   ],

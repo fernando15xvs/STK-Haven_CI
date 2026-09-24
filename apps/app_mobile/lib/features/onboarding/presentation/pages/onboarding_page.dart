@@ -1,10 +1,13 @@
+import 'package:core/domain/models/settings_state.dart';
+import 'package:core/domain/models/user_experience_profile.dart';
+import 'package:core/features/onboarding/application/onboarding_recommendation_service.dart';
+import 'package:core/features/onboarding/application/program_service.dart';
+import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/primary_button.dart';
-import 'package:core/core/constants/preset_programs.dart';
-import 'package:core/domain/models/preset_program.dart';
-import 'package:core/features/onboarding/application/program_service.dart';
 import 'package:gym_tracker/features/onboarding/presentation/widgets/program_preview_modal.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
@@ -15,12 +18,21 @@ class OnboardingPage extends ConsumerStatefulWidget {
 }
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
+  static const int _pageCount = 6;
+
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
-  String? _selectedGoal;
-  String? _selectedExperience;
-  int? _selectedDays;
+  TrainingGoal? _goal;
+  TrainingExperience? _experience;
+  int? _daysPerWeek;
+  SessionDurationPreference _duration = SessionDurationPreference.variable;
+  TrainingEnvironment? _environment;
+  PlanningPreference _planning = PlanningPreference.recommendation;
+  WeightUnit _weightUnit = WeightUnit.kg;
+  bool _remindersWanted = false;
+  FaithContentPreference _faith = FaithContentPreference.undecided;
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -28,51 +40,62 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     super.dispose();
   }
 
-  void _nextPage() {
-    if (_currentIndex < 3) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
+  void _goTo(int index) {
+    if (index < 0 || index >= _pageCount) return;
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+    );
   }
 
-  void _previousPage() {
-    if (_currentIndex > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
+  void _next() => _goTo(_currentIndex + 1);
+
+  UserExperienceProfile _buildProfile() {
+    return UserExperienceProfile(
+      trainingGoal: _goal,
+      trainingExperience: _experience,
+      trainingDaysPerWeek: _daysPerWeek,
+      sessionDuration: _duration,
+      trainingEnvironment: _environment,
+      planningPreference: _planning,
+      weightUnit: _weightUnit,
+      workoutRemindersWanted: _remindersWanted,
+      faithPreference: _faith,
+      habitsEnabled: false,
+      onboardingVersion: UserExperienceProfile.currentOnboardingVersion,
+    );
   }
 
-  PresetProgram? _getRecommendedProgram() {
-    if (_selectedDays == null) return null;
+  Future<void> _finish({required bool installRecommended}) async {
+    if (_saving) return;
+    setState(() => _saving = true);
 
-    if (_selectedDays! <= 2) {
-      return presetPrograms.firstWhere((p) => p.id == 'prog_fullbody_2', orElse: () => presetPrograms.first);
-    }
+    try {
+      final profile = _buildProfile();
+      await ref
+          .read(userExperienceProfileProvider.notifier)
+          .updateProfile(profile);
 
-    if (_selectedDays == 3) {
-      if (_selectedExperience == 'Principiante' || _selectedGoal == 'Mantenerme activo') {
-        return presetPrograms.firstWhere((p) => p.id == 'prog_fullbody_3', orElse: () => presetPrograms.first);
+      final settings = ref.read(settingsProvider);
+      ref.read(settingsProvider.notifier).updateSettings(
+            settings.copyWith(
+              weightUnit: profile.weightUnit,
+              showDailyVerse: profile.faithEnabled,
+              dailyVerseNotifications: false,
+            ),
+          );
+
+      final recommended =
+          OnboardingRecommendationService.recommend(profile);
+      if (installRecommended && recommended != null) {
+        await ref.read(programServiceProvider).installProgram(recommended);
+      } else {
+        await ref.read(programServiceProvider).completeOnboardingFromScratch();
       }
-      return presetPrograms.firstWhere((p) => p.id == 'prog_ppl_3', orElse: () => presetPrograms.first);
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-
-    if (_selectedDays == 4 || _selectedDays == 5) {
-      return presetPrograms.firstWhere((p) => p.id == 'prog_upper_lower_4', orElse: () => presetPrograms.first);
-    }
-
-    if (_selectedDays == 6) {
-      if (_selectedExperience == 'Principiante') {
-        // Principiantes no deberían hacer 6 días, bajar a 4
-        return presetPrograms.firstWhere((p) => p.id == 'prog_upper_lower_4', orElse: () => presetPrograms.first);
-      }
-      return presetPrograms.firstWhere((p) => p.id == 'prog_ppl_6', orElse: () => presetPrograms.first);
-    }
-
-    return presetPrograms.first;
   }
 
   @override
@@ -82,42 +105,49 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Progress Indicator
             if (_currentIndex > 0)
               Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                ),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
-                      onPressed: _previousPage,
+                      tooltip: 'Atrás',
+                      onPressed: _saving ? null : () => _goTo(_currentIndex - 1),
+                      icon: const Icon(Icons.arrow_back_rounded),
                     ),
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: (_currentIndex) / 3,
-                          backgroundColor: AppColors.surface,
-                          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                          minHeight: 8,
-                        ),
+                      child: LinearProgressIndicator(
+                        value: _currentIndex / (_pageCount - 1),
+                        minHeight: 7,
+                        borderRadius: BorderRadius.circular(99),
                       ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '${_currentIndex + 1}/$_pageCount',
+                      style: AppTypography.labelSmall,
                     ),
                   ],
                 ),
               ),
-
-            // Page Content
             Expanded(
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (index) => setState(() => _currentIndex = index),
+                onPageChanged: (index) =>
+                    setState(() => _currentIndex = index),
                 children: [
-                  _buildWelcomeStep(),
-                  _buildExperienceGoalStep(),
-                  _buildDaysStep(),
-                  _buildRecommendationStep(),
+                  _welcomeStep(),
+                  _goalStep(),
+                  _scheduleStep(),
+                  _preferencesStep(),
+                  _faithStep(),
+                  _summaryStep(),
                 ],
               ),
             ),
@@ -127,247 +157,577 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     );
   }
 
-  Widget _buildWelcomeStep() {
+  Widget _stepShell({
+    required String title,
+    required String subtitle,
+    required List<Widget> children,
+    required String actionLabel,
+    required VoidCallback? onAction,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        AppSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AppTypography.displaySmall),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: PrimaryButton(
+              label: actionLabel,
+              onPressed: _saving ? null : onAction,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _welcomeStep() {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.fitness_center, size: 80, color: AppColors.primary),
-          const SizedBox(height: AppSpacing.xl),
-          const Text(
-            'Lleva tu progreso\nal siguiente nivel',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary, height: 1.2),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          const Text(
-            'Diseñamos un programa basado en tu experiencia y disponibilidad.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
-          ),
-          const Spacer(),
-          SizedBox(
-            width: double.infinity, 
-            child: PrimaryButton(
-              label: 'Comenzar',
-              onPressed: _nextPage, 
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExperienceGoalStep() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('¿Qué quieres conseguir?', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: AppSpacing.lg),
-          _buildSelectionChip('Ganar masa muscular', _selectedGoal, (v) => setState(() => _selectedGoal = v)),
-          _buildSelectionChip('Ganar fuerza', _selectedGoal, (v) => setState(() => _selectedGoal = v)),
-          _buildSelectionChip('Mantenerme activo', _selectedGoal, (v) => setState(() => _selectedGoal = v)),
-
-          const SizedBox(height: AppSpacing.xl * 1.5),
-
-          const Text('¿Cuál es tu experiencia?', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: AppSpacing.lg),
-          _buildSelectionChip('Principiante', _selectedExperience, (v) => setState(() => _selectedExperience = v)),
-          _buildSelectionChip('Intermedio', _selectedExperience, (v) => setState(() => _selectedExperience = v)),
-          _buildSelectionChip('Avanzado', _selectedExperience, (v) => setState(() => _selectedExperience = v)),
-
-          const Spacer(),
-          SizedBox(
-            width: double.infinity, 
-            child: PrimaryButton(
-              label: 'Siguiente',
-              onPressed: (_selectedGoal != null && _selectedExperience != null) ? _nextPage : null, 
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDaysStep() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('¿Cuántos días puedes entrenar?', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: AppSpacing.sm),
-          const Text('A la semana', style: TextStyle(fontSize: 16, color: AppColors.textSecondary)),
-          const SizedBox(height: AppSpacing.xl),
-          
-          Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.md,
-            children: [2, 3, 4, 5, 6].map((days) {
-              final isSelected = _selectedDays == days;
-              return GestureDetector(
-                onTap: () => setState(() => _selectedDays = days),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 60,
-                  height: 60,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isSelected ? AppColors.primary : AppColors.surfaceBorder,
-                      width: 2,
-                    ),
-                  ),
-                  child: Text(
-                    '$days',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected ? Colors.black : AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-
-          const Spacer(),
-          SizedBox(
-            width: double.infinity, 
-            child: PrimaryButton(
-              label: 'Siguiente',
-              onPressed: _selectedDays != null ? _nextPage : null, 
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecommendationStep() {
-    final recommendedProgram = _getRecommendedProgram();
-    if (recommendedProgram == null) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Recomendado para ti', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: AppSpacing.xl),
-          
           Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            width: 96,
+            height: 96,
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.primary.withAlpha(100), width: 1),
+              color: AppColors.primaryFaded,
+              borderRadius: BorderRadius.circular(28),
             ),
-            child: Column(
+            child: const Icon(
+              Icons.tune_rounded,
+              size: 48,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          const Text(
+            'Haz que STK Haven\nse adapte a ti',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 30,
+              height: 1.15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Text(
+            'Son unas pocas preguntas. Podrás cambiar todo después desde tu perfil.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const Spacer(),
+          SizedBox(
+            width: double.infinity,
+            child: PrimaryButton(label: 'Comenzar', onPressed: _next),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _goalStep() {
+    return _stepShell(
+      title: 'Tu entrenamiento',
+      subtitle: 'Primero, cuéntanos qué buscas y tu nivel actual.',
+      actionLabel: 'Siguiente',
+      onAction: _goal != null && _experience != null ? _next : null,
+      children: [
+        Text('Objetivo principal', style: AppTypography.headlineMedium),
+        const SizedBox(height: 10),
+        _choice(
+          value: TrainingGoal.hypertrophy,
+          selected: _goal,
+          title: 'Ganar masa muscular',
+          onTap: (value) => setState(() => _goal = value),
+        ),
+        _choice(
+          value: TrainingGoal.strength,
+          selected: _goal,
+          title: 'Ganar fuerza',
+          onTap: (value) => setState(() => _goal = value),
+        ),
+        _choice(
+          value: TrainingGoal.activeLifestyle,
+          selected: _goal,
+          title: 'Mantenerme activo',
+          onTap: (value) => setState(() => _goal = value),
+        ),
+        _choice(
+          value: TrainingGoal.conditioning,
+          selected: _goal,
+          title: 'Mejorar mi condición física',
+          onTap: (value) => setState(() => _goal = value),
+        ),
+        _choice(
+          value: TrainingGoal.selfDirected,
+          selected: _goal,
+          title: 'Crear mis propias rutinas',
+          onTap: (value) {
+            setState(() {
+              _goal = value;
+              _planning = PlanningPreference.selfDirected;
+            });
+          },
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text('Experiencia', style: AppTypography.headlineMedium),
+        const SizedBox(height: 10),
+        _choice(
+          value: TrainingExperience.beginner,
+          selected: _experience,
+          title: 'Principiante',
+          onTap: (value) => setState(() => _experience = value),
+        ),
+        _choice(
+          value: TrainingExperience.intermediate,
+          selected: _experience,
+          title: 'Intermedio',
+          onTap: (value) => setState(() => _experience = value),
+        ),
+        _choice(
+          value: TrainingExperience.advanced,
+          selected: _experience,
+          title: 'Avanzado',
+          onTap: (value) => setState(() => _experience = value),
+        ),
+      ],
+    );
+  }
+
+  Widget _scheduleStep() {
+    return _stepShell(
+      title: 'Tiempo y entorno',
+      subtitle: 'Esto ayuda a que las recomendaciones sean realistas.',
+      actionLabel: 'Siguiente',
+      onAction: _environment != null ? _next : null,
+      children: [
+        Text('Días por semana', style: AppTypography.headlineMedium),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final days in [2, 3, 4, 5, 6])
+              ChoiceChip(
+                label: Text('$days'),
+                selected: _daysPerWeek == days,
+                onSelected: (_) => setState(() => _daysPerWeek = days),
+              ),
+            ChoiceChip(
+              label: const Text('Aún no lo sé'),
+              selected: _daysPerWeek == null,
+              onSelected: (_) => setState(() => _daysPerWeek = null),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text('Duración habitual', style: AppTypography.headlineMedium),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _durationChip(SessionDurationPreference.minutes30, '30 min'),
+            _durationChip(SessionDurationPreference.minutes45, '45 min'),
+            _durationChip(SessionDurationPreference.minutes60, '60 min'),
+            _durationChip(SessionDurationPreference.minutes75Plus, '75+ min'),
+            _durationChip(SessionDurationPreference.variable, 'Variable'),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text('¿Dónde entrenas?', style: AppTypography.headlineMedium),
+        const SizedBox(height: 10),
+        _choice(
+          value: TrainingEnvironment.fullGym,
+          selected: _environment,
+          title: 'Gimnasio completo',
+          onTap: (value) => setState(() => _environment = value),
+        ),
+        _choice(
+          value: TrainingEnvironment.homeWeights,
+          selected: _environment,
+          title: 'Casa con pesas',
+          onTap: (value) => setState(() => _environment = value),
+        ),
+        _choice(
+          value: TrainingEnvironment.minimalEquipment,
+          selected: _environment,
+          title: 'Casa / equipamiento mínimo',
+          onTap: (value) => setState(() => _environment = value),
+        ),
+        _choice(
+          value: TrainingEnvironment.mixed,
+          selected: _environment,
+          title: 'Mixto',
+          onTap: (value) => setState(() => _environment = value),
+        ),
+      ],
+    );
+  }
+
+  Widget _preferencesStep() {
+    return _stepShell(
+      title: 'Tus preferencias',
+      subtitle: 'Puedes modificarlas cuando quieras.',
+      actionLabel: 'Siguiente',
+      onAction: _next,
+      children: [
+        Text('Planificación', style: AppTypography.headlineMedium),
+        const SizedBox(height: 10),
+        _choice(
+          value: PlanningPreference.recommendation,
+          selected: _planning,
+          title: 'Quiero una recomendación',
+          onTap: (value) => setState(() => _planning = value),
+        ),
+        _choice(
+          value: PlanningPreference.selfDirected,
+          selected: _planning,
+          title: 'Quiero crear mis propias rutinas',
+          onTap: (value) => setState(() => _planning = value),
+        ),
+        _choice(
+          value: PlanningPreference.decideLater,
+          selected: _planning,
+          title: 'Decidir después',
+          onTap: (value) => setState(() => _planning = value),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text('Unidad de peso', style: AppTypography.headlineMedium),
+        const SizedBox(height: 10),
+        SegmentedButton<WeightUnit>(
+          segments: const [
+            ButtonSegment(value: WeightUnit.kg, label: Text('kg')),
+            ButtonSegment(value: WeightUnit.lb, label: Text('lb')),
+          ],
+          selected: {_weightUnit},
+          onSelectionChanged: (value) =>
+              setState(() => _weightUnit = value.first),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          value: _remindersWanted,
+          onChanged: (value) => setState(() => _remindersWanted = value),
+          title: const Text('Quiero recordatorios de entrenamiento'),
+          subtitle: const Text(
+            'La hora y el permiso del sistema se configurarán después.',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _faithStep() {
+    return _stepShell(
+      title: 'Fe, solo si tú quieres',
+      subtitle: '¿Quieres incluir contenido de fe cristiana en STK Haven?',
+      actionLabel: 'Ver resumen',
+      onAction: _next,
+      children: [
+        _choice(
+          value: FaithContentPreference.enabled,
+          selected: _faith,
+          title: 'Sí, quiero incluirlo',
+          subtitle: 'Versículo diario, Biblia, Haven Faith y estudio.',
+          onTap: (value) => setState(() => _faith = value),
+        ),
+        _choice(
+          value: FaithContentPreference.disabled,
+          selected: _faith,
+          title: 'No, prefiero mantenerlo oculto',
+          subtitle: 'No se cargarán recursos de Fe en segundo plano.',
+          onTap: (value) => setState(() => _faith = value),
+        ),
+        _choice(
+          value: FaithContentPreference.undecided,
+          selected: _faith,
+          title: 'Decidir después',
+          subtitle: 'Podrás activarlo desde Perfil cuando quieras.',
+          onTap: (value) => setState(() => _faith = value),
+        ),
+      ],
+    );
+  }
+
+  Widget _summaryStep() {
+    final profile = _buildProfile();
+    final recommended =
+        OnboardingRecommendationService.recommend(profile);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xl,
+        AppSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Todo listo', style: AppTypography.displaySmall),
+          const SizedBox(height: 8),
+          Text(
+            'Estas son tus preferencias iniciales.',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _summaryRow('Objetivo', _goalLabel(_goal)),
+                  _summaryRow('Experiencia', _experienceLabel(_experience)),
+                  _summaryRow(
+                    'Frecuencia',
+                    _daysPerWeek == null
+                        ? 'Por decidir'
+                        : '$_daysPerWeek días/semana',
+                  ),
+                  _summaryRow('Duración', _durationLabel(_duration)),
+                  _summaryRow('Entorno', _environmentLabel(_environment)),
+                  _summaryRow('Peso', _weightUnit.label),
+                  _summaryRow(
+                    'Fe',
+                    switch (_faith) {
+                      FaithContentPreference.enabled => 'Incluida',
+                      FaithContentPreference.disabled => 'Oculta',
+                      FaithContentPreference.undecided => 'Decidir después',
+                    },
+                  ),
+                  if (recommended != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryFaded,
+                        borderRadius: AppRadius.lg_,
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'PROGRAMA RECOMENDADO',
+                            style: AppTypography.labelMedium.copyWith(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            recommended.name,
+                            style: AppTypography.headlineLarge,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            recommended.description,
+                            style: AppTypography.bodySmall,
+                          ),
+                          const SizedBox(height: 10),
+                          OutlinedButton(
+                            onPressed: () => showModalBottomSheet<void>(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (_) =>
+                                  ProgramPreviewModal(program: recommended),
+                            ),
+                            child: const Text('Ver rutinas'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (recommended != null)
+            SizedBox(
+              width: double.infinity,
+              child: PrimaryButton(
+                label: _saving ? 'Guardando…' : 'Usar programa recomendado',
+                onPressed: _saving
+                    ? null
+                    : () => _finish(installRecommended: true),
+              ),
+            ),
+          if (recommended != null) const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed:
+                  _saving ? null : () => _finish(installRecommended: false),
+              child: Text(
+                recommended == null
+                    ? 'Entrar a STK Haven'
+                    : 'Continuar sin instalar programa',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _durationChip(
+    SessionDurationPreference value,
+    String label,
+  ) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: _duration == value,
+      onSelected: (_) => setState(() => _duration = value),
+    );
+  }
+
+  Widget _choice<T>({
+    required T value,
+    required T? selected,
+    required String title,
+    String? subtitle,
+    required ValueChanged<T> onTap,
+  }) {
+    final active = value == selected;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: active ? AppColors.primaryFaded : AppColors.surface,
+        borderRadius: AppRadius.md_,
+        child: InkWell(
+          borderRadius: AppRadius.md_,
+          onTap: () => onTap(value),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.md_,
+              border: Border.all(
+                color: active
+                    ? AppColors.primary
+                    : AppColors.surfaceBorder,
+              ),
+            ),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.star, color: AppColors.primary, size: 20),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text('Mejor opción', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-                  ],
+                Icon(
+                  active
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: active
+                      ? AppColors.primary
+                      : AppColors.textSecondary,
                 ),
-                const SizedBox(height: AppSpacing.md),
-                Text(recommendedProgram.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                const SizedBox(height: AppSpacing.sm),
-                Text('${recommendedProgram.daysPerWeek} días / semana • ${recommendedProgram.level}', style: const TextStyle(color: AppColors.textSecondary)),
-                const SizedBox(height: AppSpacing.md),
-                Text(recommendedProgram.description, style: const TextStyle(color: AppColors.textPrimary, height: 1.4)),
-                const SizedBox(height: AppSpacing.lg),
-                SizedBox(
-                  
-                  child: OutlinedButton(
-                    onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (ctx) => ProgramPreviewModal(program: recommendedProgram),
-                      );
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('Ver rutinas', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: AppTypography.bodyLarge),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          
-          const Spacer(),
-          SizedBox(
-            width: double.infinity, 
-            child: PrimaryButton(
-              label: 'Usar este programa',
-              onPressed: () async {
-                await ref.read(programServiceProvider).installProgram(recommendedProgram);
-              },
+        ),
+      ),
+    );
+  }
+
+  Widget _summaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          TextButton(
-            onPressed: () async {
-              await ref.read(programServiceProvider).completeOnboardingFromScratch();
-            },
-            child: const Text('Crear mis propias rutinas →', style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          const SizedBox(height: AppSpacing.lg),
+          Text(value, style: AppTypography.labelMedium),
         ],
       ),
     );
   }
 
-  Widget _buildSelectionChip(String text, String? selectedValue, ValueChanged<String> onSelect) {
-    final isSelected = text == selectedValue;
-    return GestureDetector(
-      onTap: () => onSelect(text),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: AppSpacing.md),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withAlpha(30) : AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.surfaceBorder,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-              color: isSelected ? AppColors.primary : AppColors.textSecondary,
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Text(
-              text,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  String _goalLabel(TrainingGoal? value) => switch (value) {
+        TrainingGoal.hypertrophy => 'Masa muscular',
+        TrainingGoal.strength => 'Fuerza',
+        TrainingGoal.activeLifestyle => 'Mantenerme activo',
+        TrainingGoal.conditioning => 'Condición física',
+        TrainingGoal.selfDirected => 'Rutinas propias',
+        null => 'Por decidir',
+      };
+
+  String _experienceLabel(TrainingExperience? value) => switch (value) {
+        TrainingExperience.beginner => 'Principiante',
+        TrainingExperience.intermediate => 'Intermedio',
+        TrainingExperience.advanced => 'Avanzado',
+        null => 'Por decidir',
+      };
+
+  String _durationLabel(SessionDurationPreference value) => switch (value) {
+        SessionDurationPreference.minutes30 => '30 min',
+        SessionDurationPreference.minutes45 => '45 min',
+        SessionDurationPreference.minutes60 => '60 min',
+        SessionDurationPreference.minutes75Plus => '75+ min',
+        SessionDurationPreference.variable => 'Variable',
+      };
+
+  String _environmentLabel(TrainingEnvironment? value) => switch (value) {
+        TrainingEnvironment.fullGym => 'Gimnasio',
+        TrainingEnvironment.homeWeights => 'Casa con pesas',
+        TrainingEnvironment.minimalEquipment => 'Equipamiento mínimo',
+        TrainingEnvironment.mixed => 'Mixto',
+        null => 'Por decidir',
+      };
 }

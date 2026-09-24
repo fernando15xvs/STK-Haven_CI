@@ -1,6 +1,7 @@
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/pages/training_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/profile/presentation/widgets/platform_settings_page.dart';
 import 'package:core/features/programs/presentation/pages/training_programs_page.dart';
 import 'package:core/features/progress/presentation/pages/progress_intelligence_page.dart';
@@ -85,8 +86,8 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
     });
   }
 
-  Widget _content() => IndexedStack(
-        index: _selectedIndex,
+  Widget _content([int? selectedIndex]) => IndexedStack(
+        index: selectedIndex ?? _selectedIndex,
         children: List<Widget>.generate(
           _pages.length,
           (index) =>
@@ -99,7 +100,7 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
   }
 
-  Future<void> _openQuickMenu() async {
+  Future<void> _openQuickMenu({required bool faithEnabled}) async {
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -140,20 +141,22 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
                   subtitle: 'Última vs anterior, tendencias y unilateral.',
                   onTap: () => open(const ProgressIntelligencePage()),
                 ),
-                const SizedBox(height: 10),
-                _QuickMenuTile(
-                  icon: Icons.menu_book_outlined,
-                  title: 'La Biblia',
-                  subtitle: 'Lee por libro y capítulo.',
-                  onTap: () => open(const BibleReaderPageWeb()),
-                ),
-                const SizedBox(height: 10),
-                _QuickMenuTile(
-                  icon: Icons.auto_awesome_outlined,
-                  title: 'Haven Faith',
-                  subtitle: 'Abre tu chat de acompañamiento.',
-                  onTap: () => open(const AiChatPageWeb()),
-                ),
+                if (faithEnabled) ...[
+                  const SizedBox(height: 10),
+                  _QuickMenuTile(
+                    icon: Icons.menu_book_outlined,
+                    title: 'La Biblia',
+                    subtitle: 'Lee por libro y capítulo.',
+                    onTap: () => open(const BibleReaderPageWeb()),
+                  ),
+                  const SizedBox(height: 10),
+                  _QuickMenuTile(
+                    icon: Icons.auto_awesome_outlined,
+                    title: 'Haven Faith',
+                    subtitle: 'Abre tu chat de acompañamiento.',
+                    onTap: () => open(const AiChatPageWeb()),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 _QuickMenuTile(
                   icon: Icons.build_outlined,
@@ -190,24 +193,24 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
     );
   }
 
-  Future<void> _showShortcutHelp() async {
+  Future<void> _showShortcutHelp({required bool faithEnabled}) async {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Atajos de teclado'),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Ctrl/⌘ + 1  Inicio'),
-            Text('Ctrl/⌘ + 2  Rutinas'),
-            Text('Ctrl/⌘ + 3  Programas'),
-            Text('Ctrl/⌘ + 4  Progreso'),
-            Text('Ctrl/⌘ + 5  Fe'),
-            Text('Ctrl/⌘ + 6  Perfil'),
-            Text('Ctrl/⌘ + 7  Herramientas'),
-            SizedBox(height: 8),
-            Text('Ctrl/⌘ + K  Accesos rápidos'),
+            const Text('Ctrl/⌘ + 1  Inicio'),
+            const Text('Ctrl/⌘ + 2  Rutinas'),
+            const Text('Ctrl/⌘ + 3  Programas'),
+            const Text('Ctrl/⌘ + 4  Progreso'),
+            if (faithEnabled) const Text('Ctrl/⌘ + 5  Fe'),
+            const Text('Ctrl/⌘ + 6  Perfil'),
+            const Text('Ctrl/⌘ + 7  Herramientas'),
+            const SizedBox(height: 8),
+            const Text('Ctrl/⌘ + K  Accesos rápidos'),
           ],
         ),
         actions: [
@@ -259,6 +262,34 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
       settingsProvider.select((settings) => settings.performanceMode),
     );
     final savings = performanceMode == PerformanceMode.savings;
+    final faithEnabled = ref.watch(
+      userExperienceProfileProvider.select(
+        (profile) => profile.value?.faithEnabled ?? false,
+      ),
+    );
+    final visiblePageIndices = <int>[
+      0,
+      1,
+      2,
+      3,
+      if (faithEnabled) 4,
+      5,
+      6,
+    ];
+    final effectiveSelectedIndex =
+        !faithEnabled && _selectedIndex == 4 ? 0 : _selectedIndex;
+    final railSelectedIndex =
+        visiblePageIndices.indexOf(effectiveSelectedIndex);
+
+    if (effectiveSelectedIndex != _selectedIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _selectedIndex != 4) return;
+        setState(() {
+          _selectedIndex = 0;
+          _visited.add(0);
+        });
+      });
+    }
 
     return Shortcuts(
       shortcuts: _shortcuts,
@@ -266,13 +297,14 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
         actions: <Type, Action<Intent>>{
           _SelectSectionIntent: CallbackAction<_SelectSectionIntent>(
             onInvoke: (intent) {
+              if (intent.index == 4 && !faithEnabled) return null;
               _select(intent.index);
               return null;
             },
           ),
           _QuickMenuIntent: CallbackAction<_QuickMenuIntent>(
             onInvoke: (_) {
-              _openQuickMenu();
+              _openQuickMenu(faithEnabled: faithEnabled);
               return null;
             },
           ),
@@ -282,14 +314,15 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 760;
-              final content = _content();
+              final content = _content(effectiveSelectedIndex);
               if (compact) {
                 return Scaffold(
                   body: SafeArea(bottom: false, child: content),
                   bottomNavigationBar: _CompactNavigationBar(
-                    selectedPageIndex: _selectedIndex,
+                    selectedPageIndex: effectiveSelectedIndex,
                     onSelectPage: _select,
-                    onOpenQuickMenu: _openQuickMenu,
+                    onOpenQuickMenu: () =>
+                        _openQuickMenu(faithEnabled: faithEnabled),
                   ),
                 );
               }
@@ -299,8 +332,9 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
                   child: Row(
                     children: [
                       NavigationRail(
-                        selectedIndex: _selectedIndex,
-                        onDestinationSelected: _select,
+                        selectedIndex: railSelectedIndex < 0 ? 0 : railSelectedIndex,
+                        onDestinationSelected: (railIndex) =>
+                            _select(visiblePageIndices[railIndex]),
                         labelType: constraints.maxWidth >= 1180
                             ? NavigationRailLabelType.all
                             : NavigationRailLabelType.selected,
@@ -308,11 +342,15 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
                           padding: const EdgeInsets.only(bottom: 8),
                           child: IconButton(
                             tooltip: 'Atajos de teclado',
-                            onPressed: _showShortcutHelp,
+                            onPressed: () =>
+                                _showShortcutHelp(faithEnabled: faithEnabled),
                             icon: const Icon(Icons.keyboard_outlined),
                           ),
                         ),
-                        destinations: _desktopDestinations,
+                        destinations: [
+                          for (final index in visiblePageIndices)
+                            _desktopDestinations[index],
+                        ],
                       ),
                       const VerticalDivider(thickness: 1, width: 1),
                       Expanded(
@@ -322,7 +360,7 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
                               : AnimatedSwitcher(
                                   duration: const Duration(milliseconds: 160),
                                   child: KeyedSubtree(
-                                    key: ValueKey(_selectedIndex),
+                                    key: ValueKey(effectiveSelectedIndex),
                                     child: content,
                                   ),
                                 ),

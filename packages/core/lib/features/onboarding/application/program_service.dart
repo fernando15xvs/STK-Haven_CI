@@ -7,6 +7,7 @@ import 'package:core/features/routines/data/routine_repository.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/domain/models/settings_state.dart';
 
 final programServiceProvider = Provider<ProgramService>((ref) {
@@ -14,11 +15,14 @@ final programServiceProvider = Provider<ProgramService>((ref) {
   final settingsNotifier = ref.watch(settingsProvider.notifier);
   final routinesNotifier = ref.watch(routineListProvider.notifier);
   final exerciseNotifier = ref.watch(exerciseListProvider.notifier);
+  final trainingProgramNotifier =
+      ref.watch(trainingProgramListProvider.notifier);
   return ProgramService(
     routineRepo,
     settingsNotifier,
     routinesNotifier,
     exerciseNotifier,
+    trainingProgramNotifier,
     () => ref.read(settingsProvider),
   );
 });
@@ -28,6 +32,7 @@ class ProgramService {
   final SettingsNotifier _settingsNotifier;
   final RoutineListNotifier _routineListNotifier;
   final ExerciseListNotifier _exerciseListNotifier;
+  final TrainingProgramListNotifier _trainingProgramListNotifier;
   final SettingsState Function() _getSettingsState;
 
   bool _isInstalling = false;
@@ -37,6 +42,7 @@ class ProgramService {
     this._settingsNotifier,
     this._routineListNotifier,
     this._exerciseListNotifier,
+    this._trainingProgramListNotifier,
     this._getSettingsState,
   );
 
@@ -77,9 +83,23 @@ class ProgramService {
       await _routineRepository.addRoutine(routine);
     }
     
-    // Refresh the routines list in the UI
+    // Refresh the routines list in the UI.
     _routineListNotifier.refresh();
 
+    final trainingWeekdays = <int>{
+      for (final routine in preset.routines) ...routine.scheduledDays,
+    };
+    await _trainingProgramListNotifier.create(
+      name: preset.name,
+      routineIds: generatedIds,
+      durationWeeks: preset.durationWeeks,
+      trainingWeekdays: trainingWeekdays,
+      notes: 'Instalado desde onboarding · ${preset.id} v${preset.version}',
+      activate: true,
+    );
+
+    // Keep the legacy snapshot during the Roadmap 3 migration window so
+    // existing profile/program surfaces remain backward-compatible.
     // Guardar ActiveProgramState
     final activeProgram = ActiveProgramState(
       presetProgramId: preset.id,

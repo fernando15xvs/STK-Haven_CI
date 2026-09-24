@@ -1,14 +1,15 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import 'package:core/core/config/supabase_config.dart';
 import 'package:core/database/hive/hive_database.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/layout/web_layout.dart';
+import 'features/onboarding/presentation/onboarding_page_web.dart';
 import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
@@ -35,10 +36,26 @@ class WebApp extends ConsumerStatefulWidget {
 }
 
 class _WebAppState extends ConsumerState<WebApp> {
-  @override
-  void initState() {
-    super.initState();
+  bool _bibleInitSchedulePending = false;
+  bool _bibleInitStarted = false;
+
+  void _syncBibleInitialization(bool faithEnabled) {
+    if (!faithEnabled ||
+        _bibleInitStarted ||
+        _bibleInitSchedulePending) {
+      return;
+    }
+
+    _bibleInitSchedulePending = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _bibleInitSchedulePending = false;
+      if (!mounted || _bibleInitStarted) return;
+
+      final stillEnabled =
+          ref.read(userExperienceProfileProvider).value?.faithEnabled == true;
+      if (!stillEnabled) return;
+
+      _bibleInitStarted = true;
       ref.read(bibleInitProvider.notifier).initialize();
     });
   }
@@ -46,6 +63,11 @@ class _WebAppState extends ConsumerState<WebApp> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    final experienceProfile = ref.watch(userExperienceProfileProvider);
+    _syncBibleInitialization(
+      experienceProfile.value?.faithEnabled == true,
+    );
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'STK Haven',
@@ -61,7 +83,9 @@ class _WebAppState extends ConsumerState<WebApp> {
           child: child ?? const SizedBox.shrink(),
         );
       },
-      home: const WebLayout(),
+      home: settings.hasCompletedOnboarding
+          ? const WebLayout()
+          : const WebOnboardingPage(),
     );
   }
 }

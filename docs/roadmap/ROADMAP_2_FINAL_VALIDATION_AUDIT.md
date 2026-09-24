@@ -2,9 +2,11 @@
 
 Este documento es la fuente de verdad para el cierre de pruebas de las fases J–T. La implementación puede cerrarse antes que la validación física, pero cada ítem solo se marca cuando existe evidencia real.
 
-## Estado actual del candidato — 2026-09-12
+## Estado actual del candidato — 2026-09-23
 
-**HEAD actual de la rama después de la separación Android/iOS:** `d3225db8e2767e93b965b7be7f6910d8a3caa8d6`.
+**Candidato privado validado por CI público:** `f382134decdee0690176d886538e6b462f60c5cc`.
+
+**Snapshot público equivalente:** `cc4029927da8f03657c04703ffc97a28e611e5ce` en `fernando15xvs/STK-Haven_CI`.
 
 Desde la última matriz automática verde se modificó código runtime y de build. Entre los cambios posteriores están:
 - hardening de rendimiento Android/móvil: pestañas lazy, eliminación de blur costoso, física de scroll nativa, inicialización diferida y apertura concurrente de cajas Hive;
@@ -14,7 +16,7 @@ Desde la última matriz automática verde se modificó código runtime y de buil
 - servicios de arranque Android/iOS aislados en `lib/platform/android/` y `lib/platform/ios/`;
 - scripts locales y workflow actualizados para compilar cada plataforma con su target explícito.
 
-Por lo tanto, la matriz automática verde documentada sobre `844d5e18...` **queda como evidencia histórica**, pero **no valida el HEAD actual**. Debe repetirse `scripts/validate_roadmap2_local.ps1` antes de considerar verde el nuevo candidato.
+El candidato post-hardening/post-split fue validado nuevamente mediante el mirror público de CI. El workflow `STK Haven Public CI` run `#1` (`35887125248`) terminó `success` el 2026-09-23. La matriz local histórica sobre `844d5e18...` se conserva como evidencia adicional, pero ya no es la única evidencia automática del código posterior al split.
 
 ### Evidencia manual Android ya completada y que sigue siendo válida funcionalmente
 
@@ -48,6 +50,36 @@ Hallazgos UX todavía pendientes:
 - volver a medir fluidez en APK release físico después del hardening y del split de plataforma.
 
 ---
+
+## Evidencia automática — GitHub Actions público — 2026-09-23
+
+**Repositorio CI:** `fernando15xvs/STK-Haven_CI`
+
+**Fuente privada exacta:** `f382134decdee0690176d886538e6b462f60c5cc`
+
+**Snapshot público exacto:** `cc4029927da8f03657c04703ffc97a28e611e5ce`
+
+**Workflow:** `STK Haven Public CI`
+
+**Run:** `#1` / `35887125248`
+
+**Resultado global:** `completed / success`
+
+Jobs verdes:
+
+- `Analyze + Core tests`: resolución de workspace, `flutter analyze --no-fatal-infos` y tests completos de `packages/core`.
+- `Mobile tests`: tests de `apps/app_mobile`.
+- `Android artifacts`: debug APK, profile APK, release APK, release AAB y release split-per-ABI usando `lib/main_android.dart`.
+- `Web tests + builds`: tests web, build release dart2js y build comparativo WASM.
+- `iOS release + profile`: CocoaPods, build iOS release y profile con `--no-codesign` usando `lib/main_ios.dart` en runner macOS real.
+
+Alcance y límites de esta evidencia:
+
+- valida compilación/test/analyze cruzados en Linux/macOS y los entrypoints post-split;
+- valida que iOS compila en macOS, pero **no** sustituye smoke en iPhone físico, firma/distribución ni notificaciones/background reales;
+- valida builds web, pero **no** sustituye instalación PWA, upgrade de service worker, offline real ni accesibilidad manual;
+- no reemplaza las pruebas funcionales manuales J–T que fueron pausadas para un test integral posterior;
+- los commits posteriores que modifiquen solo documentación no invalidan este run.
 
 ## Evidencia automática — Windows — 2026-09-09
 
@@ -110,7 +142,7 @@ Roadmap 2.0 no se considera listo para `main` hasta que:
 - [x] `flutter analyze` no tenga errores ni warnings bloqueantes en el candidato automático histórico.
 - [x] Tests core/mobile/web relevantes pasen en el candidato automático histórico.
 - [x] Android debug/release/profile/AAB/split y web release construyan correctamente en el candidato automático histórico.
-- [ ] Repetir matriz completa sobre el candidato posterior al hardening/split Android-iOS.
+- [x] CI cruzado post-hardening/post-split verde sobre `f382134d...` (run público `35887125248`).
 - [ ] iOS se valide en macOS o equipo compatible antes del release final iOS.
 - [x] Backups v8/v9 cubiertos por tests de restauración Hive pasan en la matriz histórica.
 - [ ] Smoke tests funcionales manuales J–T restantes pasen en datos nuevos y datos existentes.
@@ -122,20 +154,20 @@ Roadmap 2.0 no se considera listo para `main` hasta que:
 - [x] Registrar SHA exacto del candidato automático Windows histórico.
 - [x] Comparar rama contra `main` y confirmar que contiene `main` sin quedar por detrás.
 - [x] Runner distingue cambios fuente de artefactos Flutter regenerados conocidos.
-- [ ] Registrar nuevo SHA automático después de ejecutar la matriz post-split.
+- [x] Registrar nuevo SHA automático post-split: privado `f382134d...` / snapshot público `cc402992...`.
 - [ ] Repetir `git status` final antes del merge y confirmar que no hay cambios fuente locales.
 - [ ] Confirmar ausencia de secretos/credenciales y archivos locales en la diferencia final antes del merge.
 
 ## 1. Matriz automática general
 - [x] Matriz completa pasó sobre `844d5e18...`.
-- [ ] Repetir `flutter pub get` sobre HEAD actual.
-- [ ] Repetir `flutter analyze` sobre HEAD actual.
-- [ ] Repetir tests completos de `packages/core` sobre HEAD actual.
-- [ ] Repetir tests completos de `apps/app_mobile` sobre HEAD actual.
-- [ ] Repetir tests web/responsive sobre HEAD actual.
-- [ ] Repetir Android debug/profile/release/AAB/split usando `lib/main_android.dart`.
-- [ ] Repetir Web dart2js/WASM sobre HEAD actual.
-- [ ] iOS analyze/test/build en macOS usando `lib/main_ios.dart`.
+- [x] Resolución de dependencias/workspace repetida en CI público post-split.
+- [x] `flutter analyze --no-fatal-infos` pasó en CI público post-split.
+- [x] Tests completos de `packages/core` pasaron en CI público post-split.
+- [x] Tests de `apps/app_mobile` pasaron en CI público post-split.
+- [x] Tests de `apps/app_web` pasaron en CI público post-split.
+- [x] Android debug/profile/release/AAB/split pasó usando `lib/main_android.dart`.
+- [x] Web dart2js/WASM pasó en CI público post-split.
+- [x] iOS release/profile compiló en macOS usando `lib/main_ios.dart` y `--no-codesign`.
 
 ## 2. Fase J — Exercise Memory global
 - [x] Tests automáticos cross-routine por `exerciseId` pasaron en la matriz histórica.
@@ -214,7 +246,7 @@ Roadmap 2.0 no se considera listo para `main` hasta que:
 - [x] Benchmark sintético 5k sesiones ejecutado dentro de tests core en la matriz histórica.
 - [x] Tests de índice de historial/analytics con 1k y 5k sesiones pasaron históricamente.
 - [x] Se aplicó hardening móvil posterior: tabs lazy, menos blur/compositing, scroll nativo, trabajo no crítico diferido y Hive concurrente.
-- [ ] Repetir matriz automática post-hardening.
+- [x] CI automático post-hardening/post-split pasó en el snapshot público equivalente.
 - [ ] Medir apertura de workout, progreso e inicio con historial grande en dispositivo real.
 - [ ] Revisar memoria y frames >32 ms en dispositivo físico.
 - [ ] Confirmar Riverpod/timers sin reconstrucciones excesivas con DevTools.
@@ -225,8 +257,8 @@ Roadmap 2.0 no se considera listo para `main` hasta que:
 - [x] Build release puede firmarse con key privada o, solo para pruebas locales, con debug key.
 - [x] Smoke en emulador reproduce el flujo 1RM corregido sin pantalla roja.
 - [x] Funciones J/K/L principales probadas manualmente en Android.
-- [ ] Repetir debug/profile/release/AAB/split sobre el nuevo entrypoint Android.
-- [ ] Confirmar mejora de fluidez en el APK release físico post-hardening.
+- [x] Debug/profile/release/AAB/split pasó sobre `lib/main_android.dart` en CI público.
+- [x] Smoke físico: el APK release post-hardening se percibe fluido y ya no se siente pesado.
 - [ ] Cold start release/profile en dispositivo físico.
 - [ ] Memoria y jank en dispositivo gama baja/media.
 - [ ] Recreación de proceso mantiene workout/timers.
@@ -234,7 +266,7 @@ Roadmap 2.0 no se considera listo para `main` hasta que:
 
 ## 10. Fase R — iOS
 - [x] Arquitectura separada con `lib/main_ios.dart` y `lib/platform/ios/`.
-- [ ] Build release/profile en macOS con el nuevo entrypoint iOS.
+- [x] Build release/profile en macOS pasó con `lib/main_ios.dart` y `--no-codesign`.
 - [ ] Cold start/memoria/frames en iPhone físico compatible.
 - [ ] Background/resume timers/notificaciones.
 - [ ] Reduce Motion/Modo rendimiento reduce efectos costosos.
@@ -245,7 +277,7 @@ Roadmap 2.0 no se considera listo para `main` hasta que:
 - [x] Build comparativo WASM pasó en la matriz histórica.
 - [x] Tests responsive web pasaron, incluido 390×844, en la matriz histórica.
 - [x] Artefacto dart2js exacto se restauró para Pages después del build WASM.
-- [ ] Repetir matriz web sobre HEAD actual.
+- [x] Tests web + dart2js + WASM pasaron en CI público post-split.
 - [ ] Upgrade de release sin limpiar caché manualmente.
 - [ ] Offline abre versión instalada esperada.
 - [ ] Instalación PWA y reapertura.
@@ -261,7 +293,7 @@ Roadmap 2.0 no se considera listo para `main` hasta que:
 - [x] Tests Programas A/B/C pasaron históricamente.
 - [x] Tests responsive críticos pasaron históricamente.
 - [x] Test de integración Roadmap 2.0 programa→memoria→workout→resumen→progreso pasó históricamente.
-- [ ] Repetir todos los anteriores sobre HEAD post-split.
+- [x] Tests automáticos relevantes J/K/L/N/T incluidos en `packages/core` pasaron en CI público post-split.
 - [ ] Golden approval humana.
 - [x] Integration manual con cierre/reapertura durante workout.
 - [ ] Integration manual restore backup→continuar uso.
@@ -287,8 +319,8 @@ Roadmap 2.0 no se considera listo para `main` hasta que:
 
 ## Estado de cierre actual
 
-La implementación J–T continúa en la rama `feat/roadmap-2-complete`, sin merge a `main`. La matriz automática histórica fue verde, pero el candidato actual cambió por hardening móvil y separación Android/iOS, por lo que requiere una nueva ejecución completa antes de recuperar estado automático VERDE.
+La implementación J–T continúa en la rama `feat/roadmap-2-complete`, sin merge a `main`. El candidato post-hardening y post-separación Android/iOS recuperó estado automático VERDE mediante el run público `35887125248`, correspondiente exactamente al privado `f382134d...`.
 
-La evidencia manual Android ya cubre Exercise Memory, acciones rápidas/1RM, timers, persistencia, Unilateral Pro funcional y Programas 2.0 básico. Permanecen pendientes el refinamiento visual unilateral, Progreso/Intelligence manual, rendimiento físico post-hardening, regresión histórica, PWA y toda la validación iOS/macOS.
+La evidencia manual Android ya cubre Exercise Memory, acciones rápidas/1RM, timers, persistencia, Unilateral Pro funcional, Programas 2.0 básico y mejora de fluidez percibida en dispositivo físico. Permanecen pendientes el refinamiento visual unilateral, Progreso/Intelligence manual, profiling formal de rendimiento, regresión histórica, PWA y la validación funcional en iPhone físico. La compilación iOS release/profile en macOS ya está verde.
 
 No hacer merge a `main` hasta completar o aceptar explícitamente las validaciones pendientes del nuevo candidato.

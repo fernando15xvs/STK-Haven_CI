@@ -4,7 +4,9 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/platform/platform_capabilities.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/settings_state.dart';
+import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/core/services/backup_service.dart';
 import 'package:core/core/services/backup_file_service.dart';
 import 'package:core/features/onboarding/application/program_service.dart';
@@ -32,6 +34,11 @@ class ProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final notifier = ref.read(settingsProvider.notifier);
+    final faithEnabled = ref.watch(
+      userExperienceProfileProvider.select(
+        (profile) => profile.value?.faithEnabled ?? false,
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes y Perfil')),
@@ -48,6 +55,34 @@ class ProfilePage extends ConsumerWidget {
           const Center(child: Text('Atleta Principal', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary))),
           
           const SizedBox(height: AppSpacing.xxl),
+
+          const SectionHeading(title: 'PERSONALIZACIÓN'),
+          const SizedBox(height: AppSpacing.sm),
+          PremiumCard(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              leading: const Icon(Icons.tune_rounded, color: AppColors.primary),
+              title: Text(
+                'Tu experiencia',
+                style: AppTypography.headlineMedium,
+              ),
+              subtitle: Text(
+                'Objetivo, días, duración, entorno, unidad, recordatorios y Fe',
+                style: AppTypography.bodySmall,
+              ),
+              trailing: const Icon(
+                Icons.chevron_right,
+                color: AppColors.textSecondary,
+              ),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ExperiencePreferencesPage(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
 
           if (settings.activeProgram != null) ...[
             const SectionHeading(title: 'PROGRAMA ACTUAL'),
@@ -142,12 +177,13 @@ class ProfilePage extends ConsumerWidget {
           
           const SizedBox(height: AppSpacing.xl),
 
-          const SectionHeading(title: 'FORTALEZA'),
-          const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
+          if (faithEnabled) ...[
+            const SectionHeading(title: 'FORTALEZA'),
+            const SizedBox(height: AppSpacing.sm),
+            PremiumCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
                 SwitchListTile(
                   title: Text('Mostrar tarjeta en Inicio', style: AppTypography.headlineMedium),
                   subtitle: Text('Fortaleza de hoy en tu dashboard', style: AppTypography.bodySmall),
@@ -175,11 +211,11 @@ class ProfilePage extends ConsumerWidget {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage()));
                   },
                 ),
-              ],
+                ],
+              ),
             ),
-          ),
-          
-          const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xl),
+          ],
           
           const SectionHeading(title: 'UNIDADES'),
           const SizedBox(height: AppSpacing.sm),

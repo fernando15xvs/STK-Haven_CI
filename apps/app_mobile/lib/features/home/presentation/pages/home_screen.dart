@@ -1,6 +1,7 @@
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/pages/training_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/profile/presentation/widgets/platform_settings_page.dart';
 import 'package:core/features/programs/presentation/pages/training_programs_page.dart';
 import 'package:core/features/progress/presentation/pages/progress_intelligence_page.dart';
@@ -61,6 +62,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       settingsProvider.select((settings) => settings.performanceMode),
     );
     final savings = performanceMode == PerformanceMode.savings;
+    final faithEnabled = ref.watch(
+      userExperienceProfileProvider.select(
+        (profile) => profile.value?.faithEnabled ?? false,
+      ),
+    );
 
     return Scaffold(
       // Keeping the body out from underneath the navigation surface avoids an
@@ -96,7 +102,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   isSelected: _currentIndex == 1,
                   onTap: () => _selectTab(1),
                 ),
-                const _FloatingMenuButton(),
+                _FloatingMenuButton(faithEnabled: faithEnabled),
                 _BottomNavItem(
                   icon: Icons.bar_chart_outlined,
                   activeIcon: Icons.bar_chart,
@@ -212,7 +218,9 @@ class _BottomNavItem extends StatelessWidget {
 }
 
 class _FloatingMenuButton extends StatefulWidget {
-  const _FloatingMenuButton();
+  const _FloatingMenuButton({required this.faithEnabled});
+
+  final bool faithEnabled;
 
   @override
   State<_FloatingMenuButton> createState() => _FloatingMenuButtonState();
@@ -336,16 +344,18 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                           label: 'Copias',
                           onTap: () => _openPage(const BackupStatusPage()),
                         ),
-                        _MenuOption(
-                          icon: Icons.menu_book,
-                          label: 'La Biblia',
-                          onTap: () => _openPage(const BibleReaderPage()),
-                        ),
-                        _MenuOption(
-                          icon: Icons.auto_awesome,
-                          label: 'Haven Faith',
-                          onTap: () => _openPage(const AiChatPage()),
-                        ),
+                        if (widget.faithEnabled) ...[
+                          _MenuOption(
+                            icon: Icons.menu_book,
+                            label: 'La Biblia',
+                            onTap: () => _openPage(const BibleReaderPage()),
+                          ),
+                          _MenuOption(
+                            icon: Icons.auto_awesome,
+                            label: 'Haven Faith',
+                            onTap: () => _openPage(const AiChatPage()),
+                          ),
+                        ],
                         _MenuOption(
                           icon: Icons.build_circle_outlined,
                           label: 'Herramientas',

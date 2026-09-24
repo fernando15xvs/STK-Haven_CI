@@ -3,12 +3,12 @@ import 'package:core/domain/models/settings_state.dart';
 
 class SettingsRepository {
   final Box _box;
-  static const String _settingsKey = 'app_settings';
+  static const String storageKey = 'app_settings';
 
   SettingsRepository(this._box);
 
   SettingsState getSettings() {
-    final Map<dynamic, dynamic>? rawData = _box.get(_settingsKey);
+    final Map<dynamic, dynamic>? rawData = _box.get(storageKey);
     if (rawData == null) {
       return const SettingsState();
     }
@@ -19,6 +19,6 @@ class SettingsRepository {
   }
 
   Future<void> saveSettings(SettingsState settings) async {
-    await _box.put(_settingsKey, settings.toJson());
+    await _box.put(storageKey, settings.toJson());
   }
 }
