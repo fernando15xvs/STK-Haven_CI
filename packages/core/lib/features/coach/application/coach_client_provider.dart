@@ -1,6 +1,8 @@
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/coach/application/coach_progress_provider.dart';
+import 'package:core/features/coach/application/coach_task_provider.dart';
+import 'package:core/features/nutrition/application/nutrition_guidance_provider.dart';
 import 'package:core/features/coach/data/coach_client_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -240,6 +242,12 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
         ref
             .read(coachProgressProvider.notifier)
             .clearClient(previous.clientUserId);
+        ref
+            .read(coachTaskProvider.notifier)
+            .clearClient(previous.clientUserId);
+        ref
+            .read(nutritionGuidanceProvider.notifier)
+            .clearForClient(previous.clientUserId);
       }
       final relationships = await _service.getRelationships();
       state = state.copyWith(
@@ -273,6 +281,12 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
         ref
             .read(coachProgressProvider.notifier)
             .clearClient(previous.clientUserId);
+        ref
+            .read(coachTaskProvider.notifier)
+            .clearClient(previous.clientUserId);
+        ref
+            .read(nutritionGuidanceProvider.notifier)
+            .clearForClient(previous.clientUserId);
       }
       final relationships = await _service.getRelationships();
       state = state.copyWith(

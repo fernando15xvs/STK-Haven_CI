@@ -14,6 +14,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../ai/presentation/pages/ai_chat_page.dart';
 import '../../../faith/presentation/pages/bible_reader_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
+import '../../../nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart';
 import '../../../progress/presentation/pages/progress_page.dart';
 import '../../../routines/presentation/pages/routines_page.dart';
 import '../../../tools/presentation/training_tools_page.dart';
@@ -362,6 +363,13 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                             onTap: () => _openPage(const AiChatPage()),
                           ),
                         ],
+                        _MenuOption(
+                          icon: Icons.restaurant_menu_outlined,
+                          label: 'Nutrición',
+                          onTap: () => _openPage(
+                            const NutritionIntelligencePageMobile(),
+                          ),
+                        ),
                         _MenuOption(
                           icon: Icons.build_circle_outlined,
                           label: 'Herramientas',

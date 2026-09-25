@@ -151,3 +151,66 @@ Jobs confirmados verdes:
 El job Supabase levantó un proyecto efímero aislado, reconstruyó la base desde las migraciones y ejecutó pgTAP. Se validó el contrato de `stk_user_profiles`, `stk_user_capabilities`, rechazo de JWT anónimo, aislamiento por `auth.uid()` y capacidades `athlete/coach`.
 
 **No se conectó ni modificó el Supabase remoto.**
+
+
+## Roadmap 3 — Coach/Client MVP — CI verde — 2026-09-24
+
+- Fuente privada validada: `f273acbe4b973088af36340f95ca4fc04aa97c8a`.
+- Snapshot público equivalente: `43a00cee3a33b46b040f2b1c7c20d3abb5c74f44`.
+- Workflow: `STK Haven Public CI`.
+- Run: `35976942306` (#13).
+- Resultado global: `success`.
+
+Jobs confirmados verdes:
+
+- Supabase DB + RLS tests.
+- Analyze + Core tests.
+- Mobile tests.
+- Android debug/profile/release APK, release AAB y split ABI.
+- Web tests + dart2js + WASM.
+- iOS release + profile en macOS sin codesign.
+
+Alcance validado:
+
+- invitaciones coach/cliente con código hasheado, expiración y aceptación explícita;
+- permisos configurables y revocación;
+- relación coach↔cliente con aislamiento RLS;
+- asignación versionada de programas sin copiar historial;
+- recepción/instalación de programa por el cliente sin reescribir historial pasado;
+- progreso compartido con contrato de datos reducido y permisos separados para progreso y entrenamientos;
+- pérdida inmediata de acceso tras revocar la relación;
+- conservación de propiedad/historial del cliente.
+
+Los tests pgTAP se ejecutaron sobre Supabase efímero. **No se aplicaron estas migraciones al Supabase remoto.**
+
+
+## Roadmap 3 — Tareas del entrenador — CI verde — 2026-09-24
+
+- Fuente privada validada: `f863af0cd9547cabdf4dcdb477e0c7d53882674c`.
+- Snapshot público equivalente: `c85a37000b68b3dfb8c378323d54218e6dfeca55`.
+- Workflow: `STK Haven Public CI`.
+- Run: `36093926256` (#15).
+- Resultado global: `success`.
+
+Jobs confirmados verdes:
+
+- Supabase DB + RLS tests.
+- Analyze + Core tests.
+- Mobile tests.
+- Android debug/profile/release APK, release AAB y split ABI.
+- Web tests + dart2js + WASM.
+- iOS release + profile en macOS sin codesign.
+
+Alcance validado:
+
+- permiso explícito `assign_tasks`;
+- tareas normalizadas con recurrencia y fechas;
+- ocurrencias finales `completed/skipped` inmutables;
+- adherencia por periodo;
+- comentarios append-only y permiso de comentario separado;
+- historial del cliente preservado tras revocación;
+- pérdida inmediata del acceso del entrenador después de revocar la relación;
+- mirror local `HabitTaskSource.coach` sin permitir mutaciones locales que evadan el backend;
+- recordatorios locales opt-in compilados en plataformas compatibles.
+
+La entrega real de notificaciones requiere smoke físico y permanece en el gate local final. **No se aplicó la migración al Supabase remoto.**

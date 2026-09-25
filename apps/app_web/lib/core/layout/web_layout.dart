@@ -15,6 +15,7 @@ import '../../features/faith/presentation/ai_chat_page_web.dart';
 import '../../features/faith/presentation/bible_reader_page_web.dart';
 import '../../features/faith/presentation/faith_hub_page_web.dart';
 import '../../features/home/presentation/home_page_web.dart';
+import '../../features/nutrition/presentation/nutrition_intelligence_page_web.dart';
 import '../../features/profile/presentation/profile_page_web.dart';
 import '../../features/progress/presentation/progress_page_web.dart';
 import '../../features/routines/presentation/routines_page_web.dart';
@@ -148,6 +149,13 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
                   title: 'Study & Hábitos',
                   subtitle: 'Tareas, recurrencia, lectura y sesiones de estudio.',
                   onTap: () => open(const StudyHabitsPage()),
+                ),
+                const SizedBox(height: 10),
+                _QuickMenuTile(
+                  icon: Icons.restaurant_menu_outlined,
+                  title: 'Nutrición Inteligente',
+                  subtitle: 'Food Vision, porciones y objetivos adultos verificados.',
+                  onTap: () => open(const NutritionIntelligencePageWeb()),
                 ),
                 if (faithEnabled) ...[
                   const SizedBox(height: 10),

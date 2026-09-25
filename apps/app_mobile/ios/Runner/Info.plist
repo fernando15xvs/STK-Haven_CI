@@ -24,6 +24,10 @@
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<key>NSCameraUsageDescription</key>
+		<string>STK Haven usa la cámara cuando eliges analizar una comida con Food Vision.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>STK Haven accede a una foto solo cuando eliges analizarla con Food Vision.</string>
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>fetch</string>

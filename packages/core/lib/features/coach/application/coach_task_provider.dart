@@ -320,6 +320,36 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
     }
   }
 
+  void clearClient(String clientUserId) {
+    final removedTaskIds = state.tasks
+        .where((task) => task.clientUserId == clientUserId)
+        .map((task) => task.id)
+        .toSet();
+
+    final tasks = state.tasks
+        .where((task) => task.clientUserId != clientUserId)
+        .toList(growable: false);
+    final occurrences = state.occurrences
+        .where((item) => !removedTaskIds.contains(item.taskId))
+        .toList(growable: false);
+    final comments = Map<String, List<CoachTaskComment>>.from(
+      state.commentsByTask,
+    );
+    for (final taskId in removedTaskIds) {
+      comments.remove(taskId);
+    }
+    final adherence =
+        Map<String, CoachTaskAdherence>.from(state.adherenceByClient)
+          ..remove(clientUserId);
+
+    state = state.copyWith(
+      tasks: List.unmodifiable(tasks),
+      occurrences: List.unmodifiable(occurrences),
+      commentsByTask: Map.unmodifiable(comments),
+      adherenceByClient: Map.unmodifiable(adherence),
+    );
+  }
+
   List<CoachTaskOccurrence> occurrencesFor(String taskId) {
     return state.occurrences
         .where((item) => item.taskId == taskId)

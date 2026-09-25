@@ -226,16 +226,22 @@ Recorrido mínimo:
 5. cliente recibe programa;
 6. cliente completa sesión;
 7. entrenador ve progreso actualizado;
-8. entrenador asigna tarea;
-9. cliente completa tarea;
-10. entrenador crea/edita orientación alimentaria V1;
-11. cliente ve la versión correcta;
-12. cliente revoca acceso.
+8. entrenador asigna una tarea con fecha/recurrencia;
+9. cliente la recibe también en Study & Habits identificada como “Asignada por entrenador”;
+10. cliente completa una ocurrencia y omite otra cuando corresponda;
+11. entrenador ve actualizarse la adherencia;
+12. cliente añade un comentario y entrenador responde;
+13. cliente activa un recordatorio local de la tarea en el dispositivo físico;
+14. entrenador crea/edita orientación alimentaria V1;
+15. cliente ve la versión correcta;
+16. cliente revoca acceso.
 
 Criterio:
 
-- [ ] después de revocar, entrenador deja de acceder;
-- [ ] cliente conserva su propio historial;
+- [ ] después de revocar, entrenador deja de acceder a relación, progreso, tareas, adherencia y comentarios protegidos;
+- [ ] cliente conserva su propio historial y las ocurrencias históricas de tareas;
+- [ ] tareas completadas/omitidas no cambian retroactivamente;
+- [ ] el recordatorio de tarea solo aparece si el cliente lo habilita localmente;
 - [ ] no aparecen datos de otros clientes;
 - [ ] cambios de programa no reescriben historial pasado.
 

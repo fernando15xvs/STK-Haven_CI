@@ -57,6 +57,31 @@
 - La migración de identidad se aplicó y probó en un **Supabase efímero aislado de CI**, incluyendo pgTAP de RLS, aislamiento entre usuarios, rechazo de sesión anónima y dominio `athlete/coach`.
 - **No se aplicó ninguna migración al Supabase remoto**; el despliegue real sigue reservado para una autorización explícita futura.
 
+
+## Evidencia automática Fase D — Coach/Client MVP — 2026-09-24
+
+- Fuente privada validada: `f273acbe4b973088af36340f95ca4fc04aa97c8a`.
+- Snapshot público equivalente: `43a00cee3a33b46b040f2b1c7c20d3abb5c74f44`.
+- GitHub Actions: `STK Haven Public CI` run #13, ID `35976942306`.
+- Resultado global: `success`.
+- Verdes: Supabase DB + RLS tests, Analyze + Core tests, Mobile tests, Android debug/profile/release/AAB/split ABI, Web tests + dart2js + WASM, iOS release/profile sin codesign.
+- Se validaron invitaciones con consentimiento, relación coach↔cliente, permisos, revocación, asignación versionada de programas y progreso compartido con permisos separados `view_progress` / `view_workouts`.
+- pgTAP confirmó aislamiento multiusuario, rechazo de entrenador no vinculado y pérdida inmediata de acceso del entrenador tras revocación, sin borrar el historial propio del cliente.
+- **No se aplicó ninguna migración Roadmap 3 al Supabase remoto.**
+
+
+## Evidencia automática Fase E — Tareas del entrenador — 2026-09-24
+
+- Fuente privada validada: `f863af0cd9547cabdf4dcdb477e0c7d53882674c`.
+- Snapshot público equivalente: `c85a37000b68b3dfb8c378323d54218e6dfeca55`.
+- GitHub Actions: `STK Haven Public CI` run #15, ID `36093926256`.
+- Resultado global: `success`.
+- Verdes: Supabase DB + RLS tests, Analyze + Core tests, Mobile tests, Android debug/profile/release/AAB/split ABI, Web tests + dart2js + WASM, iOS release/profile sin codesign.
+- Se validaron asignación consentida de tareas, estados `completed/skipped` inmutables por ocurrencia, recurrencia, adherencia, comentarios append-only, conservación del historial del cliente y corte de acceso del entrenador tras revocación.
+- Las tareas cloud se materializan como `HabitTaskSource.coach` sin permitir que el mirror local salte la autoridad del backend.
+- Los recordatorios son opt-in local del cliente; su compilación está validada, pero la aparición real de la notificación queda para el smoke físico final.
+- **No se aplicó ninguna migración Roadmap 3 al Supabase remoto.**
+
 ---
 
 # 0. Gate previo — preservar Roadmap 2.0
@@ -606,16 +631,16 @@ Ejemplos:
 - completar cuestionario;
 - revisar plan.
 
-- [ ] El entrenador crea tarea.
-- [ ] Cliente la recibe.
-- [ ] Estado pendiente/completada/omitida.
-- [ ] Fecha límite opcional.
-- [ ] Repetición.
-- [ ] Comentario cliente.
-- [ ] Comentario entrenador.
-- [ ] Notificaciones opcionales.
-- [ ] El cliente puede diferenciar tarea propia vs asignada.
-- [ ] Historial no editable retroactivamente sin trazabilidad.
+- [x] El entrenador crea tarea con consentimiento `assign_tasks`.
+- [x] Cliente la recibe desde backend y como mirror `HabitTaskSource.coach` en Study & Habits.
+- [x] Estado pendiente/completada/omitida.
+- [x] Fecha límite opcional.
+- [x] Repetición diaria/semanal.
+- [x] Comentario cliente.
+- [x] Comentario entrenador sujeto a permiso `comment`.
+- [~] Notificaciones opcionales implementadas como opt-in local; prueba física final pendiente.
+- [x] El cliente puede diferenciar tarea propia vs asignada.
+- [x] Historial no editable retroactivamente: ocurrencia final inmutable y comentarios append-only.
 
 ---
 
@@ -781,33 +806,47 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 **Gate C:** VERDE automático en entorno Supabase aislado. Esto valida implementación y seguridad base; no significa que las migraciones estén desplegadas en producción.
 
 ## Fase D — Coach/Client MVP
-- [~] D1 Relaciones/invitaciones: código hasheado/expirable preparado, pendiente CI del bloque.
-- [~] D2 Consentimiento + permisos configurables preparado, pendiente CI del bloque.
-- [~] D3 Lista de relaciones/clientes vinculados mediante RPC restringido, pendiente CI.
-- [ ] D4 Cliente detalle.
-- [ ] D5 Asignar programa.
-- [ ] D6 Cliente recibe programa.
-- [ ] D7 Progreso compartido.
-- [~] D8 Revocar acceso preparado, pendiente CI.
-- [~] D9 Auditoría RLS/pgTAP preparada, pendiente ejecución del bloque.
+- [x] D1 Relaciones/invitaciones con código hasheado y expiración.
+- [x] D2 Consentimiento + permisos configurables.
+- [x] D3 Lista de relaciones/clientes vinculados mediante RPC restringido.
+- [x] D4 Cliente detalle.
+- [x] D5 Asignar programa versionado sin copiar historial del entrenador.
+- [x] D6 Cliente recibe, revisa e instala programa sin reescribir historial pasado.
+- [x] D7 Progreso compartido con contrato mínimo y permisos separados.
+- [x] D8 Revocar acceso con corte inmediato de RLS y limpieza de caché visible.
+- [x] D9 Auditoría RLS/pgTAP de aislamiento multiusuario.
 
-**Gate D:** entrenador A jamás puede leer Cliente B no vinculado.
+**Gate D:** VERDE automático en run #13. Entrenador A no puede leer Cliente B no vinculado; revocar la relación corta el acceso sin borrar el historial propio del cliente. El smoke UX humano permanece diferido al gate local final.
 
 ## Fase E — Tareas del entrenador
-- [ ] E1 Asignar tarea.
-- [ ] E2 Cliente completa.
-- [ ] E3 Adherencia.
-- [ ] E4 Comentarios.
-- [ ] E5 Recordatorios.
+- [x] E1 Asignar tarea con permiso explícito `assign_tasks`, fecha/recurrencia y backend normalizado.
+- [x] E2 Cliente completa u omite ocurrencias; un resultado final no se reescribe retroactivamente.
+- [x] E3 Adherencia separa completadas/omitidas/pendientes y conserva historial tras archivar.
+- [x] E4 Comentarios bilaterales append-only; el entrenador necesita permiso `comment`.
+- [~] E5 Recordatorios locales opt-in implementados/compilados; smoke de notificación física diferido al gate final.
 
 ## Fase F — Alimentación V1
-- [ ] F1 Contrato de plan.
+- [~] F1 Contrato de plan y backend no clínico implementados; falta nuevo CI.
 - [ ] F2 Editor entrenador.
 - [ ] F3 Vista cliente.
-- [ ] F4 Versionado.
-- [ ] F5 Permisos.
-- [ ] F6 Avisos/scope.
-- [ ] F7 Tests.
+- [~] F4 Versionado inmutable implementado en backend; falta validación dinámica del nuevo candidato.
+- [~] F5 Permisos/RLS implementados y pgTAP específico añadido; falta ejecutar CI del nuevo candidato.
+- [~] F6 Avisos/scope no clínico implementados; falta validación UI.
+- [~] F7 Tests de contrato Dart + pgTAP de Nutrición añadidos; falta UI y obtener CI verde.
+
+## Fase F2 — Nutrición Inteligente personal / Food Vision
+- [~] N1 Contrato de estimación energética por rangos para adultos.
+- [~] N2 Objetivos mantenimiento / ajuste gradual hacia pérdida / ajuste gradual hacia ganancia, bloqueados para menores.
+- [~] N3 Food Vision multimodal con foto y respuesta estructurada.
+- [~] N4 Resultado visual por rangos, ingredientes, porciones, supuestos y confianza.
+- [~] N5 Guard fail-closed: sin acceso adulto no se devuelven calorías/macros numéricos.
+- [~] N6 Privacidad: la imagen no se persiste por defecto en STK Haven.
+- [~] N7 Captura cámara/galería Mobile + selector Web implementados; falta CI/smoke.
+- [~] N8 Reanálisis con contexto corregido implementado; editor estructurado de ingredientes/porción sigue pendiente.
+- [ ] N9 Historial alimentario opcional, local-first y borrable.
+- [ ] N10 Rate limit dedicado, métricas de calidad y dataset de evaluación.
+- [ ] N11 Validar Food Vision con platos simples, mixtos, salsas ocultas y baja confianza.
+- [~] N12 Cliente y Edge Function exigen `app_metadata.adult_nutrition_access=true`; proceso que otorga esa verificación sigue pendiente antes del release.
 
 ## Fase G — Coach 2.0
 - [ ] G1 Plantillas.
@@ -870,8 +909,8 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [x] Gate A automático (smoke manual final diferido).
 - [~] Gate B — automático verde; smoke UX/local final diferido.
 - [ ] Gate C — migración base preparada, aún sin validación dinámica.
-- [ ] Gate D.
-- [ ] Gate E.
+- [x] Gate D — automático verde; smoke UX final diferido.
+- [~] Gate E — automático verde; solo smoke físico del recordatorio queda diferido.
 - [ ] Gate F.
 - [ ] Gate G.
 - [ ] Gate H.
