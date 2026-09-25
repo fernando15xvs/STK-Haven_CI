@@ -9,6 +9,7 @@ enum CoachPermission {
   viewProgress('view_progress'),
   viewMeasurements('view_measurements'),
   assignPrograms('assign_programs'),
+  assignTasks('assign_tasks'),
   viewCheckins('view_checkins'),
   viewNutrition('view_nutrition'),
   comment('comment');

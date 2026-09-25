@@ -43,6 +43,20 @@ class HabitScheduleService {
     return completions.any(
       (completion) =>
           completion.taskId == task.id &&
+          completion.status == HabitTaskCompletionStatus.completed &&
+          _sameDate(_dateOnly(completion.completedAt), date),
+    );
+  }
+
+  static bool isResolvedOn(
+    HabitTask task,
+    Iterable<HabitTaskCompletion> completions,
+    DateTime instant,
+  ) {
+    final date = _dateOnly(instant);
+    return completions.any(
+      (completion) =>
+          completion.taskId == task.id &&
           _sameDate(_dateOnly(completion.completedAt), date),
     );
   }

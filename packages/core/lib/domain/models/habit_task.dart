@@ -39,6 +39,8 @@ class HabitTask {
   final bool faithSpecific;
   final String reference;
   final String notes;
+  final String sourceReference;
+  final bool reminderEnabled;
   final bool archived;
 
   const HabitTask({
@@ -57,6 +59,8 @@ class HabitTask {
     this.faithSpecific = false,
     this.reference = '',
     this.notes = '',
+    this.sourceReference = '',
+    this.reminderEnabled = false,
     this.archived = false,
   });
 
@@ -77,6 +81,8 @@ class HabitTask {
     bool? faithSpecific,
     String? reference,
     String? notes,
+    String? sourceReference,
+    bool? reminderEnabled,
     bool? archived,
   }) {
     return HabitTask(
@@ -96,6 +102,8 @@ class HabitTask {
       faithSpecific: faithSpecific ?? this.faithSpecific,
       reference: reference ?? this.reference,
       notes: notes ?? this.notes,
+      sourceReference: sourceReference ?? this.sourceReference,
+      reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       archived: archived ?? this.archived,
     );
   }
@@ -116,6 +124,8 @@ class HabitTask {
         'faithSpecific': faithSpecific,
         'reference': reference,
         'notes': notes,
+        'sourceReference': sourceReference,
+        'reminderEnabled': reminderEnabled,
         'archived': archived,
       };
 
@@ -168,9 +178,16 @@ class HabitTask {
       faithSpecific: json['faithSpecific'] as bool? ?? false,
       reference: '${json['reference'] ?? ''}',
       notes: '${json['notes'] ?? ''}',
+      sourceReference: '${json['sourceReference'] ?? ''}',
+      reminderEnabled: json['reminderEnabled'] as bool? ?? false,
       archived: json['archived'] as bool? ?? false,
     );
   }
+}
+
+enum HabitTaskCompletionStatus {
+  completed,
+  skipped,
 }
 
 class HabitTaskCompletion {
@@ -179,6 +196,7 @@ class HabitTaskCompletion {
   final DateTime completedAt;
   final int minutesSpent;
   final String note;
+  final HabitTaskCompletionStatus status;
 
   const HabitTaskCompletion({
     required this.id,
@@ -186,6 +204,7 @@ class HabitTaskCompletion {
     required this.completedAt,
     this.minutesSpent = 0,
     this.note = '',
+    this.status = HabitTaskCompletionStatus.completed,
   });
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -194,6 +213,7 @@ class HabitTaskCompletion {
         'completedAt': completedAt.toIso8601String(),
         'minutesSpent': minutesSpent,
         'note': note,
+        'status': status.name,
       };
 
   factory HabitTaskCompletion.fromJson(Map<String, dynamic> json) {
@@ -205,6 +225,11 @@ class HabitTaskCompletion {
           DateTime.tryParse('${json['completedAt']}') ?? DateTime.now(),
       minutesSpent: minutes.clamp(0, 1440).toInt(),
       note: '${json['note'] ?? ''}',
+      status: _enumByName(
+            HabitTaskCompletionStatus.values,
+            json['status']?.toString(),
+          ) ??
+          HabitTaskCompletionStatus.completed,
     );
   }
 }

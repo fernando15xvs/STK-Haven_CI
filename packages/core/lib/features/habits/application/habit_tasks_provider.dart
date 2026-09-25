@@ -134,6 +134,7 @@ class HabitTasksNotifier extends Notifier<HabitTasksState> {
     required String taskId,
     int minutesSpent = 0,
     String note = '',
+    HabitTaskCompletionStatus status = HabitTaskCompletionStatus.completed,
     DateTime? completedAt,
   }) async {
     final completion = HabitTaskCompletion(
@@ -142,6 +143,7 @@ class HabitTasksNotifier extends Notifier<HabitTasksState> {
       completedAt: completedAt ?? DateTime.now(),
       minutesSpent: minutesSpent.clamp(0, 1440).toInt(),
       note: note.trim(),
+      status: status,
     );
     await _repository.saveCompletion(completion);
     refresh();
@@ -184,7 +186,7 @@ final dueHabitTasksTodayProvider = Provider<List<HabitTask>>((ref) {
       .where(
         (task) =>
             HabitScheduleService.isDueOn(task, today) &&
-            !HabitScheduleService.isCompletedOn(task, completions, today),
+            !HabitScheduleService.isResolvedOn(task, completions, today),
       )
       .toList(growable: false);
 });

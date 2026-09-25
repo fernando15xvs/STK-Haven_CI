@@ -1,4 +1,5 @@
 import 'package:core/domain/models/habit_task.dart';
+import 'package:core/features/coach/application/coach_task_provider.dart';
 import 'package:core/domain/models/study_plan.dart';
 import 'package:core/features/habits/application/habit_schedule_service.dart';
 import 'package:core/features/habits/application/habit_study_timer_provider.dart';
@@ -16,6 +17,7 @@ class StudyHabitsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(coachTaskLazySyncProvider);
     final visibleTasks = ref.watch(visibleHabitTasksProvider);
     final state = ref.watch(habitTasksProvider);
     final dueToday = ref.watch(dueHabitTasksTodayProvider);
@@ -58,6 +60,8 @@ class StudyHabitsPage extends ConsumerWidget {
                   completedToday: state.completions
                       .where(
                         (completion) =>
+                            completion.status ==
+                                HabitTaskCompletionStatus.completed &&
                             completion.completedAt.year == now.year &&
                             completion.completedAt.month == now.month &&
                             completion.completedAt.day == now.day,
@@ -201,12 +205,12 @@ class StudyHabitsPage extends ConsumerWidget {
                         today: now,
                       ),
                       onOpen: () => _handleTask(context, ref, task),
-                      onComplete: () => ref
-                          .read(habitTasksProvider.notifier)
-                          .completeTask(taskId: task.id),
-                      onArchive: () => ref
-                          .read(habitTasksProvider.notifier)
-                          .archiveTask(task.id),
+                      onComplete: () => _handleTask(context, ref, task),
+                      onArchive: task.source == HabitTaskSource.coach
+                          ? null
+                          : () => ref
+                              .read(habitTasksProvider.notifier)
+                              .archiveTask(task.id),
                     ),
                     const SizedBox(height: 10),
                   ],
@@ -231,12 +235,12 @@ class StudyHabitsPage extends ConsumerWidget {
                         today: now,
                       ),
                       onOpen: () => _handleTask(context, ref, task),
-                      onComplete: () => ref
-                          .read(habitTasksProvider.notifier)
-                          .completeTask(taskId: task.id),
-                      onArchive: () => ref
-                          .read(habitTasksProvider.notifier)
-                          .archiveTask(task.id),
+                      onComplete: () => _handleTask(context, ref, task),
+                      onArchive: task.source == HabitTaskSource.coach
+                          ? null
+                          : () => ref
+                              .read(habitTasksProvider.notifier)
+                              .archiveTask(task.id),
                     ),
                     const SizedBox(height: 10),
                   ],
@@ -286,6 +290,18 @@ class StudyHabitsPage extends ConsumerWidget {
     WidgetRef ref,
     HabitTask task,
   ) async {
+    if (task.source == HabitTaskSource.coach) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Esta tarea fue asignada por tu entrenador. '
+            'Complétala desde Coach & Clientes > Tareas asignadas.',
+          ),
+        ),
+      );
+      return;
+    }
+
     if (task.type == HabitTaskType.readingTimer ||
         task.type == HabitTaskType.studySession) {
       await _openTimer(context, task);
@@ -743,7 +759,7 @@ class _HabitTaskCard extends StatelessWidget {
   final int streak;
   final VoidCallback onOpen;
   final VoidCallback onComplete;
-  final VoidCallback onArchive;
+  final VoidCallback? onArchive;
 
   const _HabitTaskCard({
     required this.task,
@@ -767,6 +783,8 @@ class _HabitTaskCard extends StatelessWidget {
         subtitle: Text(
           [
             task.category,
+            if (task.source == HabitTaskSource.coach)
+              'Asignada por entrenador',
             if (task.targetMinutes > 0) '${task.targetMinutes} min',
             if (streak > 0) 'Racha actual: $streak',
           ].join(' · '),
@@ -784,17 +802,18 @@ class _HabitTaskCard extends StatelessWidget {
                     : Icons.check_rounded,
               ),
             ),
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'archive') onArchive();
-              },
-              itemBuilder: (_) => const [
-                PopupMenuItem(
-                  value: 'archive',
-                  child: Text('Archivar'),
-                ),
-              ],
-            ),
+            if (onArchive != null)
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'archive') onArchive?.call();
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'archive',
+                    child: Text('Archivar'),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -816,12 +835,20 @@ class _CompletionTile extends StatelessWidget {
     final date = completion.completedAt;
     final day =
         '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}';
+    final skipped =
+        completion.status == HabitTaskCompletionStatus.skipped;
     return ListTile(
-      leading: const Icon(Icons.check_circle_outline),
-      title: Text(task?.title ?? 'Tarea completada'),
+      leading: Icon(
+        skipped ? Icons.remove_circle_outline : Icons.check_circle_outline,
+      ),
+      title: Text(
+        task?.title ??
+            (skipped ? 'Tarea omitida' : 'Tarea completada'),
+      ),
       subtitle: Text(
         [
           day,
+          skipped ? 'Omitida' : 'Completada',
           if (completion.minutesSpent > 0)
             '${completion.minutesSpent} min',
           if (completion.note.isNotEmpty) completion.note,

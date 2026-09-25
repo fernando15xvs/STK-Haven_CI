@@ -2,6 +2,7 @@ import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/features/coach/application/coach_client_provider.dart';
 import 'package:core/features/coach/presentation/pages/coach_client_progress_page.dart';
 import 'package:core/features/coach/presentation/pages/coach_program_assignments_page.dart';
+import 'package:core/features/coach/presentation/pages/coach_tasks_page.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -206,6 +207,44 @@ class CoachClientDetailPage extends ConsumerWidget {
                       ),
                       const Divider(height: 1),
                       _CapabilityTile(
+                        icon: Icons.task_alt_outlined,
+                        title: 'Tareas asignadas',
+                        subtitle: asCoach
+                            ? relationship.allows(
+                                    CoachPermission.assignTasks,
+                                  )
+                                ? 'Asignar tareas, revisar adherencia y comentarios.'
+                                : 'El cliente no concedió permiso para asignar tareas.'
+                            : 'Completar tareas, revisar historial y activar recordatorios locales.',
+                        enabled: !asCoach ||
+                            relationship.allows(
+                              CoachPermission.assignTasks,
+                            ),
+                        onTap: !asCoach ||
+                                relationship.allows(
+                                  CoachPermission.assignTasks,
+                                )
+                            ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => CoachTasksPage(
+                                      clientUserId:
+                                          relationship!.clientUserId,
+                                      clientDisplayName: displayName,
+                                      canAssign: asCoach &&
+                                          relationship.allows(
+                                            CoachPermission.assignTasks,
+                                          ),
+                                      canComment: !asCoach ||
+                                          relationship.allows(
+                                            CoachPermission.comment,
+                                          ),
+                                    ),
+                                  ),
+                                )
+                            : null,
+                      ),
+                      const Divider(height: 1),
+                      _CapabilityTile(
                         icon: Icons.monitor_weight_outlined,
                         title: 'Medidas',
                         subtitle: relationship.allows(
@@ -299,6 +338,7 @@ String _permissionLabel(CoachPermission permission) => switch (permission) {
       CoachPermission.viewProgress => 'Ver progreso',
       CoachPermission.viewMeasurements => 'Ver medidas',
       CoachPermission.assignPrograms => 'Asignar programas',
+      CoachPermission.assignTasks => 'Asignar tareas',
       CoachPermission.viewCheckins => 'Ver check-ins',
       CoachPermission.viewNutrition => 'Ver alimentación',
       CoachPermission.comment => 'Comentar',

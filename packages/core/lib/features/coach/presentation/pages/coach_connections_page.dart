@@ -24,6 +24,7 @@ class _CoachConnectionsPageState
     CoachPermission.viewWorkouts,
     CoachPermission.viewProgress,
     CoachPermission.assignPrograms,
+    CoachPermission.assignTasks,
     CoachPermission.comment,
   };
 
@@ -702,6 +703,7 @@ String _permissionLabel(CoachPermission permission) => switch (permission) {
       CoachPermission.viewProgress => 'Ver progreso',
       CoachPermission.viewMeasurements => 'Ver medidas',
       CoachPermission.assignPrograms => 'Asignar programas',
+      CoachPermission.assignTasks => 'Asignar tareas',
       CoachPermission.viewCheckins => 'Ver check-ins',
       CoachPermission.viewNutrition => 'Ver alimentación',
       CoachPermission.comment => 'Comentar',
