@@ -65,7 +65,6 @@ class CoachTaskService {
         .select()
         .order('occurrence_date', ascending: false);
 
-    if (response is! List) return const <CoachTaskOccurrence>[];
     return response
         .whereType<Map>()
         .map(
@@ -84,7 +83,6 @@ class CoachTaskService {
         .eq('task_id', taskId)
         .order('created_at');
 
-    if (response is! List) return const <CoachTaskComment>[];
     return response
         .whereType<Map>()
         .map(
