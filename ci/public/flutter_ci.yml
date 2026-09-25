@@ -57,6 +57,21 @@ jobs:
         if: always()
         run: supabase stop --no-backup
 
+  edge-functions:
+    name: Edge Functions static check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check Edge Functions
+        run: >-
+          deno check
+          supabase/functions/haven-faith-ai/index.ts
+          supabase/functions/food-vision-ai/index.ts
+
   mobile-tests:
     name: Mobile tests
     runs-on: ubuntu-latest

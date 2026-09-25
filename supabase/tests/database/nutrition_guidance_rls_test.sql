@@ -115,6 +115,7 @@ values (
 );
 
 create temporary table _nutrition_test (plan_id uuid);
+grant select, insert, update on _nutrition_test to authenticated;
 
 set local role authenticated;
 select set_config(

@@ -20,7 +20,7 @@ class NutritionIntelligencePageWeb extends StatelessWidget {
   }
 
   Future<NutritionPhoto?> _pickPhoto(NutritionPhotoSource source) async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: false,
       withData: true,
