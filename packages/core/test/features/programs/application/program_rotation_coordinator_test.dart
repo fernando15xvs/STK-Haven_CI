@@ -56,6 +56,37 @@ void main() {
       expect(second.nextRoutineId, 'B');
     });
 
+    test('missed calendar days never skip the expected rotation slot', () {
+      final history = [
+        _session('a', 'A', start.add(const Duration(days: 1))),
+        _session('b-late', 'B', start.add(const Duration(days: 18))),
+      ];
+      final result = ProgramRotationCoordinator.reconcile(program(), history);
+      expect(result.completions.map((item) => item.routineId), ['A', 'B']);
+      expect(result.nextRoutineId, 'C');
+    });
+
+    test('duplicate and replay do not double-advance the cycle', () {
+      final history = [
+        _session('a', 'A', start.add(const Duration(days: 1))),
+        _session('a', 'A', start.add(const Duration(days: 1))),
+        _session('b', 'B', start.add(const Duration(days: 2))),
+      ];
+      final result = ProgramRotationCoordinator.reconcile(program(), history);
+      expect(result.completions.map((item) => item.workoutSessionId), ['a', 'b']);
+      expect(result.nextRoutineId, 'C');
+    });
+
+    test('sessions before program start cannot mutate rotation', () {
+      final history = [
+        _session('old-a', 'A', start.subtract(const Duration(days: 1))),
+        _session('new-a', 'A', start.add(const Duration(hours: 2))),
+      ];
+      final result = ProgramRotationCoordinator.reconcile(program(), history);
+      expect(result.completions.map((item) => item.workoutSessionId), ['new-a']);
+      expect(result.nextRoutineId, 'B');
+    });
+
     test('manual deload week remains a program context flag', () {
       final withDeload = program().copyWith(deloadWeeks: const {2});
       expect(withDeload.isDeloadWeekAt(start.add(const Duration(days: 8))), true);

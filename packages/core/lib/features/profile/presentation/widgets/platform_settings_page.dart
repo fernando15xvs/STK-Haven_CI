@@ -352,6 +352,26 @@ class PlatformSettingsPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
+          _SectionCard(
+            title: 'Acerca de',
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.description_outlined),
+                title: const Text('Licencias de software'),
+                subtitle: const Text(
+                  'Consulta los avisos de Flutter y de las dependencias incluidas en esta versión.',
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => showLicensePage(
+                  context: context,
+                  applicationName: 'STK Haven',
+                  applicationVersion: '1.0.0',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           const _SectionCard(
             title: 'Cómo se resuelven los cambios',
             children: [
