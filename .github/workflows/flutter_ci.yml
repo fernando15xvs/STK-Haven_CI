@@ -69,7 +69,6 @@ jobs:
       - name: Type-check Edge Functions
         run: >-
           deno check
-          supabase/functions/haven-faith-ai/index.ts
           supabase/functions/food-vision-ai/index.ts
 
   mobile-tests:

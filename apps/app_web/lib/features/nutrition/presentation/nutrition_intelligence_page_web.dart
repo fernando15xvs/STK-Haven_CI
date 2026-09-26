@@ -25,8 +25,8 @@ class NutritionIntelligencePageWeb extends StatelessWidget {
       allowMultiple: false,
       withData: true,
     );
-    if (result == null || result.files.isEmpty) return null;
-    final file = result.files.single;
+    if (result.isEmpty) return null;
+    final file = result.single;
     final bytes = file.bytes;
     if (bytes == null) return null;
 
