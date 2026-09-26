@@ -2,6 +2,7 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/nutrition_history_entry.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
+import 'package:core/features/nutrition/application/food_vision_correction.dart';
 import 'package:core/features/nutrition/data/food_vision_service.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
 import 'package:flutter/material.dart';
@@ -354,13 +355,24 @@ class _NutritionIntelligencePageState
               const SizedBox(height: 16),
               _FoodVisionResultCard(estimate: estimate),
               const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.tonalIcon(
-                  onPressed: () => _saveCurrentEstimate(estimate),
-                  icon: const Icon(Icons.bookmark_add_outlined),
-                  label: const Text('Guardar resultado local'),
-                ),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: () => _saveCurrentEstimate(estimate),
+                    icon: const Icon(Icons.bookmark_add_outlined),
+                    label: const Text('Guardar resultado local'),
+                  ),
+                  if (_photo != null)
+                    OutlinedButton.icon(
+                      onPressed: _analyzing
+                          ? null
+                          : () => _editStructuredCorrection(estimate),
+                      icon: const Icon(Icons.edit_note_rounded),
+                      label: const Text('Corregir ingredientes/porciones'),
+                    ),
+                ],
               ),
             ],
           ],
@@ -534,6 +546,33 @@ class _NutritionIntelligencePageState
     }
   }
 
+  Future<void> _editStructuredCorrection(
+    FoodVisionEstimate estimate,
+  ) async {
+    final photo = _photo;
+    if (photo == null) return;
+
+    final draft = await showDialog<FoodVisionCorrectionDraft>(
+      context: context,
+      builder: (_) => _FoodVisionCorrectionDialog(
+        initial: FoodVisionCorrectionDraft.fromEstimate(
+          estimate,
+          extraContext: _dishHintController.text.trim(),
+        ),
+      ),
+    );
+    if (!mounted || draft == null) return;
+
+    final context = draft.toReanalysisContext();
+    setState(() {
+      _dishHintController.text = context;
+      _dishHintController.selection = TextSelection.collapsed(
+        offset: _dishHintController.text.length,
+      );
+    });
+    await _analyzePhoto(photo);
+  }
+
   Future<void> _pickAndAnalyze(NutritionPhotoSource source) async {
     final photo = await widget.photoPicker(source);
     if (!mounted || photo == null) return;
@@ -568,6 +607,189 @@ class _NutritionIntelligencePageState
     } finally {
       if (mounted) setState(() => _analyzing = false);
     }
+  }
+}
+
+class _FoodVisionCorrectionDialog extends StatefulWidget {
+  final FoodVisionCorrectionDraft initial;
+
+  const _FoodVisionCorrectionDialog({required this.initial});
+
+  @override
+  State<_FoodVisionCorrectionDialog> createState() =>
+      _FoodVisionCorrectionDialogState();
+}
+
+class _FoodVisionCorrectionDialogState
+    extends State<_FoodVisionCorrectionDialog> {
+  late final TextEditingController _dishName;
+  late final TextEditingController _extraContext;
+  late final List<_FoodVisionCorrectionItemControllers> _items;
+
+  @override
+  void initState() {
+    super.initState();
+    _dishName = TextEditingController(text: widget.initial.dishName);
+    _extraContext = TextEditingController(text: widget.initial.extraContext);
+    _items = widget.initial.items
+        .map(_FoodVisionCorrectionItemControllers.fromItem)
+        .toList(growable: true);
+  }
+
+  @override
+  void dispose() {
+    _dishName.dispose();
+    _extraContext.dispose();
+    for (final item in _items) {
+      item.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Corregir análisis'),
+      content: SizedBox(
+        width: 620,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _dishName,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre del plato',
+                ),
+              ),
+              const SizedBox(height: 12),
+              for (var i = 0; i < _items.length; i++)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              TextField(
+                                controller: _items[i].name,
+                                decoration: const InputDecoration(
+                                  labelText: 'Ingrediente',
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextField(
+                                controller: _items[i].portion,
+                                decoration: const InputDecoration(
+                                  labelText: 'Porción / descripción',
+                                  hintText: 'Ej.: 1 taza, porción pequeña',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Eliminar ingrediente',
+                          onPressed: () => setState(() {
+                            final removed = _items.removeAt(i);
+                            removed.dispose();
+                          }),
+                          icon: const Icon(Icons.delete_outline),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _items.length >= 24
+                      ? null
+                      : () => setState(
+                            () => _items.add(
+                              _FoodVisionCorrectionItemControllers.empty(),
+                            ),
+                          ),
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Añadir ingrediente'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _extraContext,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Contexto adicional',
+                  hintText:
+                      'Ej.: la salsa estaba aparte; no llevaba aceite adicional',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(
+              context,
+              FoodVisionCorrectionDraft(
+                dishName: _dishName.text.trim(),
+                items: [
+                  for (final item in _items)
+                    if (item.name.text.trim().isNotEmpty ||
+                        item.portion.text.trim().isNotEmpty)
+                      FoodVisionCorrectionItem(
+                        name: item.name.text.trim(),
+                        portionDescription: item.portion.text.trim(),
+                      ),
+                ],
+                extraContext: _extraContext.text.trim(),
+              ),
+            );
+          },
+          child: const Text('Reanalizar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _FoodVisionCorrectionItemControllers {
+  final TextEditingController name;
+  final TextEditingController portion;
+
+  _FoodVisionCorrectionItemControllers({
+    required this.name,
+    required this.portion,
+  });
+
+  factory _FoodVisionCorrectionItemControllers.fromItem(
+    FoodVisionCorrectionItem item,
+  ) {
+    return _FoodVisionCorrectionItemControllers(
+      name: TextEditingController(text: item.name),
+      portion: TextEditingController(text: item.portionDescription),
+    );
+  }
+
+  factory _FoodVisionCorrectionItemControllers.empty() {
+    return _FoodVisionCorrectionItemControllers(
+      name: TextEditingController(),
+      portion: TextEditingController(),
+    );
+  }
+
+  void dispose() {
+    name.dispose();
+    portion.dispose();
   }
 }
 

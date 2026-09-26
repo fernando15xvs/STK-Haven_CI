@@ -27,17 +27,41 @@ class ProgramRotationCoordinator {
         .toList(growable: false)
       ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
 
-    var next = program;
+    final completions = List<ProgramCompletion>.from(program.completions);
+    var nextIndex = program.normalizedNextRotationIndex;
+    var changed = false;
+
     for (final session in candidates) {
       final routineId = session.routineId;
       if (routineId == null) continue;
-      next = next.recordCompletion(
-        workoutSessionId: session.id,
-        routineId: routineId,
-        completedAt: session.finishedAt,
+      if (!alreadyRecorded.add(session.id)) continue;
+
+      final expectedRoutine = program.routineIds[nextIndex];
+      if (routineId != expectedRoutine) {
+        // Off-sequence sessions remain valid workout history but do not advance
+        // the expected program rotation.
+        alreadyRecorded.remove(session.id);
+        continue;
+      }
+
+      completions.add(
+        ProgramCompletion(
+          workoutSessionId: session.id,
+          routineId: routineId,
+          completedAt: session.finishedAt,
+          rotationIndex: nextIndex,
+          programWeek: program.weekAt(session.finishedAt),
+        ),
       );
+      nextIndex = (nextIndex + 1) % program.routineIds.length;
+      changed = true;
     }
-    return next;
+
+    if (!changed) return program;
+    return program.copyWith(
+      nextRotationIndex: nextIndex,
+      completions: List<ProgramCompletion>.unmodifiable(completions),
+    );
   }
 
   static String? nextRoutineId(

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "simple_visible_food",
+    "category": "simple",
+    "description": "Un alimento principal claramente visible y porción distinguible.",
+    "expected": {
+      "minimumItems": 1,
+      "requiresQuestion": false,
+      "maximumConfidenceWithoutAmbiguity": "high"
+    }
+  },
+  {
+    "id": "mixed_plate",
+    "category": "mixed",
+    "description": "Plato con varios componentes visibles separados.",
+    "expected": {
+      "minimumItems": 2,
+      "requiresQuestion": false,
+      "maximumConfidenceWithoutAmbiguity": "high"
+    }
+  },
+  {
+    "id": "hidden_sauce_or_oil",
+    "category": "hidden_sauce",
+    "description": "Plato donde aceite, salsa o preparación oculta no puede inferirse visualmente.",
+    "expected": {
+      "minimumItems": 1,
+      "requiresQuestion": true,
+      "maximumConfidenceWithoutAmbiguity": "medium"
+    }
+  },
+  {
+    "id": "low_visibility",
+    "category": "low_confidence",
+    "description": "Foto parcial, oscura u ocluida donde ingredientes/porción no son fiables.",
+    "expected": {
+      "minimumItems": 0,
+      "requiresQuestion": true,
+      "maximumConfidenceWithoutAmbiguity": "low"
+    }
+  }
+]
