@@ -47,6 +47,7 @@ class TrainingProgram {
   final Set<int> deloadWeeks;
   final int nextRotationIndex;
   final bool isActive;
+  final bool isTemplate;
   final String notes;
   final List<ProgramCompletion> completions;
 
@@ -61,6 +62,7 @@ class TrainingProgram {
     this.deloadWeeks = const <int>{},
     this.nextRotationIndex = 0,
     this.isActive = true,
+    this.isTemplate = false,
     this.notes = '',
     this.completions = const <ProgramCompletion>[],
   });
@@ -140,8 +142,56 @@ class TrainingProgram {
       deloadWeeks: Set<int>.from(deloadWeeks),
       nextRotationIndex: 0,
       isActive: false,
+      isTemplate: isTemplate,
       notes: notes,
       completions: const [],
+    );
+  }
+
+  TrainingProgram toTemplate({
+    required String newId,
+    required String newName,
+    required DateTime now,
+  }) {
+    return TrainingProgram(
+      id: newId,
+      name: newName,
+      routineIds: List<String>.from(routineIds),
+      createdAt: now,
+      startedAt: now,
+      durationWeeks: durationWeeks,
+      trainingWeekdays: Set<int>.from(trainingWeekdays),
+      deloadWeeks: Set<int>.from(deloadWeeks),
+      nextRotationIndex: 0,
+      isActive: false,
+      isTemplate: true,
+      notes: notes,
+      completions: const <ProgramCompletion>[],
+    );
+  }
+
+  TrainingProgram instantiateTemplate({
+    required String newId,
+    required String newName,
+    required DateTime now,
+  }) {
+    if (!isTemplate) {
+      throw StateError('Solo una plantilla puede instanciarse como programa.');
+    }
+    return TrainingProgram(
+      id: newId,
+      name: newName,
+      routineIds: List<String>.from(routineIds),
+      createdAt: now,
+      startedAt: now,
+      durationWeeks: durationWeeks,
+      trainingWeekdays: Set<int>.from(trainingWeekdays),
+      deloadWeeks: Set<int>.from(deloadWeeks),
+      nextRotationIndex: 0,
+      isActive: false,
+      isTemplate: false,
+      notes: notes,
+      completions: const <ProgramCompletion>[],
     );
   }
 
@@ -156,6 +206,7 @@ class TrainingProgram {
     Set<int>? deloadWeeks,
     int? nextRotationIndex,
     bool? isActive,
+    bool? isTemplate,
     String? notes,
     List<ProgramCompletion>? completions,
   }) {
@@ -170,6 +221,7 @@ class TrainingProgram {
       deloadWeeks: deloadWeeks ?? this.deloadWeeks,
       nextRotationIndex: nextRotationIndex ?? this.nextRotationIndex,
       isActive: isActive ?? this.isActive,
+      isTemplate: isTemplate ?? this.isTemplate,
       notes: notes ?? this.notes,
       completions: completions ?? this.completions,
     );
@@ -186,6 +238,7 @@ class TrainingProgram {
         'deloadWeeks': deloadWeeks.toList()..sort(),
         'nextRotationIndex': nextRotationIndex,
         'isActive': isActive,
+        'isTemplate': isTemplate,
         'notes': notes,
         'completions': completions.map((item) => item.toJson()).toList(),
       };
@@ -209,6 +262,7 @@ class TrainingProgram {
           .toSet(),
       nextRotationIndex: (json['nextRotationIndex'] as num?)?.toInt() ?? 0,
       isActive: json['isActive'] as bool? ?? true,
+      isTemplate: json['isTemplate'] as bool? ?? false,
       notes: json['notes'] as String? ?? '',
       completions: rawCompletions is List
           ? rawCompletions

@@ -1,7 +1,11 @@
+import 'package:core/database/hive/hive_boxes.dart';
+import 'package:core/domain/models/nutrition_history_entry.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
 import 'package:core/features/nutrition/data/food_vision_service.dart';
+import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum NutritionPhotoSource { camera, gallery }
@@ -44,6 +48,18 @@ class _NutritionIntelligencePageState
   bool _analyzing = false;
   String? _message;
 
+  late final NutritionHistoryRepository _historyRepository;
+  List<NutritionHistoryEntry> _history = const <NutritionHistoryEntry>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _historyRepository = NutritionHistoryRepository(
+      Hive.box<dynamic>(HiveBoxes.metadata),
+    );
+    _history = _historyRepository.getEntries();
+  }
+
   @override
   void dispose() {
     _ageController.dispose();
@@ -70,6 +86,8 @@ class _NutritionIntelligencePageState
               _buildEnergyPlanner(colors),
             const SizedBox(height: 16),
             _buildFoodVision(colors),
+            const SizedBox(height: 16),
+            _buildHistory(colors),
           ],
         ),
       ),
@@ -335,11 +353,156 @@ class _NutritionIntelligencePageState
             if (_foodEstimate case final estimate?) ...[
               const SizedBox(height: 16),
               _FoodVisionResultCard(estimate: estimate),
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.tonalIcon(
+                  onPressed: () => _saveCurrentEstimate(estimate),
+                  icon: const Icon(Icons.bookmark_add_outlined),
+                  label: const Text('Guardar resultado local'),
+                ),
+              ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildHistory(ColorScheme colors) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.history_rounded, color: colors.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Historial local',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                ),
+                if (_history.isNotEmpty)
+                  TextButton(
+                    onPressed: _confirmClearHistory,
+                    child: const Text('Borrar todo'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Solo se guarda cuando tú lo eliges. Las fotos nunca se almacenan.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 10),
+            if (_history.isEmpty)
+              const Text('Aún no has guardado análisis.')
+            else
+              for (final entry in _history.take(20))
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.restaurant_outlined),
+                  title: Text(
+                    entry.estimate.dishName.isEmpty
+                        ? 'Plato analizado'
+                        : entry.estimate.dishName,
+                  ),
+                  subtitle: Text(_historySubtitle(entry)),
+                  onTap: () => setState(() {
+                    _foodEstimate = entry.estimate;
+                    _dishHintController.text = entry.dishHint;
+                    _photo = null;
+                    _message = null;
+                  }),
+                  trailing: IconButton(
+                    tooltip: 'Eliminar',
+                    onPressed: () => _deleteHistoryEntry(entry.id),
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _historySubtitle(NutritionHistoryEntry entry) {
+    final date = entry.analyzedAt.toLocal();
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    final details = <String>['$day/$month/${date.year} $hour:$minute'];
+    if (entry.estimate.numericNutritionAvailable &&
+        entry.estimate.caloriesLow != null &&
+        entry.estimate.caloriesHigh != null) {
+      details.add(
+        '${entry.estimate.caloriesLow}–${entry.estimate.caloriesHigh} kcal',
+      );
+    }
+    return details.join(' · ');
+  }
+
+  Future<void> _saveCurrentEstimate(FoodVisionEstimate estimate) async {
+    final now = DateTime.now();
+    final id = 'food_${now.microsecondsSinceEpoch}';
+    await _historyRepository.save(
+      NutritionHistoryEntry(
+        id: id,
+        analyzedAt: now,
+        dishHint: _dishHintController.text.trim(),
+        estimate: estimate,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _history = _historyRepository.getEntries());
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Resultado guardado localmente. La foto no se guardó.'),
+      ),
+    );
+  }
+
+  Future<void> _deleteHistoryEntry(String id) async {
+    await _historyRepository.delete(id);
+    if (!mounted) return;
+    setState(() => _history = _historyRepository.getEntries());
+  }
+
+  Future<void> _confirmClearHistory() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Borrar historial'),
+        content: const Text(
+          'Se eliminarán todos los análisis de Food Vision guardados en este '
+          'dispositivo. Esta acción no afecta otras áreas de STK Haven.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Borrar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await _historyRepository.clear();
+    if (!mounted) return;
+    setState(() => _history = const <NutritionHistoryEntry>[]);
   }
 
   void _calculateEnergy() {

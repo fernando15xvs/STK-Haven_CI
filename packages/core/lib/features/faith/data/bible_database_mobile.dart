@@ -1,9 +1,7 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:http/http.dart' as http;
+import 'package:core/features/faith/data/bible_public_domain_source.dart';
 
 class BibleDatabase {
   static final BibleDatabase instance = BibleDatabase._init();
@@ -47,97 +45,42 @@ class BibleDatabase {
 
     if (count != null && count > 0) return true;
 
-    onStatusChange('Descargando Biblia...');
     try {
-      final url = Uri.parse(
-        'https://cdn.jsdelivr.net/gh/dscottpi/bibles@master/RVR1960%20-%20Spanish.json',
+      final rows = await BiblePublicDomainSource.loadAll(
+        onStatusChange: onStatusChange,
       );
-      final response = await http.get(url).timeout(const Duration(seconds: 20));
-      if (response.statusCode != 200 || response.body.trim().isEmpty) {
-        throw Exception('Error descarga (${response.statusCode})');
-      }
-
-      onStatusChange('Guardando datos...');
-      final dynamic decoded = await compute(jsonDecode, response.body);
-      final jsonList = <dynamic>[];
-
-      if (decoded is List) {
-        jsonList.addAll(decoded);
-      } else if (decoded is Map) {
-        decoded.forEach(
-          (key, value) => jsonList.add({'book': key, 'chapters': value}),
-        );
-      } else {
-        throw const FormatException('Formato de Biblia no reconocido.');
-      }
+      onStatusChange(
+        'Guardando ${BiblePublicDomainSource.translationName}…',
+      );
 
       var batch = db.batch();
-      int batchCount = 0;
-      for (final bookData in jsonList) {
-        final String libro = bookData['book'];
-        final dynamic chaptersRaw = bookData['chapters'];
-        final chapters = <dynamic>[];
-
-        if (chaptersRaw is Map) {
-          final keys = chaptersRaw.keys
-              .map((key) => int.tryParse(key.toString()) ?? 0)
-              .toList()
-            ..sort();
-          for (final key in keys) {
-            chapters.add(chaptersRaw[key.toString()]);
-          }
-        } else if (chaptersRaw is List) {
-          chapters.addAll(chaptersRaw);
-        }
-
-        for (int chapterIndex = 0;
-            chapterIndex < chapters.length;
-            chapterIndex++) {
-          final dynamic versesRaw = chapters[chapterIndex];
-          final verses = <String>[];
-
-          if (versesRaw is Map) {
-            final keys = versesRaw.keys
-                .map((key) => int.tryParse(key.toString()) ?? 0)
-                .toList()
-              ..sort();
-            for (final key in keys) {
-              verses.add(versesRaw[key.toString()].toString());
-            }
-          } else if (versesRaw is List) {
-            verses.addAll(versesRaw.map((verse) => verse.toString()));
-          }
-
-          for (int verseIndex = 0;
-              verseIndex < verses.length;
-              verseIndex++) {
-            batch.insert('versiculos', {
-              'libro': libro,
-              'capitulo': chapterIndex + 1,
-              'versiculo': verseIndex + 1,
-              'texto': verses[verseIndex],
-            });
-            batchCount++;
-            if (batchCount >= 1000) {
-              await batch.commit(continueOnError: true);
-              batch = db.batch();
-              batchCount = 0;
-
-              // Yield between chunks so a first-run Bible import cannot occupy
-              // the UI isolate continuously while the user is navigating.
-              await Future<void>.delayed(Duration.zero);
-            }
-          }
+      var batchCount = 0;
+      for (final row in rows) {
+        batch.insert('versiculos', {
+          'libro': row.book,
+          'capitulo': row.chapter,
+          'versiculo': row.verse,
+          'texto': row.text,
+        });
+        batchCount++;
+        if (batchCount >= 1000) {
+          await batch.commit(continueOnError: true);
+          batch = db.batch();
+          batchCount = 0;
+          await Future<void>.delayed(Duration.zero);
         }
       }
 
       if (batchCount > 0) {
         await batch.commit(continueOnError: true);
       }
-      debugPrint('Database initialized');
+      debugPrint(
+        'Bible database initialized with '
+        '${BiblePublicDomainSource.translationName}',
+      );
       return true;
-    } catch (e) {
-      debugPrint('Error opening database: $e');
+    } catch (error) {
+      debugPrint('Error opening Bible database: $error');
       return false;
     }
   }

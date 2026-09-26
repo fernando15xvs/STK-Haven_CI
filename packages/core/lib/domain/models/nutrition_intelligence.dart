@@ -117,6 +117,23 @@ class FoodVisionItem {
     this.uncertaintyNote = '',
   });
 
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'name': name,
+        'portionDescription': portionDescription,
+        'gramsLow': gramsLow,
+        'gramsHigh': gramsHigh,
+        'caloriesLow': caloriesLow,
+        'caloriesHigh': caloriesHigh,
+        'proteinGramsLow': proteinGramsLow,
+        'proteinGramsHigh': proteinGramsHigh,
+        'carbsGramsLow': carbsGramsLow,
+        'carbsGramsHigh': carbsGramsHigh,
+        'fatGramsLow': fatGramsLow,
+        'fatGramsHigh': fatGramsHigh,
+        'confidence': confidence.name,
+        'uncertaintyNote': uncertaintyNote,
+      };
+
   factory FoodVisionItem.fromJson(Map<String, dynamic> json) {
     return FoodVisionItem(
       name: '${json['name'] ?? ''}',
@@ -175,6 +192,24 @@ class FoodVisionEstimate {
     this.questions = const <String>[],
     required this.disclaimer,
   });
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'dishName': dishName,
+        'items': items.map((item) => item.toJson()).toList(growable: false),
+        'caloriesLow': caloriesLow,
+        'caloriesHigh': caloriesHigh,
+        'proteinGramsLow': proteinGramsLow,
+        'proteinGramsHigh': proteinGramsHigh,
+        'carbsGramsLow': carbsGramsLow,
+        'carbsGramsHigh': carbsGramsHigh,
+        'fatGramsLow': fatGramsLow,
+        'fatGramsHigh': fatGramsHigh,
+        'confidence': confidence.name,
+        'numericNutritionAvailable': numericNutritionAvailable,
+        'assumptions': assumptions,
+        'questions': questions,
+        'disclaimer': disclaimer,
+      };
 
   factory FoodVisionEstimate.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'];

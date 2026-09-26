@@ -73,6 +73,26 @@ class TrainingProgramsPage extends ConsumerWidget {
                     onDuplicate: () => ref
                         .read(trainingProgramListProvider.notifier)
                         .duplicate(program.id),
+                    onSaveTemplate: program.isTemplate
+                        ? null
+                        : () => ref
+                            .read(trainingProgramListProvider.notifier)
+                            .saveAsTemplate(program.id),
+                    onUseTemplate: program.isTemplate
+                        ? () => ref
+                            .read(trainingProgramListProvider.notifier)
+                            .createFromTemplate(program.id)
+                        : null,
+                    onPause: program.isActive && !program.isTemplate
+                        ? () => ref
+                            .read(trainingProgramListProvider.notifier)
+                            .pause(program.id)
+                        : null,
+                    onResume: !program.isActive && !program.isTemplate
+                        ? () => ref
+                            .read(trainingProgramListProvider.notifier)
+                            .resume(program.id)
+                        : null,
                     onDelete: () => _confirmDelete(context, ref, program),
                   ),
                 );
@@ -411,6 +431,10 @@ class _ProgramCard extends StatelessWidget {
     required this.onActivate,
     required this.onEdit,
     required this.onDuplicate,
+    required this.onSaveTemplate,
+    required this.onUseTemplate,
+    required this.onPause,
+    required this.onResume,
     required this.onDelete,
   });
 
@@ -420,6 +444,10 @@ class _ProgramCard extends StatelessWidget {
   final VoidCallback onActivate;
   final VoidCallback onEdit;
   final VoidCallback onDuplicate;
+  final VoidCallback? onSaveTemplate;
+  final VoidCallback? onUseTemplate;
+  final VoidCallback? onPause;
+  final VoidCallback? onResume;
   final VoidCallback onDelete;
 
   @override
@@ -463,30 +491,65 @@ class _ProgramCard extends StatelessWidget {
                             ?.copyWith(fontWeight: FontWeight.w800),
                       ),
                       Text(
-                        '${program.routineIds.length} rutinas · Semana $week/${program.durationWeeks} · ${program.completions.length} completadas',
+                        program.isTemplate
+                            ? '${program.routineIds.length} rutinas · '
+                                '${program.durationWeeks} semanas · reutilizable'
+                            : '${program.routineIds.length} rutinas · '
+                                'Semana $week/${program.durationWeeks} · '
+                                '${program.completions.length} completadas',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
                 ),
+                if (program.isTemplate)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 4),
+                    child: Chip(label: Text('Plantilla')),
+                  ),
                 PopupMenuButton<String>(
                   onSelected: (value) {
                     if (value == 'activate') return onActivate();
                     if (value == 'edit') return onEdit();
                     if (value == 'duplicate') return onDuplicate();
+                    if (value == 'template') return onSaveTemplate?.call();
+                    if (value == 'use_template') return onUseTemplate?.call();
+                    if (value == 'pause') return onPause?.call();
+                    if (value == 'resume') return onResume?.call();
                     if (value == 'delete') return onDelete();
                   },
                   itemBuilder: (context) => [
-                    if (!program.isActive)
+                    if (!program.isTemplate && !program.isActive)
                       const PopupMenuItem(
                         value: 'activate',
                         child: Text('Activar'),
                       ),
+                    if (onPause != null)
+                      const PopupMenuItem(
+                        value: 'pause',
+                        child: Text('Pausar programa'),
+                      ),
+                    if (onResume != null)
+                      const PopupMenuItem(
+                        value: 'resume',
+                        child: Text('Reanudar programa'),
+                      ),
                     const PopupMenuItem(value: 'edit', child: Text('Editar')),
-                    const PopupMenuItem(
-                      value: 'duplicate',
-                      child: Text('Duplicar programa'),
-                    ),
+                    if (!program.isTemplate)
+                      const PopupMenuItem(
+                        value: 'duplicate',
+                        child: Text('Duplicar programa'),
+                      ),
+                    if (onSaveTemplate != null)
+                      const PopupMenuItem(
+                        value: 'template',
+                        child: Text('Guardar como plantilla'),
+                      ),
+                    if (onUseTemplate != null)
+                      const PopupMenuItem(
+                        value: 'use_template',
+                        child: Text('Crear programa desde plantilla'),
+                      ),
                     const PopupMenuItem(
                       value: 'delete',
                       child: Text('Eliminar'),
@@ -495,18 +558,30 @@ class _ProgramCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            LinearProgressIndicator(value: progress),
-            const SizedBox(height: 12),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.skip_next_rounded),
-              title: const Text('Siguiente sesión'),
-              subtitle: Text(nextRoutine?.name ?? 'Rutina no disponible'),
-              trailing: program.isDeloadWeekAt(now)
-                  ? const Chip(label: Text('Descarga'))
-                  : null,
-            ),
+            if (!program.isTemplate) ...[
+              const SizedBox(height: 12),
+              LinearProgressIndicator(value: progress),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.skip_next_rounded),
+                title: const Text('Siguiente sesión'),
+                subtitle: Text(nextRoutine?.name ?? 'Rutina no disponible'),
+                trailing: program.isDeloadWeekAt(now)
+                    ? const Chip(label: Text('Descarga'))
+                    : null,
+              ),
+            ] else ...[
+              const SizedBox(height: 12),
+              const ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.library_books_outlined),
+                title: Text('Plantilla reutilizable'),
+                subtitle: Text(
+                  'Al usarla se crea un programa nuevo con rotación e historial independientes.',
+                ),
+              ),
+            ],
             if (program.notes.isNotEmpty) Text(program.notes),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,

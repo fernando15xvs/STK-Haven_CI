@@ -1,8 +1,7 @@
-import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:core/features/faith/data/bible_public_domain_source.dart';
 
 class BibleDatabase {
   static final BibleDatabase instance = BibleDatabase._init();
@@ -17,93 +16,31 @@ class BibleDatabase {
   ) async {
     if (_books.isNotEmpty) return true;
 
-    onStatusChange('Descargando Biblia...');
     try {
-      final response = await http
-          .get(
-            Uri.parse(
-              'https://cdn.jsdelivr.net/gh/dscottpi/bibles@master/RVR1960%20-%20Spanish.json',
-            ),
-          )
-          .timeout(const Duration(seconds: 20));
-
-      if (response.statusCode != 200 || response.body.trim().isEmpty) {
-        throw Exception('Error descarga (${response.statusCode})');
+      final rows = await BiblePublicDomainSource.loadAll(
+        onStatusChange: onStatusChange,
+      );
+      for (final row in rows) {
+        final chapters = _books.putIfAbsent(row.book, () => <List<String>>[]);
+        while (chapters.length < row.chapter) {
+          chapters.add(<String>[]);
+        }
+        final verses = chapters[row.chapter - 1];
+        while (verses.length < row.verse) {
+          verses.add('');
+        }
+        verses[row.verse - 1] = row.text;
       }
-
-      onStatusChange('Preparando datos...');
-      final decoded = json.decode(response.body);
-      _parse(decoded);
 
       if (_books.isEmpty) {
-        throw const FormatException('La Biblia descargada no contiene datos.');
+        throw const FormatException('La fuente bíblica no contiene datos.');
       }
-
       return true;
     } catch (error) {
       _books.clear();
       debugPrint('Error loading web Bible data: $error');
       return false;
     }
-  }
-
-  void _parse(dynamic decoded) {
-    final entries = <MapEntry<String, dynamic>>[];
-
-    if (decoded is List) {
-      for (final item in decoded) {
-        if (item is Map && item['book'] != null) {
-          entries.add(MapEntry(item['book'].toString(), item['chapters']));
-        }
-      }
-    } else if (decoded is Map) {
-      decoded.forEach(
-        (key, value) => entries.add(MapEntry(key.toString(), value)),
-      );
-    } else {
-      throw const FormatException('Formato de Biblia no reconocido.');
-    }
-
-    for (final entry in entries) {
-      final chapters = <List<String>>[];
-      final rawChapters = entry.value;
-
-      if (rawChapters is List) {
-        for (final chapter in rawChapters) {
-          chapters.add(_parseVerses(chapter));
-        }
-      } else if (rawChapters is Map) {
-        final keys = rawChapters.keys.toList()
-          ..sort(
-            (a, b) => (int.tryParse(a.toString()) ?? 0)
-                .compareTo(int.tryParse(b.toString()) ?? 0),
-          );
-        for (final key in keys) {
-          chapters.add(_parseVerses(rawChapters[key]));
-        }
-      }
-
-      if (chapters.isNotEmpty) {
-        _books[entry.key] = chapters;
-      }
-    }
-  }
-
-  List<String> _parseVerses(dynamic rawVerses) {
-    if (rawVerses is List) {
-      return rawVerses.map((verse) => verse.toString()).toList();
-    }
-
-    if (rawVerses is Map) {
-      final keys = rawVerses.keys.toList()
-        ..sort(
-          (a, b) => (int.tryParse(a.toString()) ?? 0)
-              .compareTo(int.tryParse(b.toString()) ?? 0),
-        );
-      return keys.map((key) => rawVerses[key].toString()).toList();
-    }
-
-    return const [];
   }
 
   Future<List<String>> getBooks() async => _books.keys.toList();

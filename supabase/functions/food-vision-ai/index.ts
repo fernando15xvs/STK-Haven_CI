@@ -6,6 +6,12 @@ const GEMINI_TIMEOUT_MS = 30_000;
 const DEFAULT_MODEL = 'gemini-3.8-flash';
 const SUPPORTED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
+type QuotaResult = {
+  allowed?: boolean;
+  reason?: string;
+  retry_after_seconds?: number;
+};
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -154,14 +160,17 @@ const authenticatedHandler = withSupabase(
     const imageBase64 = typeof payload.imageBase64 === 'string'
       ? payload.imageBase64.trim()
       : '';
-    const jwtClaims = ctx.jwtClaims as Record<string, unknown> | undefined;
-    const rawAppMetadata = jwtClaims?.app_metadata;
-    const appMetadata =
-      typeof rawAppMetadata === 'object' && rawAppMetadata !== null
-        ? rawAppMetadata as Record<string, unknown>
-        : {};
+    const admin = ctx.supabaseAdmin as any;
+    const { data: verification, error: verificationError } = await admin
+      .from('stk_nutrition_adult_verifications')
+      .select('verified_at,revoked_at')
+      .eq('user_id', userId)
+      .maybeSingle();
     const hasVerifiedAdultNutritionAccess =
-      appMetadata.adult_nutrition_access === true;
+      verificationError == null &&
+      verification != null &&
+      verification.revoked_at == null &&
+      typeof verification.verified_at === 'string';
     const adultNumericNutrition =
       payload.adultNumericNutrition === true &&
       hasVerifiedAdultNutritionAccess;
@@ -175,6 +184,45 @@ const authenticatedHandler = withSupabase(
     if (!imageBase64 || estimatedDecodedBytes(imageBase64) > MAX_IMAGE_BYTES) {
       return jsonResponse({ error: 'La imagen debe pesar como máximo 4 MB.' }, 400);
     }
+
+    const { data: quotaData, error: quotaError } = await admin.rpc(
+      'consume_stk_food_vision_quota',
+      { p_user_id: userId },
+    );
+    if (quotaError) {
+      console.error('food-vision-ai: quota check failed');
+      return jsonResponse(
+        { error: 'Food Vision no está disponible en este momento.' },
+        503,
+      );
+    }
+    const quota = (quotaData ?? {}) as QuotaResult;
+    if (quota.allowed !== true) {
+      const body: Record<string, unknown> = {
+        error: quota.reason === 'day_limit'
+          ? 'Alcanzaste el límite diario de análisis.'
+          : 'Hay demasiados análisis seguidos. Inténtalo nuevamente en un momento.',
+      };
+      if (typeof quota.retry_after_seconds === 'number') {
+        body.retryAfterSeconds = quota.retry_after_seconds;
+      }
+      return jsonResponse(body, 429);
+    }
+
+    const recordMetric = async (
+      success: boolean,
+      confidence: string = 'unknown',
+    ) => {
+      try {
+        await admin.rpc('record_stk_food_vision_metric', {
+          p_numeric_mode: adultNumericNutrition,
+          p_confidence: confidence,
+          p_success: success,
+        });
+      } catch {
+        console.warn('food-vision-ai: metric write failed');
+      }
+    };
 
     const apiKey = Deno.env.get('GEMINI_API_KEY')?.trim();
     if (!apiKey) {
@@ -251,6 +299,7 @@ const authenticatedHandler = withSupabase(
         console.warn(
           `food-vision-ai: Gemini returned HTTP ${providerResponse.status}`,
         );
+        await recordMetric(false);
         return jsonResponse(
           { error: 'Food Vision no pudo analizar la imagen.' },
           providerResponse.status === 429 ? 429 : 502,
@@ -269,6 +318,7 @@ const authenticatedHandler = withSupabase(
         .trim();
 
       if (!text) {
+        await recordMetric(false);
         return jsonResponse(
           { error: 'Food Vision no devolvió un análisis utilizable.' },
           502,
@@ -284,6 +334,7 @@ const authenticatedHandler = withSupabase(
         estimate = parsed as Record<string, unknown>;
       } catch {
         console.warn('food-vision-ai: structured output was invalid JSON');
+        await recordMetric(false);
         return jsonResponse(
           { error: 'Food Vision devolvió un formato inesperado.' },
           502,
@@ -323,18 +374,26 @@ const authenticatedHandler = withSupabase(
         }
       }
 
+      await recordMetric(
+        true,
+        typeof estimate.confidence === 'string'
+          ? estimate.confidence
+          : 'unknown',
+      );
       return jsonResponse({
         estimate,
         imageStored: false,
       });
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
+        await recordMetric(false);
         return jsonResponse(
           { error: 'Food Vision tardó demasiado en responder.' },
           504,
         );
       }
       console.error('food-vision-ai: provider request failed');
+      await recordMetric(false);
       return jsonResponse(
         { error: 'Food Vision no está disponible en este momento.' },
         502,

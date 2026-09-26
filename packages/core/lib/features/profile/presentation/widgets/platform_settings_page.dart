@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/faith/data/bible_public_domain_source.dart';
 import 'package:core/features/sync/application/cloud_sync_provider.dart';
 
 class PlatformSettingsPage extends ConsumerWidget {
@@ -355,6 +356,36 @@ class PlatformSettingsPage extends ConsumerWidget {
           _SectionCard(
             title: 'Acerca de',
             children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.menu_book_outlined),
+                title: const Text('Contenido bíblico'),
+                subtitle: const Text(
+                  '${BiblePublicDomainSource.translationName} · '
+                  '${BiblePublicDomainSource.licenseName}',
+                ),
+                trailing: const Icon(Icons.info_outline),
+                onTap: () => showDialog<void>(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    title: const Text('Fuente del contenido bíblico'),
+                    content: const Text(
+                      'Traducción: ${BiblePublicDomainSource.translationName}\n'
+                      'Fuente: ${BiblePublicDomainSource.sourceName}\n'
+                      'Snapshot: ${BiblePublicDomainSource.sourceTag}\n'
+                      'Licencia: ${BiblePublicDomainSource.licenseName}\n\n'
+                      'La Biblia solo se prepara cuando el módulo Fe está habilitado.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext),
+                        child: const Text('Cerrar'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.description_outlined),

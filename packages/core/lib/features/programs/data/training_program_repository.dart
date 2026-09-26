@@ -48,7 +48,9 @@ class TrainingProgramRepository {
   }
 
   TrainingProgram? getActive() {
-    final active = getAll().where((program) => program.isActive).toList();
+    final active = getAll()
+        .where((program) => program.isActive && !program.isTemplate)
+        .toList();
     if (active.isEmpty) return null;
     active.sort((a, b) => b.startedAt.compareTo(a.startedAt));
     return active.first;
@@ -69,6 +71,17 @@ class TrainingProgramRepository {
   Future<void> activate(String id, {DateTime? startedAt}) async {
     await _synchronizeBoxFromShadow();
     final all = _programsFromBox();
+    TrainingProgram? target;
+    for (final program in all) {
+      if (program.id == id) {
+        target = program;
+        break;
+      }
+    }
+    if (target == null) return;
+    if (target.isTemplate) {
+      throw StateError('Una plantilla no puede activarse directamente.');
+    }
     for (final program in all) {
       final shouldBeActive = program.id == id;
       final updated = program.copyWith(

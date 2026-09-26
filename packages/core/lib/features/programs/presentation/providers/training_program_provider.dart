@@ -109,6 +109,51 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
     return copy;
   }
 
+  Future<TrainingProgram?> saveAsTemplate(String programId) async {
+    final source = _repository.getById(programId);
+    if (source == null) return null;
+    final template = source.toTemplate(
+      newId: const Uuid().v4(),
+      newName: '${source.name} · plantilla',
+      now: DateTime.now(),
+    );
+    await _repository.save(template);
+    refresh();
+    return template;
+  }
+
+  Future<TrainingProgram?> createFromTemplate(String templateId) async {
+    final source = _repository.getById(templateId);
+    if (source == null || !source.isTemplate) return null;
+    final program = source.instantiateTemplate(
+      newId: const Uuid().v4(),
+      newName: source.name.replaceFirst(' · plantilla', ''),
+      now: DateTime.now(),
+    );
+    await _repository.save(program);
+    refresh();
+    return program;
+  }
+
+  Future<void> pause(String programId) async {
+    final program = _repository.getById(programId);
+    if (program == null || program.isTemplate || !program.isActive) return;
+    await _repository.save(program.copyWith(isActive: false));
+    refresh();
+  }
+
+  Future<void> resume(String programId) async {
+    final program = _repository.getById(programId);
+    if (program == null || program.isTemplate || program.isActive) return;
+    for (final existing in _repository.getAll()) {
+      if (existing.isActive && existing.id != programId) {
+        await _repository.save(existing.copyWith(isActive: false));
+      }
+    }
+    await _repository.save(program.copyWith(isActive: true));
+    refresh();
+  }
+
   /// Persists any completions that can be deterministically inferred from
   /// workout history. Safe to call repeatedly; completion IDs are idempotent.
   Future<TrainingProgram?> reconcileActive() async {

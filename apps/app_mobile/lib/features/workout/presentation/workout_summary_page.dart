@@ -14,6 +14,7 @@ import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_comparison_summary.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 
 class WorkoutSummaryPage extends ConsumerStatefulWidget {
   final WorkoutAnalysisResult analysisResult;
@@ -61,7 +62,9 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (ref.read(settingsProvider).showDailyVerse) {
+      final faithEnabled =
+          ref.read(userExperienceProfileProvider).value?.faithEnabled == true;
+      if (faithEnabled && ref.read(settingsProvider).showDailyVerse) {
         _showDevocionalModal(context);
       }
     });

@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/features/faith/data/bible_database.dart';
+import 'package:core/features/faith/application/faith_feature_policy.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 
 /// Observable initialization state for the Bible SQLite database.
 enum BibleDbStatus { idle, loading, ready, error }
@@ -27,6 +29,12 @@ class BibleInitNotifier extends Notifier<BibleInitState> {
   /// Call this after HiveDatabase.init(). When the DB is ready it invalidates
   /// dependent providers so the UI refreshes automatically.
   Future<void> initialize() async {
+    final faithEnabled =
+        ref.read(userExperienceProfileProvider).value?.faithEnabled == true;
+    if (!FaithFeaturePolicy.shouldLoadBible(faithEnabled: faithEnabled)) {
+      state = const BibleInitState(status: BibleDbStatus.idle);
+      return;
+    }
     state = const BibleInitState(status: BibleDbStatus.loading);
     try {
       final initialized = await BibleDatabase.instance

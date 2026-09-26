@@ -1,21 +1,39 @@
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/presentation/pages/nutrition_intelligence_page.dart';
+import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class NutritionIntelligencePageMobile extends StatelessWidget {
+class NutritionIntelligencePageMobile extends StatefulWidget {
   const NutritionIntelligencePageMobile({super.key});
 
   @override
+  State<NutritionIntelligencePageMobile> createState() =>
+      _NutritionIntelligencePageMobileState();
+}
+
+class _NutritionIntelligencePageMobileState
+    extends State<NutritionIntelligencePageMobile> {
+  late final Future<bool> _adultAccess;
+
+  @override
+  void initState() {
+    super.initState();
+    _adultAccess = NutritionAdultAccessService(
+      Supabase.instance.client,
+    ).hasVerifiedAccess();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
-    final adultAccess =
-        user?.appMetadata['adult_nutrition_access'] == true;
-    return NutritionIntelligencePage(
-      photoPicker: _pickPhoto,
-      cameraAvailable: true,
-      verifiedAdultNutritionAccess: adultAccess,
+    return FutureBuilder<bool>(
+      future: _adultAccess,
+      builder: (context, snapshot) => NutritionIntelligencePage(
+        photoPicker: _pickPhoto,
+        cameraAvailable: true,
+        verifiedAdultNutritionAccess: snapshot.data == true,
+      ),
     );
   }
 

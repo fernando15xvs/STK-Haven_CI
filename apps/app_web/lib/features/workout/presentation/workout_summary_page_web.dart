@@ -7,6 +7,7 @@ import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/workout/application/workout_summary_snapshot.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -28,6 +29,11 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
+    final faithEnabled = ref.watch(
+      userExperienceProfileProvider.select(
+        (profile) => profile.value?.faithEnabled ?? false,
+      ),
+    );
     final unit = settings.weightUnit;
     final session = analysisResult.session;
     final summary = WorkoutSummarySnapshot.fromSession(session);
@@ -222,7 +228,7 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
                     ),
                   ),
                 ],
-                if (settings.showDailyVerse) ...[
+                if (faithEnabled && settings.showDailyVerse) ...[
                   const SizedBox(height: 20),
                   _FaithMessage(),
                 ],

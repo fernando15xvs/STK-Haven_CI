@@ -35,6 +35,11 @@ class UserExperienceProfileNotifier
   Future<void> setFaithPreference(FaithContentPreference preference) async {
     final current = state.value;
     if (current == null) return;
+    if (preference != FaithContentPreference.enabled) {
+      await ref
+          .read(settingsProvider.notifier)
+          .setDailyVerseNotifications(false);
+    }
     await updateProfile(current.copyWith(faithPreference: preference));
   }
 
