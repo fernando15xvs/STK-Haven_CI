@@ -1,0 +1,89 @@
+name: STK Haven Roadmap 3 Preview
+
+on:
+  workflow_run:
+    workflows: ["STK Haven Public CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  publish-preview:
+    name: Publish isolated Roadmap 3 preview
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout validated snapshot
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.38.9"
+          channel: stable
+          cache: true
+
+      - name: Resolve locked workspace
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build isolated preview
+        working-directory: apps/app_web
+        run: >-
+          flutter build web
+          --release
+          --base-href /STK-Haven_CI/
+          --dart-define=STK_STORAGE_NAMESPACE=roadmap3_preview
+
+      - name: Brand preview PWA
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("apps/app_web/build/web")
+          manifest_path = root / "manifest.json"
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest["id"] = "./roadmap3-preview"
+          manifest["name"] = "STK Haven Preview"
+          manifest["short_name"] = "STK Preview"
+          manifest["description"] = (
+              "Preview aislado de STK Haven Roadmap 3. "
+              "No comparte almacenamiento con la PWA estable."
+          )
+          manifest_path.write_text(
+              json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+              encoding="utf-8",
+          )
+
+          index_path = root / "index.html"
+          index = index_path.read_text(encoding="utf-8")
+          index = index.replace(
+              "<title>STK Haven</title>",
+              "<title>STK Haven Preview</title>",
+          )
+          index_path.write_text(index, encoding="utf-8")
+          (root / ".nojekyll").write_text("", encoding="utf-8")
+          PY
+
+      - name: Stage preview output
+        run: |
+          rm -rf /tmp/stk-haven-preview
+          mkdir -p /tmp/stk-haven-preview
+          cp -a apps/app_web/build/web/. /tmp/stk-haven-preview/
+
+      - name: Publish preview branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan preview-pages-worktree
+          git rm -rf .
+          cp -a /tmp/stk-haven-preview/. .
+          git add -A
+          git commit -m "deploy: Roadmap 3 isolated preview"
+          git push --force origin HEAD:gh-pages
