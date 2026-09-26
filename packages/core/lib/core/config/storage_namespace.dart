@@ -37,13 +37,14 @@ class StorageNamespace {
   static String normalize(String raw) {
     final trimmed = raw.trim().toLowerCase();
     if (trimmed.isEmpty) return '';
-    final normalized =
-        trimmed.replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+
+    final normalized = trimmed.replaceAll(
+      RegExp(r'[^a-z0-9]+'),
+      '_',
+    );
+
     return normalized
         .replaceFirst(RegExp(r'^_+'), '')
-        .replaceFirst(RegExp(r'_+
-  }
-}
-), '');
+        .replaceFirst(RegExp(r'_+$'), '');
   }
 }
