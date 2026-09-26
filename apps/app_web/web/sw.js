@@ -1,4 +1,6 @@
-const CACHE_PREFIX = 'stk-haven-';
+const IS_PREVIEW_SCOPE =
+  new URL(self.registration.scope).pathname.includes('/STK-Haven_CI/');
+const CACHE_PREFIX = IS_PREVIEW_SCOPE ? 'stk-preview-r3-' : 'stk-haven-';
 const CACHE_NAME = `${CACHE_PREFIX}shell-v9`;
 const BIBLE_CACHE_NAME = `${CACHE_PREFIX}bible-rv1909-v2026-09-18`;
 const ACTIVE_CACHES = new Set([CACHE_NAME, BIBLE_CACHE_NAME]);
@@ -54,7 +56,7 @@ self.addEventListener('activate', (event) => {
       keys
         .filter((key) =>
           (key.startsWith(CACHE_PREFIX) && !ACTIVE_CACHES.has(key)) ||
-          LEGACY_FLUTTER_CACHES.includes(key),
+          (!IS_PREVIEW_SCOPE && LEGACY_FLUTTER_CACHES.includes(key)),
         )
         .map((key) => caches.delete(key)),
     );
@@ -176,7 +178,7 @@ self.addEventListener('push', (event) => {
     const title =
       typeof payload.title === 'string' && payload.title.trim()
         ? payload.title.trim()
-        : 'STK Haven';
+        : (IS_PREVIEW_SCOPE ? 'STK Haven Preview' : 'STK Haven');
     const body =
       typeof payload.body === 'string' ? payload.body.trim() : '';
     const targetUrl =
@@ -186,7 +188,7 @@ self.addEventListener('push', (event) => {
     const tag =
       typeof payload.tag === 'string' && payload.tag.trim()
         ? payload.tag.trim()
-        : 'stk-haven';
+        : (IS_PREVIEW_SCOPE ? 'stk-preview-r3' : 'stk-haven');
 
     await self.registration.showNotification(title, {
       body,
