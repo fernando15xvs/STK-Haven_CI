@@ -4,6 +4,7 @@ import 'package:core/features/coach/presentation/pages/coach_client_progress_pag
 import 'package:core/features/coach/presentation/pages/coach_program_assignments_page.dart';
 import 'package:core/features/coach/presentation/pages/coach_tasks_page.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
+import 'package:core/features/nutrition/presentation/pages/coach_nutrition_guidance_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -238,6 +239,34 @@ class CoachClientDetailPage extends ConsumerWidget {
                                           relationship.allows(
                                             CoachPermission.comment,
                                           ),
+                                    ),
+                                  ),
+                                )
+                            : null,
+                      ),
+                      const Divider(height: 1),
+                      _CapabilityTile(
+                        icon: Icons.restaurant_menu_outlined,
+                        title: 'Orientación alimentaria',
+                        subtitle: relationship.allows(
+                                CoachPermission.viewNutrition)
+                            ? (asCoach
+                                ? 'Crear guías no clínicas versionadas y revisar historial.'
+                                : 'Revisar la guía compartida y sus versiones.')
+                            : 'Sin permiso para compartir alimentación.',
+                        enabled: relationship.allows(
+                          CoachPermission.viewNutrition,
+                        ),
+                        onTap: relationship.allows(
+                                CoachPermission.viewNutrition)
+                            ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        CoachNutritionGuidancePage(
+                                      clientUserId:
+                                          relationship!.clientUserId,
+                                      clientDisplayName: displayName,
+                                      canEdit: asCoach,
                                     ),
                                   ),
                                 )
