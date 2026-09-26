@@ -1,6 +1,7 @@
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/features/coach/application/coach_client_provider.dart';
 import 'package:core/features/coach/presentation/pages/coach_client_progress_page.dart';
+import 'package:core/features/coach/presentation/pages/coach_checkins_page.dart';
 import 'package:core/features/coach/presentation/pages/coach_program_assignments_page.dart';
 import 'package:core/features/coach/presentation/pages/coach_tasks_page.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -239,6 +240,31 @@ class CoachClientDetailPage extends ConsumerWidget {
                                           relationship.allows(
                                             CoachPermission.comment,
                                           ),
+                                    ),
+                                  ),
+                                )
+                            : null,
+                      ),
+                      const Divider(height: 1),
+                      _CapabilityTile(
+                        icon: Icons.fact_check_outlined,
+                        title: 'Check-ins',
+                        subtitle: relationship.allows(CoachPermission.viewCheckins)
+                            ? (asCoach
+                                ? 'Revisar energía/recuperación percibidas y comentar.'
+                                : 'Registrar un check-in breve y compartirlo con tu entrenador.')
+                            : 'Sin permiso para compartir check-ins.',
+                        enabled: relationship.allows(CoachPermission.viewCheckins),
+                        onTap: relationship.allows(CoachPermission.viewCheckins)
+                            ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => CoachCheckinsPage(
+                                      relationshipId: relationship!.id,
+                                      clientUserId: relationship.clientUserId,
+                                      clientDisplayName: displayName,
+                                      isClient: !asCoach,
+                                      canComment: asCoach &&
+                                          relationship.allows(CoachPermission.comment),
                                     ),
                                   ),
                                 )

@@ -3,6 +3,7 @@ import 'package:core/features/coach/application/coach_progress_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CoachClientProgressPage extends ConsumerStatefulWidget {
@@ -150,6 +151,38 @@ class _ProgressBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 20),
+        _OperationalInsightCard(progress: progress),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.compare_arrows_rounded),
+            title: const Text('Comparación de periodos'),
+            subtitle: Text(
+              'Últimos 7 días: ${progress.workouts7d} entrenos · '
+              'Promedio semanal de 30 días: '
+              '${(progress.workouts30d / (30 / 7)).toStringAsFixed(1)}',
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.ios_share_outlined),
+            title: const Text('Exportar resumen'),
+            subtitle: const Text('Copia un resumen legible, sin notas privadas ni detalle de series.'),
+            trailing: const Icon(Icons.copy_rounded),
+            onTap: () async {
+              final text = _exportSummary(progress);
+              await Clipboard.setData(ClipboardData(text: text));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Resumen copiado.')),
+                );
+              }
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
         Card(
           child: ListTile(
             leading: const Icon(Icons.schedule_outlined),
@@ -222,6 +255,49 @@ class _ProgressBody extends StatelessWidget {
     final month = local.month.toString().padLeft(2, '0');
     return '$day/$month/${local.year}';
   }
+}
+
+class _OperationalInsightCard extends StatelessWidget {
+  final CoachClientProgress progress;
+  const _OperationalInsightCard({required this.progress});
+
+  @override
+  Widget build(BuildContext context) {
+    final last = progress.lastWorkoutAt;
+    final days = last == null ? null : DateTime.now().difference(last.toLocal()).inDays;
+    final needsAttention = last == null || days! >= 7;
+    return Card(
+      child: ListTile(
+        leading: Icon(needsAttention ? Icons.notifications_active_outlined : Icons.check_circle_outline),
+        title: Text(needsAttention ? 'Revisión operativa sugerida' : 'Actividad reciente'),
+        subtitle: Text(
+          last == null
+              ? 'No hay entrenamiento reciente sincronizado. Revisa el plan o contacta al cliente.'
+              : needsAttention
+                  ? 'Han pasado $days días desde el último entrenamiento. Esta alerta es operativa, no médica.'
+                  : 'El cliente registra actividad reciente; no hay alerta operativa por inactividad.',
+        ),
+      ),
+    );
+  }
+}
+
+String _exportSummary(CoachClientProgress p) {
+  final last = p.lastWorkoutAt?.toLocal();
+  final lastLabel = last == null
+      ? 'Sin datos'
+      : '${last.day.toString().padLeft(2, '0')}/${last.month.toString().padLeft(2, '0')}/${last.year}';
+  return [
+    'STK Haven · Resumen de progreso',
+    'Entrenos 7 días: ${p.workouts7d}',
+    'Entrenos 30 días: ${p.workouts30d}',
+    'Minutos 7 días: ${p.trainingMinutes7d}',
+    'Series 7 días: ${p.completedWorkingSets7d}',
+    'Volumen 7 días: ${p.volume7d.toStringAsFixed(0)}',
+    'RIR medio 7 días: ${p.averageRir7d?.toStringAsFixed(1) ?? '—'}',
+    'Último entrenamiento: $lastLabel',
+    'Generado: ${p.generatedAt.toLocal().toIso8601String()}',
+  ].join('\n');
 }
 
 class _MetricCard extends StatelessWidget {
