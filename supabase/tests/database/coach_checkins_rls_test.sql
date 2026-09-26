@@ -1,5 +1,5 @@
 begin;
-select plan(12);
+select plan(13);
 select has_table('public','stk_coach_checkins','check-in table exists');
 select has_table('public','stk_coach_checkin_comments','check-in comments table exists');
 select ok((select relrowsecurity from pg_class where oid='public.stk_coach_checkins'::regclass),'check-ins use RLS');
