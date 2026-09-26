@@ -1,23 +1,31 @@
+import '../../core/config/storage_namespace.dart';
+
 class HiveBoxes {
-  static const String routines = 'routinesBox_v2';
-  static const String history = 'historyBox_v2';
-  static const String exercises = 'exercisesBox_v2';
-  static const String metadata = 'metadataBox';
-  static const String activeWorkout = 'activeWorkoutBox_v2';
-  static const String personalRecords = 'personalRecordsBox_v2';
-  static const String bodyMeasurements = 'bodyMeasurementsBox';
-  static const String favoriteVerses = 'favoriteVersesBox';
-  static const String gamification = 'gamificationBox';
-  static const String hydration = 'hydrationBox';
-  static const String bible = 'bibleBox';
-  static const String recovery = 'recoveryBox';
-  static const String habitTasks = 'habitTasksBox_v1';
+  static String get routines => StorageNamespace.scope('routinesBox_v2');
+  static String get history => StorageNamespace.scope('historyBox_v2');
+  static String get exercises => StorageNamespace.scope('exercisesBox_v2');
+  static String get metadata => StorageNamespace.scope('metadataBox');
+  static String get activeWorkout =>
+      StorageNamespace.scope('activeWorkoutBox_v2');
+  static String get personalRecords =>
+      StorageNamespace.scope('personalRecordsBox_v2');
+  static String get bodyMeasurements =>
+      StorageNamespace.scope('bodyMeasurementsBox');
+  static String get favoriteVerses =>
+      StorageNamespace.scope('favoriteVersesBox');
+  static String get gamification => StorageNamespace.scope('gamificationBox');
+  static String get hydration => StorageNamespace.scope('hydrationBox');
+  static String get bible => StorageNamespace.scope('bibleBox');
+  static String get recovery => StorageNamespace.scope('recoveryBox');
+  static String get habitTasks => StorageNamespace.scope('habitTasksBox_v1');
 
   /// Roadmap 2.0 user-owned A/B/C programs. Stored as JSON-compatible maps so
   /// program schema can evolve without consuming/changing Hive TypeAdapter IDs.
-  static const String trainingPrograms = 'trainingProgramsBox_v2';
+  static String get trainingPrograms =>
+      StorageNamespace.scope('trainingProgramsBox_v2');
 
   /// Incremental progress/analytics cache. Derived data only; it may be safely
   /// rebuilt from workout history if invalidated or missing.
-  static const String analyticsCache = 'analyticsCacheBox_v2';
+  static String get analyticsCache =>
+      StorageNamespace.scope('analyticsCacheBox_v2');
 }
