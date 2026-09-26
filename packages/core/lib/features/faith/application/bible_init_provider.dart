@@ -22,6 +22,18 @@ class BibleInitState {
   }
 }
 
+typedef BibleInitializeAction = Future<bool> Function(
+  void Function(String) onStatusChange,
+);
+
+final faithModuleEnabledProvider = Provider<bool>((ref) {
+  return ref.watch(userExperienceProfileProvider).value?.faithEnabled == true;
+});
+
+final bibleDatabaseInitializerProvider = Provider<BibleInitializeAction>((ref) {
+  return BibleDatabase.instance.initializeDatabaseFromInternet;
+});
+
 class BibleInitNotifier extends Notifier<BibleInitState> {
   @override
   BibleInitState build() => const BibleInitState();
@@ -29,16 +41,15 @@ class BibleInitNotifier extends Notifier<BibleInitState> {
   /// Call this after HiveDatabase.init(). When the DB is ready it invalidates
   /// dependent providers so the UI refreshes automatically.
   Future<void> initialize() async {
-    final faithEnabled =
-        ref.read(userExperienceProfileProvider).value?.faithEnabled == true;
+    final faithEnabled = ref.read(faithModuleEnabledProvider);
     if (!FaithFeaturePolicy.shouldLoadBible(faithEnabled: faithEnabled)) {
       state = const BibleInitState(status: BibleDbStatus.idle);
       return;
     }
     state = const BibleInitState(status: BibleDbStatus.loading);
     try {
-      final initialized = await BibleDatabase.instance
-          .initializeDatabaseFromInternet((_) {});
+      final initializeBible = ref.read(bibleDatabaseInitializerProvider);
+      final initialized = await initializeBible((_) {});
       if (!initialized) {
         throw StateError('No fue posible preparar los datos de la Biblia.');
       }

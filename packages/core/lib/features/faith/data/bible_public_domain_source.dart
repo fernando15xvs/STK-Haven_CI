@@ -29,6 +29,17 @@ class BiblePublicDomainSource {
   static const String _rawBase =
       'https://raw.githubusercontent.com/BibleAquifer/'
       'ReinaValera1909/v2026-09-18/spa/json';
+  static const String _cdnBase =
+      'https://cdn.jsdelivr.net/gh/BibleAquifer/'
+      'ReinaValera1909@v2026-09-18/spa/json';
+
+  static List<Uri> sourceCandidatesForBook(int bookNumber) {
+    final id = bookNumber.toString().padLeft(2, '0');
+    return <Uri>[
+      Uri.parse('$_rawBase/$id.content.json'),
+      Uri.parse('$_cdnBase/$id.content.json'),
+    ];
+  }
 
   const BiblePublicDomainSource._();
 
@@ -66,11 +77,28 @@ class BiblePublicDomainSource {
     int bookNumber,
   ) async {
     final id = bookNumber.toString().padLeft(2, '0');
-    final uri = Uri.parse('$_rawBase/$id.content.json');
-    final res = await client.get(uri).timeout(const Duration(seconds: 20));
-    if (res.statusCode != 200 || res.body.trim().isEmpty) {
+    http.Response? res;
+    Object? lastError;
+
+    for (final uri in sourceCandidatesForBook(bookNumber)) {
+      try {
+        final candidate =
+            await client.get(uri).timeout(const Duration(seconds: 20));
+        if (candidate.statusCode == 200 &&
+            candidate.body.trim().isNotEmpty) {
+          res = candidate;
+          break;
+        }
+        lastError = StateError('HTTP ${candidate.statusCode}');
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (res == null) {
       throw StateError(
-        'No se pudo cargar $translationName ($id, HTTP ${res.statusCode}).',
+        'No se pudo cargar $translationName ($id). '
+        'Fuente primaria y alternativa no disponibles: $lastError',
       );
     }
 

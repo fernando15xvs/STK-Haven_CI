@@ -184,7 +184,7 @@ El onboarding deja de preguntar únicamente objetivo/experiencia/días. Debe per
 - [x] Unidad de peso: kg/lb.
 - [x] ¿Quieres recordatorios de entrenamiento?
 - [x] Si responde sí, solicitar hora después del onboarding, no pedir permisos del sistema antes de necesitarlo.
-- [ ] Preguntar por Reduce Motion / modo ahorro solo desde ajustes, no sobrecargar onboarding inicial.
+- [x] Reduce Motion / rendimiento se configura desde Ajustes y no sobrecarga onboarding inicial.
 
 ### Bloque C — Fe cristiana opcional
 
@@ -297,9 +297,9 @@ La secuencia **no se reinicia al comenzar una semana nueva**.
 - [x] Cerrar/reabrir mantiene la posición exacta.
 - [x] Backup/restore conserva la posición exacta.
 - [x] Cambiar los días disponibles no cambia el orden de las rutinas.
-- [ ] Pausar/reanudar programa no pierde la posición.
+- [x] Pausar/reanudar programa conserva posición e historial; cubierto por contrato/tests automáticos.
 - [x] Duplicar un programa nuevo empieza en su primera rutina, sin compartir estado mutable.
-- [ ] Deload/mesociclo no altera el orden salvo una acción explícita del usuario.
+- [x] Deload no altera orden/posición; cubierto por test de invariante.
 
 ## 2A.3 Integración UI
 
@@ -307,7 +307,7 @@ La secuencia **no se reinicia al comenzar una semana nueva**.
 - [x] Programas muestra secuencia y posición actual.
 - [x] Calendario proyecta futuras sesiones respetando días disponibles y continuidad entre semanas.
 - [x] Workout iniciado desde “Próxima sesión” usa la rutina esperada.
-- [ ] Si el usuario abre manualmente otra rutina, la UI deja claro que no avanzará la rotación esperada.
+- [x] Mobile/Web advierten explícitamente que una rutina fuera de secuencia no avanzará la rotación.
 - [x] Mobile y Web presentan la misma fuente de verdad.
 
 ## 2A.4 Validación automática obligatoria
@@ -320,11 +320,11 @@ sobre lunes/martes/jueves/viernes/sábado durante varias semanas.
 
 - [x] Test exacto del ejemplo de 3 semanas.
 - [x] Test de semana nueva sin reset.
-- [ ] Test de día omitido.
-- [ ] Test de cambio de días disponibles.
+- [x] Test de día omitido.
+- [x] Test de cambio de días disponibles.
 - [x] Test de workout libre/off-sequence.
 - [x] Test de persistencia/rehidratación.
-- [ ] Test de backup/restore.
+- [x] Test de backup/restore preservando posición exacta.
 - [x] Test de proyección de calendario.
 - [ ] Test mobile/web del texto “Próxima sesión”.
 
@@ -341,17 +341,17 @@ sobre lunes/martes/jueves/viernes/sábado durante varias semanas.
 Actualmente existen preferencias como `showDailyVerse`, pero el concepto de “mostrar el versículo” no debe ser equivalente a “habilitar todo el módulo Fe”.
 
 - [x] Crear `faithEnabled` mediante `UserExperienceProfile.faithEnabled` + preferencia triestado.
-- [ ] Mantener `showDailyVerse` como subpreferencia.
-- [ ] Mantener notificaciones como subpreferencia independiente.
+- [x] `showDailyVerse` se mantiene como subpreferencia independiente del opt-in global.
+- [x] Notificaciones de versículo se mantienen como subpreferencia independiente y se cancelan al desactivar Fe.
 - [x] Condicionar inicialización de Biblia a `faithEnabled == true`.
 - [x] Condicionar providers de versículo a módulo habilitado.
 - [x] Condicionar accesos rápidos en mobile.
 - [x] Condicionar navegación lateral/secciones en web.
-- [ ] Deshabilitar limpiamente sin borrar notas/favoritos del usuario.
-- [ ] Permitir reactivar y recuperar contenido local anterior.
-- [ ] Tests de “Fe OFF” sin inicialización de DB.
-- [ ] Tests de “Fe ON” con carga bajo demanda.
-- [ ] Verificar que Fe OFF mejore startup y no haga requests innecesarios.
+- [x] Desactivar Fe solo cambia preferencia/cancela notificaciones; no borra repositorios de notas/favoritos.
+- [x] Reactivar Fe reutiliza datos locales previos; desactivar no elimina contenido.
+- [x] Test de Fe OFF demuestra 0 llamadas al inicializador bíblico.
+- [x] Test de Fe ON demuestra carga bajo demanda.
+- [x] Gate inyectable probado: Fe OFF no ejecuta inicialización/request bíblico.
 
 ---
 
@@ -401,13 +401,13 @@ Si `faithEnabled == true`:
 
 - [x] Plantilla “Leer la Biblia — 10 min”.
 - [x] Timer persistente basado en timestamps, resistente a background/reapertura.
-- [ ] Elegir libro/capítulo manualmente antes o durante una sesión libre.
+- [x] Elegir/corregir referencia libro/capítulo durante una sesión libre.
 - [x] Marcar sesión completada.
 - [x] Añadir nota/reflexión.
 - [x] Guardar pasaje de referencia sin duplicar grandes textos en planes.
-- [ ] Estadística semanal de minutos de lectura.
+- [x] Estadística semanal de minutos de lectura.
 - [x] Historial de estudio.
-- [ ] Recordatorio opcional.
+- [~] Recordatorio opcional implementado; smoke físico diferido al gate local.
 
 ## 4.3 Planes de estudio bíblico
 
@@ -424,7 +424,7 @@ Ideas:
 - [x] Progreso por día/sesión.
 - [x] Pausar/reanudar.
 - [x] Múltiples inscripciones conservan el progreso ya guardado; no se borra historial al iniciar otro plan.
-- [ ] Offline del texto cuando el contenido esté disponible localmente.
+- [x] Mobile persiste RV1909 en SQLite; Web/PWA conserva libros descargados en caché runtime versionada.
 
 ## 4.4 Libros y material adicional
 
@@ -436,12 +436,12 @@ Opciones seguras de producto:
 - contenido con licencia explícita;
 - enlaces externos a contenido del autor/editor.
 
-- [ ] Crear catálogo con metadatos de licencia.
-- [ ] Nunca distribuir libros con copyright sin permiso.
-- [ ] No incluir PDFs/ebooks de terceros solo porque estén disponibles en internet.
-- [ ] Registrar fuente/licencia de cada obra.
-- [ ] Soporte de marcadores/notas.
-- [ ] Búsqueda por título/autor/tema.
+- [x] Catálogo de recursos con metadatos de fuente/licencia.
+- [x] El catálogo solo incluye contenido propio/usuario o recurso con licencia documentada; no se incorporan libros de terceros sin permiso.
+- [x] No se incluyen PDFs/ebooks de terceros por disponibilidad en internet.
+- [x] Fuente/licencia obligatoria en cada recurso del catálogo.
+- [~] Marcadores locales implementados; notas propias ya existen como recurso/historial de estudio.
+- [x] Búsqueda por título/autor/tema/fuente/licencia.
 
 ---
 
@@ -449,18 +449,22 @@ Opciones seguras de producto:
 
 La implementación actual descarga una Biblia desde un repositorio/CDN externo. Antes de ampliar Fe:
 
-- [ ] Auditar la licencia de la traducción usada actualmente.
-- [ ] Auditar la licencia del dataset concreto descargado.
-- [ ] No asumir que una Biblia es de dominio público por estar alojada en GitHub/CDN.
-- [ ] Definir traducción legalmente distribuible/offline.
-- [ ] Definir fallback cuando el proveedor/CDN no esté disponible.
-- [ ] Evitar que una URL de terceros sea infraestructura crítica.
-- [ ] Documentar atribución/licencia en la app cuando corresponda.
-- [ ] Revisar licencias de cualquier libro/devocional adicional.
+- [x] Traducción cambiada a Reina-Valera 1909 con snapshot/versionado y licencia documentada.
+- [x] Dataset BibleAquifer/RV1909 auditado y fijado a un tag versionado.
+- [x] La decisión se basa en metadata/licencia explícita, no en el alojamiento.
+- [x] Reina-Valera 1909 definida como fuente distribuible/offline del producto.
+- [x] RV1909 usa fuente primaria + CDN alternativo versionado; además reutiliza almacenamiento local/caché tras la primera carga.
+- [~] Ya no existe un único endpoint crítico: hay dos fuentes pinned + caché local. La primera carga completa sigue requiriendo conectividad externa.
+- [x] Atribución/licencia visible desde Ajustes.
+- [x] Catálogo adicional exige metadata de fuente/licencia y no incorpora contenido de terceros sin permiso.
 
 Riesgo: **alto** si se distribuye contenido protegido sin permiso.
 
 ---
+
+## Nota de reconciliación de secciones 6–15
+
+Las secciones 6–15 conservan el diseño original y varias casillas históricas. La evidencia de cierre actual para Identidad, Coach/Client, Tareas, Nutrición y Coach 2.0 está en las **Fases C–G** y sus runs CI/pgTAP posteriores. No deben reimplementarse funcionalidades únicamente porque una casilla histórica de esta parte siga en `[ ]`; se auditan contra los gates de fase y el código real.
 
 # 6. Cuentas y capacidades — Usuario / Entrenador
 
@@ -754,14 +758,14 @@ Mitigaciones obligatorias:
 
 - [ ] Features lazy.
 - [ ] Providers de coach no se crean en usuario normal.
-- [ ] Biblia no se inicializa con Fe OFF.
+- [x] Biblia no se inicializa con Fe OFF; test de 0 llamadas.
 - [ ] Paginación de clientes/historial.
 - [ ] Queries agregadas para dashboards.
 - [ ] No descargar todo el historial de todos los clientes.
-- [ ] Cache acotada.
+- [~] Historial Food Vision está acotado a 100 entradas; caché bíblica PWA queda versionada por traducción/snapshot.
 - [ ] Evitar blur/compositing costoso móvil.
-- [ ] Benchmarks con 1k/5k sesiones se mantienen.
-- [ ] Dataset de prueba con 25/100 clientes para dashboard web.
+- [x] Benchmark/regresión automático para 1k/5k sesiones.
+- [x] Test de escala para 25/100 clientes con payload reciente acotado.
 - [ ] Profiling Android release/profile.
 - [ ] Profiling iOS release/profile.
 
@@ -827,8 +831,8 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 
 ## Fase F — Alimentación V1
 - [~] F1 Contrato de plan y backend no clínico implementados; falta nuevo CI.
-- [ ] F2 Editor entrenador.
-- [ ] F3 Vista cliente.
+- [~] F2 Editor entrenador implementado y conectado al detalle del cliente; CI final pendiente.
+- [~] F3 Vista cliente + historial de versiones implementados; CI final pendiente.
 - [~] F4 Versionado inmutable implementado en backend; falta validación dinámica del nuevo candidato.
 - [~] F5 Permisos/RLS implementados y pgTAP específico añadido; falta ejecutar CI del nuevo candidato.
 - [~] F6 Avisos/scope no clínico implementados; falta validación UI.
@@ -842,31 +846,31 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [~] N5 Guard fail-closed: sin acceso adulto no se devuelven calorías/macros numéricos.
 - [~] N6 Privacidad: la imagen no se persiste por defecto en STK Haven.
 - [~] N7 Captura cámara/galería Mobile + selector Web implementados; falta CI/smoke.
-- [~] N8 Reanálisis con contexto corregido implementado; editor estructurado de ingredientes/porción sigue pendiente.
-- [ ] N9 Historial alimentario opcional, local-first y borrable.
-- [ ] N10 Rate limit dedicado, métricas de calidad y dataset de evaluación.
-- [ ] N11 Validar Food Vision con platos simples, mixtos, salsas ocultas y baja confianza.
-- [~] N12 Cliente y Edge Function exigen `app_metadata.adult_nutrition_access=true`; proceso que otorga esa verificación sigue pendiente antes del release.
+- [x] N8 Reanálisis con contexto + editor estructurado de ingredientes/porciones implementados.
+- [x] N9 Historial Food Vision opt-in, local-first, borrable y sin persistir imágenes.
+- [x] N10 Rate limit dedicado + métricas agregadas sin PII/contenido + dataset contractual de evaluación.
+- [~] N11 Dataset/validador automático cubre simple, mixto, salsa oculta y baja confianza; falta smoke live del modelo cuando se despliegue.
+- [~] N12 Cliente/Edge usan gate backend fail-closed; concesión/revocación service-role documentada. La comprobación de edad operativa concreta se define antes del release.
 
 ## Fase G — Coach 2.0
-- [ ] G1 Plantillas.
-- [ ] G2 Métricas de adherencia.
-- [ ] G3 Check-ins.
-- [ ] G4 Comparaciones por periodo.
-- [ ] G5 Alertas operativas no médicas.
-- [ ] G6 Exportes.
+- [x] G1 Biblioteca explícita: guardar como plantilla y crear programa fresco desde plantilla, sin compartir rotación/historial.
+- [x] G2 Métricas de adherencia implementadas en tareas y progreso compartido.
+- [x] G3 Check-ins con backend/RLS/UI/comentarios y pgTAP validados en CI.
+- [x] G4 Comparación 7d vs promedio semanal 30d implementada y validada.
+- [x] G5 Alerta operativa por inactividad implementada sin inferencia médica y validada.
+- [x] G6 Exportación segura de resumen mediante portapapeles implementada y validada.
 
 ## Fase H — Cierre
-- [ ] H1 Analyze/tests completos.
+- [~] H1 último candidato verde #31; cambios finales posteriores requieren un último CI.
 - [ ] H2 Migraciones desde Roadmap 2.
 - [ ] H3 Backups antiguos.
 - [ ] H4 Android.
 - [ ] H5 iOS.
 - [ ] H6 Web/PWA.
-- [ ] H7 Seguridad/RLS.
-- [ ] H8 Licencias de contenido.
+- [~] H7 pgTAP/RLS verde en #31; cambios finales no alteran esquema y requieren CI final de cierre.
+- [x] H8 auditoría de assets + RV1909/licencias documentadas; asset sin procedencia fue eliminado.
 - [ ] H9 Accesibilidad.
-- [ ] H10 Auditoría de rendimiento.
+- [~] H10 benchmarks 1k/5k y 25/100 implementados; pendiente CI final de cierre.
 - [ ] H11 Regresión completa de Roadmap 2.
 - [ ] H12 Merge solo con autorización explícita.
 
@@ -874,16 +878,16 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 
 # 17. Decisiones que no deben tomarse accidentalmente
 
-- [ ] No forzar contenido religioso a usuarios que no lo quieran.
-- [ ] No borrar datos de Fe al desactivar el módulo.
-- [ ] No inicializar/descargar Biblia con Fe desactivada.
+- [x] No forzar contenido religioso: opt-in global triestado + gates Mobile/Web.
+- [x] Desactivar Fe no borra notas/favoritos/datos locales.
+- [x] Fe OFF bloquea inicialización/descarga; cubierto por test.
 - [ ] No crear dos aplicaciones separadas para “normal” y “entrenador”.
 - [ ] No usar backup cloud como base de datos multiusuario.
 - [ ] No permitir acceso del entrenador por simple conocimiento del email/id del cliente.
-- [ ] No distribuir libros/Biblias sin licencia confirmada.
+- [x] RV1909 y catálogo usan licencia/fuente documentada; no se distribuye contenido adicional sin permiso.
 - [ ] No transformar “plan alimenticio” en diagnóstico o tratamiento médico automático.
-- [ ] No cargar todos los clientes/historias al iniciar la app.
-- [ ] No hacer merge/deploy sin cerrar gates acordados.
+- [x] Snapshots Coach limitan historial reciente; test de escala verifica payload acotado.
+- [x] Se mantiene rama aislada; sin merge ni deploy remoto durante implementación.
 
 ---
 

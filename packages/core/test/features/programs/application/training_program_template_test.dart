@@ -72,6 +72,45 @@ void main() {
     expect(resumed.nextRoutineId, original.nextRoutineId);
   });
 
+  test('changing training days does not change rotation position', () {
+    final original = program();
+    final changed = original.copyWith(
+      trainingWeekdays: const <int>{1, 3, 5},
+    );
+
+    expect(changed.nextRotationIndex, original.nextRotationIndex);
+    expect(changed.nextRoutineId, original.nextRoutineId);
+    expect(changed.completions.length, original.completions.length);
+  });
+
+  test('deload configuration never changes routine order or next slot', () {
+    final original = program();
+    final deload = original.copyWith(deloadWeeks: const <int>{2, 4});
+
+    expect(deload.routineIds, original.routineIds);
+    expect(deload.nextRotationIndex, original.nextRotationIndex);
+    expect(deload.nextRoutineId, original.nextRoutineId);
+  });
+
+  test('json backup restore preserves exact rotation state', () {
+    final original = program().copyWith(
+      trainingWeekdays: const <int>{1, 2, 4, 5, 6},
+      deloadWeeks: const <int>{4},
+    );
+
+    final restored = TrainingProgram.fromJson(original.toJson());
+
+    expect(restored.nextRotationIndex, original.nextRotationIndex);
+    expect(restored.nextRoutineId, original.nextRoutineId);
+    expect(restored.routineIds, original.routineIds);
+    expect(restored.trainingWeekdays, original.trainingWeekdays);
+    expect(restored.deloadWeeks, original.deloadWeeks);
+    expect(
+      restored.completions.map((value) => value.workoutSessionId),
+      original.completions.map((value) => value.workoutSessionId),
+    );
+  });
+
   test('template cannot instantiate from a normal program', () {
     expect(
       () => program().instantiateTemplate(

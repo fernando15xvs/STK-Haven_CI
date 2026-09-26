@@ -77,6 +77,20 @@ void main() {
       expect(result.nextRoutineId, 'C');
     });
 
+    test('duplicate off-sequence replay never becomes valid later', () {
+      final history = [
+        _session('dup-c', 'C', start.add(const Duration(hours: 1))),
+        _session('a', 'A', start.add(const Duration(hours: 2))),
+        _session('b', 'B', start.add(const Duration(hours: 3))),
+        _session('dup-c', 'C', start.add(const Duration(hours: 4))),
+      ];
+
+      final result = ProgramRotationCoordinator.reconcile(program(), history);
+
+      expect(result.completions.map((item) => item.workoutSessionId), ['a', 'b']);
+      expect(result.nextRoutineId, 'C');
+    });
+
     test('sessions before program start cannot mutate rotation', () {
       final history = [
         _session('old-a', 'A', start.subtract(const Duration(days: 1))),

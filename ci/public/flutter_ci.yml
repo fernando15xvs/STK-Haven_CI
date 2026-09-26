@@ -47,11 +47,28 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: v2.118.0
-      - name: Start isolated Supabase
+      - name: Stage Roadmap 3 migrations for upgrade test
+        run: |
+          mkdir -p /tmp/stk-roadmap3-migrations
+          find supabase/migrations -maxdepth 1 -type f -name '2026092*.sql' -print0 |
+            xargs -0 -r -I{} mv "{}" /tmp/stk-roadmap3-migrations/
+          echo "Roadmap 2 baseline migrations:"
+          ls -1 supabase/migrations
+          echo "Roadmap 3 staged migrations:"
+          ls -1 /tmp/stk-roadmap3-migrations
+      - name: Start isolated Supabase at Roadmap 2 baseline
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
-      - name: Rebuild database from migrations
+      - name: Rebuild Roadmap 2 baseline
         run: supabase db reset
-      - name: Run pgTAP database tests
+      - name: Restore Roadmap 3 migrations
+        run: mv /tmp/stk-roadmap3-migrations/*.sql supabase/migrations/
+      - name: Upgrade Roadmap 2 to Roadmap 3 incrementally
+        run: supabase migration up --local
+      - name: Run pgTAP after incremental upgrade
+        run: supabase test db
+      - name: Rebuild fresh database from all migrations
+        run: supabase db reset
+      - name: Run pgTAP after clean rebuild
         run: supabase test db
       - name: Stop isolated Supabase
         if: always()
@@ -167,3 +184,21 @@ jobs:
       - name: Build iOS profile without signing
         working-directory: apps/app_mobile
         run: flutter build ios --profile --no-codesign --target lib/main_ios.dart
+      - name: Package unsigned iOS IPA
+        working-directory: apps/app_mobile
+        run: |
+          rm -rf build/ios_personal_test
+          mkdir -p build/ios_personal_test/Payload
+          cp -R build/ios/iphoneos/Runner.app build/ios_personal_test/Payload/
+          cd build/ios_personal_test
+          /usr/bin/zip -qry STK-Haven-unsigned.ipa Payload
+          shasum -a 256 STK-Haven-unsigned.ipa > STK-Haven-unsigned.ipa.sha256
+      - name: Upload unsigned iOS personal-test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-ios-unsigned
+          path: |
+            apps/app_mobile/build/ios_personal_test/STK-Haven-unsigned.ipa
+            apps/app_mobile/build/ios_personal_test/STK-Haven-unsigned.ipa.sha256
+          retention-days: 7
+          if-no-files-found: error

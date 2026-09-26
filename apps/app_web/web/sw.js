@@ -1,5 +1,7 @@
 const CACHE_PREFIX = 'stk-haven-';
-const CACHE_NAME = `${CACHE_PREFIX}shell-v8`;
+const CACHE_NAME = `${CACHE_PREFIX}shell-v9`;
+const BIBLE_CACHE_NAME = `${CACHE_PREFIX}bible-rv1909-v2026-09-18`;
+const ACTIVE_CACHES = new Set([CACHE_NAME, BIBLE_CACHE_NAME]);
 const LEGACY_FLUTTER_CACHES = [
   'flutter-app-cache',
   'flutter-temp-cache',
@@ -51,7 +53,7 @@ self.addEventListener('activate', (event) => {
     await Promise.all(
       keys
         .filter((key) =>
-          (key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME) ||
+          (key.startsWith(CACHE_PREFIX) && !ACTIVE_CACHES.has(key)) ||
           LEGACY_FLUTTER_CACHES.includes(key),
         )
         .map((key) => caches.delete(key)),
@@ -65,6 +67,12 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
+
+  if (isPinnedBibleRequest(url)) {
+    event.respondWith(bibleCacheFirst(request));
+    return;
+  }
+
   if (url.origin !== self.location.origin) return;
 
   const scopeUrl = new URL(self.registration.scope);
@@ -79,6 +87,38 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(cacheFirstWithRefresh(request));
 });
+
+function isPinnedBibleRequest(url) {
+  const githubRaw =
+    url.hostname === 'raw.githubusercontent.com' &&
+    url.pathname.startsWith(
+      '/BibleAquifer/ReinaValera1909/v2026-09-18/spa/json/',
+    );
+  const jsDelivr =
+    url.hostname === 'cdn.jsdelivr.net' &&
+    url.pathname.startsWith(
+      '/gh/BibleAquifer/ReinaValera1909@v2026-09-18/spa/json/',
+    );
+  return (githubRaw || jsDelivr) && url.pathname.endsWith('.content.json');
+}
+
+async function bibleCacheFirst(request) {
+  const cache = await caches.open(BIBLE_CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    const fallback = await cache.match(request);
+    if (fallback) return fallback;
+    throw error;
+  }
+}
 
 async function networkFirst(request) {
   const cache = await caches.open(CACHE_NAME);

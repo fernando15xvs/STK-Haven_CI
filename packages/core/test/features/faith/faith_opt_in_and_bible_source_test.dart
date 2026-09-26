@@ -58,6 +58,26 @@ void main() {
       expect(row.text, 'EN el principio era el Verbo.');
     });
 
+    test('uses two pinned source candidates for first-load resilience', () {
+      final candidates = BiblePublicDomainSource.sourceCandidatesForBook(43);
+
+      expect(candidates, hasLength(2));
+      expect(
+        candidates.first.toString(),
+        contains(
+          'raw.githubusercontent.com/BibleAquifer/ReinaValera1909/'
+          'v2026-09-18/spa/json/43.content.json',
+        ),
+      );
+      expect(
+        candidates.last.toString(),
+        contains(
+          'cdn.jsdelivr.net/gh/BibleAquifer/'
+          'ReinaValera1909@v2026-09-18/spa/json/43.content.json',
+        ),
+      );
+    });
+
     test('declares pinned public-domain source metadata', () {
       expect(BiblePublicDomainSource.translationName, 'Reina-Valera 1909');
       expect(BiblePublicDomainSource.sourceTag, 'v2026-09-18');

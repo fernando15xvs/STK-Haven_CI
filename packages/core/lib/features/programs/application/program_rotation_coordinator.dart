@@ -28,19 +28,20 @@ class ProgramRotationCoordinator {
       ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
 
     final completions = List<ProgramCompletion>.from(program.completions);
+    final seenSessionIds = <String>{...alreadyRecorded};
     var nextIndex = program.normalizedNextRotationIndex;
     var changed = false;
 
     for (final session in candidates) {
       final routineId = session.routineId;
       if (routineId == null) continue;
-      if (!alreadyRecorded.add(session.id)) continue;
+      if (!seenSessionIds.add(session.id)) continue;
 
       final expectedRoutine = program.routineIds[nextIndex];
       if (routineId != expectedRoutine) {
         // Off-sequence sessions remain valid workout history but do not advance
-        // the expected program rotation.
-        alreadyRecorded.remove(session.id);
+        // the expected program rotation. The id remains seen so a duplicate
+        // replay of the same session cannot advance later.
         continue;
       }
 
