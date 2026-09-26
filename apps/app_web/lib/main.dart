@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:core/core/config/storage_namespace.dart';
 import 'package:core/core/config/supabase_config.dart';
 import 'package:core/database/hive/hive_database.dart';
 import 'package:core/domain/models/settings_state.dart';
@@ -19,6 +20,7 @@ import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  StorageNamespace.configureSharedPreferences();
 
   await Supabase.initialize(
     url: SupabaseConfig.url,
