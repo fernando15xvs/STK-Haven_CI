@@ -261,7 +261,14 @@ En navegador compatible:
 - [ ] abrir offline lo que deba estar disponible offline;
 - [ ] actualizar desde una versión previa sin limpiar caché;
 - [ ] no queda service worker sirviendo una versión antigua;
-- [ ] teclado/foco básicos funcionan.
+- [ ] teclado/foco básicos funcionan;
+- [ ] gesto lateral/Back del navegador vuelve a la pantalla Flutter anterior sin recargar el shell;
+- [ ] el comportamiento anterior se verifica en varias rutas internas (Biblia, Favoritos, Coach, Nutrición, Ajustes);
+- [ ] Web Push puede activarse desde una PWA instalada con cuenta permanente;
+- [ ] una Push de prueba aparece con la PWA fuera de primer plano;
+- [ ] al tocar la Push se abre/enfoca STK Haven;
+- [ ] el tono propio de alarma se reproduce con la app abierta cuando termina un descanso;
+- [ ] saltar el descanso manualmente no dispara el tono.
 
 ---
 

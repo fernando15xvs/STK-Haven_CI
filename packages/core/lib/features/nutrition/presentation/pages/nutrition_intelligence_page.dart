@@ -563,9 +563,9 @@ class _NutritionIntelligencePageState
     );
     if (!mounted || draft == null) return;
 
-    final context = draft.toReanalysisContext();
+    final correctionContext = draft.toReanalysisContext();
     setState(() {
-      _dishHintController.text = context;
+      _dishHintController.text = correctionContext;
       _dishHintController.selection = TextSelection.collapsed(
         offset: _dishHintController.text.length,
       );
