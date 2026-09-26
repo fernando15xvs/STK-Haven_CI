@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'stk-haven-';
-const CACHE_NAME = `${CACHE_PREFIX}shell-v7`;
+const CACHE_NAME = `${CACHE_PREFIX}shell-v8`;
 const LEGACY_FLUTTER_CACHES = [
   'flutter-app-cache',
   'flutter-temp-cache',
@@ -122,3 +122,70 @@ async function cacheFirstWithRefresh(request) {
   if (response) return response;
   return Response.error();
 }
+
+
+self.addEventListener('push', (event) => {
+  event.waitUntil((async () => {
+    let payload = {};
+    try {
+      payload = event.data ? event.data.json() : {};
+    } catch (_) {
+      payload = { body: event.data ? event.data.text() : '' };
+    }
+
+    const title =
+      typeof payload.title === 'string' && payload.title.trim()
+        ? payload.title.trim()
+        : 'STK Haven';
+    const body =
+      typeof payload.body === 'string' ? payload.body.trim() : '';
+    const targetUrl =
+      typeof payload.url === 'string' && payload.url.trim()
+        ? payload.url.trim()
+        : './';
+    const tag =
+      typeof payload.tag === 'string' && payload.tag.trim()
+        ? payload.tag.trim()
+        : 'stk-haven';
+
+    await self.registration.showNotification(title, {
+      body,
+      icon: './icons/stk-haven-192.png',
+      badge: './icons/stk-haven-192.png',
+      tag,
+      renotify: false,
+      data: { url: targetUrl },
+    });
+  })());
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const target = new URL(
+      event.notification?.data?.url || './',
+      self.registration.scope,
+    ).href;
+
+    const windows = await self.clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true,
+    });
+
+    for (const client of windows) {
+      if ('focus' in client) {
+        if ('navigate' in client && client.url !== target) {
+          try {
+            await client.navigate(target);
+          } catch (_) {}
+        }
+        await client.focus();
+        return;
+      }
+    }
+
+    if (self.clients.openWindow) {
+      await self.clients.openWindow(target);
+    }
+  })());
+});

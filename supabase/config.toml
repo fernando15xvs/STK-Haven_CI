@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.food-vision-ai]
 verify_jwt = true
+
+[functions.web-push-test]
+verify_jwt = true

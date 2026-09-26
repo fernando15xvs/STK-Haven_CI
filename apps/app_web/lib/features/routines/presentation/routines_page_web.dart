@@ -2,6 +2,7 @@ import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -129,6 +130,32 @@ class RoutinesPageWeb extends ConsumerWidget {
         ),
       );
       return;
+    }
+    final programSession = ref.read(nextProgramSessionProvider);
+    if (programSession != null &&
+        programSession.routine.id != routine.id) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Rutina fuera de la secuencia'),
+          content: Text(
+            'La siguiente sesión de “${programSession.program.name}” es '
+            '“${programSession.routine.name}”. “${routine.name}” se puede '
+            'entrenar, pero no avanzará la rotación del programa.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Entrenar de todos modos'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !context.mounted) return;
     }
     ref.read(activeWorkoutProvider.notifier).startWorkout(routine, exercises);
     if (!context.mounted) return;

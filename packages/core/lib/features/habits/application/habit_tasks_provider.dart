@@ -2,6 +2,7 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/habit_task.dart';
 import 'package:core/features/habits/application/habit_schedule_service.dart';
 import 'package:core/features/habits/application/habit_task_templates.dart';
+import 'package:core/features/habits/application/habit_task_notification_service.dart';
 import 'package:core/features/habits/data/habit_task_repository.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,6 +121,42 @@ class HabitTasksNotifier extends Notifier<HabitTasksState> {
       task.copyWith(updatedAt: DateTime.now()),
     );
     refresh();
+  }
+
+  Future<bool> setReminder({
+    required String taskId,
+    required bool enabled,
+    DateTime? scheduledAt,
+  }) async {
+    final task = _repository.getTask(taskId);
+    if (task == null || task.source == HabitTaskSource.coach) return false;
+
+    if (!enabled) {
+      await HabitTaskNotificationService.cancel(taskId);
+      await _repository.saveTask(
+        task.copyWith(
+          reminderEnabled: false,
+          updatedAt: DateTime.now(),
+        ),
+      );
+      refresh();
+      return true;
+    }
+
+    final updated = task.copyWith(
+      reminderEnabled: true,
+      scheduledAt: scheduledAt ?? task.scheduledAt,
+      updatedAt: DateTime.now(),
+    );
+    final scheduled = await HabitTaskNotificationService.scheduleNext(updated);
+    await _repository.saveTask(
+      updated.copyWith(
+        reminderEnabled: scheduled,
+        updatedAt: DateTime.now(),
+      ),
+    );
+    refresh();
+    return scheduled;
   }
 
   Future<void> archiveTask(String taskId) async {

@@ -4,6 +4,7 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 
 class WorkoutLauncher {
@@ -49,6 +50,34 @@ class WorkoutLauncher {
       if (choice == 'discard_start') {
         await notifier.cancelWorkout();
       }
+    }
+
+    final programSession = ref.read(nextProgramSessionProvider);
+    if (programSession != null &&
+        programSession.routine.id != routine.id) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Rutina fuera de la secuencia'),
+          content: Text(
+            'La siguiente sesión de “${programSession.program.name}” es '
+            '“${programSession.routine.name}”. Puedes entrenar '
+            '“${routine.name}”, pero esta sesión no avanzará la rotación del '
+            'programa.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Entrenar de todos modos'),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !context.mounted) return;
     }
 
     notifier.startWorkout(routine, exercises);

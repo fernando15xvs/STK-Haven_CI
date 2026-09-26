@@ -27,6 +27,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../faith/presentation/favorites_page_web.dart';
 import '../application/data_export_service_web.dart';
 import 'achievements_page_web.dart';
+import 'web_notification_settings_page.dart';
 
 class ProfilePageWeb extends ConsumerWidget {
   const ProfilePageWeb({super.key});
@@ -76,6 +77,21 @@ class ProfilePageWeb extends ConsumerWidget {
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const ExperiencePreferencesPage(),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _Section(
+                  title: 'Web y PWA',
+                  child: _ActionTile(
+                    icon: Icons.notifications_active_outlined,
+                    title: 'Notificaciones y alarmas',
+                    subtitle:
+                        'Web Push, permiso del navegador y sonido de alarmas.',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const WebNotificationSettingsPage(),
                       ),
                     ),
                   ),

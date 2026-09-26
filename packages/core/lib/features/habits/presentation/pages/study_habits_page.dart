@@ -1,4 +1,7 @@
+import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/habit_task.dart';
+import 'package:core/features/habits/application/study_resource_catalog.dart';
+import 'package:core/features/habits/data/study_resource_bookmark_repository.dart';
 import 'package:core/features/coach/application/coach_task_provider.dart';
 import 'package:core/domain/models/study_plan.dart';
 import 'package:core/features/habits/application/habit_schedule_service.dart';
@@ -11,6 +14,7 @@ import 'package:core/features/habits/presentation/pages/habit_study_timer_page.d
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class StudyHabitsPage extends ConsumerWidget {
   const StudyHabitsPage({super.key});
@@ -38,6 +42,27 @@ class StudyHabitsPage extends ConsumerWidget {
     );
     final latestCompletions =
         state.completions.take(10).toList(growable: false);
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+    final faithTaskIds = state.tasks
+        .where(
+          (task) =>
+              task.faithSpecific &&
+              (task.type == HabitTaskType.readingTimer ||
+                  task.type == HabitTaskType.studySession),
+        )
+        .map((task) => task.id)
+        .toSet();
+    final readingMinutesWeek = state.completions
+        .where(
+          (completion) =>
+              completion.status == HabitTaskCompletionStatus.completed &&
+              !completion.completedAt.isBefore(sevenDaysAgo) &&
+              faithTaskIds.contains(completion.taskId),
+        )
+        .fold<int>(
+          0,
+          (sum, completion) => sum + completion.minutesSpent,
+        );
 
     return Scaffold(
       appBar: AppBar(
@@ -67,6 +92,7 @@ class StudyHabitsPage extends ConsumerWidget {
                             completion.completedAt.day == now.day,
                       )
                       .length,
+                  readingMinutesWeek: faithEnabled ? readingMinutesWeek : 0,
                 ),
                 if (activeTimer != null) ...[
                   const SizedBox(height: 16),
@@ -184,6 +210,21 @@ class StudyHabitsPage extends ConsumerWidget {
                 ],
                 const SizedBox(height: 24),
                 _SectionTitle(
+                  title: 'Recursos de estudio',
+                  subtitle:
+                      'Solo recursos propios o con licencia documentada.',
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => _showResourceCatalog(
+                    context,
+                    faithEnabled: faithEnabled,
+                  ),
+                  icon: const Icon(Icons.library_books_outlined),
+                  label: const Text('Buscar recursos y licencias'),
+                ),
+                const SizedBox(height: 24),
+                _SectionTitle(
                   title: 'Para hoy',
                   subtitle: dueToday.isEmpty
                       ? 'No tienes tareas pendientes para hoy.'
@@ -206,6 +247,9 @@ class StudyHabitsPage extends ConsumerWidget {
                       ),
                       onOpen: () => _handleTask(context, ref, task),
                       onComplete: () => _handleTask(context, ref, task),
+                      onReminder: task.source == HabitTaskSource.coach
+                          ? null
+                          : () => _configureReminder(context, ref, task),
                       onArchive: task.source == HabitTaskSource.coach
                           ? null
                           : () => ref
@@ -236,6 +280,9 @@ class StudyHabitsPage extends ConsumerWidget {
                       ),
                       onOpen: () => _handleTask(context, ref, task),
                       onComplete: () => _handleTask(context, ref, task),
+                      onReminder: task.source == HabitTaskSource.coach
+                          ? null
+                          : () => _configureReminder(context, ref, task),
                       onArchive: task.source == HabitTaskSource.coach
                           ? null
                           : () => ref
@@ -367,6 +414,161 @@ class StudyHabitsPage extends ConsumerWidget {
     );
   }
 
+  static Future<void> _showResourceCatalog(
+    BuildContext context, {
+    required bool faithEnabled,
+  }) async {
+    final repository = StudyResourceBookmarkRepository(
+      Hive.box<dynamic>(HiveBoxes.metadata),
+    );
+    final search = TextEditingController();
+    var bookmarks = repository.getBookmarks();
+    var query = '';
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final results = StudyResourceCatalog.search(query)
+              .where(
+                (resource) =>
+                    faithEnabled || resource.id != 'rv1909',
+              )
+              .toList(growable: false);
+          return AlertDialog(
+            title: const Text('Recursos de estudio'),
+            content: SizedBox(
+              width: 620,
+              height: 480,
+              child: Column(
+                children: [
+                  TextField(
+                    controller: search,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      labelText: 'Buscar por título, autor o tema',
+                    ),
+                    onChanged: (value) =>
+                        setDialogState(() => query = value),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: results.isEmpty
+                        ? const Center(
+                            child: Text('No hay recursos para esa búsqueda.'),
+                          )
+                        : ListView.separated(
+                            itemCount: results.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final resource = results[index];
+                              final marked =
+                                  bookmarks.contains(resource.id);
+                              return ListTile(
+                                leading: Icon(
+                                  resource.id == 'rv1909'
+                                      ? Icons.menu_book_outlined
+                                      : Icons.description_outlined,
+                                ),
+                                title: Text(resource.title),
+                                subtitle: Text(
+                                  '${resource.author} · '
+                                  '${resource.licenseName}\n'
+                                  'Fuente: ${resource.source}',
+                                ),
+                                isThreeLine: true,
+                                trailing: IconButton(
+                                  tooltip: marked
+                                      ? 'Quitar marcador'
+                                      : 'Guardar marcador',
+                                  icon: Icon(
+                                    marked
+                                        ? Icons.bookmark
+                                        : Icons.bookmark_border,
+                                  ),
+                                  onPressed: () async {
+                                    await repository.setBookmarked(
+                                      resource.id,
+                                      !marked,
+                                    );
+                                    setDialogState(() {
+                                      bookmarks =
+                                          repository.getBookmarks();
+                                    });
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cerrar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    search.dispose();
+  }
+
+  static Future<void> _configureReminder(
+    BuildContext context,
+    WidgetRef ref,
+    HabitTask task,
+  ) async {
+    final notifier = ref.read(habitTasksProvider.notifier);
+    if (task.reminderEnabled) {
+      await notifier.setReminder(taskId: task.id, enabled: false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recordatorio desactivado.')),
+        );
+      }
+      return;
+    }
+
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(
+        task.scheduledAt?.toLocal() ??
+            DateTime.now().add(const Duration(hours: 1)),
+      ),
+    );
+    if (selected == null || !context.mounted) return;
+
+    final now = DateTime.now();
+    final scheduledAt = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      selected.hour,
+      selected.minute,
+    );
+    final enabled = await notifier.setReminder(
+      taskId: task.id,
+      enabled: true,
+      scheduledAt: scheduledAt,
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? 'Recordatorio activado.'
+                : 'No se pudo activar el recordatorio en este dispositivo.',
+          ),
+        ),
+      );
+    }
+  }
+
   static Future<void> _showCreateTaskDialog(
     BuildContext context,
     WidgetRef ref,
@@ -374,6 +576,7 @@ class StudyHabitsPage extends ConsumerWidget {
     final titleController = TextEditingController();
     final categoryController = TextEditingController(text: 'General');
     final minutesController = TextEditingController(text: '10');
+    final referenceController = TextEditingController();
     var type = HabitTaskType.checklist;
     var recurrence = HabitRecurrenceType.once;
     var weekdays = <int>{};
@@ -432,6 +635,17 @@ class StudyHabitsPage extends ConsumerWidget {
                         labelText: 'Minutos objetivo',
                       ),
                     ),
+                    if (type == HabitTaskType.readingTimer ||
+                        type == HabitTaskType.studySession) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: referenceController,
+                        decoration: const InputDecoration(
+                          labelText: 'Referencia / tema (opcional)',
+                          hintText: 'Ej.: Juan 3 o tema a estudiar',
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     DropdownButtonFormField<HabitRecurrenceType>(
                       initialValue: recurrence,
@@ -513,6 +727,7 @@ class StudyHabitsPage extends ConsumerWidget {
                                         0,
                                 recurrence: recurrence,
                                 weekdays: weekdays,
+                                reference: referenceController.text,
                               );
                           if (dialogContext.mounted) {
                             Navigator.pop(dialogContext);
@@ -534,6 +749,7 @@ class StudyHabitsPage extends ConsumerWidget {
     titleController.dispose();
     categoryController.dispose();
     minutesController.dispose();
+    referenceController.dispose();
   }
 
   static String _typeLabel(HabitTaskType value) => switch (value) {
@@ -657,10 +873,12 @@ class _StudyPlanEnrollmentCard extends StatelessWidget {
 class _OverviewCard extends StatelessWidget {
   final int pendingToday;
   final int completedToday;
+  final int readingMinutesWeek;
 
   const _OverviewCard({
     required this.pendingToday,
     required this.completedToday,
+    required this.readingMinutesWeek,
   });
 
   @override
@@ -684,6 +902,14 @@ class _OverviewCard extends StatelessWidget {
                 icon: Icons.check_circle_outline,
               ),
             ),
+            if (readingMinutesWeek > 0)
+              Expanded(
+                child: _Metric(
+                  label: 'Lectura · 7 días',
+                  value: '$readingMinutesWeek min',
+                  icon: Icons.menu_book_outlined,
+                ),
+              ),
           ],
         ),
       ),
@@ -759,6 +985,7 @@ class _HabitTaskCard extends StatelessWidget {
   final int streak;
   final VoidCallback onOpen;
   final VoidCallback onComplete;
+  final VoidCallback? onReminder;
   final VoidCallback? onArchive;
 
   const _HabitTaskCard({
@@ -766,6 +993,7 @@ class _HabitTaskCard extends StatelessWidget {
     required this.streak,
     required this.onOpen,
     required this.onComplete,
+    required this.onReminder,
     required this.onArchive,
   });
 
@@ -802,6 +1030,18 @@ class _HabitTaskCard extends StatelessWidget {
                     : Icons.check_rounded,
               ),
             ),
+            if (onReminder != null)
+              IconButton(
+                tooltip: task.reminderEnabled
+                    ? 'Desactivar recordatorio'
+                    : 'Activar recordatorio',
+                onPressed: onReminder,
+                icon: Icon(
+                  task.reminderEnabled
+                      ? Icons.notifications_active_outlined
+                      : Icons.notifications_none_outlined,
+                ),
+              ),
             if (onArchive != null)
               PopupMenuButton<String>(
                 onSelected: (value) {

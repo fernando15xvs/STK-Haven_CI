@@ -23,12 +23,14 @@ class _HabitStudyTimerPageState
     extends ConsumerState<HabitStudyTimerPage> {
   Timer? _ticker;
   final TextEditingController _noteController = TextEditingController();
+  late final TextEditingController _referenceController;
   bool _bootstrapped = false;
   bool _finishing = false;
 
   @override
   void initState() {
     super.initState();
+    _referenceController = TextEditingController(text: widget.task.reference);
     _ticker = Timer.periodic(
       const Duration(seconds: 1),
       (_) {
@@ -59,6 +61,7 @@ class _HabitStudyTimerPageState
   void dispose() {
     _ticker?.cancel();
     _noteController.dispose();
+    _referenceController.dispose();
     super.dispose();
   }
 
@@ -83,6 +86,12 @@ class _HabitStudyTimerPageState
       final elapsedSeconds = timer.elapsedSecondsAt(now);
       final minutes = elapsedSeconds <= 0 ? 0 : (elapsedSeconds + 59) ~/ 60;
 
+      final reference = _referenceController.text.trim();
+      if (reference != widget.task.reference) {
+        await ref.read(habitTasksProvider.notifier).updateTask(
+              widget.task.copyWith(reference: reference),
+            );
+      }
       await ref.read(habitTasksProvider.notifier).completeTask(
             taskId: widget.task.id,
             minutesSpent: minutes,
@@ -155,13 +164,15 @@ class _HabitStudyTimerPageState
                     borderRadius: BorderRadius.circular(99),
                   ),
                 ],
-                if (widget.task.reference.isNotEmpty) ...[
+                if (widget.task.faithSpecific) ...[
                   const SizedBox(height: 24),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.bookmark_outline),
-                      title: const Text('Referencia'),
-                      subtitle: Text(widget.task.reference),
+                  TextField(
+                    controller: _referenceController,
+                    decoration: const InputDecoration(
+                      labelText: 'Libro / capítulo o pasaje (opcional)',
+                      hintText: 'Ej.: Juan 3 o Salmos 23',
+                      prefixIcon: Icon(Icons.bookmark_outline),
+                      border: OutlineInputBorder(),
                     ),
                   ),
                 ],

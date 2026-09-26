@@ -217,6 +217,186 @@
   </div>
 
   <script>
+    // Keep Flutter's imperative Navigator stack synchronized with the browser
+    // history used by Safari/iOS swipe-back and desktop Back/Forward.
+    let stkFlutterBackHandler = null;
+    let stkHistoryDepth = 0;
+    let stkSuppressNextPop = false;
+
+    window.stkSetFlutterBackHandler = (handler) => {
+      stkFlutterBackHandler = handler;
+    };
+
+    window.stkHistoryInitialize = () => {
+      stkHistoryDepth = 0;
+      stkSuppressNextPop = false;
+      const current = history.state && typeof history.state === 'object'
+        ? history.state
+        : {};
+      history.replaceState(
+        { ...current, stkHavenRoot: true, stkHavenDepth: 0 },
+        '',
+        location.href,
+      );
+    };
+
+    window.stkHistoryRoutePushed = () => {
+      stkHistoryDepth += 1;
+      history.pushState(
+        { stkHavenRoute: true, stkHavenDepth: stkHistoryDepth },
+        '',
+        location.href,
+      );
+    };
+
+    window.stkHistoryRoutePopped = () => {
+      if (stkHistoryDepth <= 0) return;
+      stkHistoryDepth -= 1;
+      stkSuppressNextPop = true;
+      history.back();
+    };
+
+    window.addEventListener('popstate', () => {
+      if (stkSuppressNextPop) {
+        stkSuppressNextPop = false;
+        return;
+      }
+      if (stkHistoryDepth > 0 && stkFlutterBackHandler) {
+        stkHistoryDepth -= 1;
+        stkFlutterBackHandler();
+      }
+    });
+
+    function stkUrlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+      const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+      const rawData = atob(base64);
+      return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+    }
+
+    window.stkWebPushSupport = async () => {
+      const serviceWorker = 'serviceWorker' in navigator;
+      const pushManager = 'PushManager' in window;
+      let subscribed = false;
+      if (serviceWorker && pushManager) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          subscribed = !!(await registration.pushManager.getSubscription());
+        } catch (_) {}
+      }
+      return JSON.stringify({
+        serviceWorker,
+        pushManager,
+        notifications: 'Notification' in window,
+        permission: 'Notification' in window
+          ? Notification.permission
+          : 'unsupported',
+        subscribed,
+        standalone:
+          window.matchMedia('(display-mode: standalone)').matches ||
+          window.navigator.standalone === true,
+      });
+    };
+
+    window.stkWebPushSubscribe = async (vapidPublicKey) => {
+      if (!('serviceWorker' in navigator) ||
+          !('PushManager' in window) ||
+          !('Notification' in window)) {
+        throw new Error('Web Push no está soportado en este navegador.');
+      }
+      if (!vapidPublicKey) {
+        throw new Error('WEB_PUSH_VAPID_PUBLIC_KEY no está configurada.');
+      }
+
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+      if (permission !== 'granted') {
+        throw new Error('Permiso de notificaciones no concedido.');
+      }
+
+      const registration = await navigator.serviceWorker.ready;
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: stkUrlBase64ToUint8Array(vapidPublicKey),
+        });
+      }
+      return JSON.stringify(subscription.toJSON());
+    };
+
+    window.stkWebPushUnsubscribe = async () => {
+      if (!('serviceWorker' in navigator)) return '';
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+      if (!subscription) return '';
+      const endpoint = subscription.endpoint || '';
+      await subscription.unsubscribe();
+      return endpoint;
+    };
+
+    let stkAudioContext = null;
+
+    window.stkEnableWebAudio = async () => {
+      const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextCtor) return false;
+      stkAudioContext = stkAudioContext || new AudioContextCtor();
+      if (stkAudioContext.state === 'suspended') {
+        await stkAudioContext.resume();
+      }
+      return stkAudioContext.state === 'running';
+    };
+
+    window.stkPlayAlarmTone = async () => {
+      const enabled = await window.stkEnableWebAudio();
+      if (!enabled || !stkAudioContext) return false;
+
+      const now = stkAudioContext.currentTime;
+      const gain = stkAudioContext.createGain();
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.22, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+      gain.connect(stkAudioContext.destination);
+
+      for (const [offset, frequency] of [[0, 880], [0.22, 988], [0.44, 1175]]) {
+        const oscillator = stkAudioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, now + offset);
+        oscillator.connect(gain);
+        oscillator.start(now + offset);
+        oscillator.stop(now + offset + 0.18);
+      }
+      return true;
+    };
+
+    const stkUnlockAudioOnce = () => {
+      window.stkEnableWebAudio().catch(() => {});
+    };
+    window.addEventListener('pointerdown', stkUnlockAudioOnce, {
+      once: true,
+      passive: true,
+    });
+    window.addEventListener('keydown', stkUnlockAudioOnce, { once: true });
+
+    window.stkShowForegroundNotification = async (title, body) => {
+      if (!('Notification' in window) || Notification.permission !== 'granted') {
+        return false;
+      }
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification(title, {
+        body,
+        icon: 'icons/stk-haven-192.png',
+        badge: 'icons/stk-haven-192.png',
+        tag: 'stk-haven-foreground',
+        data: { url: './' },
+      });
+      return true;
+    };
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', async () => {
         try {

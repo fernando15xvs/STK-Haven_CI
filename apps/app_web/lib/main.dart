@@ -1,14 +1,19 @@
+import 'dart:async';
+
 import 'package:core/core/config/supabase_config.dart';
 import 'package:core/database/hive/hive_database.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/layout/web_layout.dart';
+import 'core/navigation/web_browser_history_bridge.dart';
+import 'core/notifications/web_platform_notification_service.dart';
 import 'features/onboarding/presentation/onboarding_page_web.dart';
 import 'core/theme/app_theme.dart';
 
@@ -36,8 +41,17 @@ class WebApp extends ConsumerStatefulWidget {
 }
 
 class _WebAppState extends ConsumerState<WebApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  final WebBrowserHistoryBridge _historyBridge = WebBrowserHistoryBridge();
+
   bool _bibleInitSchedulePending = false;
   bool _bibleInitStarted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _historyBridge.attach(_navigatorKey);
+  }
 
   void _syncBibleInitialization(bool faithEnabled) {
     if (!faithEnabled ||
@@ -63,12 +77,24 @@ class _WebAppState extends ConsumerState<WebApp> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+
+    ref.listen(activeWorkoutProvider, (previous, next) {
+      final naturallyFinishedRest =
+          previous?.isResting == true &&
+          previous!.restTimerSeconds <= 1 &&
+          !next.isResting;
+      if (naturallyFinishedRest && settings.timerSoundEnabled) {
+        unawaited(WebPlatformNotificationService.playAlarmTone());
+      }
+    });
     final experienceProfile = ref.watch(userExperienceProfileProvider);
     _syncBibleInitialization(
       experienceProfile.value?.faithEnabled == true,
     );
 
     return MaterialApp(
+      navigatorKey: _navigatorKey,
+      navigatorObservers: <NavigatorObserver>[_historyBridge],
       debugShowCheckedModeBanner: false,
       title: 'STK Haven',
       theme: AppTheme.darkTheme,
