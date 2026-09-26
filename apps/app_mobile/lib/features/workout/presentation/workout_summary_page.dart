@@ -13,7 +13,6 @@ import 'package:core/features/workout/application/workout_summary_snapshot.dart'
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_comparison_summary.dart';
-import 'package:lottie/lottie.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
 
 class WorkoutSummaryPage extends ConsumerStatefulWidget {
@@ -358,15 +357,6 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
               ),
             ],
           ),
-      Positioned.fill(
-        child: IgnorePointer(
-          child: Lottie.asset(
-            'assets/lottie/confetti.json',
-            repeat: false,
-            fit: BoxFit.cover,
-          ),
-        ),
-      ),
     ],
   ),
   floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
