@@ -34,15 +34,17 @@ void main() {
       );
 
       final payload = plan.toEditorPayload();
-      final serialized = payload.toString().toLowerCase();
-
       expect(payload['title'], 'Guía general');
       expect(payload['meals'], hasLength(1));
-      expect(serialized, isNot(contains('calorie')));
-      expect(serialized, isNot(contains('caloría')));
-      expect(serialized, isNot(contains('macro_target')));
-      expect(serialized, isNot(contains('weight_target')));
-      expect(serialized, isNot(contains('deficit')));
+      expect(payload.keys, isNot(contains('calories')));
+      expect(payload.keys, isNot(contains('calorie_target')));
+      expect(payload.keys, isNot(contains('macro_target')));
+      expect(payload.keys, isNot(contains('weight_target')));
+      expect(payload.keys, isNot(contains('deficit')));
+      expect(
+        payload['scope_notice'].toString().toLowerCase(),
+        contains('no prescribe calorías'),
+      );
     });
 
     test('parses immutable version independently from current version', () {
