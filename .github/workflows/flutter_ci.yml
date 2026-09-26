@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: public-ci-${{ github.workflow }}-${{ github.ref }}
@@ -46,6 +46,24 @@ jobs:
             apps/app_mobile/windows/flutter/generated_plugins.cmake
           retention-days: 1
           if-no-files-found: error
+      - name: Commit normalized dependency files to mirror
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pubspec.lock \
+            apps/app_mobile/linux/flutter/generated_plugin_registrant.cc \
+            apps/app_mobile/linux/flutter/generated_plugin_registrant.h \
+            apps/app_mobile/linux/flutter/generated_plugins.cmake \
+            apps/app_mobile/macos/Flutter/GeneratedPluginRegistrant.swift \
+            apps/app_mobile/windows/flutter/generated_plugin_registrant.cc \
+            apps/app_mobile/windows/flutter/generated_plugin_registrant.h \
+            apps/app_mobile/windows/flutter/generated_plugins.cmake
+          if git diff --cached --quiet; then
+            echo "Dependency snapshot already normalized."
+          else
+            git commit -m "chore: normalize Flutter dependency snapshot"
+            git push origin HEAD:main
+          fi
       - name: Analyze
         run: flutter analyze --no-fatal-infos
       - name: Core tests
