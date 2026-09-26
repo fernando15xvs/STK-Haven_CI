@@ -77,13 +77,39 @@ jobs:
           mkdir -p /tmp/stk-haven-preview
           cp -a apps/app_web/build/web/. /tmp/stk-haven-preview/
 
-      - name: Publish preview branch
+      - name: Publish clean preview branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # An orphan checkout keeps ignored/untracked Flutter build artifacts in
+          # the working tree. Remove both tracked and generated content before
+          # copying the web bundle, otherwise GitHub Pages tries to archive
+          # ephemeral plugin symlinks and the Pages build fails.
           git checkout --orphan preview-pages-worktree
-          git rm -rf .
+          git rm -rf . || true
+          git clean -ffdx
+
           cp -a /tmp/stk-haven-preview/. .
+
+          test -f index.html
+          test -f main.dart.js
+          test -f manifest.json
+          test -f .nojekyll
+
+          for unexpected in .dart_tool apps packages pubspec.yaml pubspec.lock; do
+            if [ -e "$unexpected" ]; then
+              echo "::error::Unexpected publish artifact: $unexpected"
+              exit 1
+            fi
+          done
+
+          if find . -type l -print -quit | grep -q .; then
+            echo "::error::Symlinks are not allowed in the Pages publish branch"
+            find . -type l -print
+            exit 1
+          fi
+
           git add -A
           git commit -m "deploy: Roadmap 3 isolated preview"
           git push --force origin HEAD:gh-pages
