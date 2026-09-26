@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: public-ci-${{ github.workflow }}-${{ github.ref }}
@@ -30,27 +30,11 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve workspace
-        run: flutter pub get
-      - name: Upload normalized dependency files
-        uses: actions/upload-artifact@v4
-        with:
-          name: roadmap3-normalized-dependencies
-          path: |
-            pubspec.lock
-            apps/app_mobile/linux/flutter/generated_plugin_registrant.cc
-            apps/app_mobile/linux/flutter/generated_plugin_registrant.h
-            apps/app_mobile/linux/flutter/generated_plugins.cmake
-            apps/app_mobile/macos/Flutter/GeneratedPluginRegistrant.swift
-            apps/app_mobile/windows/flutter/generated_plugin_registrant.cc
-            apps/app_mobile/windows/flutter/generated_plugin_registrant.h
-            apps/app_mobile/windows/flutter/generated_plugins.cmake
-          retention-days: 1
-          if-no-files-found: error
-      - name: Commit normalized dependency files to mirror
+        run: flutter pub get --enforce-lockfile
+      - name: Verify dependency snapshot is clean
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pubspec.lock \
+          git diff --exit-code -- \
+            pubspec.lock \
             apps/app_mobile/linux/flutter/generated_plugin_registrant.cc \
             apps/app_mobile/linux/flutter/generated_plugin_registrant.h \
             apps/app_mobile/linux/flutter/generated_plugins.cmake \
@@ -58,12 +42,6 @@ jobs:
             apps/app_mobile/windows/flutter/generated_plugin_registrant.cc \
             apps/app_mobile/windows/flutter/generated_plugin_registrant.h \
             apps/app_mobile/windows/flutter/generated_plugins.cmake
-          if git diff --cached --quiet; then
-            echo "Dependency snapshot already normalized."
-          else
-            git commit -m "chore: normalize Flutter dependency snapshot"
-            git push origin HEAD:main
-          fi
       - name: Analyze
         run: flutter analyze --no-fatal-infos
       - name: Core tests
@@ -134,7 +112,7 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve workspace
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
@@ -155,7 +133,7 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve workspace
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
       - name: Build debug APK
         working-directory: apps/app_mobile
         run: flutter build apk --debug --target lib/main_android.dart
@@ -184,7 +162,7 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve workspace
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
       - name: Web tests
         working-directory: apps/app_web
         run: flutter test
@@ -207,7 +185,7 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve workspace
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
       - name: Install CocoaPods
         working-directory: apps/app_mobile/ios
         run: pod install
