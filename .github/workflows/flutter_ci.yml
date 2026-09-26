@@ -31,6 +31,21 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Upload normalized dependency files
+        uses: actions/upload-artifact@v4
+        with:
+          name: roadmap3-normalized-dependencies
+          path: |
+            pubspec.lock
+            apps/app_mobile/linux/flutter/generated_plugin_registrant.cc
+            apps/app_mobile/linux/flutter/generated_plugin_registrant.h
+            apps/app_mobile/linux/flutter/generated_plugins.cmake
+            apps/app_mobile/macos/Flutter/GeneratedPluginRegistrant.swift
+            apps/app_mobile/windows/flutter/generated_plugin_registrant.cc
+            apps/app_mobile/windows/flutter/generated_plugin_registrant.h
+            apps/app_mobile/windows/flutter/generated_plugins.cmake
+          retention-days: 1
+          if-no-files-found: error
       - name: Analyze
         run: flutter analyze --no-fatal-infos
       - name: Core tests
