@@ -16,14 +16,11 @@ void main() {
     expect(listenerEnd, greaterThan(listenerStart));
 
     final listener = html.substring(listenerStart, listenerEnd);
-    expect(
-      RegExp(r'event\.stopImmediatePropagation\(\);')
-          .allMatches(listener)
-          .length,
-      2,
-    );
-    expect(listener, contains('stkSuppressNextPop = false;'));
+    expect(listener, contains('const managed ='));
+    expect(listener, contains('event.stopImmediatePropagation();'));
+    expect(listener, contains('targetDepth < stkHistoryDepth'));
     expect(listener, contains('stkFlutterBackHandler();'));
+    expect(listener, isNot(contains('stkSuppressNextPop')));
   });
 
   test('in-app Flutter Back never traverses to another document entry', () {
@@ -41,5 +38,16 @@ void main() {
     expect(popHandler, isNot(contains('history.back()')));
     expect(popHandler, isNot(contains('history.go(')));
     expect(popHandler, contains('history.replaceState('));
+  });
+
+  test('Safari browser Back removes the Flutter page without reverse animation',
+      () {
+    final bridge = File(
+      'lib/core/navigation/web_browser_history_bridge.dart',
+    ).readAsStringSync();
+
+    expect(bridge, contains('navigator.removeRoute(route);'));
+    expect(bridge, isNot(contains('navigator.maybePop()')));
+    expect(bridge, contains('RoutePopDisposition.doNotPop'));
   });
 }
