@@ -25,4 +25,21 @@ void main() {
     expect(listener, contains('stkSuppressNextPop = false;'));
     expect(listener, contains('stkFlutterBackHandler();'));
   });
+
+  test('in-app Flutter Back never traverses to another document entry', () {
+    final html = File('web/index.html').readAsStringSync();
+    final popStart = html.indexOf('window.stkHistoryRoutePopped = () => {');
+    final popEnd = html.indexOf(
+      "window.addEventListener('popstate'",
+      popStart,
+    );
+
+    expect(popStart, greaterThanOrEqualTo(0));
+    expect(popEnd, greaterThan(popStart));
+
+    final popHandler = html.substring(popStart, popEnd);
+    expect(popHandler, isNot(contains('history.back()')));
+    expect(popHandler, isNot(contains('history.go(')));
+    expect(popHandler, contains('history.replaceState('));
+  });
 }

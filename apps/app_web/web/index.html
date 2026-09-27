@@ -252,8 +252,15 @@
     window.stkHistoryRoutePopped = () => {
       if (stkHistoryDepth <= 0) return;
       stkHistoryDepth -= 1;
-      stkSuppressNextPop = true;
-      history.back();
+
+      // Do not traverse browser history for an in-app Flutter pop. Safari can
+      // treat the previous entry as a full document navigation in some cases,
+      // which restores/reloads index.html and shows the splash again. Keep the
+      // current document alive and only rewrite the managed depth marker.
+      const parentState = stkHistoryDepth === 0
+        ? { stkHavenRoot: true, stkHavenDepth: 0 }
+        : { stkHavenRoute: true, stkHavenDepth: stkHistoryDepth };
+      history.replaceState(parentState, '', location.href);
     };
 
     window.addEventListener('popstate', (event) => {
