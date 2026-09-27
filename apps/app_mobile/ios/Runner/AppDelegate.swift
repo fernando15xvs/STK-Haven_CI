@@ -40,13 +40,12 @@ import UserNotifications
 
         switch call.method {
         case "requestPermission":
-          self.readTodaySteps { steps, error in
-            if let cmError = error as? CMError,
-               cmError.code == .notAuthorized {
-              result(false)
-            } else {
-              result(steps != nil)
-            }
+          self.readTodaySteps { steps, _ in
+            // Core Motion presents/uses the motion authorization state through
+            // the pedometer query itself. A successful step result is enough
+            // to confirm access; avoid relying on CMError internals whose Swift
+            // API differs across SDK versions.
+            result(steps != nil)
           }
         case "getTodaySteps":
           self.readTodaySteps { steps, error in
