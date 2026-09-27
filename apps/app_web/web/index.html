@@ -378,6 +378,15 @@
     });
     window.addEventListener('keydown', stkUnlockAudioOnce, { once: true });
 
+    window.stkRequestNotificationPermission = async () => {
+      if (!('Notification' in window)) return 'unsupported';
+      if (Notification.permission === 'granted' ||
+          Notification.permission === 'denied') {
+        return Notification.permission;
+      }
+      return await Notification.requestPermission();
+    };
+
     window.stkShowForegroundNotification = async (title, body) => {
       if (!('Notification' in window) || Notification.permission !== 'granted') {
         return false;

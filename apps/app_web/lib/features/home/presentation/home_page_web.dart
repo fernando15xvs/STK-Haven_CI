@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/core/utils/fitness_formatter.dart';
@@ -8,6 +10,7 @@ import 'package:core/features/exercises/presentation/providers/exercise_provider
 import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/home/application/hydration_provider.dart';
+import 'package:core/features/home/application/wellness_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
@@ -16,6 +19,7 @@ import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 
+import '../../../core/notifications/web_platform_notification_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../faith/presentation/daily_verse_page_web.dart';
 import '../../workout/presentation/active_workout_page_web.dart';
@@ -23,6 +27,155 @@ import 'widgets/recovery_check_in_card_web.dart';
 
 class HomePageWeb extends ConsumerWidget {
   const HomePageWeb({super.key});
+
+  Future<void> _showHydrationSettings(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final current = ref.read(hydrationPreferencesProvider);
+    var targetMl = current.targetMl;
+    var reminderEnabled = current.reminderEnabled;
+    var reminderHour = current.reminderHour;
+
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Hidratación'),
+          content: SizedBox(
+            width: 460,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Ajusta una meta que tenga sentido para ti. Esta función sirve como referencia de registro y no reemplaza una recomendación médica.',
+                  ),
+                  const SizedBox(height: 18),
+                  Text(
+                    'Meta diaria: ${(targetMl / 1000).toStringAsFixed(targetMl % 1000 == 0 ? 0 : 2)} L',
+                  ),
+                  Slider(
+                    value: targetMl.toDouble(),
+                    min: 1000,
+                    max: 5000,
+                    divisions: 16,
+                    label: '$targetMl ml',
+                    onChanged: (value) =>
+                        setDialogState(() => targetMl = value.round()),
+                  ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Avisarme si todavía no llego a mi meta'),
+                    subtitle: const Text(
+                      'En la PWA el aviso funciona cuando el navegador permite notificaciones.',
+                    ),
+                    value: reminderEnabled,
+                    onChanged: (value) =>
+                        setDialogState(() => reminderEnabled = value),
+                  ),
+                  if (reminderEnabled)
+                    DropdownButtonFormField<int>(
+                      initialValue: reminderHour,
+                      decoration: const InputDecoration(
+                        labelText: 'Hora del recordatorio',
+                      ),
+                      items: [
+                        for (final hour in [12, 15, 18, 20, 22])
+                          DropdownMenuItem(
+                            value: hour,
+                            child: Text('${hour.toString().padLeft(2, '0')}:00'),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() => reminderHour = value);
+                        }
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (save != true) return;
+    await ref
+        .read(hydrationPreferencesProvider.notifier)
+        .setTargetMl(targetMl);
+    await ref
+        .read(hydrationPreferencesProvider.notifier)
+        .setReminderHour(reminderHour);
+    await ref
+        .read(hydrationPreferencesProvider.notifier)
+        .setReminderEnabled(reminderEnabled);
+
+    if (reminderEnabled && context.mounted) {
+      final permission =
+          await WebPlatformNotificationService.requestLocalNotificationPermission();
+      if (permission != 'granted' && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'El recordatorio quedó configurado, pero Safari todavía no concedió permiso de notificaciones.',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _editSteps(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final current = ref.read(dailyStepsProvider).steps;
+    final controller = TextEditingController(text: '$current');
+    final value = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Pasos de hoy'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Cantidad de pasos',
+            hintText: 'Ej. 4500',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(
+              dialogContext,
+              int.tryParse(controller.text.trim()),
+            ),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value != null) {
+      await ref.read(dailyStepsProvider.notifier).setSteps(value);
+    }
+  }
 
   Future<void> _startRoutine(
     BuildContext context,
@@ -53,6 +206,8 @@ class HomePageWeb extends ConsumerWidget {
     final history = ref.watch(workoutHistoryProvider);
     final active = ref.watch(activeWorkoutProvider);
     final hydration = ref.watch(hydrationProvider);
+    final hydrationPreferences = ref.watch(hydrationPreferencesProvider);
+    final dailySteps = ref.watch(dailyStepsProvider);
     final faithEnabled = ref.watch(
       userExperienceProfileProvider.select(
         (profile) => profile.value?.faithEnabled ?? false,
@@ -118,6 +273,7 @@ class HomePageWeb extends ConsumerWidget {
             child: ListView(
               padding: EdgeInsets.fromLTRB(horizontal, 26, horizontal, 110),
               children: [
+                const _HydrationReminderHost(),
                 const _GreetingHeader(),
                 if (faithEnabled && settings.showDailyVerse &&
                     verseAsync != null && bibleInit != null) ...[
@@ -165,25 +321,49 @@ class HomePageWeb extends ConsumerWidget {
                     final stacked = constraints.maxWidth < 760;
                     final hydrationCard = _HydrationCard(
                       waterMl: hydration.waterMl,
-                      onAdd: (ml) => ref.read(hydrationProvider.notifier).addWater(ml),
+                      targetMl: hydrationPreferences.targetMl,
+                      reminderEnabled: hydrationPreferences.reminderEnabled,
+                      reminderHour: hydrationPreferences.reminderHour,
+                      onConfigure: () => _showHydrationSettings(context, ref),
+                      onAdd: (ml) =>
+                          ref.read(hydrationProvider.notifier).addWater(ml),
                     );
-                    final weekCard = _WeeklyCard(
-                      workouts: week.length,
-                      sets: weeklySets,
-                      seconds: weeklySeconds,
-                      volume: weeklyVolume,
-                      trainedDays: trainedDays,
-                      weightLabel: settings.weightUnit.label,
-                      displayedVolume: WeightConverter.displayWeight(weeklyVolume, settings.weightUnit),
+                    final stepsCard = _DailyStepsCard(
+                      steps: dailySteps.steps,
+                      onEdit: () => _editSteps(context, ref),
                     );
                     if (stacked) {
-                      return Column(children: [hydrationCard, const SizedBox(height: 14), weekCard]);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          hydrationCard,
+                          const SizedBox(height: 14),
+                          stepsCard,
+                        ],
+                      );
                     }
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [Expanded(child: hydrationCard), const SizedBox(width: 14), Expanded(child: weekCard)],
+                      children: [
+                        Expanded(child: hydrationCard),
+                        const SizedBox(width: 14),
+                        Expanded(child: stepsCard),
+                      ],
                     );
                   },
+                ),
+                const SizedBox(height: 14),
+                _WeeklyCard(
+                  workouts: week.length,
+                  sets: weeklySets,
+                  seconds: weeklySeconds,
+                  volume: weeklyVolume,
+                  trainedDays: trainedDays,
+                  weightLabel: settings.weightUnit.label,
+                  displayedVolume: WeightConverter.displayWeight(
+                    weeklyVolume,
+                    settings.weightUnit,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 LayoutBuilder(
@@ -197,7 +377,14 @@ class HomePageWeb extends ConsumerWidget {
                           : FitnessFormatter.formatPRValue(recentPr.newValue, recentPr.type, settings.weightUnit),
                     );
                     if (stacked) {
-                      return Column(children: [lastWorkoutCard, const SizedBox(height: 14), prCard]);
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          lastWorkoutCard,
+                          const SizedBox(height: 14),
+                          prCard,
+                        ],
+                      );
                     }
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,6 +398,90 @@ class HomePageWeb extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _HydrationReminderHost extends ConsumerStatefulWidget {
+  const _HydrationReminderHost();
+
+  @override
+  ConsumerState<_HydrationReminderHost> createState() =>
+      _HydrationReminderHostState();
+}
+
+class _HydrationReminderHostState
+    extends ConsumerState<_HydrationReminderHost> {
+  Timer? _timer;
+  String? _signature;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _schedule() {
+    final preferences = ref.read(hydrationPreferencesProvider);
+    final hydration = ref.read(hydrationProvider);
+    final signature =
+        '${preferences.reminderEnabled}|${preferences.reminderHour}|${preferences.targetMl}|${hydration.waterMl}|${preferences.lastReminderDate}';
+    if (_signature == signature) return;
+    _signature = signature;
+
+    _timer?.cancel();
+    if (!preferences.reminderEnabled ||
+        hydration.waterMl >= preferences.targetMl) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final today =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    if (preferences.lastReminderDate == today) return;
+
+    final reminderAt = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      preferences.reminderHour,
+    );
+    final delay = reminderAt.isAfter(now)
+        ? reminderAt.difference(now)
+        : Duration.zero;
+
+    _timer = Timer(delay, () async {
+      if (!mounted) return;
+      final latestPreferences = ref.read(hydrationPreferencesProvider);
+      final latestHydration = ref.read(hydrationProvider);
+      if (!latestPreferences.reminderEnabled ||
+          latestHydration.waterMl >= latestPreferences.targetMl ||
+          latestPreferences.lastReminderDate == today) {
+        return;
+      }
+
+      final missing =
+          (latestPreferences.targetMl - latestHydration.waterMl).clamp(0, 5000);
+      final shown =
+          await WebPlatformNotificationService.showForegroundNotification(
+        title: 'Hidratación · STK Haven',
+        body: 'Te faltan $missing ml para tu meta personal de hoy.',
+      );
+      if (shown && mounted) {
+        await ref
+            .read(hydrationPreferencesProvider.notifier)
+            .markReminderSent(DateTime.now());
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.watch(hydrationPreferencesProvider);
+    ref.watch(hydrationProvider);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _schedule();
+    });
+    return const SizedBox.shrink();
   }
 }
 
@@ -395,28 +666,149 @@ class _ProgramCard extends StatelessWidget {
 
 class _HydrationCard extends StatelessWidget {
   final int waterMl;
+  final int targetMl;
+  final bool reminderEnabled;
+  final int reminderHour;
   final ValueChanged<int> onAdd;
-  const _HydrationCard({required this.waterMl, required this.onAdd});
+  final VoidCallback onConfigure;
+
+  const _HydrationCard({
+    required this.waterMl,
+    required this.targetMl,
+    required this.reminderEnabled,
+    required this.reminderHour,
+    required this.onAdd,
+    required this.onConfigure,
+  });
 
   @override
   Widget build(BuildContext context) {
-    const goal = 3000;
+    final remaining = (targetMl - waterMl).clamp(0, targetMl);
+    final progress =
+        targetMl <= 0 ? 0.0 : (waterMl / targetMl).clamp(0.0, 1.0);
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [const Icon(Icons.water_drop_outlined, color: Colors.lightBlueAccent), const SizedBox(width: 8), Expanded(child: Text('Hidratación diaria', style: AppTypography.headlineSmall)), Text('$waterMl / $goal ml', style: AppTypography.labelMedium)]),
-          const SizedBox(height: 14),
-          LinearProgressIndicator(value: (waterMl / goal).clamp(0.0, 1.0), minHeight: 9, borderRadius: BorderRadius.circular(20)),
+          Row(
+            children: [
+              const Icon(
+                Icons.water_drop_outlined,
+                color: Colors.lightBlueAccent,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Hidratación diaria',
+                  style: AppTypography.headlineSmall,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Configurar hidratación',
+                onPressed: onConfigure,
+                icon: const Icon(Icons.tune_rounded),
+              ),
+            ],
+          ),
+          Text(
+            '$waterMl / $targetMl ml',
+            style: AppTypography.labelMedium,
+          ),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(
+            value: progress,
+            minHeight: 9,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            remaining == 0
+                ? 'Meta registrada por hoy.'
+                : 'Te faltan $remaining ml para tu meta personal.',
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+          if (reminderEnabled)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Recordatorio: ${reminderHour.toString().padLeft(2, '0')}:00',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              OutlinedButton(onPressed: () => onAdd(250), child: const Text('+250 ml')),
-              OutlinedButton(onPressed: () => onAdd(500), child: const Text('+500 ml')),
-              OutlinedButton(onPressed: () => onAdd(750), child: const Text('+750 ml')),
+              OutlinedButton(
+                onPressed: () => onAdd(250),
+                child: const Text('+250 ml'),
+              ),
+              OutlinedButton(
+                onPressed: () => onAdd(500),
+                child: const Text('+500 ml'),
+              ),
+              OutlinedButton(
+                onPressed: () => onAdd(750),
+                child: const Text('+750 ml'),
+              ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DailyStepsCard extends StatelessWidget {
+  final int steps;
+  final VoidCallback onEdit;
+
+  const _DailyStepsCard({
+    required this.steps,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.directions_walk_rounded,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Pasos de hoy',
+                  style: AppTypography.headlineSmall,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Registrar pasos',
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined),
+              ),
+            ],
+          ),
+          Text(
+            '$steps',
+            style: AppTypography.displaySmall,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'En la web puedes registrarlos manualmente. En Android e iOS se puede sincronizar el sensor del dispositivo.',
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -512,36 +904,6 @@ class _RecentPrCard extends StatelessWidget {
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('PR reciente', style: AppTypography.labelMedium), Text(title!, style: AppTypography.headlineSmall), if (value != null) Text(value!, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary))])),
               ],
             ),
-    );
-  }
-}
-
-class _FeatureCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  const _FeatureCard({required this.icon, required this.title, required this.subtitle, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: AppRadius.lg_,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: AppRadius.lg_,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(borderRadius: AppRadius.lg_, border: Border.all(color: AppColors.border), boxShadow: AppElevation.soft),
-          child: Row(children: [
-            Container(width: 44, height: 44, decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.12), borderRadius: AppRadius.md_), child: Icon(icon, color: AppColors.primary)),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: AppTypography.headlineSmall), Text(subtitle, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary))])),
-            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-          ]),
-        ),
-      ),
     );
   }
 }

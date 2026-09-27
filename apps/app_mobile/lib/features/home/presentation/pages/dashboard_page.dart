@@ -21,6 +21,7 @@ import 'package:gym_tracker/core/theme/components/metric_tile.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/features/faith/presentation/pages/daily_verse_page.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/hydration_widget.dart';
+import 'package:gym_tracker/features/home/presentation/widgets/daily_steps_widget.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/recovery_check_in_card.dart';
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
@@ -90,6 +91,8 @@ class DashboardPage extends ConsumerWidget {
             Text('BIENESTAR', style: AppTypography.labelLarge.copyWith(color: AppColors.textSecondary)),
             const SizedBox(height: AppSpacing.sm),
             const HydrationWidget(),
+            const SizedBox(height: AppSpacing.md),
+            const DailyStepsWidget(),
             const SizedBox(height: AppSpacing.xxl),
             _WeeklyTracker(history: history),
             if (lastWorkout != null || recentPR != null) ...[
@@ -553,22 +556,13 @@ class _RecentGrid extends StatelessWidget {
 
     if (cards.length <= 1) return cards.first;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 360) {
-          return Column(
-            children: [cards[0], const SizedBox(height: AppSpacing.sm), cards[1]],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: cards[0]),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: cards[1]),
-          ],
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        cards[0],
+        const SizedBox(height: AppSpacing.sm),
+        cards[1],
+      ],
     );
   }
 }

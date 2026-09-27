@@ -24,6 +24,9 @@ external JSPromise<JSBoolean> _stkShowForegroundNotification(
   JSString body,
 );
 
+@JS('stkRequestNotificationPermission')
+external JSPromise<JSString> _stkRequestNotificationPermission();
+
 class WebPushSupport {
   final bool serviceWorker;
   final bool pushManager;
@@ -155,6 +158,10 @@ class WebPlatformNotificationService {
 
   static Future<bool> playAlarmTone() async {
     return (await _stkPlayAlarmTone().toDart).toDart;
+  }
+
+  static Future<String> requestLocalNotificationPermission() async {
+    return (await _stkRequestNotificationPermission().toDart).toDart;
   }
 
   static Future<bool> showForegroundNotification({
