@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:core/features/programs/application/program_plan_insights.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_volume_planner.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
@@ -36,11 +39,28 @@ String _weekdayAndDate(DateTime value) {
   return '${weekdays[value.weekday]} · ${value.day}/${value.month}';
 }
 
-class TrainingProgramsPage extends ConsumerWidget {
+class TrainingProgramsPage extends ConsumerStatefulWidget {
   const TrainingProgramsPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TrainingProgramsPage> createState() =>
+      _TrainingProgramsPageState();
+}
+
+class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
+  bool _reconcileScheduled = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_reconcileScheduled) {
+      _reconcileScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(
+          ref.read(trainingProgramListProvider.notifier).reconcileActive(),
+        );
+      });
+    }
     final programs = ref.watch(trainingProgramListProvider);
     final routines = ref.watch(routineListProvider);
     final history = ref.watch(workoutHistoryProvider);
@@ -55,15 +75,6 @@ class TrainingProgramsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Plan de entrenamiento'),
-        actions: [
-          IconButton(
-            tooltip: 'Reconciliar con historial',
-            onPressed: () => ref
-                .read(trainingProgramListProvider.notifier)
-                .reconcileActive(),
-            icon: const Icon(Icons.sync_rounded),
-          ),
-        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: routines.isEmpty
@@ -92,6 +103,11 @@ class TrainingProgramsPage extends ConsumerWidget {
                   muscleGroupByExerciseId: muscleByExercise,
                   weekStart: weekStart,
                 );
+                final insights = ProgramPlanInsights.calculate(
+                  program: program,
+                  routines: routines,
+                  now: DateTime.now(),
+                );
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 14),
                   child: _ProgramCard(
@@ -99,6 +115,7 @@ class TrainingProgramsPage extends ConsumerWidget {
                     routineById: routineById,
                     volumes: volumes,
                     plannedSessions: plannedSessions,
+                    insights: insights,
                     onActivate: () => ref
                         .read(trainingProgramListProvider.notifier)
                         .activate(program.id),
@@ -180,7 +197,7 @@ class TrainingProgramsPage extends ConsumerWidget {
           }
 
           return AlertDialog(
-            title: Text(existing == null ? 'Crear programa' : 'Editar programa'),
+            title: Text(existing == null ? 'Crear plan' : 'Editar plan'),
             content: SizedBox(
               width: 620,
               child: SingleChildScrollView(
@@ -437,7 +454,7 @@ class TrainingProgramsPage extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Eliminar programa'),
+        title: const Text('Eliminar plan'),
         content: Text(
           'Se eliminará “${program.name}”. Sus rutinas y entrenamientos históricos se conservan.',
         ),
@@ -467,6 +484,7 @@ class _ProgramCard extends StatelessWidget {
     required this.routineById,
     required this.volumes,
     required this.plannedSessions,
+    required this.insights,
     required this.onActivate,
     required this.onEdit,
     required this.onDuplicate,
@@ -481,6 +499,7 @@ class _ProgramCard extends StatelessWidget {
   final Map<String, Routine> routineById;
   final List<ProgramMuscleVolume> volumes;
   final List<ProgramScheduledSession> plannedSessions;
+  final ProgramPlanInsights insights;
   final VoidCallback onActivate;
   final VoidCallback onEdit;
   final VoidCallback onDuplicate;
@@ -567,18 +586,18 @@ class _ProgramCard extends StatelessWidget {
                     if (onPause != null)
                       const PopupMenuItem(
                         value: 'pause',
-                        child: Text('Pausar programa'),
+                        child: Text('Pausar plan'),
                       ),
                     if (onResume != null)
                       const PopupMenuItem(
                         value: 'resume',
-                        child: Text('Reanudar programa'),
+                        child: Text('Reanudar plan'),
                       ),
                     const PopupMenuItem(value: 'edit', child: Text('Editar')),
                     if (!program.isTemplate)
                       const PopupMenuItem(
                         value: 'duplicate',
-                        child: Text('Duplicar programa'),
+                        child: Text('Duplicar plan'),
                       ),
                     if (onSaveTemplate != null)
                       const PopupMenuItem(
@@ -588,7 +607,7 @@ class _ProgramCard extends StatelessWidget {
                     if (onUseTemplate != null)
                       const PopupMenuItem(
                         value: 'use_template',
-                        child: Text('Crear programa desde plantilla'),
+                        child: Text('Crear plan desde plantilla'),
                       ),
                     const PopupMenuItem(
                       value: 'delete',
@@ -601,15 +620,12 @@ class _ProgramCard extends StatelessWidget {
             if (!program.isTemplate) ...[
               const SizedBox(height: 12),
               LinearProgressIndicator(value: progress),
-              const SizedBox(height: 12),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.skip_next_rounded),
-                title: const Text('Siguiente sesión'),
-                subtitle: Text(nextRoutine?.name ?? 'Rutina no disponible'),
-                trailing: program.isDeloadWeekAt(now)
-                    ? const Chip(label: Text('Descarga'))
-                    : null,
+              const SizedBox(height: 14),
+              _PlanOverview(
+                program: program,
+                nextRoutine: nextRoutine,
+                routineById: routineById,
+                insights: insights,
               ),
             ] else ...[
               const SizedBox(height: 12),
@@ -682,6 +698,30 @@ class _ProgramCard extends StatelessWidget {
                     )
                     .toList(),
               ),
+            if (insights.next14SessionCount > 0)
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: const Text('Próximos 14 días'),
+                subtitle: Text(
+                  '${insights.next14SessionCount} sesiones previstas · distribución por rutina',
+                ),
+                children: [
+                  for (final routineId in program.routineIds)
+                    if ((insights.next14RoutineCounts[routineId] ?? 0) > 0)
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.repeat_rounded),
+                        title: Text(
+                          routineById[routineId]?.name ?? 'Rutina eliminada',
+                        ),
+                        trailing: Text(
+                          '×${insights.next14RoutineCounts[routineId]}',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                ],
+              ),
             if (volumes.isNotEmpty)
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
@@ -719,6 +759,221 @@ String _date(DateTime value) {
   }
 }
 
+class _PlanOverview extends StatelessWidget {
+  const _PlanOverview({
+    required this.program,
+    required this.nextRoutine,
+    required this.routineById,
+    required this.insights,
+  });
+
+  final TrainingProgram program;
+  final Routine? nextRoutine;
+  final Map<String, Routine> routineById;
+  final ProgramPlanInsights insights;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final nextDate = insights.nextScheduledDate;
+    final nextName = insights.nextScheduledRoutineId == null
+        ? nextRoutine?.name
+        : routineById[insights.nextScheduledRoutineId!]?.name ??
+            nextRoutine?.name;
+    final statusColor = insights.pendingDue > 0
+        ? colors.error
+        : colors.primary;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.32),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: colors.outlineVariant.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                insights.pendingDue > 0
+                    ? Icons.schedule_rounded
+                    : Icons.check_circle_outline_rounded,
+                color: statusColor,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  insights.paceLabel,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: statusColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+              if (program.isDeloadWeekAt(DateTime.now()))
+                const Chip(label: Text('Descarga')),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _InsightMetric(
+                icon: Icons.event_available_outlined,
+                label: 'Esta semana',
+                value:
+                    '${insights.completedThisWeek}/${insights.plannedThisWeek} sesiones',
+              ),
+              _InsightMetric(
+                icon: Icons.skip_next_rounded,
+                label: 'Próxima',
+                value: nextDate == null
+                    ? 'Sin fecha'
+                    : '${_shortDate(nextDate)} · ${nextName ?? 'Rutina'}',
+              ),
+              _InsightMetric(
+                icon: Icons.flag_outlined,
+                label: 'Fin estimado',
+                value: _shortDate(insights.estimatedEndDate),
+              ),
+            ],
+          ),
+          if (insights.trainingWeekdays.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              'Días de entrenamiento',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
+            const SizedBox(height: 7),
+            Wrap(
+              spacing: 6,
+              children: [
+                for (final entry in const [
+                  (DateTime.monday, 'L'),
+                  (DateTime.tuesday, 'M'),
+                  (DateTime.wednesday, 'X'),
+                  (DateTime.thursday, 'J'),
+                  (DateTime.friday, 'V'),
+                  (DateTime.saturday, 'S'),
+                  (DateTime.sunday, 'D'),
+                ])
+                  _DayBadge(
+                    label: entry.$2,
+                    active: insights.trainingWeekdays.contains(entry.$1),
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  static String _shortDate(DateTime date) {
+    const months = [
+      'ene',
+      'feb',
+      'mar',
+      'abr',
+      'may',
+      'jun',
+      'jul',
+      'ago',
+      'sep',
+      'oct',
+      'nov',
+      'dic',
+    ];
+    return '${date.day} ${months[date.month - 1]}';
+  }
+}
+
+class _InsightMetric extends StatelessWidget {
+  const _InsightMetric({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: 138, maxWidth: 220),
+      child: Container(
+        padding: const EdgeInsets.all(11),
+        decoration: BoxDecoration(
+          color: colors.surface.withValues(alpha: 0.72),
+          borderRadius: BorderRadius.circular(13),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 18, color: colors.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DayBadge extends StatelessWidget {
+  const _DayBadge({
+    required this.label,
+    required this.active,
+  });
+
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return CircleAvatar(
+      radius: 15,
+      backgroundColor:
+          active ? colors.primary : colors.surfaceContainerHighest,
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: active ? colors.onPrimary : colors.onSurfaceVariant,
+              fontWeight: FontWeight.w800,
+            ),
+      ),
+    );
+  }
+}
+
 class _EmptyPrograms extends StatelessWidget {
   const _EmptyPrograms({required this.hasRoutines});
 
@@ -735,15 +990,15 @@ class _EmptyPrograms extends StatelessWidget {
             const Icon(Icons.layers_outlined, size: 56),
             const SizedBox(height: 14),
             Text(
-              'Todavía no tienes Programas 2.0',
+              'Todavía no tienes un plan de entrenamiento',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
               hasRoutines
-                  ? 'Crea una rotación A/B/C usando tus rutinas existentes.'
-                  : 'Primero crea una rutina y luego podrás agruparla en un programa.',
+                  ? 'Crea una rotación usando tus rutinas existentes y elige los días en que entrenas.'
+                  : 'Primero crea una rutina y luego podrás organizarla dentro de un plan.',
               textAlign: TextAlign.center,
             ),
           ],
