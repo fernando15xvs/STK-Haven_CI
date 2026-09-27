@@ -4,6 +4,7 @@ import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_rotation_coordinator.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
+import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -117,6 +118,20 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
         notes: 'Programa recomendado según tu configuración inicial.',
       ),
     );
+
+    final settings = ref.read(settingsProvider);
+    final legacySnapshot = settings.activeProgram;
+    if (legacySnapshot != null &&
+        legacySnapshot.programNameSnapshot == 'Upper / Lower (4 Días)') {
+      ref.read(settingsProvider.notifier).updateSettings(
+            settings.copyWith(
+              activeProgram: legacySnapshot.copyWith(
+                programNameSnapshot: friendlyName,
+              ),
+            ),
+          );
+    }
+
     refresh();
   }
 
