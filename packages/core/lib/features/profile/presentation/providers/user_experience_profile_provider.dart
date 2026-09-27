@@ -18,13 +18,19 @@ final userExperienceProfileProvider = AsyncNotifierProvider<
 
 class UserExperienceProfileNotifier
     extends AsyncNotifier<UserExperienceProfile> {
-  late final UserExperienceProfileRepository _repository;
+  UserExperienceProfileRepository get _repository =>
+      ref.read(userExperienceProfileRepositoryProvider);
 
   @override
   Future<UserExperienceProfile> build() async {
-    _repository = ref.watch(userExperienceProfileRepositoryProvider);
-    final legacySettings = ref.watch(settingsProvider);
-    return _repository.getOrMigrate(legacySettings);
+    final repository = ref.watch(userExperienceProfileRepositoryProvider);
+
+    // Legacy settings are needed only to seed a profile when none exists yet.
+    // Watching SettingsState here rebuilds this AsyncNotifier after every
+    // settings change. The previous late-final repository assignment then ran
+    // a second time on Web and raised LateInitializationError.
+    final legacySettings = ref.read(settingsProvider);
+    return repository.getOrMigrate(legacySettings);
   }
 
   Future<void> updateProfile(UserExperienceProfile profile) async {
