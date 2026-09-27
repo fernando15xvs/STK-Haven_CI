@@ -88,8 +88,9 @@ class WebBrowserHistoryBridge extends NavigatorObserver {
   }) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
 
-    final oldIndex =
-        oldRoute == null ? -1 : _pageRoutes.indexOf(oldRoute);
+    final oldIndex = oldRoute is PageRoute<dynamic>
+        ? _pageRoutes.indexOf(oldRoute)
+        : -1;
     if (oldIndex >= 0) {
       if (newRoute is PageRoute<dynamic>) {
         _pageRoutes[oldIndex] = newRoute;
