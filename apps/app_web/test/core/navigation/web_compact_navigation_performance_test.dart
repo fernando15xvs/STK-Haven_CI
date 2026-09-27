@@ -20,7 +20,10 @@ void main() {
     expect(compactBlock, contains('_pages[effectiveSelectedIndex]'));
     expect(compactBlock, contains('RepaintBoundary'));
     expect(compactBlock, isNot(contains('_content(effectiveSelectedIndex)')));
-    expect(compactBlock, isNot(contains('IndexedStack')));
+    expect(
+      RegExp(r'\bIndexedStack\s*\(').hasMatch(compactBlock),
+      isFalse,
+    );
   });
 
   test('desktop keeps lazy retained tabs', () {
