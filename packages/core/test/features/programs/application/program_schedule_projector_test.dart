@@ -75,6 +75,58 @@ void main() {
       );
     });
 
+    test('recommended five-day schedule matches the adaptive default', () {
+      expect(
+        ProgramScheduleProjector.recommendedTrainingWeekdays(5),
+        {
+          DateTime.monday,
+          DateTime.tuesday,
+          DateTime.thursday,
+          DateTime.friday,
+          DateTime.saturday,
+        },
+      );
+    });
+
+    test('five-day weeks alternate 3/2 distribution without resetting', () {
+      final adaptive = program(
+        weekdays: ProgramScheduleProjector.recommendedTrainingWeekdays(5),
+      );
+
+      final week1 = ProgramScheduleProjector.projectWeek(
+        program: adaptive,
+        routines: routines,
+        weekStart: monday,
+      );
+      final afterWeek1 = adaptive.copyWith(
+        nextRotationIndex: 1,
+        completions: [
+          for (var i = 0; i < week1.length; i++)
+            ProgramCompletion(
+              workoutSessionId: 'w1-$i',
+              routineId: week1[i].routineId,
+              completedAt: week1[i].date.add(const Duration(hours: 18)),
+              rotationIndex: week1[i].rotationIndex,
+              programWeek: 1,
+            ),
+        ],
+      );
+      final week2 = ProgramScheduleProjector.projectWeek(
+        program: afterWeek1,
+        routines: routines,
+        weekStart: monday.add(const Duration(days: 7)),
+      );
+
+      expect(
+        week1.map((item) => item.routineId).toList(),
+        ['ua', 'la', 'ub', 'lb', 'ua'],
+      );
+      expect(
+        week2.map((item) => item.routineId).toList(),
+        ['la', 'ub', 'lb', 'ua', 'la'],
+      );
+    });
+
     test('new week does not reset the routine sequence', () {
       final projected = ProgramScheduleProjector.project(
         program: program(),

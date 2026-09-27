@@ -16,6 +16,44 @@ class ProgramScheduledSession {
 class ProgramScheduleProjector {
   const ProgramScheduleProjector._();
 
+  static Set<int> recommendedTrainingWeekdays(int daysPerWeek) {
+    return switch (daysPerWeek) {
+      <= 1 => <int>{DateTime.monday},
+      2 => <int>{DateTime.monday, DateTime.thursday},
+      3 => <int>{DateTime.monday, DateTime.wednesday, DateTime.friday},
+      4 => <int>{
+          DateTime.monday,
+          DateTime.tuesday,
+          DateTime.thursday,
+          DateTime.friday,
+        },
+      5 => <int>{
+          DateTime.monday,
+          DateTime.tuesday,
+          DateTime.thursday,
+          DateTime.friday,
+          DateTime.saturday,
+        },
+      6 => <int>{
+          DateTime.monday,
+          DateTime.tuesday,
+          DateTime.wednesday,
+          DateTime.thursday,
+          DateTime.friday,
+          DateTime.saturday,
+        },
+      _ => <int>{
+          DateTime.monday,
+          DateTime.tuesday,
+          DateTime.wednesday,
+          DateTime.thursday,
+          DateTime.friday,
+          DateTime.saturday,
+          DateTime.sunday,
+        },
+    };
+  }
+
   static Set<int> effectiveTrainingWeekdays(
     TrainingProgram program,
     Iterable<Routine> routines,
@@ -43,9 +81,27 @@ class ProgramScheduleProjector {
     DateTime date,
   ) {
     final weekdays = effectiveTrainingWeekdays(program, routines);
-    // No configured weekdays means the program is sequence-only and can be
-    // started on any day rather than becoming impossible to launch.
     return weekdays.isEmpty || weekdays.contains(date.weekday);
+  }
+
+  static int rotationIndexAt(
+    TrainingProgram program,
+    DateTime instant,
+  ) {
+    if (program.routineIds.isEmpty) return 0;
+
+    final before = program.completions
+        .where((item) => item.completedAt.isBefore(instant))
+        .toList(growable: false)
+      ..sort((a, b) => a.completedAt.compareTo(b.completedAt));
+
+    if (before.isEmpty) {
+      return program.completions.isEmpty
+          ? program.normalizedNextRotationIndex
+          : 0;
+    }
+
+    return (before.last.rotationIndex + 1) % program.routineIds.length;
   }
 
   static List<ProgramScheduledSession> project({
@@ -53,6 +109,7 @@ class ProgramScheduleProjector {
     required Iterable<Routine> routines,
     required DateTime from,
     required int days,
+    int? initialRotationIndex,
   }) {
     if (days <= 0 || program.routineIds.isEmpty) {
       return const <ProgramScheduledSession>[];
@@ -60,7 +117,9 @@ class ProgramScheduleProjector {
 
     final weekdays = effectiveTrainingWeekdays(program, routines);
     final result = <ProgramScheduledSession>[];
-    var rotationIndex = program.normalizedNextRotationIndex;
+    var rotationIndex =
+        (initialRotationIndex ?? program.normalizedNextRotationIndex) %
+            program.routineIds.length;
     var cursor = DateTime(from.year, from.month, from.day);
 
     for (var offset = 0; offset < days; offset++) {
@@ -80,5 +139,39 @@ class ProgramScheduleProjector {
     }
 
     return result;
+  }
+
+  static List<ProgramScheduledSession> projectWeek({
+    required TrainingProgram program,
+    required Iterable<Routine> routines,
+    required DateTime weekStart,
+  }) {
+    if (program.routineIds.isEmpty) {
+      return const <ProgramScheduledSession>[];
+    }
+
+    final normalizedWeekStart =
+        DateTime(weekStart.year, weekStart.month, weekStart.day);
+    final weekEnd = normalizedWeekStart.add(const Duration(days: 7));
+    final programStart = DateTime(
+      program.startedAt.year,
+      program.startedAt.month,
+      program.startedAt.day,
+    );
+    final from = programStart.isAfter(normalizedWeekStart)
+        ? programStart
+        : normalizedWeekStart;
+
+    if (!from.isBefore(weekEnd)) {
+      return const <ProgramScheduledSession>[];
+    }
+
+    return project(
+      program: program,
+      routines: routines,
+      from: from,
+      days: weekEnd.difference(from).inDays,
+      initialRotationIndex: rotationIndexAt(program, from),
+    );
   }
 }

@@ -9,6 +9,33 @@ import 'package:core/features/workout/application/workout_history_provider.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+String _friendlyProgramName(String value) {
+  return value == 'Upper / Lower (4 Días)'
+      ? 'Upper / Lower continuo'
+      : value;
+}
+
+String _friendlyProgramNote(String value) {
+  final note = value.trim();
+  if (note.startsWith('Instalado desde onboarding ·')) {
+    return 'Programa recomendado según tu configuración inicial.';
+  }
+  return note;
+}
+
+String _weekdayAndDate(DateTime value) {
+  const weekdays = <int, String>{
+    DateTime.monday: 'Lunes',
+    DateTime.tuesday: 'Martes',
+    DateTime.wednesday: 'Miércoles',
+    DateTime.thursday: 'Jueves',
+    DateTime.friday: 'Viernes',
+    DateTime.saturday: 'Sábado',
+    DateTime.sunday: 'Domingo',
+  };
+  return '${weekdays[value.weekday]} · ${value.day}/${value.month}';
+}
+
 class TrainingProgramsPage extends ConsumerWidget {
   const TrainingProgramsPage({super.key});
 
@@ -27,7 +54,7 @@ class TrainingProgramsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Programas 3.0'),
+        title: const Text('Plan de entrenamiento'),
         actions: [
           IconButton(
             tooltip: 'Reconciliar con historial',
@@ -43,7 +70,7 @@ class TrainingProgramsPage extends ConsumerWidget {
             ? null
             : () => _showEditor(context, ref, routines, null),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Nuevo programa'),
+        label: const Text('Nuevo plan'),
       ),
       body: programs.isEmpty
           ? _EmptyPrograms(hasRoutines: routines.isNotEmpty)
@@ -52,12 +79,18 @@ class TrainingProgramsPage extends ConsumerWidget {
               itemCount: programs.length,
               itemBuilder: (context, index) {
                 final program = programs[index];
+                final weekStart = _startOfWeek(DateTime.now());
+                final plannedSessions = ProgramScheduleProjector.projectWeek(
+                  program: program,
+                  routines: routines,
+                  weekStart: weekStart,
+                );
                 final volumes = ProgramVolumePlanner.calculateWeek(
                   program: program,
                   routines: routines,
                   history: history,
                   muscleGroupByExerciseId: muscleByExercise,
-                  weekStart: _startOfWeek(DateTime.now()),
+                  weekStart: weekStart,
                 );
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 14),
@@ -65,6 +98,7 @@ class TrainingProgramsPage extends ConsumerWidget {
                     program: program,
                     routineById: routineById,
                     volumes: volumes,
+                    plannedSessions: plannedSessions,
                     onActivate: () => ref
                         .read(trainingProgramListProvider.notifier)
                         .activate(program.id),
@@ -112,8 +146,12 @@ class TrainingProgramsPage extends ConsumerWidget {
     List<Routine> routines,
     TrainingProgram? existing,
   ) async {
-    final name = TextEditingController(text: existing?.name ?? 'Mi programa');
-    final notes = TextEditingController(text: existing?.notes ?? '');
+    final name = TextEditingController(
+      text: existing == null ? 'Mi plan' : _friendlyProgramName(existing.name),
+    );
+    final notes = TextEditingController(
+      text: existing == null ? '' : _friendlyProgramNote(existing.notes),
+    );
     var durationWeeks = existing?.durationWeeks ?? 8;
     var routineIds = List<String>.from(existing?.routineIds ?? const []);
     var trainingWeekdays = existing == null
@@ -428,6 +466,7 @@ class _ProgramCard extends StatelessWidget {
     required this.program,
     required this.routineById,
     required this.volumes,
+    required this.plannedSessions,
     required this.onActivate,
     required this.onEdit,
     required this.onDuplicate,
@@ -441,6 +480,7 @@ class _ProgramCard extends StatelessWidget {
   final TrainingProgram program;
   final Map<String, Routine> routineById;
   final List<ProgramMuscleVolume> volumes;
+  final List<ProgramScheduledSession> plannedSessions;
   final VoidCallback onActivate;
   final VoidCallback onEdit;
   final VoidCallback onDuplicate;
@@ -484,7 +524,7 @@ class _ProgramCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        program.name,
+                        _friendlyProgramName(program.name),
                         style: Theme.of(context)
                             .textTheme
                             .titleLarge
@@ -582,7 +622,8 @@ class _ProgramCard extends StatelessWidget {
                 ),
               ),
             ],
-            if (program.notes.isNotEmpty) Text(program.notes),
+            if (_friendlyProgramNote(program.notes).isNotEmpty)
+              Text(_friendlyProgramNote(program.notes)),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
               title: const Text('Rotación y cumplimiento'),
@@ -614,10 +655,40 @@ class _ProgramCard extends StatelessWidget {
                       ),
               ],
             ),
+            if (plannedSessions.isNotEmpty)
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: const Text('Plan de esta semana'),
+                subtitle: Text(
+                  plannedSessions
+                      .map(
+                        (item) =>
+                            routineById[item.routineId]?.name ?? 'Rutina eliminada',
+                      )
+                      .join(' → '),
+                ),
+                children: plannedSessions
+                    .map(
+                      (item) => ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.event_available_outlined),
+                        title: Text(
+                          routineById[item.routineId]?.name ??
+                              'Rutina eliminada',
+                        ),
+                        subtitle: Text(_weekdayAndDate(item.date)),
+                      ),
+                    )
+                    .toList(),
+              ),
             if (volumes.isNotEmpty)
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
-                title: const Text('Volumen semanal previsto vs realizado'),
+                title: const Text('Volumen de esta semana'),
+                subtitle: const Text(
+                  'Previsto según el calendario y la rotación continua vs realizado.',
+                ),
                 children: volumes
                     .map(
                       (volume) => ListTile(
@@ -642,7 +713,7 @@ class _ProgramCard extends StatelessWidget {
     );
   }
 
-  static String _date(DateTime value) {
+String _date(DateTime value) {
     final local = value.toLocal();
     return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
   }

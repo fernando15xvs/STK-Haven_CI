@@ -1,6 +1,7 @@
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/domain/models/workout_session.dart';
+import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/workout/application/exercise_performance_memory.dart';
 
 class ProgramMuscleVolume {
@@ -22,9 +23,6 @@ class ProgramMuscleVolume {
       plannedVolume > 0 ? performedVolume / plannedVolume : null;
 }
 
-/// Estimates planned weekly volume from each exercise's latest global load and
-/// the current RoutineExercise rep target. If no prior load exists, planned
-/// volume remains zero but planned set counts are still available.
 class ProgramVolumePlanner {
   const ProgramVolumePlanner._();
 
@@ -55,8 +53,14 @@ class ProgramVolumePlanner {
           .map((exercise) => exercise.exerciseId),
     );
 
-    for (final routineId in program.routineIds) {
-      final routine = routineMap[routineId];
+    final plannedSessions = ProgramScheduleProjector.projectWeek(
+      program: program,
+      routines: routines,
+      weekStart: weekStart,
+    );
+
+    for (final session in plannedSessions) {
+      final routine = routineMap[session.routineId];
       if (routine == null) continue;
       for (final target in routine.exercises) {
         final group = muscleGroupByExerciseId[target.exerciseId]?.trim();
@@ -74,7 +78,8 @@ class ProgramVolumePlanner {
     }
 
     for (final session in history) {
-      if (session.startedAt.isBefore(weekStart) || !session.startedAt.isBefore(end)) {
+      if (session.startedAt.isBefore(weekStart) ||
+          !session.startedAt.isBefore(end)) {
         continue;
       }
       if (session.routineId == null ||

@@ -7,6 +7,7 @@ import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,11 +49,30 @@ class _WebAppState extends ConsumerState<WebApp> {
 
   bool _bibleInitSchedulePending = false;
   bool _bibleInitStarted = false;
+  bool _programPersonalizationScheduled = false;
 
   @override
   void initState() {
     super.initState();
     _historyBridge.attach(_navigatorKey);
+  }
+
+  void _syncProgramPersonalization(int? preferredDaysPerWeek) {
+    if (preferredDaysPerWeek == null || _programPersonalizationScheduled) {
+      return;
+    }
+
+    _programPersonalizationScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(
+        ref
+            .read(trainingProgramListProvider.notifier)
+            .personalizeLegacyOnboardingProgram(
+              preferredDaysPerWeek: preferredDaysPerWeek,
+            ),
+      );
+    });
   }
 
   void _syncBibleInitialization(bool faithEnabled) {
@@ -92,6 +112,9 @@ class _WebAppState extends ConsumerState<WebApp> {
     final experienceProfile = ref.watch(userExperienceProfileProvider);
     _syncBibleInitialization(
       experienceProfile.value?.faithEnabled == true,
+    );
+    _syncProgramPersonalization(
+      experienceProfile.value?.trainingDaysPerWeek,
     );
 
     return MaterialApp(

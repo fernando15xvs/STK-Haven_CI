@@ -17,7 +17,6 @@ import '../../features/faith/presentation/faith_hub_page_web.dart';
 import '../../features/home/presentation/home_page_web.dart';
 import '../../features/nutrition/presentation/nutrition_intelligence_page_web.dart';
 import '../../features/profile/presentation/profile_page_web.dart';
-import '../../features/profile/presentation/web_notification_settings_page.dart';
 import '../../features/progress/presentation/progress_page_web.dart';
 import '../../features/routines/presentation/routines_page_web.dart';
 import '../../features/tools/presentation/training_tools_page_web.dart';
@@ -133,8 +132,8 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
                 const SizedBox(height: 14),
                 _QuickMenuTile(
                   icon: Icons.layers_outlined,
-                  title: 'Programas 3.0',
-                  subtitle: 'Rotación A/B/C, mesociclos y descarga.',
+                  title: 'Plan de entrenamiento',
+                  subtitle: 'Rotación continua, calendario, volumen y descarga.',
                   onTap: () => open(const TrainingProgramsPage()),
                 ),
                 const SizedBox(height: 10),
@@ -174,13 +173,6 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
                     onTap: () => open(const AiChatPageWeb()),
                   ),
                 ],
-                const SizedBox(height: 10),
-                _QuickMenuTile(
-                  icon: Icons.notifications_active_outlined,
-                  title: 'Notificaciones Web/PWA',
-                  subtitle: 'Web Push, permisos y sonido de alarmas.',
-                  onTap: () => open(const WebNotificationSettingsPage()),
-                ),
                 const SizedBox(height: 10),
                 _QuickMenuTile(
                   icon: Icons.build_outlined,

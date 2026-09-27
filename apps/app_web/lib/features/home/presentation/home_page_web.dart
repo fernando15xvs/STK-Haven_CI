@@ -17,8 +17,6 @@ import 'package:core/features/workout/application/workout_history_provider.dart'
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../faith/presentation/ai_chat_page_web.dart';
-import '../../faith/presentation/bible_reader_page_web.dart';
 import '../../faith/presentation/daily_verse_page_web.dart';
 import '../../workout/presentation/active_workout_page_web.dart';
 import 'widgets/recovery_check_in_card_web.dart';
@@ -207,48 +205,6 @@ class HomePageWeb extends ConsumerWidget {
                     );
                   },
                 ),
-                if (faithEnabled) ...[
-                  const SizedBox(height: 24),
-                  Text('Fe y enfoque', style: AppTypography.headlineLarge),
-                  const SizedBox(height: 10),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final stacked = constraints.maxWidth < 620;
-                      final bible = _FeatureCard(
-                        icon: Icons.menu_book_outlined,
-                        title: 'La Biblia',
-                        subtitle: 'Lee por libro y capítulo.',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const BibleReaderPageWeb(),
-                          ),
-                        ),
-                      );
-                      final faith = _FeatureCard(
-                        icon: Icons.auto_awesome_outlined,
-                        title: 'Haven Faith',
-                        subtitle: 'Asistente espiritual y físico.',
-                        onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const AiChatPageWeb(),
-                          ),
-                        ),
-                      );
-                      if (stacked) {
-                        return Column(
-                          children: [bible, const SizedBox(height: 12), faith],
-                        );
-                      }
-                      return Row(
-                        children: [
-                          Expanded(child: bible),
-                          const SizedBox(width: 14),
-                          Expanded(child: faith),
-                        ],
-                      );
-                    },
-                  ),
-                ],
               ],
             ),
           ),

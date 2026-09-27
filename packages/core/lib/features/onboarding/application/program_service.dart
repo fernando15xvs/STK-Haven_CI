@@ -7,6 +7,7 @@ import 'package:core/features/routines/data/routine_repository.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/domain/models/settings_state.dart';
 
@@ -46,7 +47,10 @@ class ProgramService {
     this._getSettingsState,
   );
 
-  Future<void> installProgram(PresetProgram preset) async {
+  Future<void> installProgram(
+    PresetProgram preset, {
+    int? trainingDaysPerWeek,
+  }) async {
     if (_isInstalling) return;
     _isInstalling = true;
 
@@ -86,15 +90,19 @@ class ProgramService {
     // Refresh the routines list in the UI.
     _routineListNotifier.refresh();
 
-    final trainingWeekdays = <int>{
-      for (final routine in preset.routines) ...routine.scheduledDays,
-    };
+    final trainingWeekdays = trainingDaysPerWeek == null
+        ? <int>{
+            for (final routine in preset.routines) ...routine.scheduledDays,
+          }
+        : ProgramScheduleProjector.recommendedTrainingWeekdays(
+            trainingDaysPerWeek,
+          );
     await _trainingProgramListNotifier.create(
       name: preset.name,
       routineIds: generatedIds,
       durationWeeks: preset.durationWeeks,
       trainingWeekdays: trainingWeekdays,
-      notes: 'Instalado desde onboarding · ${preset.id} v${preset.version}',
+      notes: 'Programa recomendado según tu configuración inicial.',
       activate: true,
     );
 
@@ -130,7 +138,11 @@ class ProgramService {
     );
   }
 
-  Future<void> replaceProgram(PresetProgram newPreset, bool keepOldRoutines) async {
+  Future<void> replaceProgram(
+    PresetProgram newPreset,
+    bool keepOldRoutines, {
+    int? trainingDaysPerWeek,
+  }) async {
     final activeProgram = _getSettingsState().activeProgram;
 
     if (!keepOldRoutines && activeProgram != null) {
@@ -140,7 +152,10 @@ class ProgramService {
       _routineListNotifier.refresh();
     }
 
-    await installProgram(newPreset);
+    await installProgram(
+      newPreset,
+      trainingDaysPerWeek: trainingDaysPerWeek,
+    );
   }
 
   Future<void> removeActiveProgram({required bool keepGeneratedRoutines}) async {

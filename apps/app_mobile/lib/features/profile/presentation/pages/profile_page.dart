@@ -524,7 +524,12 @@ class ProfilePage extends ConsumerWidget {
                 trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  await ref.read(programServiceProvider).replaceProgram(p, keepOld);
+                  await ref.read(programServiceProvider).replaceProgram(
+              p,
+              keepOld,
+              trainingDaysPerWeek:
+                  ref.read(userExperienceProfileProvider).value?.trainingDaysPerWeek,
+            );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Programa ${p.name} activado')));
                   }

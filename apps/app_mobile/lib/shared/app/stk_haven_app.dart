@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +24,7 @@ class MyApp extends ConsumerStatefulWidget {
 }
 
 class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  bool _programPersonalizationScheduled = false;
   @override
   void initState() {
     super.initState();
@@ -47,6 +52,21 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     final reduceMotionSetting = ref.watch(
       settingsProvider.select((settings) => settings.reduceMotion),
     );
+    final experienceProfile = ref.watch(userExperienceProfileProvider);
+    final preferredDays = experienceProfile.value?.trainingDaysPerWeek;
+    if (preferredDays != null && !_programPersonalizationScheduled) {
+      _programPersonalizationScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(
+          ref
+              .read(trainingProgramListProvider.notifier)
+              .personalizeLegacyOnboardingProgram(
+                preferredDaysPerWeek: preferredDays,
+              ),
+        );
+      });
+    }
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,

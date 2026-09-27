@@ -320,9 +320,14 @@ class ProfilePageWeb extends ConsumerWidget {
     if (activate != true || !context.mounted) return;
 
     final current = ref.read(settingsProvider).activeProgram;
+    final preferredDays =
+        ref.read(userExperienceProfileProvider).value?.trainingDaysPerWeek;
     try {
       if (current == null) {
-        await ref.read(programServiceProvider).installProgram(selected);
+        await ref.read(programServiceProvider).installProgram(
+              selected,
+              trainingDaysPerWeek: preferredDays,
+            );
       } else {
         final keepOld = await showDialog<bool>(
           context: context,
@@ -339,7 +344,11 @@ class ProfilePageWeb extends ConsumerWidget {
           ),
         );
         if (keepOld == null) return;
-        await ref.read(programServiceProvider).replaceProgram(selected, keepOld);
+        await ref.read(programServiceProvider).replaceProgram(
+              selected,
+              keepOld,
+              trainingDaysPerWeek: preferredDays,
+            );
       }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Programa ${selected.name} activado.')));

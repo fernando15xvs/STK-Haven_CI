@@ -81,8 +81,8 @@ final List<PresetProgram> presetPrograms = [
   PresetProgram(
     id: 'prog_upper_lower_4',
     version: 1,
-    name: 'Upper / Lower (4 Días)',
-    description: 'División clásica Torso/Pierna. Excelente equilibrio entre frecuencia y volumen para hipertrofia y fuerza.',
+    name: 'Upper / Lower continuo',
+    description: 'Rotación continua Upper/Lower que se adapta a tus días de entrenamiento sin reiniciarse al cambiar de semana.',
     level: 'Intermedio',
     daysPerWeek: 4,
     durationWeeks: 12,

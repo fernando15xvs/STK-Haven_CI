@@ -84,7 +84,10 @@ class _WebOnboardingPageState extends ConsumerState<WebOnboardingPage> {
       final recommended =
           OnboardingRecommendationService.recommend(profile);
       if (installRecommended && recommended != null) {
-        await ref.read(programServiceProvider).installProgram(recommended);
+        await ref.read(programServiceProvider).installProgram(
+              recommended,
+              trainingDaysPerWeek: profile.trainingDaysPerWeek,
+            );
       } else {
         await ref.read(programServiceProvider).completeOnboardingFromScratch();
       }

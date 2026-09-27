@@ -86,6 +86,40 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
     refresh();
   }
 
+  /// Upgrades the old onboarding-generated program once, using the frequency
+  /// already stored in the user's personalization profile.
+  ///
+  /// The legacy note is the migration marker. Replacing it with a friendly
+  /// sentence makes this idempotent and ensures later manual weekday edits are
+  /// never overwritten.
+  Future<void> personalizeLegacyOnboardingProgram({
+    int? preferredDaysPerWeek,
+  }) async {
+    final active = _repository.getActive();
+    if (active == null ||
+        !active.notes.startsWith('Instalado desde onboarding ·')) {
+      return;
+    }
+
+    final weekdays = preferredDaysPerWeek == null
+        ? active.trainingWeekdays
+        : ProgramScheduleProjector.recommendedTrainingWeekdays(
+            preferredDaysPerWeek,
+          );
+    final friendlyName = active.name == 'Upper / Lower (4 Días)'
+        ? 'Upper / Lower continuo'
+        : active.name;
+
+    await _repository.save(
+      active.copyWith(
+        name: friendlyName,
+        trainingWeekdays: weekdays,
+        notes: 'Programa recomendado según tu configuración inicial.',
+      ),
+    );
+    refresh();
+  }
+
   Future<void> activate(String programId) async {
     await _repository.activate(programId, startedAt: DateTime.now());
     refresh();
