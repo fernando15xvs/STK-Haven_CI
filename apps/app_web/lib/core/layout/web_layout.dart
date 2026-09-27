@@ -330,10 +330,23 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxWidth < 760;
-              final content = _content(effectiveSelectedIndex);
               if (compact) {
+                // iPhone/Safari is much more sensitive to large retained
+                // Flutter trees. Keeping every visited tab alive in an
+                // IndexedStack meant hidden pages continued listening to
+                // Riverpod providers and rebuilding in the background.
+                //
+                // On compact Web render only the active root tab. App data
+                // lives in providers/repositories, so switching tabs remains
+                // state-safe while drastically reducing layout/paint work.
+                final compactContent = RepaintBoundary(
+                  child: KeyedSubtree(
+                    key: ValueKey(effectiveSelectedIndex),
+                    child: _pages[effectiveSelectedIndex],
+                  ),
+                );
                 return Scaffold(
-                  body: SafeArea(bottom: false, child: content),
+                  body: SafeArea(bottom: false, child: compactContent),
                   bottomNavigationBar: _CompactNavigationBar(
                     selectedPageIndex: effectiveSelectedIndex,
                     onSelectPage: _select,
@@ -343,6 +356,7 @@ class _WebLayoutState extends ConsumerState<WebLayout> {
                 );
               }
 
+              final content = _content(effectiveSelectedIndex);
               return Scaffold(
                 body: SafeArea(
                   child: Row(
