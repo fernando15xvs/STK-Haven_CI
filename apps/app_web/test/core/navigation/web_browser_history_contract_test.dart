@@ -3,51 +3,54 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('managed browser Back is consumed exactly once', () {
+  test('browser Back is guarded instead of popping Flutter routes', () {
     final html = File('web/index.html').readAsStringSync();
-    final listenerStart =
-        html.indexOf("window.addEventListener('popstate', (event) => {");
-    final listenerEnd = html.indexOf(
-      '    function stkUrlBase64ToUint8Array',
-      listenerStart,
-    );
 
-    expect(listenerStart, greaterThanOrEqualTo(0));
-    expect(listenerEnd, greaterThan(listenerStart));
+    expect(html, contains('let stkHistoryGuardReady = false;'));
+    expect(html, contains('stkHavenBackGuard: true'));
+    expect(html, contains("window.addEventListener('popstate', (event) => {"));
+    expect(html, contains('event.stopImmediatePropagation();'));
 
-    final listener = html.substring(listenerStart, listenerEnd);
-    expect(listener, contains('const managed ='));
-    expect(listener, contains('event.stopImmediatePropagation();'));
-    expect(listener, contains('targetDepth < stkHistoryDepth'));
-    expect(listener, contains('stkFlutterBackHandler();'));
-    expect(listener, isNot(contains('stkSuppressNextPop')));
+    // Browser Back must never be translated into a Flutter Navigator pop.
+    expect(html, isNot(contains('stkFlutterBackHandler')));
+    expect(html, isNot(contains('stkHistoryRoutePushed')));
+    expect(html, isNot(contains('stkHistoryRoutePopped')));
   });
 
-  test('in-app Flutter Back never traverses to another document entry', () {
-    final html = File('web/index.html').readAsStringSync();
-    final popStart = html.indexOf('window.stkHistoryRoutePopped = () => {');
-    final popEnd = html.indexOf(
-      "window.addEventListener('popstate'",
-      popStart,
-    );
-
-    expect(popStart, greaterThanOrEqualTo(0));
-    expect(popEnd, greaterThan(popStart));
-
-    final popHandler = html.substring(popStart, popEnd);
-    expect(popHandler, isNot(contains('history.back()')));
-    expect(popHandler, isNot(contains('history.go(')));
-    expect(popHandler, contains('history.replaceState('));
-  });
-
-  test('Safari browser Back removes the Flutter page without reverse animation',
+  test('history guard stays same-document and never traverses browser history',
       () {
+    final html = File('web/index.html').readAsStringSync();
+    final initStart = html.indexOf('window.stkHistoryInitialize = () => {');
+    final helperStart = html.indexOf(
+      '    function stkUrlBase64ToUint8Array',
+      initStart,
+    );
+
+    expect(initStart, greaterThanOrEqualTo(0));
+    expect(helperStart, greaterThan(initStart));
+
+    final historyBridge = html.substring(initStart, helperStart);
+    expect(historyBridge, contains('history.replaceState('));
+    expect(historyBridge, contains('history.pushState('));
+    expect(historyBridge, isNot(contains('history.back()')));
+    expect(historyBridge, isNot(contains('history.go(')));
+    expect(historyBridge, isNot(contains('history.forward()')));
+  });
+
+  test('Dart bridge does not observe route pushes or pops', () {
     final bridge = File(
       'lib/core/navigation/web_browser_history_bridge.dart',
     ).readAsStringSync();
 
-    expect(bridge, contains('navigator.removeRoute(route);'));
-    expect(bridge, isNot(contains('navigator.maybePop()')));
-    expect(bridge, contains('RoutePopDisposition.doNotPop'));
+    expect(bridge, contains('_stkHistoryInitialize();'));
+    expect(bridge, isNot(contains('didPush(')));
+    expect(bridge, isNot(contains('didPop(')));
+    expect(bridge, isNot(contains('removeRoute(')));
+    expect(bridge, isNot(contains('maybePop(')));
+  });
+
+  test('horizontal browser overscroll is disabled where supported', () {
+    final html = File('web/index.html').readAsStringSync();
+    expect(html, contains('overscroll-behavior-x: none;'));
   });
 }

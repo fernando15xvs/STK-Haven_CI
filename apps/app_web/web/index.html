@@ -36,6 +36,7 @@
     body {
       overflow: hidden;
       touch-action: none;
+      overscroll-behavior-x: none;
       overscroll-behavior-y: none;
       font-family: Outfit, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -217,79 +218,49 @@
   </div>
 
   <script>
-    // Keep Flutter's imperative Navigator stack synchronized with the browser
-    // history used by Safari/iOS swipe-back and desktop Back/Forward.
-    let stkFlutterBackHandler = null;
-    let stkHistoryDepth = 0;
-
-    window.stkSetFlutterBackHandler = (handler) => {
-      stkFlutterBackHandler = handler;
-    };
+    // Browser Back is intentionally disabled for STK Haven Web/PWA.
+    // Navigation inside the app must use Flutter's own back arrows/buttons.
+    //
+    // Safari's edge-swipe is browser chrome and cannot be physically removed
+    // by a web page on every iOS version. This same-document guard makes the
+    // gesture a no-op: it never changes Flutter routes and never leaves/reloads
+    // the app.
+    let stkHistoryGuardReady = false;
 
     window.stkHistoryInitialize = () => {
-      stkHistoryDepth = 0;
-      const current = history.state && typeof history.state === 'object'
-        ? history.state
-        : {};
+      if (stkHistoryGuardReady) return;
+
+      const current =
+        history.state && typeof history.state === 'object'
+          ? history.state
+          : {};
+
       history.replaceState(
-        { ...current, stkHavenRoot: true, stkHavenDepth: 0 },
+        { ...current, stkHavenRoot: true },
         '',
         location.href,
       );
-    };
-
-    window.stkHistoryRoutePushed = () => {
-      stkHistoryDepth += 1;
       history.pushState(
-        { stkHavenRoute: true, stkHavenDepth: stkHistoryDepth },
+        { stkHavenBackGuard: true },
         '',
         location.href,
       );
-    };
-
-    window.stkHistoryRoutePopped = () => {
-      if (stkHistoryDepth <= 0) return;
-      stkHistoryDepth -= 1;
-
-      // Do not traverse browser history for an in-app Flutter pop. Safari can
-      // treat the previous entry as a full document navigation in some cases,
-      // which restores/reloads index.html and shows the splash again. Keep the
-      // current document alive and only rewrite the managed depth marker.
-      const parentState = stkHistoryDepth === 0
-        ? { stkHavenRoot: true, stkHavenDepth: 0 }
-        : { stkHavenRoute: true, stkHavenDepth: stkHistoryDepth };
-      history.replaceState(parentState, '', location.href);
+      stkHistoryGuardReady = true;
     };
 
     window.addEventListener('popstate', (event) => {
-      const state =
-        event.state && typeof event.state === 'object' ? event.state : null;
-      const managed =
-        state?.stkHavenRoot === true || state?.stkHavenRoute === true;
+      if (!stkHistoryGuardReady) return;
 
-      if (!managed) {
-        return;
-      }
-
-      // STK Haven owns its synthetic route entries. Flutter Web also installs
-      // a popstate listener, so managed entries must always stop here even
-      // when the destination depth is 0. Otherwise Safari can process the same
-      // gesture twice and rebuild WebLayout on its default Inicio tab.
+      // Consume browser Back before Flutter Web can interpret the same event.
+      // Recreate the guard immediately so repeated swipes/back presses remain
+      // blocked. Flutter's in-app arrow uses Navigator.pop() and does not touch
+      // browser history, so it keeps working normally.
       event.stopImmediatePropagation();
-
-      const targetDepth = Number.isInteger(state.stkHavenDepth)
-        ? Math.max(0, state.stkHavenDepth)
-        : 0;
-
-      if (targetDepth < stkHistoryDepth && stkFlutterBackHandler) {
-        stkHistoryDepth = targetDepth;
-        stkFlutterBackHandler();
-        return;
-      }
-
-      // Forward traversal or a duplicate root marker should not create a
-      // second Flutter pop. Keep the internal browser-depth mirror aligned.
-      stkHistoryDepth = targetDepth;
+      history.pushState(
+        { stkHavenBackGuard: true },
+        '',
+        location.href,
+      );
     });
 
     function stkUrlBase64ToUint8Array(base64String) {
