@@ -6,10 +6,15 @@ class ProgramScheduledSession {
   final String routineId;
   final int rotationIndex;
 
+  /// True when the date is only an internal distribution estimate for a plan
+  /// that intentionally has no fixed weekdays.
+  final bool isFlexibleEstimate;
+
   const ProgramScheduledSession({
     required this.date,
     required this.routineId,
     required this.rotationIndex,
+    this.isFlexibleEstimate = false,
   });
 }
 
@@ -17,8 +22,8 @@ class ProgramScheduleProjector {
   const ProgramScheduleProjector._();
 
   static Set<int> recommendedTrainingWeekdays(int daysPerWeek) {
-    return switch (daysPerWeek) {
-      <= 1 => <int>{DateTime.monday},
+    return switch (daysPerWeek.clamp(1, 7)) {
+      1 => <int>{DateTime.monday},
       2 => <int>{DateTime.monday, DateTime.thursday},
       3 => <int>{DateTime.monday, DateTime.wednesday, DateTime.friday},
       4 => <int>{
@@ -54,25 +59,62 @@ class ProgramScheduleProjector {
     };
   }
 
+  /// Days that the user explicitly owns at plan level.
+  ///
+  /// Routine schedules are consulted only for legacy continuous programs that
+  /// predate plan-level frequency. New plans never inherit routine weekdays
+  /// implicitly, which prevents the same schedule from being configured twice.
   static Set<int> effectiveTrainingWeekdays(
     TrainingProgram program,
     Iterable<Routine> routines,
   ) {
-    if (program.trainingWeekdays.isNotEmpty) {
-      return Set<int>.from(program.trainingWeekdays);
-    }
-
-    final routineIds = program.routineIds.toSet();
-    final derived = <int>{};
-    for (final routine in routines) {
-      if (!routineIds.contains(routine.id)) continue;
-      for (final day in routine.scheduledDays) {
-        if (day >= DateTime.monday && day <= DateTime.sunday) {
-          derived.add(day);
+    switch (program.scheduleMode) {
+      case ProgramScheduleMode.flexible:
+        return const <int>{};
+      case ProgramScheduleMode.fixed:
+        if (program.fixedWeekdayRoutineIds.isNotEmpty) {
+          return program.fixedWeekdayRoutineIds.keys
+              .where(
+                (day) =>
+                    day >= DateTime.monday && day <= DateTime.sunday,
+              )
+              .toSet();
         }
-      }
+        return Set<int>.from(program.trainingWeekdays);
+      case ProgramScheduleMode.continuous:
+        if (program.trainingWeekdays.isNotEmpty) {
+          return Set<int>.from(program.trainingWeekdays);
+        }
+        if (program.targetSessionsPerWeek > 0) {
+          return const <int>{};
+        }
+
+        // Backward compatibility only: old programs stored weekdays on each
+        // routine because the plan-level model did not exist yet.
+        final routineIds = program.routineIds.toSet();
+        final derived = <int>{};
+        for (final routine in routines) {
+          if (!routineIds.contains(routine.id)) continue;
+          for (final day in routine.scheduledDays) {
+            if (day >= DateTime.monday && day <= DateTime.sunday) {
+              derived.add(day);
+            }
+          }
+        }
+        return derived;
     }
-    return derived;
+  }
+
+  static Set<int> _planningWeekdays(
+    TrainingProgram program,
+    Iterable<Routine> routines,
+  ) {
+    final explicit = effectiveTrainingWeekdays(program, routines);
+    if (explicit.isNotEmpty) return explicit;
+
+    final target = program.effectiveTargetSessionsPerWeek;
+    if (target <= 0) return const <int>{};
+    return recommendedTrainingWeekdays(target);
   }
 
   static bool isTrainingDay(
@@ -80,6 +122,10 @@ class ProgramScheduleProjector {
     Iterable<Routine> routines,
     DateTime date,
   ) {
+    if (program.scheduleMode == ProgramScheduleMode.flexible) {
+      return true;
+    }
+
     final weekdays = effectiveTrainingWeekdays(program, routines);
     return weekdays.isEmpty || weekdays.contains(date.weekday);
   }
@@ -101,6 +147,10 @@ class ProgramScheduleProjector {
           : 0;
     }
 
+    if (program.scheduleMode == ProgramScheduleMode.fixed) {
+      return program.normalizedNextRotationIndex;
+    }
+
     return (before.last.rotationIndex + 1) % program.routineIds.length;
   }
 
@@ -115,12 +165,36 @@ class ProgramScheduleProjector {
       return const <ProgramScheduledSession>[];
     }
 
-    final weekdays = effectiveTrainingWeekdays(program, routines);
     final result = <ProgramScheduledSession>[];
+    var cursor = DateTime(from.year, from.month, from.day);
+
+    if (program.scheduleMode == ProgramScheduleMode.fixed) {
+      for (var offset = 0; offset < days; offset++) {
+        final routineId = program.fixedWeekdayRoutineIds[cursor.weekday];
+        if (routineId != null && program.routineIds.contains(routineId)) {
+          final index = program.routineIds.indexOf(routineId);
+          result.add(
+            ProgramScheduledSession(
+              date: cursor,
+              routineId: routineId,
+              rotationIndex: index < 0 ? 0 : index,
+            ),
+          );
+        }
+        cursor = cursor.add(const Duration(days: 1));
+      }
+      return result;
+    }
+
+    final weekdays = _planningWeekdays(program, routines);
+    final estimated = program.scheduleMode == ProgramScheduleMode.flexible ||
+        (program.scheduleMode == ProgramScheduleMode.continuous &&
+            effectiveTrainingWeekdays(program, routines).isEmpty &&
+            program.targetSessionsPerWeek > 0);
+
     var rotationIndex =
         (initialRotationIndex ?? program.normalizedNextRotationIndex) %
             program.routineIds.length;
-    var cursor = DateTime(from.year, from.month, from.day);
 
     for (var offset = 0; offset < days; offset++) {
       final isOpportunity =
@@ -131,6 +205,7 @@ class ProgramScheduleProjector {
             date: cursor,
             routineId: program.routineIds[rotationIndex],
             rotationIndex: rotationIndex,
+            isFlexibleEstimate: estimated,
           ),
         );
         rotationIndex = (rotationIndex + 1) % program.routineIds.length;

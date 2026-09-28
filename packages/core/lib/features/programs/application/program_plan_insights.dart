@@ -14,6 +14,8 @@ class ProgramPlanInsights {
   final Map<String, int> next14RoutineCounts;
   final int next14SessionCount;
   final Set<int> trainingWeekdays;
+  final ProgramScheduleMode scheduleMode;
+  final int targetSessionsPerWeek;
 
   const ProgramPlanInsights({
     required this.plannedThisWeek,
@@ -27,6 +29,8 @@ class ProgramPlanInsights {
     required this.next14RoutineCounts,
     required this.next14SessionCount,
     required this.trainingWeekdays,
+    required this.scheduleMode,
+    required this.targetSessionsPerWeek,
   });
 
   double? get weeklyCompletionRatio {
@@ -35,6 +39,12 @@ class ProgramPlanInsights {
   }
 
   String get paceLabel {
+    if (scheduleMode == ProgramScheduleMode.flexible) {
+      if (remainingThisWeek == 0) {
+        return 'Completaste tu frecuencia objetivo de esta semana.';
+      }
+      return 'Llevas $completedThisWeek de $targetSessionsPerWeek sesiones objetivo.';
+    }
     if (plannedThisWeek == 0) {
       return 'No hay sesiones programadas esta semana.';
     }
@@ -65,14 +75,23 @@ class ProgramPlanInsights {
       weekStart: weekStart,
     );
 
-    final completedThisWeek = program.completions.where((item) {
+    final rawCompletedThisWeek = program.completions.where((item) {
       final completed = item.completedAt.toLocal();
       return !completed.isBefore(weekStart) && completed.isBefore(weekEnd);
     }).length;
+    final targetFrequency = program.effectiveTargetSessionsPerWeek;
+    final plannedThisWeek = program.scheduleMode == ProgramScheduleMode.flexible
+        ? targetFrequency
+        : plannedWeek.length;
+    final completedThisWeek =
+        rawCompletedThisWeek.clamp(0, plannedThisWeek).toInt();
 
-    final dueThroughToday = plannedWeek
-        .where((item) => !item.date.isAfter(today))
-        .length;
+    final dueThroughToday =
+        program.scheduleMode == ProgramScheduleMode.flexible
+            ? 0
+            : plannedWeek
+                .where((item) => !item.date.isAfter(today))
+                .length;
 
     final nextSessions = ProgramScheduleProjector.project(
       program: program,
@@ -108,14 +127,17 @@ class ProgramPlanInsights {
     );
 
     return ProgramPlanInsights(
-      plannedThisWeek: plannedWeek.length,
-      completedThisWeek: completedThisWeek.clamp(0, plannedWeek.length),
+      plannedThisWeek: plannedThisWeek,
+      completedThisWeek: completedThisWeek,
       dueThroughToday: dueThroughToday,
       pendingDue:
           (dueThroughToday - completedThisWeek).clamp(0, 999).toInt(),
       remainingThisWeek:
-          (plannedWeek.length - completedThisWeek).clamp(0, 999).toInt(),
-      nextScheduledDate: next?.date,
+          (plannedThisWeek - completedThisWeek).clamp(0, 999).toInt(),
+      nextScheduledDate:
+          program.scheduleMode == ProgramScheduleMode.flexible
+              ? null
+              : next?.date,
       nextScheduledRoutineId: next?.routineId,
       estimatedEndDate: estimatedEndDate,
       next14RoutineCounts: Map<String, int>.unmodifiable(counts),
@@ -125,6 +147,8 @@ class ProgramPlanInsights {
         program,
         routines,
       ),
+      scheduleMode: program.scheduleMode,
+      targetSessionsPerWeek: targetFrequency,
     );
   }
 }

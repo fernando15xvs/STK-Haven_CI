@@ -44,7 +44,10 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
     required String name,
     required List<String> routineIds,
     int durationWeeks = 8,
+    ProgramScheduleMode scheduleMode = ProgramScheduleMode.continuous,
+    int targetSessionsPerWeek = 0,
     Set<int> trainingWeekdays = const {},
+    Map<int, String> fixedWeekdayRoutineIds = const {},
     Set<int> deloadWeeks = const {},
     String notes = '',
     bool activate = true,
@@ -64,7 +67,11 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
       createdAt: now,
       startedAt: now,
       durationWeeks: durationWeeks,
+      scheduleMode: scheduleMode,
+      targetSessionsPerWeek: targetSessionsPerWeek.clamp(0, 7).toInt(),
       trainingWeekdays: Set<int>.from(trainingWeekdays),
+      fixedWeekdayRoutineIds:
+          Map<int, String>.from(fixedWeekdayRoutineIds),
       deloadWeeks: Set<int>.from(deloadWeeks),
       notes: notes.trim(),
       isActive: activate,
@@ -114,7 +121,11 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
     await _repository.save(
       active.copyWith(
         name: friendlyName,
+        scheduleMode: ProgramScheduleMode.continuous,
+        targetSessionsPerWeek:
+            preferredDaysPerWeek ?? active.effectiveTargetSessionsPerWeek,
         trainingWeekdays: weekdays,
+        fixedWeekdayRoutineIds: const <int, String>{},
         notes: 'Programa recomendado según tu configuración inicial.',
       ),
     );
@@ -238,6 +249,8 @@ class NextProgramSession {
   final bool isDeloadWeek;
   final bool isTrainingDay;
   final Set<int> trainingWeekdays;
+  final DateTime? scheduledDate;
+  final int targetSessionsPerWeek;
 
   const NextProgramSession({
     required this.program,
@@ -246,6 +259,8 @@ class NextProgramSession {
     required this.isDeloadWeek,
     required this.isTrainingDay,
     required this.trainingWeekdays,
+    required this.scheduledDate,
+    required this.targetSessionsPerWeek,
   });
 }
 
@@ -255,10 +270,31 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
 
   final history = ref.watch(workoutHistoryProvider);
   final reconciled = ProgramRotationCoordinator.reconcile(active, history);
-  final nextRoutineId = reconciled.nextRoutineId;
+  final routines = ref.watch(routineListProvider);
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+
+  final projected = ProgramScheduleProjector.project(
+    program: reconciled,
+    routines: routines,
+    from: today,
+    days: 21,
+    initialRotationIndex:
+        ProgramScheduleProjector.rotationIndexAt(reconciled, now),
+  );
+
+  String? nextRoutineId;
+  DateTime? scheduledDate;
+  if (projected.isNotEmpty) {
+    nextRoutineId = projected.first.routineId;
+    scheduledDate = reconciled.scheduleMode == ProgramScheduleMode.flexible
+        ? null
+        : projected.first.date;
+  } else {
+    nextRoutineId = reconciled.nextRoutineId;
+  }
   if (nextRoutineId == null) return null;
 
-  final routines = ref.watch(routineListProvider);
   Routine? routine;
   for (final candidate in routines) {
     if (candidate.id == nextRoutineId) {
@@ -268,7 +304,6 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
   }
   if (routine == null) return null;
 
-  final now = DateTime.now();
   final trainingWeekdays = ProgramScheduleProjector.effectiveTrainingWeekdays(
     reconciled,
     routines,
@@ -284,5 +319,7 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
       now,
     ),
     trainingWeekdays: trainingWeekdays,
+    scheduledDate: scheduledDate,
+    targetSessionsPerWeek: reconciled.effectiveTargetSessionsPerWeek,
   );
 });

@@ -171,9 +171,21 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
     );
     var durationWeeks = existing?.durationWeeks ?? 8;
     var routineIds = List<String>.from(existing?.routineIds ?? const []);
+    var scheduleMode =
+        existing?.scheduleMode ?? ProgramScheduleMode.continuous;
+    var targetSessionsPerWeek =
+        existing?.effectiveTargetSessionsPerWeek ?? 3;
     var trainingWeekdays = existing == null
-        ? <int>{}
-        : ProgramScheduleProjector.effectiveTrainingWeekdays(existing, routines);
+        ? ProgramScheduleProjector.recommendedTrainingWeekdays(
+            targetSessionsPerWeek,
+          )
+        : ProgramScheduleProjector.effectiveTrainingWeekdays(
+            existing,
+            routines,
+          );
+    var fixedWeekdayRoutineIds = Map<int, String>.from(
+      existing?.fixedWeekdayRoutineIds ?? const <int, String>{},
+    );
     var deloadWeeks = Set<int>.from(existing?.deloadWeeks ?? const {});
     final currentWeek = existing?.weekAt(DateTime.now()) ?? 1;
 
@@ -193,6 +205,20 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
               final value = next.removeAt(index);
               next.insert(target, value);
               routineIds = next;
+            });
+          }
+
+          void useRoutineSchedulesForFixedWeek() {
+            final next = <int, String>{};
+            for (final routineId in routineIds) {
+              final routine = byId[routineId];
+              if (routine == null) continue;
+              for (final day in routine.scheduledDays) {
+                next.putIfAbsent(day, () => routineId);
+              }
+            }
+            setDialogState(() {
+              fixedWeekdayRoutineIds = next;
             });
           }
 
@@ -231,52 +257,230 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'Días de entrenamiento',
+                      'Cómo quieres programar el plan',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Estos días indican cuándo entrenas. La rutina que toca sigue la secuencia y no se reinicia cada semana.',
-                      style: Theme.of(context).textTheme.bodySmall,
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<ProgramScheduleMode>(
+                      value: scheduleMode,
+                      decoration: const InputDecoration(
+                        labelText: 'Modo de programación',
+                      ),
+                      items: ProgramScheduleMode.values
+                          .map(
+                            (mode) => DropdownMenuItem(
+                              value: mode,
+                              child: Text(mode.label),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (mode) {
+                        if (mode == null) return;
+                        setDialogState(() {
+                          scheduleMode = mode;
+                          if (mode == ProgramScheduleMode.continuous &&
+                              trainingWeekdays.isEmpty) {
+                            trainingWeekdays =
+                                ProgramScheduleProjector
+                                    .recommendedTrainingWeekdays(
+                              targetSessionsPerWeek,
+                            );
+                          }
+                        });
+                      },
                     ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: const [
-                        (DateTime.monday, 'L'),
-                        (DateTime.tuesday, 'M'),
-                        (DateTime.wednesday, 'X'),
-                        (DateTime.thursday, 'J'),
-                        (DateTime.friday, 'V'),
-                        (DateTime.saturday, 'S'),
-                        (DateTime.sunday, 'D'),
-                      ].map((entry) {
-                        final day = entry.$1;
-                        final label = entry.$2;
-                        return FilterChip(
-                          label: Text(label),
-                          selected: trainingWeekdays.contains(day),
-                          onSelected: (selected) => setDialogState(() {
-                            final next = Set<int>.from(trainingWeekdays);
-                            if (selected) {
-                              next.add(day);
-                            } else {
-                              next.remove(day);
-                            }
-                            trainingWeekdays = next;
-                          }),
-                        );
-                      }).toList(),
-                    ),
-                    if (trainingWeekdays.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          'Sin días específicos: podrás iniciar la siguiente sesión cualquier día.',
-                          style: Theme.of(context).textTheme.bodySmall,
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<int>(
+                      value: targetSessionsPerWeek,
+                      decoration: const InputDecoration(
+                        labelText: 'Frecuencia objetivo',
+                        helperText:
+                            'Cuántas sesiones quieres completar por semana. No obliga a usar días fijos.',
+                      ),
+                      items: List.generate(
+                        7,
+                        (index) => DropdownMenuItem(
+                          value: index + 1,
+                          child: Text(
+                            '${index + 1} ${index == 0 ? 'sesión' : 'sesiones'} / semana',
+                          ),
                         ),
                       ),
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setDialogState(() {
+                          targetSessionsPerWeek = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    if (scheduleMode == ProgramScheduleMode.continuous) ...[
+                      Text(
+                        'Días habituales',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'El plan usa estos días como oportunidades. La secuencia continúa entre semanas y los días opcionales de cada rutina no interfieren.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: const [
+                          (DateTime.monday, 'L'),
+                          (DateTime.tuesday, 'M'),
+                          (DateTime.wednesday, 'X'),
+                          (DateTime.thursday, 'J'),
+                          (DateTime.friday, 'V'),
+                          (DateTime.saturday, 'S'),
+                          (DateTime.sunday, 'D'),
+                        ].map((entry) {
+                          final day = entry.$1;
+                          final label = entry.$2;
+                          return FilterChip(
+                            label: Text(label),
+                            selected: trainingWeekdays.contains(day),
+                            onSelected: (selected) =>
+                                setDialogState(() {
+                              final next =
+                                  Set<int>.from(trainingWeekdays);
+                              if (selected) {
+                                next.add(day);
+                              } else {
+                                next.remove(day);
+                              }
+                              trainingWeekdays = next;
+                            }),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: () => setDialogState(() {
+                          trainingWeekdays =
+                              ProgramScheduleProjector
+                                  .recommendedTrainingWeekdays(
+                            targetSessionsPerWeek,
+                          );
+                        }),
+                        icon: const Icon(Icons.auto_fix_high_outlined),
+                        label: const Text(
+                          'Sugerir días según mi frecuencia',
+                        ),
+                      ),
+                      if (trainingWeekdays.length !=
+                          targetSessionsPerWeek)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'Tu objetivo es de $targetSessionsPerWeek sesiones, pero marcaste ${trainingWeekdays.length} días habituales. Puedes dejarlo así: frecuencia y calendario son independientes.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .tertiary,
+                                ),
+                          ),
+                        ),
+                    ] else if (scheduleMode ==
+                        ProgramScheduleMode.fixed) ...[
+                      Text(
+                        'Semana fija',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Asigna una rutina concreta a cada día. Esta programación pertenece al plan y tiene prioridad sobre los días opcionales guardados en las rutinas.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 10),
+                      for (final entry in const [
+                        (DateTime.monday, 'Lunes'),
+                        (DateTime.tuesday, 'Martes'),
+                        (DateTime.wednesday, 'Miércoles'),
+                        (DateTime.thursday, 'Jueves'),
+                        (DateTime.friday, 'Viernes'),
+                        (DateTime.saturday, 'Sábado'),
+                        (DateTime.sunday, 'Domingo'),
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: DropdownButtonFormField<String>(
+                            value:
+                                fixedWeekdayRoutineIds[entry.$1] ?? '__rest__',
+                            decoration: InputDecoration(
+                              labelText: entry.$2,
+                            ),
+                            items: [
+                              const DropdownMenuItem<String>(
+                                value: '__rest__',
+                                child: Text('Descanso'),
+                              ),
+                              ...routineIds.map(
+                                (routineId) => DropdownMenuItem<String>(
+                                  value: routineId,
+                                  child: Text(
+                                    byId[routineId]?.name ??
+                                        'Rutina eliminada',
+                                  ),
+                                ),
+                              ),
+                            ],
+                            onChanged: (routineId) =>
+                                setDialogState(() {
+                              final next = Map<int, String>.from(
+                                fixedWeekdayRoutineIds,
+                              );
+                              if (routineId == null ||
+                                  routineId == '__rest__') {
+                                next.remove(entry.$1);
+                              } else {
+                                next[entry.$1] = routineId;
+                              }
+                              fixedWeekdayRoutineIds = next;
+                            }),
+                          ),
+                        ),
+                      TextButton.icon(
+                        onPressed: routineIds.isEmpty
+                            ? null
+                            : useRoutineSchedulesForFixedWeek,
+                        icon: const Icon(Icons.download_outlined),
+                        label: const Text(
+                          'Usar la programación opcional de mis rutinas',
+                        ),
+                      ),
+                      if (fixedWeekdayRoutineIds.length !=
+                          targetSessionsPerWeek)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            'La semana fija tiene ${fixedWeekdayRoutineIds.length} sesiones asignadas y tu frecuencia objetivo es $targetSessionsPerWeek. La app mostrará ambas para que puedas ajustarlas si quieres.',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .tertiary,
+                                ),
+                          ),
+                        ),
+                    ] else ...[
+                      Text(
+                        'Horario flexible',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'No eliges días. Cada vez que entrenes, la app continúa con la siguiente rutina de la secuencia. La frecuencia objetivo sirve para saber cuántas sesiones buscas completar esa semana.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                     const SizedBox(height: 12),
                     SwitchListTile.adaptive(
                       contentPadding: EdgeInsets.zero,
@@ -299,12 +503,16 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                     ),
                     const Divider(),
                     Text(
-                      'Rotación',
+                      scheduleMode == ProgramScheduleMode.fixed
+                          ? 'Rutinas del plan'
+                          : 'Rotación',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'La secuencia continúa entre semanas: por ejemplo Upper A → Lower A → Upper B → Lower B → Upper A…',
+                      scheduleMode == ProgramScheduleMode.fixed
+                          ? 'Estas son las rutinas disponibles para asignar a la semana fija. El orden se conserva por si luego cambias a rotación continua o flexible.'
+                          : 'La secuencia continúa entre semanas: por ejemplo Upper A → Lower A → Upper B → Lower B → Upper A…',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
@@ -340,9 +548,17 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                             IconButton(
                               tooltip: 'Quitar',
                               onPressed: () => setDialogState(() {
+                                final removedId = routineIds[index];
                                 final next = List<String>.from(routineIds)
                                   ..removeAt(index);
                                 routineIds = next;
+                                fixedWeekdayRoutineIds =
+                                    Map<int, String>.from(
+                                      fixedWeekdayRoutineIds,
+                                    )
+                                      ..removeWhere(
+                                        (_, value) => value == removedId,
+                                      );
                               }),
                               icon: const Icon(Icons.close_rounded),
                             ),
@@ -415,7 +631,10 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
               name: name.text,
               routineIds: routineIds,
               durationWeeks: durationWeeks,
+              scheduleMode: scheduleMode,
+              targetSessionsPerWeek: targetSessionsPerWeek,
               trainingWeekdays: trainingWeekdays,
+              fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,
               deloadWeeks: deloadWeeks,
               notes: notes.text,
               activate: true,
@@ -434,7 +653,10 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                 notes: notes.text.trim(),
                 durationWeeks: durationWeeks,
                 routineIds: routineIds,
+                scheduleMode: scheduleMode,
+                targetSessionsPerWeek: targetSessionsPerWeek,
                 trainingWeekdays: trainingWeekdays,
+                fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,
                 deloadWeeks: deloadWeeks,
                 nextRotationIndex: safeNext,
               ),
@@ -553,7 +775,8 @@ class _ProgramCard extends StatelessWidget {
                         program.isTemplate
                             ? '${program.routineIds.length} rutinas · '
                                 '${program.durationWeeks} semanas · reutilizable'
-                            : '${program.routineIds.length} rutinas · '
+                            : '${program.scheduleMode.label} · '
+                                '${program.effectiveTargetSessionsPerWeek}x/sem · '
                                 'Semana $week/${program.durationWeeks} · '
                                 '${program.completions.length} completadas',
                         style: Theme.of(context).textTheme.bodySmall,
@@ -642,11 +865,17 @@ class _ProgramCard extends StatelessWidget {
               Text(_friendlyProgramNote(program.notes)),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
-              title: const Text('Rotación y cumplimiento'),
+              title: Text(
+                program.scheduleMode == ProgramScheduleMode.fixed
+                    ? 'Rutinas y cumplimiento'
+                    : 'Rotación y cumplimiento',
+              ),
               subtitle: Text(
-                program.routineIds
-                    .map((id) => routineById[id]?.name ?? 'Eliminada')
-                    .join(' → '),
+                program.scheduleMode == ProgramScheduleMode.fixed
+                    ? 'Semana fija controlada por el plan'
+                    : program.routineIds
+                        .map((id) => routineById[id]?.name ?? 'Eliminada')
+                        .join(' → '),
               ),
               children: [
                 if (program.completions.isEmpty)
@@ -674,7 +903,11 @@ class _ProgramCard extends StatelessWidget {
             if (plannedSessions.isNotEmpty)
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
-                title: const Text('Plan de esta semana'),
+                title: Text(
+                  program.scheduleMode == ProgramScheduleMode.flexible
+                      ? 'Secuencia estimada de esta semana'
+                      : 'Plan de esta semana',
+                ),
                 subtitle: Text(
                   plannedSessions
                       .map(
@@ -693,7 +926,11 @@ class _ProgramCard extends StatelessWidget {
                           routineById[item.routineId]?.name ??
                               'Rutina eliminada',
                         ),
-                        subtitle: Text(_weekdayAndDate(item.date)),
+                        subtitle: Text(
+                          item.isFlexibleEstimate
+                              ? 'Orden estimado según tu frecuencia objetivo'
+                              : _weekdayAndDate(item.date),
+                        ),
                       ),
                     )
                     .toList(),
@@ -703,7 +940,9 @@ class _ProgramCard extends StatelessWidget {
                 tilePadding: EdgeInsets.zero,
                 title: const Text('Próximos 14 días'),
                 subtitle: Text(
-                  '${insights.next14SessionCount} sesiones previstas · distribución por rutina',
+                  program.scheduleMode == ProgramScheduleMode.flexible
+                      ? '${insights.next14SessionCount} sesiones estimadas por frecuencia · distribución por rutina'
+                      : '${insights.next14SessionCount} sesiones previstas · distribución por rutina',
                 ),
                 children: [
                   for (final routineId in program.routineIds)
@@ -824,6 +1063,17 @@ class _PlanOverview extends StatelessWidget {
             runSpacing: 10,
             children: [
               _InsightMetric(
+                icon: Icons.repeat_rounded,
+                label: 'Frecuencia objetivo',
+                value:
+                    '${program.effectiveTargetSessionsPerWeek} sesiones/sem',
+              ),
+              _InsightMetric(
+                icon: Icons.calendar_view_week_outlined,
+                label: 'Programación',
+                value: program.scheduleMode.label,
+              ),
+              _InsightMetric(
                 icon: Icons.event_available_outlined,
                 label: 'Esta semana',
                 value:
@@ -833,7 +1083,9 @@ class _PlanOverview extends StatelessWidget {
                 icon: Icons.skip_next_rounded,
                 label: 'Próxima',
                 value: nextDate == null
-                    ? 'Sin fecha'
+                    ? program.scheduleMode == ProgramScheduleMode.flexible
+                        ? 'Flexible · ${nextName ?? 'Rutina'}'
+                        : 'Sin fecha'
                     : '${_shortDate(nextDate)} · ${nextName ?? 'Rutina'}',
               ),
               _InsightMetric(

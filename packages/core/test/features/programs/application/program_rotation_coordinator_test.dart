@@ -101,6 +101,32 @@ void main() {
       expect(result.nextRoutineId, 'B');
     });
 
+    test('fixed week counts only the routine assigned to that weekday', () {
+      final fixed = program().copyWith(
+        scheduleMode: ProgramScheduleMode.fixed,
+        targetSessionsPerWeek: 2,
+        fixedWeekdayRoutineIds: const {
+          DateTime.friday: 'C',
+          DateTime.saturday: 'A',
+        },
+      );
+      final friday = DateTime(2026, 1, 2, 8);
+      final saturday = DateTime(2026, 1, 3, 8);
+      final history = [
+        _session('wrong-friday', 'A', friday),
+        _session('right-friday', 'C', friday.add(const Duration(hours: 2))),
+        _session('right-saturday', 'A', saturday),
+      ];
+
+      final result = ProgramRotationCoordinator.reconcile(fixed, history);
+
+      expect(
+        result.completions.map((item) => item.workoutSessionId),
+        ['right-friday', 'right-saturday'],
+      );
+      expect(result.nextRotationIndex, fixed.nextRotationIndex);
+    });
+
     test('manual deload week remains a program context flag', () {
       final withDeload = program().copyWith(deloadWeeks: const {2});
       expect(withDeload.isDeloadWeekAt(start.add(const Duration(days: 8))), true);

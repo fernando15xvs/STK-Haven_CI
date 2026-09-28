@@ -41,6 +41,43 @@ void main() {
     expect(insights.next14SessionCount, 10);
   });
 
+  test('flexible plan tracks frequency without inventing overdue days', () {
+    final program = TrainingProgram(
+      id: 'flex',
+      name: 'Flexible',
+      routineIds: const ['ua', 'la', 'ub', 'lb'],
+      createdAt: monday,
+      startedAt: monday,
+      durationWeeks: 12,
+      scheduleMode: ProgramScheduleMode.flexible,
+      targetSessionsPerWeek: 5,
+      nextRotationIndex: 1,
+      completions: [
+        ProgramCompletion(
+          workoutSessionId: 'w1',
+          routineId: 'ua',
+          completedAt: DateTime(2026, 9, 28, 18),
+          rotationIndex: 0,
+          programWeek: 1,
+        ),
+      ],
+    );
+
+    final result = ProgramPlanInsights.calculate(
+      program: program,
+      routines: routines,
+      now: DateTime(2026, 9, 30, 12),
+    );
+
+    expect(result.plannedThisWeek, 5);
+    expect(result.completedThisWeek, 1);
+    expect(result.pendingDue, 0);
+    expect(result.remainingThisWeek, 4);
+    expect(result.nextScheduledDate, isNull);
+    expect(result.nextScheduledRoutineId, 'la');
+    expect(result.paceLabel, 'Llevas 1 de 5 sesiones objetivo.');
+  });
+
   test('completed sessions reduce pending and remaining counts', () {
     final program = TrainingProgram(
       id: 'p',

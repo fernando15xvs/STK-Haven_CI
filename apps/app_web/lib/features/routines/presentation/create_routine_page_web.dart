@@ -688,7 +688,17 @@ class _RoutineDetails extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Text('Días de entrenamiento', style: AppTypography.labelLarge),
+          Text(
+            'Programación opcional',
+            style: AppTypography.labelLarge,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Úsala solo si entrenas esta rutina de forma independiente.',
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -704,7 +714,7 @@ class _RoutineDetails extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            'Los días son opcionales; sirven para mostrar qué entrenamiento toca hoy.',
+            'Si esta rutina forma parte de un Plan de entrenamiento activo, la programación del plan tiene prioridad y estos días no interfieren.',
             style: AppTypography.bodySmall.copyWith(
               color: AppColors.textSecondary,
             ),

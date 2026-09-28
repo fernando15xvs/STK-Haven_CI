@@ -22,6 +22,9 @@ void main() {
         DateTime.saturday,
       },
       int nextIndex = 0,
+      ProgramScheduleMode scheduleMode = ProgramScheduleMode.continuous,
+      int targetSessionsPerWeek = 0,
+      Map<int, String> fixedWeekdayRoutineIds = const {},
     }) {
       return TrainingProgram(
         id: 'upper-lower',
@@ -29,7 +32,10 @@ void main() {
         routineIds: const ['ua', 'la', 'ub', 'lb'],
         createdAt: monday,
         startedAt: monday,
+        scheduleMode: scheduleMode,
+        targetSessionsPerWeek: targetSessionsPerWeek,
         trainingWeekdays: weekdays,
+        fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,
         nextRotationIndex: nextIndex,
       );
     }
@@ -127,6 +133,94 @@ void main() {
       );
     });
 
+    test('frequency goal stays independent from habitual weekdays', () {
+      final independent = program(
+        weekdays: const {
+          DateTime.monday,
+          DateTime.tuesday,
+          DateTime.thursday,
+          DateTime.friday,
+        },
+        targetSessionsPerWeek: 5,
+      );
+
+      final projected = ProgramScheduleProjector.projectWeek(
+        program: independent,
+        routines: routines,
+        weekStart: monday,
+      );
+
+      expect(independent.effectiveTargetSessionsPerWeek, 5);
+      expect(projected.length, 4);
+      expect(
+        ProgramScheduleProjector.effectiveTrainingWeekdays(
+          independent,
+          routines,
+        ).length,
+        4,
+      );
+    });
+
+    test('flexible plan ignores routine weekdays and follows frequency', () {
+      final flexible = program(
+        weekdays: const {},
+        scheduleMode: ProgramScheduleMode.flexible,
+        targetSessionsPerWeek: 4,
+      );
+
+      final projected = ProgramScheduleProjector.projectWeek(
+        program: flexible,
+        routines: routines,
+        weekStart: monday,
+      );
+
+      expect(
+        ProgramScheduleProjector.effectiveTrainingWeekdays(
+          flexible,
+          routines,
+        ),
+        isEmpty,
+      );
+      expect(projected.length, 4);
+      expect(projected.every((item) => item.isFlexibleEstimate), isTrue);
+      expect(
+        ProgramScheduleProjector.isTrainingDay(
+          flexible,
+          routines,
+          monday.add(const Duration(days: 2)),
+        ),
+        isTrue,
+      );
+    });
+
+    test('fixed plan owns weekday to routine assignments', () {
+      final fixed = program(
+        weekdays: const {},
+        scheduleMode: ProgramScheduleMode.fixed,
+        targetSessionsPerWeek: 3,
+        fixedWeekdayRoutineIds: const {
+          DateTime.monday: 'lb',
+          DateTime.wednesday: 'ua',
+          DateTime.friday: 'lb',
+        },
+      );
+
+      final projected = ProgramScheduleProjector.projectWeek(
+        program: fixed,
+        routines: routines,
+        weekStart: monday,
+      );
+
+      expect(
+        projected.map((item) => item.routineId).toList(),
+        ['lb', 'ua', 'lb'],
+      );
+      expect(
+        projected.map((item) => item.date.weekday).toList(),
+        [DateTime.monday, DateTime.wednesday, DateTime.friday],
+      );
+    });
+
     test('new week does not reset the routine sequence', () {
       final projected = ProgramScheduleProjector.project(
         program: program(),
@@ -200,6 +294,38 @@ void main() {
 
       expect(restored.trainingWeekdays, original.trainingWeekdays);
       expect(restored.nextRoutineId, 'ua');
+    });
+
+    test('schedule mode, target frequency and fixed map survive JSON', () {
+      final original = program(
+        weekdays: const {},
+        scheduleMode: ProgramScheduleMode.fixed,
+        targetSessionsPerWeek: 4,
+        fixedWeekdayRoutineIds: const {
+          DateTime.monday: 'ua',
+          DateTime.tuesday: 'la',
+          DateTime.thursday: 'ub',
+          DateTime.friday: 'lb',
+        },
+      );
+
+      final restored = TrainingProgram.fromJson(original.toJson());
+
+      expect(restored.scheduleMode, ProgramScheduleMode.fixed);
+      expect(restored.targetSessionsPerWeek, 4);
+      expect(restored.fixedWeekdayRoutineIds, original.fixedWeekdayRoutineIds);
+    });
+
+    test('old JSON infers frequency from stored plan weekdays', () {
+      final json = program().toJson()
+        ..remove('targetSessionsPerWeek')
+        ..remove('scheduleMode')
+        ..remove('fixedWeekdayRoutineIds');
+
+      final restored = TrainingProgram.fromJson(json);
+
+      expect(restored.scheduleMode, ProgramScheduleMode.continuous);
+      expect(restored.effectiveTargetSessionsPerWeek, 5);
     });
 
     test('old JSON without trainingWeekdays remains compatible', () {

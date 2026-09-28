@@ -1,3 +1,17 @@
+enum ProgramScheduleMode {
+  continuous,
+  fixed,
+  flexible,
+}
+
+extension ProgramScheduleModeX on ProgramScheduleMode {
+  String get label => switch (this) {
+        ProgramScheduleMode.continuous => 'Rotación continua',
+        ProgramScheduleMode.fixed => 'Semana fija',
+        ProgramScheduleMode.flexible => 'Flexible',
+      };
+}
+
 class ProgramCompletion {
   final String workoutSessionId;
   final String routineId;
@@ -43,7 +57,25 @@ class TrainingProgram {
   final DateTime createdAt;
   final DateTime startedAt;
   final int durationWeeks;
+
+  /// How this plan owns scheduling while active.
+  ///
+  /// Routine.scheduledDays remains an optional standalone schedule. It never
+  /// overrides an explicit plan schedule.
+  final ProgramScheduleMode scheduleMode;
+
+  /// User goal, independent from which weekdays are selected.
+  ///
+  /// A value of 0 is accepted only for migrated legacy data; callers should use
+  /// [effectiveTargetSessionsPerWeek] when displaying the frequency.
+  final int targetSessionsPerWeek;
+
+  /// Habitual opportunity days for continuous plans.
   final Set<int> trainingWeekdays;
+
+  /// Plan-owned weekday -> routine mapping for fixed-week plans.
+  final Map<int, String> fixedWeekdayRoutineIds;
+
   final Set<int> deloadWeeks;
   final int nextRotationIndex;
   final bool isActive;
@@ -58,7 +90,10 @@ class TrainingProgram {
     required this.createdAt,
     required this.startedAt,
     this.durationWeeks = 8,
+    this.scheduleMode = ProgramScheduleMode.continuous,
+    this.targetSessionsPerWeek = 0,
     this.trainingWeekdays = const <int>{},
+    this.fixedWeekdayRoutineIds = const <int, String>{},
     this.deloadWeeks = const <int>{},
     this.nextRotationIndex = 0,
     this.isActive = true,
@@ -68,6 +103,23 @@ class TrainingProgram {
   });
 
   bool get hasRoutines => routineIds.isNotEmpty;
+
+  int get effectiveTargetSessionsPerWeek {
+    if (targetSessionsPerWeek > 0) {
+      return targetSessionsPerWeek.clamp(1, 7).toInt();
+    }
+    if (scheduleMode == ProgramScheduleMode.fixed &&
+        fixedWeekdayRoutineIds.isNotEmpty) {
+      return fixedWeekdayRoutineIds.length.clamp(1, 7).toInt();
+    }
+    if (trainingWeekdays.isNotEmpty) {
+      return trainingWeekdays.length.clamp(1, 7).toInt();
+    }
+    if (routineIds.isNotEmpty) {
+      return routineIds.length.clamp(1, 7).toInt();
+    }
+    return 0;
+  }
 
   int get normalizedNextRotationIndex {
     if (routineIds.isEmpty) return 0;
@@ -99,16 +151,37 @@ class TrainingProgram {
   }) {
     if (routineIds.isEmpty) return this;
 
+    if (completions.any((item) => item.workoutSessionId == workoutSessionId)) {
+      return this;
+    }
+
+    if (scheduleMode == ProgramScheduleMode.fixed) {
+      final expectedRoutine =
+          fixedWeekdayRoutineIds[completedAt.toLocal().weekday];
+      if (expectedRoutine == null || routineId != expectedRoutine) {
+        return this;
+      }
+      final index = routineIds.indexOf(routineId);
+      return copyWith(
+        completions: [
+          ...completions,
+          ProgramCompletion(
+            workoutSessionId: workoutSessionId,
+            routineId: routineId,
+            completedAt: completedAt,
+            rotationIndex: index < 0 ? 0 : index,
+            programWeek: weekAt(completedAt),
+          ),
+        ],
+      );
+    }
+
     final expectedIndex = normalizedNextRotationIndex;
     final expectedRoutine = routineIds[expectedIndex];
 
     // A workout belonging to another routine may still exist in history, but
-    // it must not silently advance this program's rotation.
+    // it must not silently advance continuous/flexible sequencing.
     if (routineId != expectedRoutine) return this;
-
-    if (completions.any((item) => item.workoutSessionId == workoutSessionId)) {
-      return this;
-    }
 
     final nextIndex = (expectedIndex + 1) % routineIds.length;
     return copyWith(
@@ -138,7 +211,10 @@ class TrainingProgram {
       createdAt: now,
       startedAt: now,
       durationWeeks: durationWeeks,
+      scheduleMode: scheduleMode,
+      targetSessionsPerWeek: targetSessionsPerWeek,
       trainingWeekdays: Set<int>.from(trainingWeekdays),
+      fixedWeekdayRoutineIds: Map<int, String>.from(fixedWeekdayRoutineIds),
       deloadWeeks: Set<int>.from(deloadWeeks),
       nextRotationIndex: 0,
       isActive: false,
@@ -160,7 +236,10 @@ class TrainingProgram {
       createdAt: now,
       startedAt: now,
       durationWeeks: durationWeeks,
+      scheduleMode: scheduleMode,
+      targetSessionsPerWeek: targetSessionsPerWeek,
       trainingWeekdays: Set<int>.from(trainingWeekdays),
+      fixedWeekdayRoutineIds: Map<int, String>.from(fixedWeekdayRoutineIds),
       deloadWeeks: Set<int>.from(deloadWeeks),
       nextRotationIndex: 0,
       isActive: false,
@@ -185,7 +264,10 @@ class TrainingProgram {
       createdAt: now,
       startedAt: now,
       durationWeeks: durationWeeks,
+      scheduleMode: scheduleMode,
+      targetSessionsPerWeek: targetSessionsPerWeek,
       trainingWeekdays: Set<int>.from(trainingWeekdays),
+      fixedWeekdayRoutineIds: Map<int, String>.from(fixedWeekdayRoutineIds),
       deloadWeeks: Set<int>.from(deloadWeeks),
       nextRotationIndex: 0,
       isActive: false,
@@ -202,7 +284,10 @@ class TrainingProgram {
     DateTime? createdAt,
     DateTime? startedAt,
     int? durationWeeks,
+    ProgramScheduleMode? scheduleMode,
+    int? targetSessionsPerWeek,
     Set<int>? trainingWeekdays,
+    Map<int, String>? fixedWeekdayRoutineIds,
     Set<int>? deloadWeeks,
     int? nextRotationIndex,
     bool? isActive,
@@ -217,7 +302,12 @@ class TrainingProgram {
       createdAt: createdAt ?? this.createdAt,
       startedAt: startedAt ?? this.startedAt,
       durationWeeks: durationWeeks ?? this.durationWeeks,
+      scheduleMode: scheduleMode ?? this.scheduleMode,
+      targetSessionsPerWeek:
+          targetSessionsPerWeek ?? this.targetSessionsPerWeek,
       trainingWeekdays: trainingWeekdays ?? this.trainingWeekdays,
+      fixedWeekdayRoutineIds:
+          fixedWeekdayRoutineIds ?? this.fixedWeekdayRoutineIds,
       deloadWeeks: deloadWeeks ?? this.deloadWeeks,
       nextRotationIndex: nextRotationIndex ?? this.nextRotationIndex,
       isActive: isActive ?? this.isActive,
@@ -234,7 +324,13 @@ class TrainingProgram {
         'createdAt': createdAt.toIso8601String(),
         'startedAt': startedAt.toIso8601String(),
         'durationWeeks': durationWeeks,
+        'scheduleMode': scheduleMode.name,
+        'targetSessionsPerWeek': targetSessionsPerWeek,
         'trainingWeekdays': trainingWeekdays.toList()..sort(),
+        'fixedWeekdayRoutineIds': {
+          for (final entry in fixedWeekdayRoutineIds.entries)
+            entry.key.toString(): entry.value,
+        },
         'deloadWeeks': deloadWeeks.toList()..sort(),
         'nextRotationIndex': nextRotationIndex,
         'isActive': isActive,
@@ -245,6 +341,46 @@ class TrainingProgram {
 
   factory TrainingProgram.fromJson(Map<String, dynamic> json) {
     final rawCompletions = json['completions'];
+    final trainingWeekdays =
+        (json['trainingWeekdays'] as List? ?? const [])
+            .map((value) => (value as num).toInt())
+            .where(
+              (value) =>
+                  value >= DateTime.monday && value <= DateTime.sunday,
+            )
+            .toSet();
+
+    final rawMode = json['scheduleMode']?.toString();
+    final scheduleMode = ProgramScheduleMode.values.firstWhere(
+      (value) => value.name == rawMode,
+      orElse: () => ProgramScheduleMode.continuous,
+    );
+
+    final fixedWeekdayRoutineIds = <int, String>{};
+    final rawFixed = json['fixedWeekdayRoutineIds'];
+    if (rawFixed is Map) {
+      for (final entry in rawFixed.entries) {
+        final day = int.tryParse(entry.key.toString());
+        final routineId = entry.value?.toString();
+        if (day != null &&
+            day >= DateTime.monday &&
+            day <= DateTime.sunday &&
+            routineId != null &&
+            routineId.isNotEmpty) {
+          fixedWeekdayRoutineIds[day] = routineId;
+        }
+      }
+    }
+
+    final storedTarget =
+        (json['targetSessionsPerWeek'] as num?)?.toInt() ?? 0;
+    final legacyTarget = storedTarget > 0
+        ? storedTarget
+        : scheduleMode == ProgramScheduleMode.fixed &&
+                fixedWeekdayRoutineIds.isNotEmpty
+            ? fixedWeekdayRoutineIds.length
+            : trainingWeekdays.length;
+
     return TrainingProgram(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -252,10 +388,10 @@ class TrainingProgram {
       createdAt: DateTime.parse(json['createdAt'] as String),
       startedAt: DateTime.parse(json['startedAt'] as String),
       durationWeeks: (json['durationWeeks'] as num?)?.toInt() ?? 8,
-      trainingWeekdays: (json['trainingWeekdays'] as List? ?? const [])
-          .map((value) => (value as num).toInt())
-          .where((value) => value >= DateTime.monday && value <= DateTime.sunday)
-          .toSet(),
+      scheduleMode: scheduleMode,
+      targetSessionsPerWeek: legacyTarget.clamp(0, 7).toInt(),
+      trainingWeekdays: trainingWeekdays,
+      fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,
       deloadWeeks: (json['deloadWeeks'] as List? ?? const [])
           .map((value) => (value as num).toInt())
           .where((value) => value > 0)

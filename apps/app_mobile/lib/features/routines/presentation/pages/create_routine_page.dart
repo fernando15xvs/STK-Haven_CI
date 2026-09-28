@@ -617,7 +617,14 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
             ),
           ),
           const SizedBox(height: AppSpacing.xxl),
-          const SectionHeading(title: 'DÍAS DE ENTRENAMIENTO'),
+          const SectionHeading(title: 'PROGRAMACIÓN OPCIONAL'),
+          const SizedBox(height: 6),
+          Text(
+            'Elige días solo si usarás esta rutina por separado. Dentro de un Plan de entrenamiento, el calendario del plan tiene prioridad.',
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

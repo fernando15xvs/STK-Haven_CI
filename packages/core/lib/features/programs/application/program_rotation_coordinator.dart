@@ -37,11 +37,31 @@ class ProgramRotationCoordinator {
       if (routineId == null) continue;
       if (!seenSessionIds.add(session.id)) continue;
 
+      if (program.scheduleMode == ProgramScheduleMode.fixed) {
+        final expectedRoutine =
+            program.fixedWeekdayRoutineIds[session.startedAt.toLocal().weekday];
+        if (expectedRoutine == null || routineId != expectedRoutine) {
+          continue;
+        }
+
+        final routineIndex = program.routineIds.indexOf(routineId);
+        completions.add(
+          ProgramCompletion(
+            workoutSessionId: session.id,
+            routineId: routineId,
+            completedAt: session.finishedAt,
+            rotationIndex: routineIndex < 0 ? 0 : routineIndex,
+            programWeek: program.weekAt(session.finishedAt),
+          ),
+        );
+        changed = true;
+        continue;
+      }
+
       final expectedRoutine = program.routineIds[nextIndex];
       if (routineId != expectedRoutine) {
         // Off-sequence sessions remain valid workout history but do not advance
-        // the expected program rotation. The id remains seen so a duplicate
-        // replay of the same session cannot advance later.
+        // continuous/flexible sequencing.
         continue;
       }
 

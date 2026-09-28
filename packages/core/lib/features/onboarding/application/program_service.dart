@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/preset_program.dart';
 import 'package:core/domain/models/active_program_state.dart';
+import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/routines/data/routine_repository.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
@@ -97,10 +98,14 @@ class ProgramService {
         : ProgramScheduleProjector.recommendedTrainingWeekdays(
             trainingDaysPerWeek,
           );
+    final targetFrequency =
+        (trainingDaysPerWeek ?? preset.daysPerWeek).clamp(1, 7).toInt();
     await _trainingProgramListNotifier.create(
       name: preset.name,
       routineIds: generatedIds,
       durationWeeks: preset.durationWeeks,
+      scheduleMode: ProgramScheduleMode.continuous,
+      targetSessionsPerWeek: targetFrequency,
       trainingWeekdays: trainingWeekdays,
       notes: 'Programa recomendado según tu configuración inicial.',
       activate: true,
