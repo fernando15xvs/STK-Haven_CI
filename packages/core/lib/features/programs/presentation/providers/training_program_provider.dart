@@ -320,6 +320,10 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
     ),
     trainingWeekdays: trainingWeekdays,
     scheduledDate: scheduledDate,
-    targetSessionsPerWeek: reconciled.effectiveTargetSessionsPerWeek,
+    targetSessionsPerWeek:
+        ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
+      reconciled,
+      routines,
+    ),
   );
 });

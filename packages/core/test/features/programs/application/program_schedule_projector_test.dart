@@ -246,6 +246,22 @@ void main() {
       expect(projected.map((item) => item.routineId), ['ub', 'lb']);
     });
 
+    test('legacy frequency is inferred from effective routine weekdays', () {
+      final legacy = program(
+        weekdays: const {},
+        targetSessionsPerWeek: 0,
+      );
+
+      expect(
+        ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
+          legacy,
+          routines,
+        ),
+        5,
+      );
+      expect(legacy.effectiveTargetSessionsPerWeek, 4);
+    });
+
     test('legacy program derives opportunity days from routine schedules', () {
       final legacy = program(weekdays: const {});
 

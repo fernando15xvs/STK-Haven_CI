@@ -79,7 +79,10 @@ class ProgramPlanInsights {
       final completed = item.completedAt.toLocal();
       return !completed.isBefore(weekStart) && completed.isBefore(weekEnd);
     }).length;
-    final targetFrequency = program.effectiveTargetSessionsPerWeek;
+    final targetFrequency = ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
+      program,
+      routines,
+    );
     final plannedThisWeek = program.scheduleMode == ProgramScheduleMode.flexible
         ? targetFrequency
         : plannedWeek.length;

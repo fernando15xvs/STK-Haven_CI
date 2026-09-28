@@ -105,6 +105,30 @@ class ProgramScheduleProjector {
     }
   }
 
+  static int effectiveTargetSessionsPerWeek(
+    TrainingProgram program,
+    Iterable<Routine> routines,
+  ) {
+    if (program.targetSessionsPerWeek > 0) {
+      return program.targetSessionsPerWeek.clamp(1, 7).toInt();
+    }
+
+    final weekdays = effectiveTrainingWeekdays(program, routines);
+    if (weekdays.isNotEmpty) {
+      return weekdays.length.clamp(1, 7).toInt();
+    }
+
+    if (program.scheduleMode == ProgramScheduleMode.fixed &&
+        program.fixedWeekdayRoutineIds.isNotEmpty) {
+      return program.fixedWeekdayRoutineIds.length.clamp(1, 7).toInt();
+    }
+
+    if (program.routineIds.isNotEmpty) {
+      return program.routineIds.length.clamp(1, 7).toInt();
+    }
+    return 0;
+  }
+
   static Set<int> _planningWeekdays(
     TrainingProgram program,
     Iterable<Routine> routines,
@@ -112,7 +136,7 @@ class ProgramScheduleProjector {
     final explicit = effectiveTrainingWeekdays(program, routines);
     if (explicit.isNotEmpty) return explicit;
 
-    final target = program.effectiveTargetSessionsPerWeek;
+    final target = effectiveTargetSessionsPerWeek(program, routines);
     if (target <= 0) return const <int>{};
     return recommendedTrainingWeekdays(target);
   }

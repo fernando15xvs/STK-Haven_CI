@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:core/features/programs/application/program_muscle_frequency_planner.dart';
 import 'package:core/features/programs/application/program_plan_insights.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_volume_planner.dart';
@@ -103,6 +104,13 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                   muscleGroupByExerciseId: muscleByExercise,
                   weekStart: weekStart,
                 );
+                final muscleFrequency =
+                    ProgramMuscleFrequencyPlanner.calculateWeek(
+                  program: program,
+                  routines: routines,
+                  exercises: exercises,
+                  weekStart: weekStart,
+                );
                 final insights = ProgramPlanInsights.calculate(
                   program: program,
                   routines: routines,
@@ -114,6 +122,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                     program: program,
                     routineById: routineById,
                     volumes: volumes,
+                    muscleFrequency: muscleFrequency,
                     plannedSessions: plannedSessions,
                     insights: insights,
                     onActivate: () => ref
@@ -174,7 +183,12 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
     var scheduleMode =
         existing?.scheduleMode ?? ProgramScheduleMode.continuous;
     var targetSessionsPerWeek =
-        existing?.effectiveTargetSessionsPerWeek ?? 3;
+        existing == null
+            ? 3
+            : ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
+                existing,
+                routines,
+              );
     var trainingWeekdays = existing == null
         ? ProgramScheduleProjector.recommendedTrainingWeekdays(
             targetSessionsPerWeek,
@@ -705,6 +719,7 @@ class _ProgramCard extends StatelessWidget {
     required this.program,
     required this.routineById,
     required this.volumes,
+    required this.muscleFrequency,
     required this.plannedSessions,
     required this.insights,
     required this.onActivate,
@@ -720,6 +735,7 @@ class _ProgramCard extends StatelessWidget {
   final TrainingProgram program;
   final Map<String, Routine> routineById;
   final List<ProgramMuscleVolume> volumes;
+  final List<ProgramMuscleFrequency> muscleFrequency;
   final List<ProgramScheduledSession> plannedSessions;
   final ProgramPlanInsights insights;
   final VoidCallback onActivate;
@@ -776,7 +792,10 @@ class _ProgramCard extends StatelessWidget {
                             ? '${program.routineIds.length} rutinas · '
                                 '${program.durationWeeks} semanas · reutilizable'
                             : '${program.scheduleMode.label} · '
-                                '${program.effectiveTargetSessionsPerWeek}x/sem · '
+                                '${ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
+                                  program,
+                                  routineById.values,
+                                )}x/sem · '
                                 'Semana $week/${program.durationWeeks} · '
                                 '${program.completions.length} completadas',
                         style: Theme.of(context).textTheme.bodySmall,
@@ -961,6 +980,37 @@ class _ProgramCard extends StatelessWidget {
                       ),
                 ],
               ),
+            if (muscleFrequency.isNotEmpty)
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: const Text('Frecuencia muscular de esta semana'),
+                subtitle: const Text(
+                  'Cuántas sesiones estimulan cada grupo muscular.',
+                ),
+                children: muscleFrequency
+                    .map(
+                      (item) => ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(item.muscleGroup),
+                        subtitle: Text(
+                          item.directSessions == item.totalSessions
+                              ? '${item.directSessions} ${item.directSessions == 1 ? 'sesión directa' : 'sesiones directas'}'
+                              : item.directSessions == 0
+                                  ? '${item.secondaryOnlySessions} ${item.secondaryOnlySessions == 1 ? 'sesión como secundario' : 'sesiones como secundario'}'
+                                  : '${item.directSessions} directas · ${item.secondaryOnlySessions} secundarias',
+                        ),
+                        trailing: Text(
+                          '${item.totalSessions}×/sem',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
             if (volumes.isNotEmpty)
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
@@ -1066,7 +1116,10 @@ class _PlanOverview extends StatelessWidget {
                 icon: Icons.repeat_rounded,
                 label: 'Frecuencia objetivo',
                 value:
-                    '${program.effectiveTargetSessionsPerWeek} sesiones/sem',
+                    '${ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
+                                  program,
+                                  routineById.values,
+                                )} sesiones/sem',
               ),
               _InsightMetric(
                 icon: Icons.calendar_view_week_outlined,
