@@ -120,8 +120,13 @@ class WorkoutNotificationService {
 
   static Future<void> cancelRestTimerNotification() async {
     if (kIsWeb) return;
-    await initialize();
-    await _notificationsPlugin.cancel(id: _restTimerNotificationId);
+    try {
+      await initialize();
+      await _notificationsPlugin.cancel(id: _restTimerNotificationId);
+    } catch (_) {
+      // Notification cleanup is best-effort. An unavailable platform plugin
+      // must not break workout cancellation, provider disposal, or recovery.
+    }
   }
 
   static Future<bool> scheduleDailyWorkoutReminder({
