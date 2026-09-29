@@ -127,6 +127,21 @@ void main() {
       expect(result.nextRotationIndex, fixed.nextRotationIndex);
     });
 
+    test('partial effective workout does not advance rotation', () {
+      final partial = _session(
+        'partial-a',
+        'A',
+        start.add(const Duration(days: 1)),
+        complete: false,
+      );
+
+      final result =
+          ProgramRotationCoordinator.reconcile(program(), [partial]);
+
+      expect(result.completions, isEmpty);
+      expect(result.nextRoutineId, 'A');
+    });
+
     test('manual deload week remains a program context flag', () {
       final withDeload = program().copyWith(deloadWeeks: const {2});
       expect(withDeload.isDeloadWeekAt(start.add(const Duration(days: 8))), true);
@@ -135,7 +150,12 @@ void main() {
   });
 }
 
-WorkoutSession _session(String id, String? routineId, DateTime startedAt) {
+WorkoutSession _session(
+  String id,
+  String? routineId,
+  DateTime startedAt, {
+  bool complete = true,
+}) {
   return WorkoutSession(
     id: id,
     routineId: routineId,
@@ -143,6 +163,20 @@ WorkoutSession _session(String id, String? routineId, DateTime startedAt) {
     startedAt: startedAt,
     finishedAt: startedAt.add(const Duration(hours: 1)),
     durationSeconds: 3600,
-    exercises: const [],
+    exercises: [
+      WorkoutExercise(
+        exerciseId: 'exercise-${routineId ?? 'free'}',
+        exerciseNameSnapshot: 'Exercise',
+        muscleGroupSnapshot: 'Test',
+        sets: [
+          WorkoutSet(
+            weight: 10,
+            reps: 10,
+            completed: complete,
+            setType: WorkoutSetType.working,
+          ),
+        ],
+      ),
+    ],
   );
 }

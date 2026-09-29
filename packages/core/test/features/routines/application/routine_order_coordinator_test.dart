@@ -10,6 +10,7 @@ void main() {
     int warmupSets = 0,
     int approachSets = 0,
     bool unilateral = false,
+    RoutineExercisePhase phase = RoutineExercisePhase.main,
   }) {
     return RoutineExercise(
       exerciseId: id,
@@ -21,6 +22,7 @@ void main() {
       warmupSets: warmupSets,
       approachSets: approachSets,
       unilateral: unilateral,
+      phase: phase,
       supersetGroupId: supersetGroupId,
     );
   }
@@ -66,6 +68,40 @@ void main() {
       expect(bench.approachSets, 1);
       expect(row.supersetGroupId, 'pair-1');
       expect(row.unilateral, true);
+    });
+
+    test('normalize groups mobility first and stretching last', () {
+      final input = [
+        exercise('bench', 0),
+        exercise(
+          'hamstring-stretch',
+          1,
+          phase: RoutineExercisePhase.stretching,
+        ),
+        exercise(
+          'shoulder-cars',
+          2,
+          phase: RoutineExercisePhase.mobility,
+        ),
+        exercise('row', 3),
+      ];
+
+      final result = RoutineOrderCoordinator.normalize(input);
+
+      expect(
+        result.map((item) => item.exerciseId),
+        ['shoulder-cars', 'bench', 'row', 'hamstring-stretch'],
+      );
+      expect(
+        result.map((item) => item.phase),
+        [
+          RoutineExercisePhase.mobility,
+          RoutineExercisePhase.main,
+          RoutineExercisePhase.main,
+          RoutineExercisePhase.stretching,
+        ],
+      );
+      expect(result.map((item) => item.order), [0, 1, 2, 3]);
     });
 
     test('normalize repairs stale order values without changing list order', () {

@@ -164,36 +164,45 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         ),
       );
 
+      final isMainExercise = re.phase == RoutineExercisePhase.main;
+      final phaseSetType = switch (re.phase) {
+        RoutineExercisePhase.mobility => WorkoutSetType.mobility,
+        RoutineExercisePhase.main => WorkoutSetType.working,
+        RoutineExercisePhase.stretching => WorkoutSetType.stretching,
+      };
+
       final sets = <WorkoutSet>[
-        ...List.generate(
-          re.warmupSets,
-          (_) => WorkoutSet(
-            weight: 0,
-            reps: 0,
-            completed: false,
-            setType: WorkoutSetType.warmup,
-            restSeconds: re.restSeconds,
-            sideRestSeconds: configuredSideRest,
+        if (isMainExercise)
+          ...List.generate(
+            re.warmupSets,
+            (_) => WorkoutSet(
+              weight: 0,
+              reps: 0,
+              completed: false,
+              setType: WorkoutSetType.warmup,
+              restSeconds: re.restSeconds,
+              sideRestSeconds: configuredSideRest,
+            ),
           ),
-        ),
-        ...List.generate(
-          re.approachSets,
-          (_) => WorkoutSet(
-            weight: 0,
-            reps: 0,
-            completed: false,
-            setType: WorkoutSetType.approach,
-            restSeconds: re.restSeconds,
-            sideRestSeconds: configuredSideRest,
+        if (isMainExercise)
+          ...List.generate(
+            re.approachSets,
+            (_) => WorkoutSet(
+              weight: 0,
+              reps: 0,
+              completed: false,
+              setType: WorkoutSetType.approach,
+              restSeconds: re.restSeconds,
+              sideRestSeconds: configuredSideRest,
+            ),
           ),
-        ),
         ...List.generate(
           re.targetSets,
           (_) => WorkoutSet(
             weight: 0,
             reps: 0,
             completed: false,
-            setType: WorkoutSetType.working,
+            setType: phaseSetType,
             restSeconds: re.restSeconds,
             sideRestSeconds: configuredSideRest,
           ),
@@ -776,29 +785,51 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
 
     if (!hasCompletedWorkingSets) return EmptyWorkout();
 
+    final effectiveSets = finalSession.exercises
+        .expand((exercise) => exercise.sets)
+        .where((set) => set.setType == WorkoutSetType.working)
+        .toList(growable: false);
+    final sessionIsComplete = effectiveSets.isNotEmpty &&
+        effectiveSets.every((set) => set.completed);
+
     try {
+      // The same session id is reused when an incomplete workout is resumed,
+      // so the final save replaces the partial snapshot instead of duplicating
+      // it in history.
       await ref.read(workoutRepositoryProvider).saveWorkoutSession(finalSession);
       ref.read(workoutHistoryProvider.notifier).refresh();
 
-      // Shared progress is best-effort and must never block workout completion.
-      // Tests/local-only flows may not initialize Supabase at all, so even
-      // obtaining the cloud provider is isolated from the local save path.
-      _syncSharedProgressBestEffort();
-
-      await ref
-          .read(gamificationProvider.notifier)
-          .addWorkoutSession(finalSession);
+      if (sessionIsComplete) {
+        // Only a fully completed session is published/rewarded and allowed to
+        // advance the plan. This avoids double rewards when a partial session
+        // is later resumed and completed.
+        _syncSharedProgressBestEffort();
+        await ref
+            .read(gamificationProvider.notifier)
+            .addWorkoutSession(finalSession);
+      }
 
       final analysisResult =
           await ref.read(workoutAnalysisServiceProvider).analyze(finalSession);
 
-      // Program rotation is reconciled from the saved history, so free or
-      // out-of-order workouts never advance A/B/C accidentally.
-      await ref.read(trainingProgramListProvider.notifier).reconcileActive();
+      if (sessionIsComplete) {
+        await ref.read(trainingProgramListProvider.notifier).reconcileActive();
+        await ref.read(activeWorkoutRepositoryProvider).clearDraft();
+        _undoSession = null;
+        state = const ActiveWorkoutState();
+      } else {
+        // Keep an incomplete workout resumable even after the user leaves the
+        // summary screen. Home/Routines will keep showing the active-workout
+        // banner until the remaining effective sets are completed or discarded.
+        await ref.read(activeWorkoutRepositoryProvider).saveDraft(finalSession);
+        _undoSession = null;
+        state = ActiveWorkoutState(
+          session: finalSession,
+          globalTimerSeconds: duration,
+        );
+      }
+      ref.invalidate(nextProgramSessionProvider);
 
-      await ref.read(activeWorkoutRepositoryProvider).clearDraft();
-      _undoSession = null;
-      state = const ActiveWorkoutState();
       return WorkoutFinished(analysisResult);
     } catch (_) {
       return null;
@@ -819,6 +850,30 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       // Remote sharing is optional. A cloud/bootstrap failure must never turn
       // a successfully saved local workout into a failed completion.
     }
+  }
+
+  Future<void> resumeSavedWorkout(WorkoutSession savedSession) async {
+    _cancelTimers();
+    _undoSession = null;
+    final now = DateTime.now();
+    final resumedStartedAt = now.subtract(
+      Duration(seconds: savedSession.durationSeconds),
+    );
+    final resumed = WorkoutSession(
+      id: savedSession.id,
+      routineId: savedSession.routineId,
+      routineNameSnapshot: savedSession.routineNameSnapshot,
+      startedAt: resumedStartedAt,
+      finishedAt: now,
+      durationSeconds: savedSession.durationSeconds,
+      exercises: savedSession.exercises,
+      notes: savedSession.notes,
+    );
+    await ref.read(activeWorkoutRepositoryProvider).saveDraft(resumed);
+    state = ActiveWorkoutState(
+      session: resumed,
+      globalTimerSeconds: resumed.durationSeconds,
+    );
   }
 
   Future<void> cancelWorkout() async {

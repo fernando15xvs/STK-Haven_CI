@@ -52,6 +52,7 @@ class RoutineRepository {
                 unilateral: e.unilateral,
                 unilateralTarget: e.unilateralTarget.name,
                 supersetGroupId: e.supersetGroupId,
+                phase: e.phase.name,
               ),
             )
             .toList(),
@@ -80,6 +81,10 @@ class RoutineRepository {
                   orElse: () => UnilateralTarget.other,
                 ),
                 supersetGroupId: e.supersetGroupId,
+                phase: RoutineExercisePhase.values.firstWhere(
+                  (phase) => phase.name == e.phase,
+                  orElse: () => RoutineExercisePhase.main,
+                ),
               ),
             )
             .toList(),

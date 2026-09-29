@@ -29,9 +29,16 @@ class RoutineOrderCoordinator {
   }
 
   static List<RoutineExercise> normalize(List<RoutineExercise> exercises) {
+    final indexed = exercises.asMap().entries.toList(growable: false)
+      ..sort((a, b) {
+        final phase = a.value.phase.sortOrder.compareTo(b.value.phase.sortOrder);
+        if (phase != 0) return phase;
+        return a.key.compareTo(b.key);
+      });
+
     return List<RoutineExercise>.generate(
-      exercises.length,
-      (index) => exercises[index].copyWith(order: index),
+      indexed.length,
+      (index) => indexed[index].value.copyWith(order: index),
       growable: false,
     );
   }
