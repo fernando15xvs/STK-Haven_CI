@@ -1,5 +1,6 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/exercise_performance_memory.dart';
+import 'package:core/features/workout/application/workout_history_index.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 WorkoutSession _session({
@@ -255,5 +256,275 @@ void main() {
       expect(sets[1].weight, 50);
       expect(sets[1].reps, 9);
     });
+    test(
+      'newer routine with fewer set slots does not erase older slot memory',
+      () {
+        final upperA = WorkoutSession(
+          id: 'upper-a-old',
+          routineId: 'upper-a',
+          routineNameSnapshot: 'Upper A',
+          startedAt: DateTime(2026, 9, 7),
+          finishedAt: DateTime(2026, 9, 7, 1),
+          durationSeconds: 3600,
+          exercises: const [
+            WorkoutExercise(
+              exerciseId: 'press',
+              exerciseNameSnapshot: 'Press',
+              muscleGroupSnapshot: 'Pecho',
+              sets: [
+                WorkoutSet(
+                  weight: 20,
+                  reps: 6,
+                  completed: true,
+                  setType: WorkoutSetType.warmup,
+                ),
+                WorkoutSet(
+                  weight: 40,
+                  reps: 2,
+                  completed: true,
+                  setType: WorkoutSetType.approach,
+                ),
+                WorkoutSet(
+                  weight: 42.5,
+                  reps: 2,
+                  completed: true,
+                  setType: WorkoutSetType.approach,
+                ),
+                WorkoutSet(
+                  weight: 60,
+                  reps: 10,
+                  completed: true,
+                  setType: WorkoutSetType.working,
+                ),
+                WorkoutSet(
+                  weight: 60,
+                  reps: 10,
+                  completed: true,
+                  setType: WorkoutSetType.working,
+                ),
+              ],
+            ),
+          ],
+        );
+
+        final upperB = WorkoutSession(
+          id: 'upper-b-new',
+          routineId: 'upper-b',
+          routineNameSnapshot: 'Upper B',
+          startedAt: DateTime(2026, 9, 10),
+          finishedAt: DateTime(2026, 9, 10, 1),
+          durationSeconds: 3600,
+          exercises: const [
+            WorkoutExercise(
+              exerciseId: 'press',
+              exerciseNameSnapshot: 'Press',
+              muscleGroupSnapshot: 'Pecho',
+              sets: [
+                WorkoutSet(
+                  weight: 45,
+                  reps: 2,
+                  completed: true,
+                  setType: WorkoutSetType.approach,
+                ),
+                WorkoutSet(
+                  weight: 47.5,
+                  reps: 2,
+                  completed: true,
+                  setType: WorkoutSetType.approach,
+                ),
+                WorkoutSet(
+                  weight: 62.5,
+                  reps: 8,
+                  completed: true,
+                  setType: WorkoutSetType.working,
+                ),
+              ],
+            ),
+          ],
+        );
+
+        final currentUpperA = WorkoutSession(
+          id: 'upper-a-current',
+          routineId: 'upper-a',
+          routineNameSnapshot: 'Upper A',
+          startedAt: DateTime(2026, 9, 14),
+          finishedAt: DateTime(2026, 9, 14),
+          durationSeconds: 0,
+          exercises: const [
+            WorkoutExercise(
+              exerciseId: 'press',
+              exerciseNameSnapshot: 'Press',
+              muscleGroupSnapshot: 'Pecho',
+              sets: [
+                WorkoutSet(
+                  weight: 0,
+                  reps: 0,
+                  completed: false,
+                  setType: WorkoutSetType.warmup,
+                ),
+                WorkoutSet(
+                  weight: 0,
+                  reps: 0,
+                  completed: false,
+                  setType: WorkoutSetType.approach,
+                ),
+                WorkoutSet(
+                  weight: 0,
+                  reps: 0,
+                  completed: false,
+                  setType: WorkoutSetType.approach,
+                ),
+                WorkoutSet(
+                  weight: 0,
+                  reps: 0,
+                  completed: false,
+                  setType: WorkoutSetType.working,
+                ),
+                WorkoutSet(
+                  weight: 0,
+                  reps: 0,
+                  completed: false,
+                  setType: WorkoutSetType.working,
+                ),
+              ],
+            ),
+          ],
+        );
+
+        final synthetic =
+            ExercisePerformanceMemory.syntheticPreviousSessionForCurrent(
+          [upperA, upperB],
+          currentUpperA,
+        );
+
+        expect(synthetic, isNotNull);
+        final sets = synthetic!.exercises.single.sets;
+        expect(sets, hasLength(5));
+
+        // Upper B has no warm-up, so warm-up #1 falls back to Upper A.
+        expect(sets[0].setType, WorkoutSetType.warmup);
+        expect(sets[0].weight, 20);
+        expect(sets[0].reps, 6);
+
+        // Upper B has both approach slots, so they are the newest memory.
+        expect(sets[1].setType, WorkoutSetType.approach);
+        expect(sets[1].weight, 45);
+        expect(sets[2].weight, 47.5);
+
+        // Working #1 comes from Upper B, but working #2 falls back to Upper A.
+        expect(sets[3].setType, WorkoutSetType.working);
+        expect(sets[3].weight, 62.5);
+        expect(sets[3].reps, 8);
+        expect(sets[4].setType, WorkoutSetType.working);
+        expect(sets[4].weight, 60);
+        expect(sets[4].reps, 10);
+      },
+    );
+
+    test('indexed memory uses the same per-slot fallback behavior', () {
+      final older = WorkoutSession(
+        id: 'older',
+        routineId: 'a',
+        routineNameSnapshot: 'Upper A',
+        startedAt: DateTime(2026, 9, 7),
+        finishedAt: DateTime(2026, 9, 7, 1),
+        durationSeconds: 3600,
+        exercises: const [
+          WorkoutExercise(
+            exerciseId: 'press',
+            exerciseNameSnapshot: 'Press',
+            muscleGroupSnapshot: 'Pecho',
+            sets: [
+              WorkoutSet(
+                weight: 20,
+                reps: 6,
+                completed: true,
+                setType: WorkoutSetType.warmup,
+              ),
+              WorkoutSet(
+                weight: 60,
+                reps: 10,
+                completed: true,
+                setType: WorkoutSetType.working,
+              ),
+              WorkoutSet(
+                weight: 60,
+                reps: 9,
+                completed: true,
+                setType: WorkoutSetType.working,
+              ),
+            ],
+          ),
+        ],
+      );
+      final newer = WorkoutSession(
+        id: 'newer',
+        routineId: 'b',
+        routineNameSnapshot: 'Upper B',
+        startedAt: DateTime(2026, 9, 10),
+        finishedAt: DateTime(2026, 9, 10, 1),
+        durationSeconds: 3600,
+        exercises: const [
+          WorkoutExercise(
+            exerciseId: 'press',
+            exerciseNameSnapshot: 'Press',
+            muscleGroupSnapshot: 'Pecho',
+            sets: [
+              WorkoutSet(
+                weight: 62.5,
+                reps: 8,
+                completed: true,
+                setType: WorkoutSetType.working,
+              ),
+            ],
+          ),
+        ],
+      );
+      final current = WorkoutSession(
+        id: 'current',
+        routineId: 'a',
+        routineNameSnapshot: 'Upper A',
+        startedAt: DateTime(2026, 9, 14),
+        finishedAt: DateTime(2026, 9, 14),
+        durationSeconds: 0,
+        exercises: const [
+          WorkoutExercise(
+            exerciseId: 'press',
+            exerciseNameSnapshot: 'Press',
+            muscleGroupSnapshot: 'Pecho',
+            sets: [
+              WorkoutSet(
+                weight: 0,
+                reps: 0,
+                setType: WorkoutSetType.warmup,
+              ),
+              WorkoutSet(
+                weight: 0,
+                reps: 0,
+                setType: WorkoutSetType.working,
+              ),
+              WorkoutSet(
+                weight: 0,
+                reps: 0,
+                setType: WorkoutSetType.working,
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final index = WorkoutHistoryIndex.build([older, newer]);
+      final synthetic =
+          ExercisePerformanceMemory.syntheticPreviousSessionForCurrentInIndex(
+        index,
+        current,
+      );
+
+      final sets = synthetic!.exercises.single.sets;
+      expect(sets[0].weight, 20);
+      expect(sets[1].weight, 62.5);
+      expect(sets[2].weight, 60);
+    });
+
   });
 }

@@ -141,57 +141,168 @@ class ExercisePerformanceMemory {
     Iterable<WorkoutSession> history,
     WorkoutSession currentSession,
   ) {
-    final entries = latestForExercises(
-      history,
-      currentSession.exercises.map((exercise) => exercise.exerciseId),
-      excludeSessionId: currentSession.id,
+    final sessions = history
+        .where((session) => session.id != currentSession.id)
+        .toList(growable: false)
+      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+
+    final occurrences = <String, List<WorkoutExerciseOccurrence>>{};
+    final wanted = currentSession.exercises
+        .map((exercise) => exercise.exerciseId)
+        .toSet();
+
+    for (final session in sessions) {
+      for (final exercise in session.exercises) {
+        if (!wanted.contains(exercise.exerciseId)) continue;
+        if (!_hasCompletedWorkingSet(exercise)) continue;
+        occurrences
+            .putIfAbsent(exercise.exerciseId, () => [])
+            .add(
+              WorkoutExerciseOccurrence(
+                session: session,
+                exercise: exercise,
+              ),
+            );
+      }
+    }
+
+    return _syntheticPreviousSessionFromOccurrences(
+      occurrences,
+      currentSession,
     );
-    return _syntheticPreviousSessionForEntries(entries, currentSession);
   }
 
   static WorkoutSession? syntheticPreviousSessionForCurrentInIndex(
     WorkoutHistoryIndex index,
     WorkoutSession currentSession,
   ) {
-    final entries = latestForExercisesInIndex(
-      index,
-      currentSession.exercises.map((exercise) => exercise.exerciseId),
-      excludeSessionId: currentSession.id,
+    final occurrences = <String, List<WorkoutExerciseOccurrence>>{};
+
+    for (final currentExercise in currentSession.exercises) {
+      final filtered = index
+          .exerciseOccurrences(currentExercise.exerciseId)
+          .where(
+            (occurrence) =>
+                occurrence.session.id != currentSession.id &&
+                _hasCompletedWorkingSet(occurrence.exercise),
+          )
+          .toList(growable: false);
+      if (filtered.isNotEmpty) {
+        occurrences[currentExercise.exerciseId] = filtered;
+      }
+    }
+
+    return _syntheticPreviousSessionFromOccurrences(
+      occurrences,
+      currentSession,
     );
-    return _syntheticPreviousSessionForEntries(entries, currentSession);
   }
 
-  static WorkoutSession? _syntheticPreviousSessionForEntries(
-    Map<String, ExercisePerformanceMemoryEntry> entries,
+  /// Builds the ANTERIOR/prefill memory slot by slot instead of letting the
+  /// newest routine occurrence replace the whole exercise history.
+  ///
+  /// Example: Upper A may have 1 warm-up + 2 approach + 2 working sets while
+  /// Upper B has 0 warm-up + 2 approach + 1 working set. After completing
+  /// Upper B, returning to Upper A should keep the newest available value for
+  /// every slot:
+  /// - warm-up #1 can fall back to the older Upper A;
+  /// - approach #1/#2 can come from the newer Upper B;
+  /// - working #1 can come from Upper B;
+  /// - working #2 can fall back to Upper A.
+  ///
+  /// Missing slots in a newer routine therefore never erase useful exercise
+  /// memory from an older completed session.
+  static WorkoutSession? _syntheticPreviousSessionFromOccurrences(
+    Map<String, List<WorkoutExerciseOccurrence>> occurrencesByExercise,
     WorkoutSession currentSession,
   ) {
-    if (entries.isEmpty) return null;
-
-    final newest = entries.values.reduce(
-      (a, b) => a.performedAt.isAfter(b.performedAt) ? a : b,
-    );
+    if (occurrencesByExercise.isEmpty) return null;
 
     final alignedExercises = <WorkoutExercise>[];
+    WorkoutExerciseOccurrence? newestUsedOccurrence;
+
     for (final currentExercise in currentSession.exercises) {
-      final entry = entries[currentExercise.exerciseId];
-      if (entry == null) continue;
-      alignedExercises.add(
-        _alignExerciseToCurrent(
-          source: entry.exercise,
-          current: currentExercise,
-        ),
-      );
+      final occurrences =
+          occurrencesByExercise[currentExercise.exerciseId] ?? const [];
+      if (occurrences.isEmpty) continue;
+
+      final counters = <WorkoutSetType, int>{
+        for (final type in WorkoutSetType.values) type: 0,
+      };
+      var hasRememberedSet = false;
+      final alignedSets = <WorkoutSet>[];
+
+      for (final currentSet in currentExercise.sets) {
+        final type = currentSet.setType;
+        final ordinal = counters[type] ?? 0;
+        counters[type] = ordinal + 1;
+
+        WorkoutSet? remembered;
+        WorkoutExerciseOccurrence? rememberedFrom;
+
+        for (final occurrence in occurrences) {
+          final sameType = occurrence.exercise.sets
+              .where((set) => set.setType == type)
+              .toList(growable: false);
+
+          if (ordinal >= sameType.length) continue;
+          final candidate = sameType[ordinal];
+          if (!candidate.completed) continue;
+
+          remembered = _normalizedSetForPreviousDisplay(candidate);
+          rememberedFrom = occurrence;
+          break;
+        }
+
+        if (remembered == null) {
+          alignedSets.add(
+            WorkoutSet(
+              weight: 0,
+              reps: 0,
+              completed: false,
+              setType: type,
+              restSeconds: currentSet.restSeconds,
+              sideRestSeconds: currentSet.sideRestSeconds,
+            ),
+          );
+          continue;
+        }
+
+        hasRememberedSet = true;
+        alignedSets.add(remembered);
+
+        if (rememberedFrom != null &&
+            (newestUsedOccurrence == null ||
+                rememberedFrom.date.isAfter(newestUsedOccurrence.date))) {
+          newestUsedOccurrence = rememberedFrom;
+        }
+      }
+
+      if (hasRememberedSet) {
+        alignedExercises.add(
+          currentExercise.copyWith(sets: alignedSets),
+        );
+      }
     }
+
+    final newest = newestUsedOccurrence;
+    if (alignedExercises.isEmpty || newest == null) return null;
 
     return WorkoutSession(
       id: '__exercise_memory__',
       routineId: null,
       routineNameSnapshot: 'Memoria global de ejercicios',
-      startedAt: newest.performedAt,
+      startedAt: newest.session.startedAt,
       finishedAt: newest.session.finishedAt,
       exercises: alignedExercises,
       durationSeconds: 0,
       notes: '',
+    );
+  }
+
+  static bool _hasCompletedWorkingSet(WorkoutExercise exercise) {
+    return exercise.sets.any(
+      (set) => set.setType == WorkoutSetType.working && set.completed,
     );
   }
 
@@ -225,41 +336,6 @@ class ExercisePerformanceMemory {
       durationSeconds: 0,
       notes: '',
     );
-  }
-
-  static WorkoutExercise _alignExerciseToCurrent({
-    required WorkoutExercise source,
-    required WorkoutExercise current,
-  }) {
-    final sourceByType = <WorkoutSetType, List<WorkoutSet>>{
-      for (final type in WorkoutSetType.values)
-        type: source.sets
-            .where((set) => set.setType == type)
-            .map(_normalizedSetForPreviousDisplay)
-            .toList(growable: false),
-    };
-    final counters = <WorkoutSetType, int>{
-      for (final type in WorkoutSetType.values) type: 0,
-    };
-
-    final aligned = current.sets.map((currentSet) {
-      final type = currentSet.setType;
-      final ordinal = counters[type] ?? 0;
-      counters[type] = ordinal + 1;
-      final candidates = sourceByType[type] ?? const <WorkoutSet>[];
-      if (ordinal < candidates.length) return candidates[ordinal];
-
-      return WorkoutSet(
-        weight: 0,
-        reps: 0,
-        completed: false,
-        setType: type,
-        restSeconds: currentSet.restSeconds,
-        sideRestSeconds: currentSet.sideRestSeconds,
-      );
-    }).toList(growable: false);
-
-    return source.copyWith(sets: aligned);
   }
 
   static WorkoutExercise _normalizedForPreviousDisplay(
