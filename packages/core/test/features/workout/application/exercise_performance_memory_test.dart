@@ -496,16 +496,19 @@ void main() {
               WorkoutSet(
                 weight: 0,
                 reps: 0,
+                completed: false,
                 setType: WorkoutSetType.warmup,
               ),
               WorkoutSet(
                 weight: 0,
                 reps: 0,
+                completed: false,
                 setType: WorkoutSetType.working,
               ),
               WorkoutSet(
                 weight: 0,
                 reps: 0,
+                completed: false,
                 setType: WorkoutSetType.working,
               ),
             ],
