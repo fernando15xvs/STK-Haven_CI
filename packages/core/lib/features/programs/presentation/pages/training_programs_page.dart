@@ -211,13 +211,15 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
             for (final routine in routines) routine.id: routine,
           };
 
-          void move(int index, int direction) {
-            final target = index + direction;
-            if (target < 0 || target >= routineIds.length) return;
+          void reorderRoutines(int oldIndex, int newIndex) {
             setDialogState(() {
+              var adjustedNewIndex = newIndex;
+              if (adjustedNewIndex > oldIndex) {
+                adjustedNewIndex -= 1;
+              }
               final next = List<String>.from(routineIds);
-              final value = next.removeAt(index);
-              next.insert(target, value);
+              final moved = next.removeAt(oldIndex);
+              next.insert(adjustedNewIndex, moved);
               routineIds = next;
             });
           }
@@ -527,52 +529,112 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
                         child: Text('Añade al menos una rutina.'),
+                      )
+                    else ...[
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.drag_indicator_rounded,
+                            size: 18,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Arrastra el asa para cambiar el orden de la rotación.',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
                       ),
-                    ...List.generate(routineIds.length, (index) {
-                      final routine = byId[routineIds[index]];
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          radius: 16,
-                          child: Text('${index + 1}'),
+                      const SizedBox(height: 8),
+                      ReorderableListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        buildDefaultDragHandles: false,
+                        itemCount: routineIds.length,
+                        onReorder: reorderRoutines,
+                        proxyDecorator: (child, index, animation) => Material(
+                          elevation: 8,
+                          borderRadius: BorderRadius.circular(14),
+                          child: child,
                         ),
-                        title: Text(routine?.name ?? 'Rutina eliminada'),
-                        trailing: Wrap(
-                          children: [
-                            IconButton(
-                              tooltip: 'Subir',
-                              onPressed:
-                                  index == 0 ? null : () => move(index, -1),
-                              icon: const Icon(Icons.arrow_upward_rounded),
+                        itemBuilder: (context, index) {
+                          final routineId = routineIds[index];
+                          final routine = byId[routineId];
+                          return Container(
+                            key: ValueKey('program-routine-$routineId'),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withValues(alpha: 0.28),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant
+                                    .withValues(alpha: 0.45),
+                              ),
                             ),
-                            IconButton(
-                              tooltip: 'Bajar',
-                              onPressed: index == routineIds.length - 1
-                                  ? null
-                                  : () => move(index, 1),
-                              icon: const Icon(Icons.arrow_downward_rounded),
+                            child: ListTile(
+                              contentPadding:
+                                  const EdgeInsets.fromLTRB(10, 2, 4, 2),
+                              leading: ReorderableDragStartListener(
+                                index: index,
+                                child: Tooltip(
+                                  message: 'Arrastrar para reordenar',
+                                  child: Container(
+                                    width: 42,
+                                    height: 42,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .surface,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.drag_indicator_rounded,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              title: Text(
+                                routine?.name ?? 'Rutina eliminada',
+                              ),
+                              subtitle: Text(
+                                'Posición ${index + 1} en la rotación',
+                              ),
+                              trailing: IconButton(
+                                tooltip: 'Quitar del plan',
+                                onPressed: () => setDialogState(() {
+                                  final next = List<String>.from(routineIds)
+                                    ..removeAt(index);
+                                  routineIds = next;
+                                  fixedWeekdayRoutineIds =
+                                      Map<int, String>.from(
+                                        fixedWeekdayRoutineIds,
+                                      )
+                                        ..removeWhere(
+                                          (_, value) => value == routineId,
+                                        );
+                                  if (scheduleMode ==
+                                      ProgramScheduleMode.fixed) {
+                                    targetSessionsPerWeek =
+                                        fixedWeekdayRoutineIds.length;
+                                  }
+                                }),
+                                icon: const Icon(Icons.close_rounded),
+                              ),
                             ),
-                            IconButton(
-                              tooltip: 'Quitar',
-                              onPressed: () => setDialogState(() {
-                                final removedId = routineIds[index];
-                                final next = List<String>.from(routineIds)
-                                  ..removeAt(index);
-                                routineIds = next;
-                                fixedWeekdayRoutineIds =
-                                    Map<int, String>.from(
-                                      fixedWeekdayRoutineIds,
-                                    )
-                                      ..removeWhere(
-                                        (_, value) => value == removedId,
-                                      );
-                              }),
-                              icon: const Icon(Icons.close_rounded),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
+                          );
+                        },
+                      ),
+                    ],
                     ExpansionTile(
                       tilePadding: EdgeInsets.zero,
                       title: const Text('Añadir rutina'),
