@@ -233,8 +233,15 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
             }
             setDialogState(() {
               fixedWeekdayRoutineIds = next;
+              targetSessionsPerWeek = next.length;
             });
           }
+
+          final scheduleIsValid = switch (scheduleMode) {
+            ProgramScheduleMode.continuous => trainingWeekdays.isNotEmpty,
+            ProgramScheduleMode.fixed => fixedWeekdayRoutineIds.isNotEmpty,
+            ProgramScheduleMode.flexible => targetSessionsPerWeek > 0,
+          };
 
           return AlertDialog(
             title: Text(existing == null ? 'Crear plan' : 'Editar plan'),
@@ -292,53 +299,37 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                         if (mode == null) return;
                         setDialogState(() {
                           scheduleMode = mode;
-                          if (mode == ProgramScheduleMode.continuous &&
-                              trainingWeekdays.isEmpty) {
-                            trainingWeekdays =
-                                ProgramScheduleProjector
-                                    .recommendedTrainingWeekdays(
-                              targetSessionsPerWeek,
-                            );
+                          if (mode == ProgramScheduleMode.continuous) {
+                            if (trainingWeekdays.isEmpty) {
+                              trainingWeekdays =
+                                  ProgramScheduleProjector
+                                      .recommendedTrainingWeekdays(
+                                targetSessionsPerWeek.clamp(1, 7).toInt(),
+                              );
+                            }
+                            targetSessionsPerWeek =
+                                trainingWeekdays.length;
+                          } else if (mode == ProgramScheduleMode.fixed) {
+                            targetSessionsPerWeek =
+                                fixedWeekdayRoutineIds.length;
+                          } else if (targetSessionsPerWeek <= 0) {
+                            targetSessionsPerWeek = 3;
                           }
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<int>(
-                      value: targetSessionsPerWeek,
-                      decoration: const InputDecoration(
-                        labelText: 'Frecuencia objetivo',
-                        helperText:
-                            'Cuántas sesiones quieres completar por semana. No obliga a usar días fijos.',
-                      ),
-                      items: List.generate(
-                        7,
-                        (index) => DropdownMenuItem(
-                          value: index + 1,
-                          child: Text(
-                            '${index + 1} ${index == 0 ? 'sesión' : 'sesiones'} / semana',
-                          ),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setDialogState(() {
-                          targetSessionsPerWeek = value;
                         });
                       },
                     ),
                     const SizedBox(height: 14),
                     if (scheduleMode == ProgramScheduleMode.continuous) ...[
                       Text(
-                        'Días habituales',
+                        '¿Qué días entrenas normalmente?',
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'El plan usa estos días como oportunidades. La secuencia continúa entre semanas y los días opcionales de cada rutina no interfieren.',
+                        'Marca los días en los que sueles entrenar. La app calcula automáticamente tu frecuencia semanal y continúa la rotación sin reiniciarla.',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
@@ -366,40 +357,26 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                                 next.remove(day);
                               }
                               trainingWeekdays = next;
+                              targetSessionsPerWeek =
+                                  trainingWeekdays.length;
                             }),
                           );
                         }).toList(),
                       ),
-                      const SizedBox(height: 8),
-                      TextButton.icon(
-                        onPressed: () => setDialogState(() {
-                          trainingWeekdays =
-                              ProgramScheduleProjector
-                                  .recommendedTrainingWeekdays(
-                            targetSessionsPerWeek,
-                          );
-                        }),
-                        icon: const Icon(Icons.auto_fix_high_outlined),
-                        label: const Text(
-                          'Sugerir días según mi frecuencia',
-                        ),
+                      const SizedBox(height: 10),
+                      _EditorFrequencySummary(
+                        sessions: trainingWeekdays.length,
+                        text: trainingWeekdays.isEmpty
+                            ? 'Selecciona al menos un día.'
+                            : trainingWeekdays.length == 7
+                                ? '7 sesiones/semana · una oportunidad cada día. Puedes dejar días sin marcar si quieres días libres.'
+                                : '${trainingWeekdays.length} ${trainingWeekdays.length == 1 ? 'sesión' : 'sesiones'} por semana',
                       ),
-                      if (trainingWeekdays.length !=
-                          targetSessionsPerWeek)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            'Tu objetivo es de $targetSessionsPerWeek sesiones, pero marcaste ${trainingWeekdays.length} días habituales. Puedes dejarlo así: frecuencia y calendario son independientes.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .tertiary,
-                                ),
-                          ),
-                        ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Ejemplo: si marcas L, M, J, V y S, tu frecuencia será 5 sesiones/semana aunque tengas solo 4 rutinas.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ] else if (scheduleMode ==
                         ProgramScheduleMode.fixed) ...[
                       Text(
@@ -456,6 +433,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                                 next[entry.$1] = routineId;
                               }
                               fixedWeekdayRoutineIds = next;
+                              targetSessionsPerWeek = next.length;
                             }),
                           ),
                         ),
@@ -468,22 +446,13 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                           'Usar la programación opcional de mis rutinas',
                         ),
                       ),
-                      if (fixedWeekdayRoutineIds.length !=
-                          targetSessionsPerWeek)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            'La semana fija tiene ${fixedWeekdayRoutineIds.length} sesiones asignadas y tu frecuencia objetivo es $targetSessionsPerWeek. La app mostrará ambas para que puedas ajustarlas si quieres.',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .tertiary,
-                                ),
-                          ),
-                        ),
+                      const SizedBox(height: 8),
+                      _EditorFrequencySummary(
+                        sessions: fixedWeekdayRoutineIds.length,
+                        text: fixedWeekdayRoutineIds.isEmpty
+                            ? 'Asigna al menos una rutina a un día.'
+                            : '${fixedWeekdayRoutineIds.length} ${fixedWeekdayRoutineIds.length == 1 ? 'sesión' : 'sesiones'} por semana · calculado desde tu semana fija',
+                      ),
                     ] else ...[
                       Text(
                         'Horario flexible',
@@ -491,8 +460,32 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'No eliges días. Cada vez que entrenes, la app continúa con la siguiente rutina de la secuencia. La frecuencia objetivo sirve para saber cuántas sesiones buscas completar esa semana.',
+                        'Aquí no eliges días concretos. Solo indicas cuántas veces quieres entrenar por semana y la rotación continúa cuando tú entrenes.',
                         style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<int>(
+                        value: targetSessionsPerWeek.clamp(1, 7).toInt(),
+                        decoration: const InputDecoration(
+                          labelText: '¿Cuántas veces quieres entrenar por semana?',
+                          helperText:
+                              'Ejemplo: 5 significa completar 5 sesiones durante la semana, sin importar qué días.',
+                        ),
+                        items: List.generate(
+                          7,
+                          (index) => DropdownMenuItem(
+                            value: index + 1,
+                            child: Text(
+                              '${index + 1} ${index == 0 ? 'sesión' : 'sesiones'} / semana',
+                            ),
+                          ),
+                        ),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setDialogState(() {
+                            targetSessionsPerWeek = value;
+                          });
+                        },
                       ),
                     ],
                     const SizedBox(height: 12),
@@ -628,7 +621,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                 child: const Text('Cancelar'),
               ),
               FilledButton(
-                onPressed: routineIds.isEmpty
+                onPressed: routineIds.isEmpty || !scheduleIsValid
                     ? null
                     : () => Navigator.pop(dialogContext, true),
                 child: Text(existing == null ? 'Crear y activar' : 'Guardar'),
@@ -640,13 +633,20 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
     );
 
     if (save == true) {
+      final normalizedTargetSessions = switch (scheduleMode) {
+        ProgramScheduleMode.continuous => trainingWeekdays.length,
+        ProgramScheduleMode.fixed => fixedWeekdayRoutineIds.length,
+        ProgramScheduleMode.flexible =>
+            targetSessionsPerWeek.clamp(1, 7).toInt(),
+      };
+
       if (existing == null) {
         await ref.read(trainingProgramListProvider.notifier).create(
               name: name.text,
               routineIds: routineIds,
               durationWeeks: durationWeeks,
               scheduleMode: scheduleMode,
-              targetSessionsPerWeek: targetSessionsPerWeek,
+              targetSessionsPerWeek: normalizedTargetSessions,
               trainingWeekdays: trainingWeekdays,
               fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,
               deloadWeeks: deloadWeeks,
@@ -668,7 +668,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                 durationWeeks: durationWeeks,
                 routineIds: routineIds,
                 scheduleMode: scheduleMode,
-                targetSessionsPerWeek: targetSessionsPerWeek,
+                targetSessionsPerWeek: normalizedTargetSessions,
                 trainingWeekdays: trainingWeekdays,
                 fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,
                 deloadWeeks: deloadWeeks,
@@ -1114,7 +1114,9 @@ class _PlanOverview extends StatelessWidget {
             children: [
               _InsightMetric(
                 icon: Icons.repeat_rounded,
-                label: 'Frecuencia objetivo',
+                label: program.scheduleMode == ProgramScheduleMode.flexible
+                    ? 'Frecuencia objetivo'
+                    : 'Frecuencia semanal',
                 value:
                     '${ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
                                   program,
@@ -1274,6 +1276,50 @@ class _DayBadge extends StatelessWidget {
               color: active ? colors.onPrimary : colors.onSurfaceVariant,
               fontWeight: FontWeight.w800,
             ),
+      ),
+    );
+  }
+}
+
+class _EditorFrequencySummary extends StatelessWidget {
+  const _EditorFrequencySummary({
+    required this.sessions,
+    required this.text,
+  });
+
+  final int sessions;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.primaryContainer.withValues(alpha: 0.24),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colors.primary.withValues(alpha: 0.28),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.repeat_rounded,
+            size: 20,
+            color: colors.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              sessions <= 0 ? text : 'Frecuencia: $text',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }

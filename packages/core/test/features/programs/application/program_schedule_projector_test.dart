@@ -133,31 +133,61 @@ void main() {
       );
     });
 
-    test('frequency goal stays independent from habitual weekdays', () {
-      final independent = program(
+    test('continuous frequency follows selected training days', () {
+      final continuous = program(
         weekdays: const {
           DateTime.monday,
           DateTime.tuesday,
           DateTime.thursday,
           DateTime.friday,
         },
-        targetSessionsPerWeek: 5,
+        targetSessionsPerWeek: 5, // stale value from an older editor
       );
 
       final projected = ProgramScheduleProjector.projectWeek(
-        program: independent,
+        program: continuous,
         routines: routines,
         weekStart: monday,
       );
 
-      expect(independent.effectiveTargetSessionsPerWeek, 5);
-      expect(projected.length, 4);
       expect(
-        ProgramScheduleProjector.effectiveTrainingWeekdays(
-          independent,
+        ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
+          continuous,
           routines,
-        ).length,
+        ),
         4,
+      );
+      expect(projected.length, 4);
+    });
+
+    test('continuous seven-day calendar means seven weekly sessions', () {
+      final everyDay = program(
+        weekdays: const {
+          DateTime.monday,
+          DateTime.tuesday,
+          DateTime.wednesday,
+          DateTime.thursday,
+          DateTime.friday,
+          DateTime.saturday,
+          DateTime.sunday,
+        },
+        targetSessionsPerWeek: 4,
+      );
+
+      expect(
+        ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
+          everyDay,
+          routines,
+        ),
+        7,
+      );
+      expect(
+        ProgramScheduleProjector.projectWeek(
+          program: everyDay,
+          routines: routines,
+          weekStart: monday,
+        ).length,
+        7,
       );
     });
 
@@ -218,6 +248,13 @@ void main() {
       expect(
         projected.map((item) => item.date.weekday).toList(),
         [DateTime.monday, DateTime.wednesday, DateTime.friday],
+      );
+      expect(
+        ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
+          fixed,
+          routines,
+        ),
+        3,
       );
     });
 

@@ -109,24 +109,36 @@ class ProgramScheduleProjector {
     TrainingProgram program,
     Iterable<Routine> routines,
   ) {
-    if (program.targetSessionsPerWeek > 0) {
-      return program.targetSessionsPerWeek.clamp(1, 7).toInt();
-    }
+    switch (program.scheduleMode) {
+      case ProgramScheduleMode.continuous:
+        final weekdays = effectiveTrainingWeekdays(program, routines);
+        if (weekdays.isNotEmpty) {
+          return weekdays.length.clamp(1, 7).toInt();
+        }
+        if (program.targetSessionsPerWeek > 0) {
+          return program.targetSessionsPerWeek.clamp(1, 7).toInt();
+        }
+        return program.routineIds.length.clamp(0, 7).toInt();
 
-    final weekdays = effectiveTrainingWeekdays(program, routines);
-    if (weekdays.isNotEmpty) {
-      return weekdays.length.clamp(1, 7).toInt();
-    }
+      case ProgramScheduleMode.fixed:
+        if (program.fixedWeekdayRoutineIds.isNotEmpty) {
+          return program.fixedWeekdayRoutineIds.length.clamp(1, 7).toInt();
+        }
+        final fixedDays = effectiveTrainingWeekdays(program, routines);
+        if (fixedDays.isNotEmpty) {
+          return fixedDays.length.clamp(1, 7).toInt();
+        }
+        if (program.targetSessionsPerWeek > 0) {
+          return program.targetSessionsPerWeek.clamp(1, 7).toInt();
+        }
+        return 0;
 
-    if (program.scheduleMode == ProgramScheduleMode.fixed &&
-        program.fixedWeekdayRoutineIds.isNotEmpty) {
-      return program.fixedWeekdayRoutineIds.length.clamp(1, 7).toInt();
+      case ProgramScheduleMode.flexible:
+        if (program.targetSessionsPerWeek > 0) {
+          return program.targetSessionsPerWeek.clamp(1, 7).toInt();
+        }
+        return program.routineIds.length.clamp(0, 7).toInt();
     }
-
-    if (program.routineIds.isNotEmpty) {
-      return program.routineIds.length.clamp(1, 7).toInt();
-    }
-    return 0;
   }
 
   static Set<int> _planningWeekdays(
