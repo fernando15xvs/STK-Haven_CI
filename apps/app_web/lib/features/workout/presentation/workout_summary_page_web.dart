@@ -9,8 +9,10 @@ import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/workout/application/workout_summary_snapshot.dart';
+import 'package:core/features/workout/application/active_workout_provider.dart';
 
 import '../../../core/theme/app_colors.dart';
+import 'active_workout_page_web_content.dart';
 
 class WorkoutSummaryPageWeb extends ConsumerWidget {
   final WorkoutAnalysisResult analysisResult;
@@ -70,6 +72,24 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
                     unit,
                   ),
                 ),
+                if (!summary.isComplete) ...[
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: () async {
+                      await ref
+                          .read(activeWorkoutProvider.notifier)
+                          .resumeSavedWorkout(session);
+                      if (!context.mounted) return;
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (_) => const ActiveWorkoutPageWeb(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('Continuar entrenamiento incompleto'),
+                  ),
+                ],
                 if (summary.exercises.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _ExerciseMapWeb(summary: summary),
@@ -684,7 +704,7 @@ class _SessionOverviewCardWeb extends StatelessWidget {
               icon: Icons.timer_outlined,
             ),
             _MetricCard(
-              label: 'Series de trabajo',
+              label: 'Series efectivas',
               value:
                   '${summary.completedWorkingSets}/${summary.plannedWorkingSets}',
               icon: Icons.layers_outlined,
@@ -823,10 +843,10 @@ class _ExerciseMapWeb extends StatelessWidget {
 
 String _sessionCompletionMessageWeb(WorkoutSummarySnapshot summary) {
   if (summary.plannedWorkingSets == 0) {
-    return 'La sesión quedó guardada sin series de trabajo registradas.';
+    return 'La sesión quedó guardada sin series efectivas registradas.';
   }
   if (summary.isComplete) {
-    return 'Se registraron todas las series de trabajo planificadas.';
+    return 'Se registraron todas las series efectivas planificadas.';
   }
   return 'El resumen refleja únicamente las series que se completaron.';
 }

@@ -55,7 +55,7 @@ class FitnessFormatter {
       ProgressionReason.buildRepetitions =>
         'Mantén la carga y prioriza repeticiones controladas dentro del rango.',
       ProgressionReason.incompleteWorkSets =>
-        'Faltan series de trabajo completadas para calcular una referencia fiable.',
+        'Faltan series efectivas completadas para calcular una referencia fiable.',
       ProgressionReason.missingRir =>
         'Falta el RIR de alguna serie; no se propone aumentar la carga.',
       ProgressionReason.effortTooHigh =>

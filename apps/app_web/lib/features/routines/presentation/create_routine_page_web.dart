@@ -94,6 +94,8 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
     int rest = current?.restSeconds ?? 90;
     int warmupSets = current?.warmupSets ?? personal.warmupSets;
     int approachSets = current?.approachSets ?? personal.approachSets;
+    RoutineExercisePhase phase =
+        current?.phase ?? RoutineExercisePhase.main;
     bool unilateral = current?.unilateral ?? false;
     UnilateralTarget unilateralTarget =
         current?.unilateralTarget ?? UnilateralTarget.other;
@@ -153,11 +155,41 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _DialogSection(
-                      title: 'Series efectivas',
+                      title: 'Ubicación en la sesión',
+                      subtitle:
+                          'Opcional: usa Movilidad para ejercicios preparatorios al inicio y Estiramiento para el final.',
+                      child: DropdownButtonFormField<RoutineExercisePhase>(
+                        initialValue: phase,
+                        decoration: const InputDecoration(
+                          labelText: 'Tipo de ejercicio dentro de la rutina',
+                        ),
+                        items: RoutineExercisePhase.values
+                            .map(
+                              (value) => DropdownMenuItem(
+                                value: value,
+                                child: Text(value.label),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setDialogState(() => phase = value);
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _DialogSection(
+                      title: phase == RoutineExercisePhase.main
+                          ? 'Series efectivas'
+                          : phase == RoutineExercisePhase.mobility
+                              ? 'Movilidad'
+                              : 'Estiramiento',
                       child: Column(
                         children: [
                           counter(
-                            'Series de trabajo',
+                            phase == RoutineExercisePhase.main
+                                ? 'Series efectivas'
+                                : 'Series / rondas',
                             sets,
                             sets > 1
                                 ? () => setDialogState(() => sets--)
@@ -202,36 +234,38 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    _DialogSection(
-                      title: 'Preparación predeterminada',
-                      subtitle:
-                          'Se recordará para la próxima vez que añadas este ejercicio. No cuenta como series efectivas ni para PRs.',
-                      child: Column(
-                        children: [
-                          counter(
-                            'Calentamiento',
-                            warmupSets,
-                            warmupSets > 0
-                                ? () => setDialogState(() => warmupSets--)
-                                : null,
-                            warmupSets < 5
-                                ? () => setDialogState(() => warmupSets++)
-                                : null,
-                          ),
-                          counter(
-                            'Aproximación',
-                            approachSets,
-                            approachSets > 0
-                                ? () => setDialogState(() => approachSets--)
-                                : null,
-                            approachSets < 5
-                                ? () => setDialogState(() => approachSets++)
-                                : null,
-                          ),
-                        ],
+                    if (phase == RoutineExercisePhase.main) ...[
+                      const SizedBox(height: 12),
+                      _DialogSection(
+                        title: 'Preparación predeterminada',
+                        subtitle:
+                            'Se recordará para la próxima vez que añadas este ejercicio. No cuenta como series efectivas ni para PRs.',
+                        child: Column(
+                          children: [
+                            counter(
+                              'Calentamiento',
+                              warmupSets,
+                              warmupSets > 0
+                                  ? () => setDialogState(() => warmupSets--)
+                                  : null,
+                              warmupSets < 5
+                                  ? () => setDialogState(() => warmupSets++)
+                                  : null,
+                            ),
+                            counter(
+                              'Aproximación',
+                              approachSets,
+                              approachSets > 0
+                                  ? () => setDialogState(() => approachSets--)
+                                  : null,
+                              approachSets < 5
+                                  ? () => setDialogState(() => approachSets++)
+                                  : null,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ],
                     const SizedBox(height: 12),
                     _DialogSection(
                       title: 'Nota técnica personal',
@@ -305,8 +339,11 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                     targetRepsMin: minReps,
                     targetRepsMax: maxReps,
                     restSeconds: rest,
-                    warmupSets: warmupSets,
-                    approachSets: approachSets,
+                    warmupSets:
+                        phase == RoutineExercisePhase.main ? warmupSets : 0,
+                    approachSets:
+                        phase == RoutineExercisePhase.main ? approachSets : 0,
+                    phase: phase,
                     unilateral: unilateral,
                     unilateralTarget: unilateralTarget,
                     supersetGroupId: current?.supersetGroupId,
@@ -833,6 +870,8 @@ class _ExerciseSelection extends StatelessWidget {
                 final item = selected[index];
                 final exercise = exerciseMap[item.exerciseId];
                 final extras = <String>[
+                  if (item.phase != RoutineExercisePhase.main)
+                    item.phase.shortLabel,
                   if (item.warmupSets > 0) '${item.warmupSets} calent.',
                   if (item.approachSets > 0) '${item.approachSets} aprox.',
                   if (item.unilateral) '${item.unilateralTarget.label} I/D',

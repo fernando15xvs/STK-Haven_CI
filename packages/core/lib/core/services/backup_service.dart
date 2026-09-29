@@ -257,6 +257,7 @@ class BackupService {
                 'unilateral': exercise.unilateral,
                 'unilateralTarget': exercise.unilateralTarget,
                 'supersetGroupId': exercise.supersetGroupId,
+                'phase': exercise.phase,
               },
             )
             .toList(),
@@ -397,6 +398,7 @@ class BackupService {
                         unilateralTarget:
                             exercise['unilateralTarget'] ?? 'other',
                         supersetGroupId: exercise['supersetGroupId'] as String?,
+                        phase: exercise['phase'] ?? 'main',
                       ),
                     )
                     .toList(),

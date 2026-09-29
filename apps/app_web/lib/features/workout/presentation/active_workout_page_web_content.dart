@@ -59,8 +59,13 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
     final session = ref.read(activeWorkoutProvider).session;
     if (session == null || _finishing) return;
 
-    final incomplete =
-        session.exercises.where((exercise) => !exercise.completed).length;
+    final incomplete = session.exercises.where((exercise) {
+      final effective = exercise.sets
+          .where((set) => set.setType == WorkoutSetType.working)
+          .toList(growable: false);
+      return effective.isNotEmpty &&
+          effective.any((set) => !set.completed);
+    }).length;
 
     if (incomplete > 0) {
       final continueFinish = await showDialog<bool>(
@@ -69,8 +74,8 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
           title: const Text('Aún faltan ejercicios'),
           content: Text(
             incomplete == 1
-                ? 'Todavía tienes 1 ejercicio incompleto. ¿Seguro que deseas finalizar el entrenamiento?'
-                : 'Todavía tienes $incomplete ejercicios incompletos. ¿Seguro que deseas finalizar el entrenamiento?',
+                ? 'Todavía tienes 1 ejercicio con series efectivas pendientes. Puedes seguir entrenando o guardar la sesión incompleta para continuarla después.'
+                : 'Todavía tienes $incomplete ejercicios con series efectivas pendientes. Puedes seguir entrenando o guardar la sesión incompleta para continuarla después.',
           ),
           actions: [
             TextButton(
@@ -79,7 +84,7 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Finalizar de todos modos'),
+              child: const Text('Guardar incompleta'),
             ),
           ],
         ),
@@ -712,7 +717,7 @@ class _MobileExerciseCardState extends State<_MobileExerciseCard> {
                           )
                         else
                           Text(
-                            '$doneWorking/${working.length} series de trabajo${completed ? ' · Completado' : ''}',
+                            '$doneWorking/${working.length} series efectivas${completed ? ' · Completado' : ''}',
                             style: AppTypography.bodySmall.copyWith(
                               color: completed
                                   ? AppColors.success
@@ -1045,7 +1050,7 @@ class _ExerciseEditor extends ConsumerWidget {
         content: Text(
           replaced
               ? 'Ejercicio sustituido por ${selected.name}.'
-              : 'No se pudo sustituir porque ya existe trabajo completado.',
+              : 'No se pudo sustituir porque ya existe series efectivas completadas.',
         ),
       ),
     );
@@ -1294,9 +1299,11 @@ class _SetTypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (type) {
+      WorkoutSetType.mobility => AppColors.info,
       WorkoutSetType.warmup => AppColors.warning,
       WorkoutSetType.approach => AppColors.gold,
       WorkoutSetType.working => AppColors.primary,
+      WorkoutSetType.stretching => AppColors.success,
     };
     return Container(
       constraints: const BoxConstraints(minWidth: 28),
