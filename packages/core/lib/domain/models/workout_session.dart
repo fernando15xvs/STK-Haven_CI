@@ -1,9 +1,11 @@
 import 'package:core/domain/models/routine.dart';
 
 enum WorkoutSetType {
+  mobility,
   warmup,
   approach,
   working,
+  stretching,
 }
 
 enum WorkoutSide { left, right }
@@ -22,15 +24,19 @@ extension WorkoutSideX on WorkoutSide {
 
 extension WorkoutSetTypeX on WorkoutSetType {
   String get label => switch (this) {
+        WorkoutSetType.mobility => 'Movilidad',
         WorkoutSetType.warmup => 'Calentamiento',
         WorkoutSetType.approach => 'Aproximación',
-        WorkoutSetType.working => 'Trabajo',
+        WorkoutSetType.working => 'Efectiva',
+        WorkoutSetType.stretching => 'Estiramiento',
       };
 
   String get shortLabel => switch (this) {
+        WorkoutSetType.mobility => 'M',
         WorkoutSetType.warmup => 'C',
         WorkoutSetType.approach => 'A',
-        WorkoutSetType.working => 'T',
+        WorkoutSetType.working => 'E',
+        WorkoutSetType.stretching => 'S',
       };
 }
 
@@ -80,7 +86,7 @@ class WorkoutSet {
   }) : setType = warmup ? WorkoutSetType.warmup : setType;
 
   /// Compatibilidad con los cálculos existentes: calentamiento y aproximación
-  /// no cuentan como series efectivas de trabajo.
+  /// no cuentan como series efectivas.
   bool get warmup => setType != WorkoutSetType.working;
 
   bool get hasLeftSideData =>

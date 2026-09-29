@@ -26,6 +26,8 @@ class HiveRoutineExercise {
   String unilateralTarget;
   @HiveField(10)
   String? supersetGroupId;
+  @HiveField(11)
+  String phase;
 
   HiveRoutineExercise({
     required this.exerciseId,
@@ -39,6 +41,7 @@ class HiveRoutineExercise {
     this.unilateral = false,
     this.unilateralTarget = 'other',
     this.supersetGroupId,
+    this.phase = 'main',
   });
 }
 

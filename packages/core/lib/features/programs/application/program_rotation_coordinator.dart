@@ -23,6 +23,7 @@ class ProgramRotationCoordinator {
         .where((session) =>
             !session.startedAt.isBefore(program.startedAt) &&
             session.routineId != null &&
+            _isCompletedEffectiveSession(session) &&
             !alreadyRecorded.contains(session.id))
         .toList(growable: false)
       ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
@@ -83,6 +84,15 @@ class ProgramRotationCoordinator {
       nextRotationIndex: nextIndex,
       completions: List<ProgramCompletion>.unmodifiable(completions),
     );
+  }
+
+  static bool _isCompletedEffectiveSession(WorkoutSession session) {
+    final effectiveSets = session.exercises
+        .expand((exercise) => exercise.sets)
+        .where((set) => set.setType == WorkoutSetType.working)
+        .toList(growable: false);
+    return effectiveSets.isNotEmpty &&
+        effectiveSets.every((set) => set.completed);
   }
 
   static String? nextRoutineId(

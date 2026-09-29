@@ -28,13 +28,14 @@ class HiveRoutineExerciseAdapter extends TypeAdapter<HiveRoutineExercise> {
       unilateral: fields[8] as bool? ?? false,
       unilateralTarget: fields[9] as String? ?? 'other',
       supersetGroupId: fields[10] as String?,
+      phase: fields[11] as String? ?? 'main',
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveRoutineExercise obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.exerciseId)
       ..writeByte(1)
@@ -56,7 +57,9 @@ class HiveRoutineExerciseAdapter extends TypeAdapter<HiveRoutineExercise> {
       ..writeByte(9)
       ..write(obj.unilateralTarget)
       ..writeByte(10)
-      ..write(obj.supersetGroupId);
+      ..write(obj.supersetGroupId)
+      ..writeByte(11)
+      ..write(obj.phase);
   }
 
   @override

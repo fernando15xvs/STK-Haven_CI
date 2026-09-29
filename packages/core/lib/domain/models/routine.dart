@@ -1,3 +1,29 @@
+enum RoutineExercisePhase {
+  mobility,
+  main,
+  stretching,
+}
+
+extension RoutineExercisePhaseX on RoutineExercisePhase {
+  String get label => switch (this) {
+        RoutineExercisePhase.mobility => 'Movilidad · inicio',
+        RoutineExercisePhase.main => 'Entrenamiento principal',
+        RoutineExercisePhase.stretching => 'Estiramiento · final',
+      };
+
+  String get shortLabel => switch (this) {
+        RoutineExercisePhase.mobility => 'Movilidad',
+        RoutineExercisePhase.main => 'Principal',
+        RoutineExercisePhase.stretching => 'Estiramiento',
+      };
+
+  int get sortOrder => switch (this) {
+        RoutineExercisePhase.mobility => 0,
+        RoutineExercisePhase.main => 1,
+        RoutineExercisePhase.stretching => 2,
+      };
+}
+
 enum UnilateralTarget {
   arm,
   leg,
@@ -27,6 +53,7 @@ class RoutineExercise {
   final int restSeconds;
   final int warmupSets;
   final int approachSets;
+  final RoutineExercisePhase phase;
   final bool unilateral;
   final UnilateralTarget unilateralTarget;
 
@@ -43,6 +70,7 @@ class RoutineExercise {
     required this.restSeconds,
     this.warmupSets = 0,
     this.approachSets = 0,
+    this.phase = RoutineExercisePhase.main,
     this.unilateral = false,
     this.unilateralTarget = UnilateralTarget.other,
     this.supersetGroupId,
@@ -60,6 +88,7 @@ class RoutineExercise {
     int? restSeconds,
     int? warmupSets,
     int? approachSets,
+    RoutineExercisePhase? phase,
     bool? unilateral,
     UnilateralTarget? unilateralTarget,
     String? supersetGroupId,
@@ -74,6 +103,7 @@ class RoutineExercise {
       restSeconds: restSeconds ?? this.restSeconds,
       warmupSets: warmupSets ?? this.warmupSets,
       approachSets: approachSets ?? this.approachSets,
+      phase: phase ?? this.phase,
       unilateral: unilateral ?? this.unilateral,
       unilateralTarget: unilateralTarget ?? this.unilateralTarget,
       supersetGroupId:
