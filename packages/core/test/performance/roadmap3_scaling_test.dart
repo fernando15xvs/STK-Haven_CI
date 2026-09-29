@@ -16,7 +16,21 @@ void main() {
       startedAt: at,
       finishedAt: at.add(const Duration(hours: 1)),
       durationSeconds: 3600,
-      exercises: const <WorkoutExercise>[],
+      exercises: const [
+        WorkoutExercise(
+          exerciseId: 'scale-exercise',
+          exerciseNameSnapshot: 'Scale exercise',
+          muscleGroupSnapshot: 'Test',
+          sets: [
+            WorkoutSet(
+              weight: 10,
+              reps: 10,
+              completed: true,
+              setType: WorkoutSetType.working,
+            ),
+          ],
+        ),
+      ],
     );
   }
 
