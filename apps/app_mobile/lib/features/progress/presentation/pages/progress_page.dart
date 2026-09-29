@@ -432,7 +432,7 @@ class _ExercisesTab extends ConsumerWidget {
               ),
               SizedBox(height: 8),
               Text(
-                'Completa series de trabajo para construir tu dashboard.',
+                'Completa series efectivas para construir tu dashboard.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppColors.textSecondary),
               ),
@@ -465,7 +465,7 @@ class _ExercisesTab extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Solo cuenta series de trabajo completadas; calentamiento y aproximación no alteran estas métricas.',
+                'Solo cuenta series efectivas completadas; calentamiento y aproximación no alteran estas métricas.',
                 style: AppTypography.bodySmall.copyWith(height: 1.35),
               ),
             ],
@@ -593,7 +593,7 @@ class _ExercisesTab extends ConsumerWidget {
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
                         child: _ExerciseMetric(
-                          label: 'SERIES TRABAJO',
+                          label: 'SERIES EFECTIVAS',
                           value: '${dashboard.completedWorkSets}',
                         ),
                       ),

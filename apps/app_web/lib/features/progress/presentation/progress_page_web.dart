@@ -460,7 +460,7 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
         icon: Icons.query_stats,
         title: 'Aún no hay progreso por ejercicio',
         message:
-            'Completa series de trabajo para construir métricas por ejercicio.',
+            'Completa series efectivas para construir métricas por ejercicio.',
       );
     }
 
@@ -601,7 +601,7 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: _ExerciseMetricWeb(
-                          label: 'SERIES TRABAJO',
+                          label: 'SERIES EFECTIVAS',
                           value: '${dashboard.completedWorkSets}',
                         ),
                       ),
@@ -664,7 +664,7 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                     const Spacer(),
                   const SizedBox(height: 6),
                   Text(
-                    'Solo series de trabajo completadas; preparación e incompletas quedan fuera.',
+                    'Solo series efectivas completadas; preparación e incompletas quedan fuera.',
                     style: AppTypography.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                       height: 1.3,

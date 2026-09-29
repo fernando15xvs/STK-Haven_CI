@@ -10,6 +10,8 @@ import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/workout/application/workout_summary_snapshot.dart';
+import 'package:core/features/workout/application/active_workout_provider.dart';
+import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_comparison_summary.dart';
@@ -126,6 +128,24 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
                   ),
                 ),
               ),
+              if (!summary.isComplete) ...[
+                const SizedBox(height: AppSpacing.md),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await ref
+                        .read(activeWorkoutProvider.notifier)
+                        .resumeSavedWorkout(session);
+                    if (!context.mounted) return;
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => const ActiveWorkoutPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Continuar entrenamiento incompleto'),
+                ),
+              ],
               const SizedBox(height: AppSpacing.xxl),
 
               // ── 2. Exercise completion map ──────────────────────────────
@@ -765,10 +785,10 @@ class _ExerciseCompletionRow extends StatelessWidget {
 
 String _sessionCompletionMessage(WorkoutSummarySnapshot summary) {
   if (summary.plannedWorkingSets == 0) {
-    return 'La sesión quedó guardada sin series de trabajo registradas.';
+    return 'La sesión quedó guardada sin series efectivas registradas.';
   }
   if (summary.isComplete) {
-    return 'Se registraron todas las series de trabajo planificadas.';
+    return 'Se registraron todas las series efectivas planificadas.';
   }
   return 'El resumen refleja únicamente las series que se completaron.';
 }

@@ -316,6 +316,43 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
 
   Future<void> _finish(BuildContext context) async {
     if (_isFinishing) return;
+
+    final session = ref.read(activeWorkoutProvider).session;
+    if (session == null) return;
+    final incompleteExercises = session.exercises.where((exercise) {
+      final effective = exercise.sets
+          .where((set) => set.setType == WorkoutSetType.working)
+          .toList(growable: false);
+      return effective.isNotEmpty &&
+          effective.any((set) => !set.completed);
+    }).length;
+
+    if (incompleteExercises > 0) {
+      final continueFinish = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surfaceHigh,
+          title: const Text('Aún faltan ejercicios'),
+          content: Text(
+            incompleteExercises == 1
+                ? 'Todavía tienes 1 ejercicio con series efectivas pendientes. Puedes seguir entrenando o guardar la sesión incompleta para continuarla después.'
+                : 'Todavía tienes $incompleteExercises ejercicios con series efectivas pendientes. Puedes seguir entrenando o guardar la sesión incompleta para continuarla después.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Seguir entrenando'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Guardar incompleta'),
+            ),
+          ],
+        ),
+      );
+      if (continueFinish != true) return;
+    }
+
     setState(() => _isFinishing = true);
     final result =
         await ref.read(activeWorkoutProvider.notifier).finishWorkout();
@@ -857,7 +894,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
         content: Text(
           replaced
               ? 'Ejercicio sustituido por ${selected.name}.'
-              : 'No se pudo sustituir el ejercicio porque ya tiene trabajo completado.',
+              : 'No se pudo sustituir el ejercicio porque ya tiene series efectivas completadas.',
         ),
       ),
     );
@@ -978,7 +1015,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                           )
                         else
                           Text(
-                            '${completed ? '$doneWorking series de trabajo · $volumeText' : '$doneWorking/${workingSets.length} series de trabajo'}${widget.workoutExercise.isInSuperset ? ' · Superserie' : ''}',
+                            '${completed ? '$doneWorking series efectivas · $volumeText' : '$doneWorking/${workingSets.length} series efectivas'}${widget.workoutExercise.isInSuperset ? ' · Superserie' : ''}',
                             style: AppTypography.bodySmall.copyWith(
                               color: completed
                                   ? AppColors.success
@@ -1268,9 +1305,11 @@ class _SetTypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (type) {
+      WorkoutSetType.mobility => AppColors.info,
       WorkoutSetType.warmup => AppColors.warning,
       WorkoutSetType.approach => AppColors.gold,
       WorkoutSetType.working => AppColors.primary,
+      WorkoutSetType.stretching => AppColors.success,
     };
     return Container(
       constraints: const BoxConstraints(minWidth: 26),

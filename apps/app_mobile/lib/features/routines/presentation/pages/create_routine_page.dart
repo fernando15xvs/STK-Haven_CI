@@ -100,6 +100,8 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
     int rest = current?.restSeconds ?? 90;
     int warmupSets = current?.warmupSets ?? personal.warmupSets;
     int approachSets = current?.approachSets ?? personal.approachSets;
+    RoutineExercisePhase phase =
+        current?.phase ?? RoutineExercisePhase.main;
     bool unilateral = current?.unilateral ?? false;
     UnilateralTarget unilateralTarget =
         current?.unilateralTarget ?? UnilateralTarget.other;
@@ -144,11 +146,41 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                 ),
                 const SizedBox(height: 22),
                 _ConfigSection(
-                  title: 'Series efectivas',
+                  title: 'Ubicación en la sesión',
+                  subtitle:
+                      'Opcional: Movilidad va al inicio, Entrenamiento principal al centro y Estiramiento al final.',
+                  child: DropdownButtonFormField<RoutineExercisePhase>(
+                    initialValue: phase,
+                    decoration: const InputDecoration(
+                      labelText: 'Tipo de ejercicio dentro de la rutina',
+                    ),
+                    items: RoutineExercisePhase.values
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(value.label),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setBottomState(() => phase = value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 14),
+                _ConfigSection(
+                  title: phase == RoutineExercisePhase.main
+                      ? 'Series efectivas'
+                      : phase == RoutineExercisePhase.mobility
+                          ? 'Movilidad'
+                          : 'Estiramiento',
                   child: Column(
                     children: [
                       _CounterRow(
-                        label: 'Series de trabajo',
+                        label: phase == RoutineExercisePhase.main
+                            ? 'Series efectivas'
+                            : 'Series / rondas',
                         value: sets,
                         min: 1,
                         max: 10,
@@ -186,33 +218,35 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 14),
-                _ConfigSection(
-                  title: 'Preparación predeterminada',
-                  subtitle:
-                      'Se recordará para la próxima vez que añadas este ejercicio. Estas series no cuentan como efectivas ni para PRs.',
-                  child: Column(
-                    children: [
-                      _CounterRow(
-                        label: 'Calentamiento',
-                        value: warmupSets,
-                        min: 0,
-                        max: 5,
-                        onChanged: (value) =>
-                            setBottomState(() => warmupSets = value),
-                      ),
-                      const SizedBox(height: 10),
-                      _CounterRow(
-                        label: 'Aproximación',
-                        value: approachSets,
-                        min: 0,
-                        max: 5,
-                        onChanged: (value) =>
-                            setBottomState(() => approachSets = value),
-                      ),
-                    ],
+                if (phase == RoutineExercisePhase.main) ...[
+                  const SizedBox(height: 14),
+                  _ConfigSection(
+                    title: 'Preparación predeterminada',
+                    subtitle:
+                        'Se recordará para la próxima vez que añadas este ejercicio. Estas series no cuentan como efectivas ni para PRs.',
+                    child: Column(
+                      children: [
+                        _CounterRow(
+                          label: 'Calentamiento',
+                          value: warmupSets,
+                          min: 0,
+                          max: 5,
+                          onChanged: (value) =>
+                              setBottomState(() => warmupSets = value),
+                        ),
+                        const SizedBox(height: 10),
+                        _CounterRow(
+                          label: 'Aproximación',
+                          value: approachSets,
+                          min: 0,
+                          max: 5,
+                          onChanged: (value) =>
+                              setBottomState(() => approachSets = value),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
                 const SizedBox(height: 14),
                 _ConfigSection(
                   title: 'Nota técnica personal',
@@ -290,8 +324,11 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                         targetRepsMin: repsMin,
                         targetRepsMax: repsMax,
                         restSeconds: rest,
-                        warmupSets: warmupSets,
-                        approachSets: approachSets,
+                        warmupSets:
+                            phase == RoutineExercisePhase.main ? warmupSets : 0,
+                        approachSets:
+                            phase == RoutineExercisePhase.main ? approachSets : 0,
+                        phase: phase,
                         unilateral: unilateral,
                         unilateralTarget: unilateralTarget,
                         supersetGroupId: current?.supersetGroupId,
@@ -753,6 +790,8 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                       Exercise(id: '', name: 'Desconocido', muscleGroup: ''),
                 );
                 final extras = <String>[
+                  if (item.phase != RoutineExercisePhase.main)
+                    item.phase.shortLabel,
                   if (item.warmupSets > 0) '${item.warmupSets} calent.',
                   if (item.approachSets > 0) '${item.approachSets} aprox.',
                   if (item.unilateral) '${item.unilateralTarget.label} I/D',
@@ -795,7 +834,9 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                       subtitle: Padding(
                         padding: const EdgeInsets.only(top: 5),
                         child: Text(
-                          '${item.targetSets} trabajo × ${item.targetRepsMin}-${item.targetRepsMax} · ${item.restSeconds}s${extras.isEmpty ? '' : ' · ${extras.join(' · ')}'}',
+                          item.phase == RoutineExercisePhase.main
+                              ? '${item.targetSets} efectivas × ${item.targetRepsMin}-${item.targetRepsMax} · ${item.restSeconds}s${extras.isEmpty ? '' : ' · ${extras.join(' · ')}'}'
+                              : '${item.targetSets} ${item.phase == RoutineExercisePhase.mobility ? 'movilidad' : 'estiramiento'} × ${item.targetRepsMin}-${item.targetRepsMax}${extras.isEmpty ? '' : ' · ${extras.join(' · ')}'}',
                           style: AppTypography.bodySmall,
                         ),
                       ),
