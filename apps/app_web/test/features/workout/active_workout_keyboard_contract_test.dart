@@ -6,17 +6,23 @@ void main() {
   test('mobile web repairs the viewport after the system keyboard closes', () {
     final html = File('web/index.html').readAsStringSync();
 
-    expect(html, contains('interactive-widget=resizes-content'));
+    expect(html, isNot(contains('interactive-widget=resizes-content')));
     expect(html, contains('const stkVisualViewport = window.visualViewport;'));
     expect(
       html,
-      contains("stkVisualViewport.addEventListener(\n        'resize'"),
+      contains("document.addEventListener(\n      'focusin'"),
     );
+    expect(html, contains('stkVisualViewport.removeEventListener('));
+    expect(html, contains('document.documentElement.style.height'));
+    expect(html, contains('document.body.style.height'));
+    expect(html, contains("style.removeProperty('height')"));
+    expect(html, contains('let stkStableViewportHeight = Math.max('));
     expect(html, contains('window.requestAnimationFrame(() => {'));
     expect(html, contains('document.documentElement.scrollTop = 0;'));
     expect(html, contains("window.dispatchEvent(new Event('resize'));"));
     expect(html, contains("document.addEventListener(\n      'focusout'"));
-    expect(html, contains('stkForceFlutterViewportSync, 420'));
+    expect(html, contains('[80, 180, 360, 600]'));
+    expect(html, contains('window.stkRecoverKeyboardViewport'));
   });
 
   test('web set input coalesces drafts and flushes when editing finishes', () {
@@ -27,9 +33,10 @@ void main() {
     expect(source, contains('Timer? _updateDebounce;'));
     expect(source, contains('Duration(milliseconds: 350)'));
     expect(source, contains('onChanged: (_) => _scheduleUpdate()'));
-    expect(source, contains('onSubmitted: (_) => _finishEditing()'));
+    expect(source, contains('onEditingComplete: _finishEditing'));
     expect(source, contains('onTapOutside: (_) => _finishEditing()'));
     expect(source, contains('textInputAction: TextInputAction.done'));
+    expect(source, contains('_stkRecoverKeyboardViewport();'));
     expect(source, contains('await WidgetsBinding.instance.endOfFrame;'));
   });
 

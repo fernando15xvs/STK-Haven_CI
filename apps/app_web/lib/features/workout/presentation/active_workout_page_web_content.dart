@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:js_interop';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,9 @@ import '../../../core/theme/app_colors.dart';
 import '../../routines/presentation/exercise_picker_page_web.dart';
 import 'barbell_calculator_dialog_web.dart';
 import 'workout_summary_page_web.dart';
+
+@JS('stkRecoverKeyboardViewport')
+external void _stkRecoverKeyboardViewport();
 
 class ActiveWorkoutPageWeb extends ConsumerStatefulWidget {
   const ActiveWorkoutPageWeb({super.key});
@@ -94,6 +98,10 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
       if (continueFinish != true) return;
     }
 
+    // Restore the pre-keyboard height while Flutter still considers text
+    // editing active. Safari can otherwise commit the temporary keyboard-sized
+    // canvas as the new physical viewport during the Done animation.
+    _stkRecoverKeyboardViewport();
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _finishing = true);
     // Let the keyboard/viewport transition and the progress indicator paint
@@ -1455,6 +1463,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
 
   void _finishEditing() {
     _flushUpdate();
+    _stkRecoverKeyboardViewport();
     FocusScope.of(context).unfocus();
   }
 
@@ -1471,7 +1480,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
       enabled: !widget.set.completed,
       decoration: InputDecoration(labelText: label, suffixIcon: suffixIcon),
       onChanged: (_) => _scheduleUpdate(),
-      onSubmitted: (_) => _finishEditing(),
+      onEditingComplete: _finishEditing,
       onTapOutside: (_) => _finishEditing(),
     );
   }

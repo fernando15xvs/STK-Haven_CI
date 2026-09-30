@@ -11,7 +11,7 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="STK Haven: entrenamiento, progreso y bienestar personal.">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#090A0C">
 
   <meta name="mobile-web-app-capable" content="yes">
@@ -263,89 +263,153 @@
       );
     });
 
-    // Flutter Web can keep the keyboard-sized viewport for one extra frame on
-    // mobile Safari/Chrome after the system keyboard is dismissed. Because the
-    // document deliberately disables overscroll, the browser does not get the
-    // follow-up scroll interaction that would normally repair that stale size.
-    // Re-notify Flutter after VisualViewport has actually expanded and once
-    // more after WebKit's closing animation settles.
+    // Keep Flutter's physical view full-sized. The virtual keyboard must be
+    // represented as a visual-viewport inset, not as a permanent resize of the
+    // document. Mobile WebKit can otherwise leave the canvas at the keyboard
+    // height for a frame (or until the next tap) after Done is pressed.
     const stkVisualViewport = window.visualViewport;
-    let stkPreviousVisualHeight =
-      stkVisualViewport?.height ?? window.innerHeight;
-    let stkKeyboardViewportWasShrunk = false;
-    let stkViewportRecoveryTimer = null;
+    let stkKeyboardViewportActive = false;
+    let stkViewportRecoveryTimers = [];
+    let stkStableViewportHeight = Math.max(
+      document.documentElement.clientHeight,
+      window.innerHeight,
+      stkVisualViewport?.height ?? 0,
+    );
 
-    function stkForceFlutterViewportSync() {
+    function stkIsEditable(element) {
+      if (!(element instanceof HTMLElement)) return false;
+      const tag = element.tagName;
+      return tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        element.isContentEditable;
+    }
+
+    function stkResetRootScroll() {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }
+
+    function stkNotifyFlutterViewport() {
+      stkResetRootScroll();
+      // Reading the root height commits the style change before Flutter's
+      // resize listener asks the browser for the new metrics.
+      void document.documentElement.offsetHeight;
+      window.dispatchEvent(new Event('resize'));
+    }
+
+    function stkSyncKeyboardViewport() {
+      if (!stkKeyboardViewportActive || !stkVisualViewport) return;
+
       window.requestAnimationFrame(() => {
-        const visualHeight =
-          window.visualViewport?.height ?? window.innerHeight;
-        const layoutHeight = Math.max(
-          document.documentElement.clientHeight,
-          window.innerHeight,
-        );
+        if (!stkKeyboardViewportActive) return;
+        const height = Math.round(stkVisualViewport.height);
+        if (height <= 0) return;
 
-        // Do not expand Flutter while the keyboard is still occupying a
-        // meaningful part of the screen.
-        if (layoutHeight - visualHeight > 120) return;
-
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-        window.scrollTo(0, 0);
-        window.dispatchEvent(new Event('resize'));
+        document.documentElement.style.height = `${height}px`;
+        document.body.style.height = `${height}px`;
+        stkNotifyFlutterViewport();
       });
     }
 
-    function stkHandleVisualViewportResize() {
-      window.requestAnimationFrame(() => {
-        const visualHeight =
-          window.visualViewport?.height ?? window.innerHeight;
-        const layoutHeight = Math.max(
-          document.documentElement.clientHeight,
-          window.innerHeight,
-        );
-        const isShrunk = layoutHeight - visualHeight > 120;
-        const grewAfterKeyboard =
-          visualHeight > stkPreviousVisualHeight + 80;
-        const keyboardJustClosed =
-          stkKeyboardViewportWasShrunk && !isShrunk;
-
-        stkPreviousVisualHeight = visualHeight;
-        stkKeyboardViewportWasShrunk = isShrunk;
-
-        if (!keyboardJustClosed && !grewAfterKeyboard) return;
-
-        stkForceFlutterViewportSync();
-        window.clearTimeout(stkViewportRecoveryTimer);
-        stkViewportRecoveryTimer = window.setTimeout(
-          stkForceFlutterViewportSync,
-          180,
-        );
+    function stkCancelViewportRecoveryTimers() {
+      stkViewportRecoveryTimers.forEach((timer) => {
+        window.clearTimeout(timer);
       });
+      stkViewportRecoveryTimers = [];
     }
 
-    if (stkVisualViewport) {
-      stkVisualViewport.addEventListener(
+    function stkRecoverFullViewport() {
+      stkKeyboardViewportActive = false;
+      stkVisualViewport?.removeEventListener(
         'resize',
-        stkHandleVisualViewportResize,
-        { passive: true },
+        stkSyncKeyboardViewport,
+      );
+
+      // Use the pre-keyboard height immediately. Waiting for Safari's delayed
+      // visualViewport update is what exposes the black keyboard-sized gap.
+      if (stkStableViewportHeight > 0) {
+        const height = `${Math.round(stkStableViewportHeight)}px`;
+        document.documentElement.style.height = height;
+        document.body.style.height = height;
+      }
+
+      // WebKit reports the final viewport late when Safari's bottom toolbar is
+      // visible. Notify Flutter now and at the end of that closing animation.
+      stkCancelViewportRecoveryTimers();
+      window.requestAnimationFrame(stkNotifyFlutterViewport);
+      [80, 180, 360, 600].forEach((delay) => {
+        stkViewportRecoveryTimers.push(
+          window.setTimeout(stkNotifyFlutterViewport, delay),
+        );
+      });
+      stkViewportRecoveryTimers.push(
+        window.setTimeout(() => {
+          document.documentElement.style.removeProperty('height');
+          document.body.style.removeProperty('height');
+          window.requestAnimationFrame(stkNotifyFlutterViewport);
+        }, 700),
       );
     }
 
-    // iOS may finish the Done/blur transition before reporting the final
-    // VisualViewport value. These delayed checks are harmless while the
-    // keyboard is open and close the remaining timing window when it is not.
     document.addEventListener(
-      'focusout',
-      () => {
-        window.setTimeout(stkForceFlutterViewportSync, 0);
-        window.setTimeout(stkForceFlutterViewportSync, 180);
-        window.setTimeout(stkForceFlutterViewportSync, 420);
+      'focusin',
+      (event) => {
+        if (!stkIsEditable(event.target) || !stkVisualViewport) return;
+
+        stkCancelViewportRecoveryTimers();
+        stkStableViewportHeight = Math.max(
+          document.documentElement.clientHeight,
+          window.innerHeight,
+          stkVisualViewport.height,
+        );
+        stkKeyboardViewportActive = true;
+        // Re-register for every editing session. WebKit can stop delivering
+        // this listener after a software-keyboard lifecycle.
+        stkVisualViewport.removeEventListener(
+          'resize',
+          stkSyncKeyboardViewport,
+        );
+        stkVisualViewport.addEventListener(
+          'resize',
+          stkSyncKeyboardViewport,
+          { passive: true },
+        );
+        stkSyncKeyboardViewport();
       },
       true,
     );
-    window.addEventListener('pageshow', stkForceFlutterViewportSync);
+
+    document.addEventListener(
+      'focusout',
+      () => {
+        window.setTimeout(() => {
+          // Moving directly between set fields must keep keyboard tracking on.
+          if (stkIsEditable(document.activeElement)) return;
+          stkRecoverFullViewport();
+        }, 0);
+      },
+      true,
+    );
+
+    window.stkRecoverKeyboardViewport = stkRecoverFullViewport;
+    window.addEventListener('pageshow', () => {
+      stkStableViewportHeight = Math.max(
+        document.documentElement.clientHeight,
+        window.innerHeight,
+        stkVisualViewport?.height ?? 0,
+      );
+      stkRecoverFullViewport();
+    });
     window.addEventListener('orientationchange', () => {
-      window.setTimeout(stkForceFlutterViewportSync, 250);
+      window.setTimeout(() => {
+        stkStableViewportHeight = Math.max(
+          document.documentElement.clientHeight,
+          window.innerHeight,
+          stkVisualViewport?.height ?? 0,
+        );
+        stkRecoverFullViewport();
+      }, 250);
     });
 
     function stkUrlBase64ToUint8Array(base64String) {
