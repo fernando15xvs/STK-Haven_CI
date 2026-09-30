@@ -41,6 +41,23 @@
       font-family: Outfit, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
+    /*
+      iOS Safari can keep Flutter's host element at the keyboard-sized height
+      for several frames after Done is pressed. Keep the physical Flutter view
+      full-sized while the keyboard is opening or closing; Flutter still reads
+      visualViewport and exposes the keyboard through MediaQuery.viewInsets.
+    */
+    html.stk-keyboard-viewport-lock {
+      height: var(--stk-full-viewport-height) !important;
+      min-height: var(--stk-full-viewport-height) !important;
+    }
+
+    html.stk-keyboard-viewport-lock body,
+    html.stk-keyboard-viewport-lock flutter-view {
+      height: 100% !important;
+      min-height: 100% !important;
+    }
+
     #splash {
       position: fixed;
       inset: 0;
@@ -186,7 +203,9 @@
 
         window.setTimeout(() => {
           splash.remove();
-          document.body.style.background = 'transparent';
+          // Keep the app background opaque. If WebKit exposes the document
+          // between keyboard animation frames, it must never flash black.
+          document.body.style.background = '#090A0C';
         }, STK_SPLASH_FADE_MS);
       }, remaining);
     }
@@ -298,16 +317,35 @@
       window.dispatchEvent(new Event('resize'));
     }
 
+    function stkLockFullViewport() {
+      if (stkStableViewportHeight <= 0) return;
+      document.documentElement.style.setProperty(
+        '--stk-full-viewport-height',
+        `${Math.round(stkStableViewportHeight)}px`,
+      );
+      document.documentElement.classList.add(
+        'stk-keyboard-viewport-lock',
+      );
+    }
+
+    function stkUnlockFullViewport() {
+      document.documentElement.classList.remove(
+        'stk-keyboard-viewport-lock',
+      );
+      document.documentElement.style.removeProperty(
+        '--stk-full-viewport-height',
+      );
+    }
+
     function stkSyncKeyboardViewport() {
       if (!stkKeyboardViewportActive || !stkVisualViewport) return;
 
       window.requestAnimationFrame(() => {
         if (!stkKeyboardViewportActive) return;
-        const height = Math.round(stkVisualViewport.height);
-        if (height <= 0) return;
-
-        document.documentElement.style.height = `${height}px`;
-        document.body.style.height = `${height}px`;
+        // Do not resize html/body to visualViewport.height. Flutter's web
+        // engine already converts that delta into viewInsets; shrinking the
+        // host element as well is what produced the black keyboard-sized gap.
+        stkLockFullViewport();
         stkNotifyFlutterViewport();
       });
     }
@@ -326,13 +364,9 @@
         stkSyncKeyboardViewport,
       );
 
-      // Use the pre-keyboard height immediately. Waiting for Safari's delayed
-      // visualViewport update is what exposes the black keyboard-sized gap.
-      if (stkStableViewportHeight > 0) {
-        const height = `${Math.round(stkStableViewportHeight)}px`;
-        document.documentElement.style.height = height;
-        document.body.style.height = height;
-      }
+      // Use the pre-keyboard height immediately. This also overrides the
+      // temporary inline height that Flutter WebKit can leave on flutter-view.
+      stkLockFullViewport();
 
       // WebKit reports the final viewport late when Safari's bottom toolbar is
       // visible. Notify Flutter now and at the end of that closing animation.
@@ -345,8 +379,7 @@
       });
       stkViewportRecoveryTimers.push(
         window.setTimeout(() => {
-          document.documentElement.style.removeProperty('height');
-          document.body.style.removeProperty('height');
+          stkUnlockFullViewport();
           window.requestAnimationFrame(stkNotifyFlutterViewport);
         }, 700),
       );
@@ -364,6 +397,7 @@
           stkVisualViewport.height,
         );
         stkKeyboardViewportActive = true;
+        stkLockFullViewport();
         // Re-register for every editing session. WebKit can stop delivering
         // this listener after a software-keyboard lifecycle.
         stkVisualViewport.removeEventListener(

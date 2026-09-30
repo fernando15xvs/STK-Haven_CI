@@ -13,9 +13,20 @@ void main() {
       contains("document.addEventListener(\n      'focusin'"),
     );
     expect(html, contains('stkVisualViewport.removeEventListener('));
-    expect(html, contains('document.documentElement.style.height'));
-    expect(html, contains('document.body.style.height'));
-    expect(html, contains("style.removeProperty('height')"));
+    expect(html, contains('html.stk-keyboard-viewport-lock flutter-view'));
+    expect(html, contains("'--stk-full-viewport-height'"));
+    expect(html, contains("'stk-keyboard-viewport-lock'"));
+    expect(html, contains('function stkLockFullViewport()'));
+    expect(html, contains('function stkUnlockFullViewport()'));
+    expect(
+      html,
+      isNot(contains('document.body.style.height = `${height}px`')),
+    );
+    expect(
+      html,
+      isNot(contains("document.body.style.background = 'transparent'")),
+    );
+    expect(html, contains("document.body.style.background = '#090A0C'"));
     expect(html, contains('let stkStableViewportHeight = Math.max('));
     expect(html, contains('window.requestAnimationFrame(() => {'));
     expect(html, contains('document.documentElement.scrollTop = 0;'));
