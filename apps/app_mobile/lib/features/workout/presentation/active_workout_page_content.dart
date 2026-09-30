@@ -353,7 +353,12 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       if (continueFinish != true) return;
     }
 
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _isFinishing = true);
+    // Paint the loading state and finish the native keyboard transition before
+    // starting persistence/history analysis on the UI isolate.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!context.mounted) return;
     final result =
         await ref.read(activeWorkoutProvider.notifier).finishWorkout();
     if (!context.mounted) return;
@@ -1436,7 +1441,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
     );
   }
 
-  void _flushDebounce() {
+  void _persistFields() {
     if (!widget.initialSet.completed) {
       ref.read(activeWorkoutProvider.notifier).updateSet(
             widget.exIndex,
@@ -1446,9 +1451,18 @@ class _SetRowState extends ConsumerState<_SetRow> {
     }
   }
 
+  void _flushDebounce() {
+    _debounce?.cancel();
+    _debounce = null;
+    _persistFields();
+  }
+
   void _onFieldChanged() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), _flushDebounce);
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _debounce = null;
+      _persistFields();
+    });
   }
 
   void _toggle() {
@@ -1558,6 +1572,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
                     enabled: !done,
                     done: done,
                     onChanged: (_) => _onFieldChanged(),
+                    onEditingComplete: _flushDebounce,
                   ),
                 ),
                 Expanded(
@@ -1567,6 +1582,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
                     enabled: !done,
                     done: done,
                     onChanged: (_) => _onFieldChanged(),
+                    onEditingComplete: _flushDebounce,
                   ),
                 ),
                 if (widget.isRirEnabled)
@@ -1578,6 +1594,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
                       done: done,
                       hint: '-',
                       onChanged: (_) => _onFieldChanged(),
+                      onEditingComplete: _flushDebounce,
                     ),
                   )
                 else
@@ -1717,6 +1734,7 @@ class _MinimalCell extends StatefulWidget {
   final bool done;
   final String hint;
   final ValueChanged<String>? onChanged;
+  final VoidCallback? onEditingComplete;
 
   const _MinimalCell({
     required this.controller,
@@ -1724,6 +1742,7 @@ class _MinimalCell extends StatefulWidget {
     required this.done,
     this.hint = '-',
     this.onChanged,
+    this.onEditingComplete,
   });
 
   @override
@@ -1771,6 +1790,7 @@ class _MinimalCellState extends State<_MinimalCell> {
         controller: widget.controller,
         textAlign: TextAlign.center,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        textInputAction: TextInputAction.done,
         style: AppTypography.monoMedium.copyWith(
           color: widget.done
               ? AppColors.textSecondary
@@ -1787,6 +1807,14 @@ class _MinimalCellState extends State<_MinimalCell> {
         ),
         enabled: widget.enabled,
         onChanged: widget.onChanged,
+        onEditingComplete: () {
+          widget.onEditingComplete?.call();
+          _focusNode.unfocus();
+        },
+        onTapOutside: (_) {
+          widget.onEditingComplete?.call();
+          _focusNode.unfocus();
+        },
       ),
     );
   }

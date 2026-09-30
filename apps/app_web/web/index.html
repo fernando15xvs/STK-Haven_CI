@@ -11,7 +11,7 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="STK Haven: entrenamiento, progreso y bienestar personal.">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#090A0C">
 
   <meta name="mobile-web-app-capable" content="yes">
@@ -261,6 +261,91 @@
         '',
         location.href,
       );
+    });
+
+    // Flutter Web can keep the keyboard-sized viewport for one extra frame on
+    // mobile Safari/Chrome after the system keyboard is dismissed. Because the
+    // document deliberately disables overscroll, the browser does not get the
+    // follow-up scroll interaction that would normally repair that stale size.
+    // Re-notify Flutter after VisualViewport has actually expanded and once
+    // more after WebKit's closing animation settles.
+    const stkVisualViewport = window.visualViewport;
+    let stkPreviousVisualHeight =
+      stkVisualViewport?.height ?? window.innerHeight;
+    let stkKeyboardViewportWasShrunk = false;
+    let stkViewportRecoveryTimer = null;
+
+    function stkForceFlutterViewportSync() {
+      window.requestAnimationFrame(() => {
+        const visualHeight =
+          window.visualViewport?.height ?? window.innerHeight;
+        const layoutHeight = Math.max(
+          document.documentElement.clientHeight,
+          window.innerHeight,
+        );
+
+        // Do not expand Flutter while the keyboard is still occupying a
+        // meaningful part of the screen.
+        if (layoutHeight - visualHeight > 120) return;
+
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        window.scrollTo(0, 0);
+        window.dispatchEvent(new Event('resize'));
+      });
+    }
+
+    function stkHandleVisualViewportResize() {
+      window.requestAnimationFrame(() => {
+        const visualHeight =
+          window.visualViewport?.height ?? window.innerHeight;
+        const layoutHeight = Math.max(
+          document.documentElement.clientHeight,
+          window.innerHeight,
+        );
+        const isShrunk = layoutHeight - visualHeight > 120;
+        const grewAfterKeyboard =
+          visualHeight > stkPreviousVisualHeight + 80;
+        const keyboardJustClosed =
+          stkKeyboardViewportWasShrunk && !isShrunk;
+
+        stkPreviousVisualHeight = visualHeight;
+        stkKeyboardViewportWasShrunk = isShrunk;
+
+        if (!keyboardJustClosed && !grewAfterKeyboard) return;
+
+        stkForceFlutterViewportSync();
+        window.clearTimeout(stkViewportRecoveryTimer);
+        stkViewportRecoveryTimer = window.setTimeout(
+          stkForceFlutterViewportSync,
+          180,
+        );
+      });
+    }
+
+    if (stkVisualViewport) {
+      stkVisualViewport.addEventListener(
+        'resize',
+        stkHandleVisualViewportResize,
+        { passive: true },
+      );
+    }
+
+    // iOS may finish the Done/blur transition before reporting the final
+    // VisualViewport value. These delayed checks are harmless while the
+    // keyboard is open and close the remaining timing window when it is not.
+    document.addEventListener(
+      'focusout',
+      () => {
+        window.setTimeout(stkForceFlutterViewportSync, 0);
+        window.setTimeout(stkForceFlutterViewportSync, 180);
+        window.setTimeout(stkForceFlutterViewportSync, 420);
+      },
+      true,
+    );
+    window.addEventListener('pageshow', stkForceFlutterViewportSync);
+    window.addEventListener('orientationchange', () => {
+      window.setTimeout(stkForceFlutterViewportSync, 250);
     });
 
     function stkUrlBase64ToUint8Array(base64String) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/core/utils/fitness_formatter.dart';
@@ -92,7 +94,13 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
       if (continueFinish != true) return;
     }
 
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _finishing = true);
+    // Let the keyboard/viewport transition and the progress indicator paint
+    // before Hive history analysis starts. This avoids a visible hitch on
+    // mobile browsers when an incomplete workout is saved.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
     final result =
         await ref.read(activeWorkoutProvider.notifier).finishWorkout();
     if (!mounted) return;
@@ -1356,6 +1364,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
   late final TextEditingController _weight;
   late final TextEditingController _reps;
   late final TextEditingController _rir;
+  Timer? _updateDebounce;
 
   String _number(double value) => value == 0
       ? ''
@@ -1403,6 +1412,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
 
   @override
   void dispose() {
+    _updateDebounce?.cancel();
     _weight.dispose();
     _reps.dispose();
     _rir.dispose();
@@ -1429,6 +1439,25 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
         );
   }
 
+  void _scheduleUpdate() {
+    _updateDebounce?.cancel();
+    _updateDebounce = Timer(const Duration(milliseconds: 350), () {
+      _updateDebounce = null;
+      if (mounted) _update();
+    });
+  }
+
+  void _flushUpdate({bool? completed}) {
+    _updateDebounce?.cancel();
+    _updateDebounce = null;
+    _update(completed: completed);
+  }
+
+  void _finishEditing() {
+    _flushUpdate();
+    FocusScope.of(context).unfocus();
+  }
+
   Widget _field({
     required String label,
     required TextEditingController controller,
@@ -1438,10 +1467,12 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      textInputAction: TextInputAction.done,
       enabled: !widget.set.completed,
       decoration: InputDecoration(labelText: label, suffixIcon: suffixIcon),
-      onChanged: (_) => _update(),
-      onSubmitted: (_) => _update(),
+      onChanged: (_) => _scheduleUpdate(),
+      onSubmitted: (_) => _finishEditing(),
+      onTapOutside: (_) => _finishEditing(),
     );
   }
 
@@ -1452,7 +1483,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
     return Expanded(
       child: OutlinedButton.icon(
         onPressed: () {
-          _update();
+          _flushUpdate();
           ref.read(activeWorkoutProvider.notifier).toggleUnilateralSide(
                 widget.exerciseIndex,
                 widget.setIndex,
@@ -1615,7 +1646,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
                 else ...[
                   const SizedBox(height: 10),
                   FilledButton.icon(
-                    onPressed: () => _update(completed: !done),
+                    onPressed: () => _flushUpdate(completed: !done),
                     style: FilledButton.styleFrom(
                       backgroundColor: done ? AppColors.success : null,
                       minimumSize: const Size(0, 48),
@@ -1657,7 +1688,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
                     SizedBox(
                       width: 125,
                       child: FilledButton.icon(
-                        onPressed: () => _update(completed: !done),
+                        onPressed: () => _flushUpdate(completed: !done),
                         style: FilledButton.styleFrom(
                           backgroundColor:
                               done ? AppColors.success : null,
