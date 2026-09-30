@@ -32,7 +32,17 @@ void main() {
     expect(html, contains('document.documentElement.scrollTop = 0;'));
     expect(html, contains("window.dispatchEvent(new Event('resize'));"));
     expect(html, contains("document.addEventListener(\n      'focusout'"));
-    expect(html, contains('[80, 180, 360, 600]'));
+    expect(html, contains("stkVisualViewport.addEventListener(\n          'resize'"));
+    expect(html, contains("stkVisualViewport.addEventListener(\n          'scroll'"));
+    expect(html, contains('const STK_VIEWPORT_STABLE_FRAMES = 3;'));
+    expect(html, contains('const STK_VIEWPORT_RECOVERY_MAX_MS = 1600;'));
+    expect(html, contains('function stkPollViewportRecovery(timestamp)'));
+    expect(html, contains('stkVisualViewport.offsetTop'));
+    expect(html, contains('stkViewportStableFrames >='));
+    expect(html, contains('function stkFinishViewportRecovery()'));
+    expect(html, contains('position: fixed !important;'));
+    expect(html, contains('max-height: var(--stk-full-viewport-height) !important;'));
+    expect(html, isNot(contains('[80, 180, 360, 600]')));
     expect(html, contains('window.stkRecoverKeyboardViewport'));
   });
 
