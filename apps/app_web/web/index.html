@@ -52,10 +52,21 @@
       min-height: var(--stk-full-viewport-height) !important;
     }
 
-    html.stk-keyboard-viewport-lock body,
+    html.stk-keyboard-viewport-lock body {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: var(--stk-full-viewport-height) !important;
+      min-height: var(--stk-full-viewport-height) !important;
+    }
+
     html.stk-keyboard-viewport-lock flutter-view {
-      height: 100% !important;
-      min-height: 100% !important;
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: var(--stk-full-viewport-height) !important;
+      min-height: var(--stk-full-viewport-height) !important;
+      max-height: var(--stk-full-viewport-height) !important;
     }
 
     #splash {
@@ -288,7 +299,13 @@
     // height for a frame (or until the next tap) after Done is pressed.
     const stkVisualViewport = window.visualViewport;
     let stkKeyboardViewportActive = false;
-    let stkViewportRecoveryTimers = [];
+    let stkKeyboardViewportRecovering = false;
+    let stkViewportRecoveryFrame = 0;
+    let stkViewportRecoveryStartedAt = 0;
+    let stkViewportStableFrames = 0;
+    const STK_VIEWPORT_EPSILON_PX = 2;
+    const STK_VIEWPORT_STABLE_FRAMES = 3;
+    const STK_VIEWPORT_RECOVERY_MAX_MS = 1600;
     let stkStableViewportHeight = Math.max(
       document.documentElement.clientHeight,
       window.innerHeight,
@@ -338,51 +355,96 @@
     }
 
     function stkSyncKeyboardViewport() {
-      if (!stkKeyboardViewportActive || !stkVisualViewport) return;
+      if ((!stkKeyboardViewportActive && !stkKeyboardViewportRecovering) ||
+          !stkVisualViewport) {
+        return;
+      }
 
       window.requestAnimationFrame(() => {
-        if (!stkKeyboardViewportActive) return;
-        // Do not resize html/body to visualViewport.height. Flutter's web
-        // engine already converts that delta into viewInsets; shrinking the
-        // host element as well is what produced the black keyboard-sized gap.
+        if (!stkKeyboardViewportActive && !stkKeyboardViewportRecovering) {
+          return;
+        }
+        // Never let WebKit shrink Flutter's physical host to the keyboard-sized
+        // visual viewport. Flutter still receives the keyboard as viewInsets.
         stkLockFullViewport();
         stkNotifyFlutterViewport();
       });
     }
 
-    function stkCancelViewportRecoveryTimers() {
-      stkViewportRecoveryTimers.forEach((timer) => {
-        window.clearTimeout(timer);
+    function stkStopViewportRecovery() {
+      if (stkViewportRecoveryFrame) {
+        window.cancelAnimationFrame(stkViewportRecoveryFrame);
+        stkViewportRecoveryFrame = 0;
+      }
+      stkKeyboardViewportRecovering = false;
+      stkViewportStableFrames = 0;
+    }
+
+    function stkDetachViewportListeners() {
+      stkVisualViewport?.removeEventListener('resize', stkSyncKeyboardViewport);
+      stkVisualViewport?.removeEventListener('scroll', stkSyncKeyboardViewport);
+    }
+
+    function stkFinishViewportRecovery() {
+      stkStopViewportRecovery();
+      stkDetachViewportListeners();
+
+      // Keep the full-height host through two paints after WebKit reports a
+      // stable viewport. Unlocking in the same frame can expose its stale
+      // keyboard-sized backing surface.
+      window.requestAnimationFrame(() => {
+        stkNotifyFlutterViewport();
+        window.requestAnimationFrame(() => {
+          stkUnlockFullViewport();
+          stkNotifyFlutterViewport();
+        });
       });
-      stkViewportRecoveryTimers = [];
+    }
+
+    function stkPollViewportRecovery(timestamp) {
+      if (!stkKeyboardViewportRecovering || !stkVisualViewport) return;
+
+      stkLockFullViewport();
+      stkNotifyFlutterViewport();
+
+      const heightRecovered =
+        Math.abs(stkVisualViewport.height - stkStableViewportHeight) <=
+          STK_VIEWPORT_EPSILON_PX;
+      const offsetRecovered =
+        Math.abs(stkVisualViewport.offsetTop) <= STK_VIEWPORT_EPSILON_PX;
+      const timedOut =
+        timestamp - stkViewportRecoveryStartedAt >=
+          STK_VIEWPORT_RECOVERY_MAX_MS;
+
+      if (heightRecovered && offsetRecovered) {
+        stkViewportStableFrames += 1;
+      } else {
+        stkViewportStableFrames = 0;
+      }
+
+      if (stkViewportStableFrames >= STK_VIEWPORT_STABLE_FRAMES || timedOut) {
+        stkFinishViewportRecovery();
+        return;
+      }
+
+      stkViewportRecoveryFrame =
+        window.requestAnimationFrame(stkPollViewportRecovery);
     }
 
     function stkRecoverFullViewport() {
       stkKeyboardViewportActive = false;
-      stkVisualViewport?.removeEventListener(
-        'resize',
-        stkSyncKeyboardViewport,
-      );
+      stkStopViewportRecovery();
+      stkKeyboardViewportRecovering = true;
+      stkViewportRecoveryStartedAt = performance.now();
+      stkViewportStableFrames = 0;
 
-      // Use the pre-keyboard height immediately. This also overrides the
-      // temporary inline height that Flutter WebKit can leave on flutter-view.
+      // Keep resize + scroll tracking alive while Safari animates both the
+      // keyboard and its browser chrome. Do not guess the duration with fixed
+      // timers; release only after visualViewport is physically stable.
       stkLockFullViewport();
-
-      // WebKit reports the final viewport late when Safari's bottom toolbar is
-      // visible. Notify Flutter now and at the end of that closing animation.
-      stkCancelViewportRecoveryTimers();
-      window.requestAnimationFrame(stkNotifyFlutterViewport);
-      [80, 180, 360, 600].forEach((delay) => {
-        stkViewportRecoveryTimers.push(
-          window.setTimeout(stkNotifyFlutterViewport, delay),
-        );
-      });
-      stkViewportRecoveryTimers.push(
-        window.setTimeout(() => {
-          stkUnlockFullViewport();
-          window.requestAnimationFrame(stkNotifyFlutterViewport);
-        }, 700),
-      );
+      stkNotifyFlutterViewport();
+      stkViewportRecoveryFrame =
+        window.requestAnimationFrame(stkPollViewportRecovery);
     }
 
     document.addEventListener(
@@ -390,7 +452,7 @@
       (event) => {
         if (!stkIsEditable(event.target) || !stkVisualViewport) return;
 
-        stkCancelViewportRecoveryTimers();
+        stkStopViewportRecovery();
         stkStableViewportHeight = Math.max(
           document.documentElement.clientHeight,
           window.innerHeight,
@@ -400,12 +462,14 @@
         stkLockFullViewport();
         // Re-register for every editing session. WebKit can stop delivering
         // this listener after a software-keyboard lifecycle.
-        stkVisualViewport.removeEventListener(
-          'resize',
-          stkSyncKeyboardViewport,
-        );
+        stkDetachViewportListeners();
         stkVisualViewport.addEventListener(
           'resize',
+          stkSyncKeyboardViewport,
+          { passive: true },
+        );
+        stkVisualViewport.addEventListener(
+          'scroll',
           stkSyncKeyboardViewport,
           { passive: true },
         );
