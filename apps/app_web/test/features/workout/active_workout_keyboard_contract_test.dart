@@ -12,7 +12,7 @@ void main() {
       html,
       contains("document.addEventListener(\n      'focusin'"),
     );
-    expect(html, contains('stkVisualViewport.removeEventListener('));
+    expect(html, contains('stkVisualViewport?.removeEventListener('));
     expect(html, contains('html.stk-keyboard-viewport-lock flutter-view'));
     expect(html, contains("'--stk-full-viewport-height'"));
     expect(html, contains("'stk-keyboard-viewport-lock'"));
