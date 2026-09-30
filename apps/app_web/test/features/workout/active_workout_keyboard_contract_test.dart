@@ -36,7 +36,11 @@ void main() {
     expect(source, contains('onEditingComplete: _finishEditing'));
     expect(source, contains('onTapOutside: (_) => _finishEditing()'));
     expect(source, contains('textInputAction: TextInputAction.done'));
-    expect(source, contains('_stkRecoverKeyboardViewport();'));
+    expect(source, contains('recoverKeyboardViewport();'));
+    final webBridge = File(
+      'lib/features/workout/presentation/keyboard_viewport_bridge_web.dart',
+    ).readAsStringSync();
+    expect(webBridge, contains("@JS('stkRecoverKeyboardViewport')"));
     expect(source, contains('await WidgetsBinding.instance.endOfFrame;'));
   });
 
