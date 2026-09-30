@@ -20,7 +20,7 @@ void main() {
     expect(html, contains('function stkUnlockFullViewport()'));
     expect(
       html,
-      isNot(contains('document.body.style.height = `${height}px`')),
+      isNot(contains(r'document.body.style.height = `${height}px`')),
     );
     expect(
       html,
