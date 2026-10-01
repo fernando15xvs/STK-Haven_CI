@@ -139,6 +139,14 @@ values
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2', 'athlete'),
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 'coach');
 
+insert into public.stk_subscription_entitlements(
+  user_id, product, status, tier, client_limit,
+  starts_at, current_period_end, source
+) values (
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', 'coach_pro', 'active', 'test', 100,
+  now() - interval '1 day', now() + interval '30 days', 'pgTap'
+);
+
 create temporary table _stk_invite_test (
   code text,
   relationship_id uuid
