@@ -13,6 +13,14 @@ insert into public.stk_user_profiles(user_id,display_name) values
 ('a2000000-0000-0000-0000-000000000001','Coach'),('b2000000-0000-0000-0000-000000000001','Client'),('a2000000-0000-0000-0000-000000000002','Stranger');
 insert into public.stk_user_capabilities(user_id,capability) values
 ('a2000000-0000-0000-0000-000000000001','coach'),('b2000000-0000-0000-0000-000000000001','athlete'),('a2000000-0000-0000-0000-000000000002','coach');
+insert into public.stk_subscription_entitlements(
+  user_id, product, status, tier, client_limit,
+  starts_at, current_period_end, source
+) values (
+  'a2000000-0000-0000-0000-000000000001', 'coach_pro', 'active', 'test', 100,
+  now() - interval '1 day', now() + interval '30 days', 'pgTap'
+);
+
 insert into public.stk_coach_client_relationships(id,coach_user_id,client_user_id,status,permissions) values
 ('c2000000-0000-0000-0000-000000000001','a2000000-0000-0000-0000-000000000001','b2000000-0000-0000-0000-000000000001','active','{"view_checkins":true,"comment":true}');
 
