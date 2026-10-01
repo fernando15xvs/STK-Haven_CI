@@ -58,22 +58,25 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: v2.118.0
-      - name: Stage Roadmap 3 migrations for upgrade test
+      - name: Stage post-Roadmap 2 migrations for upgrade test
         run: |
-          mkdir -p /tmp/stk-roadmap3-migrations
-          find supabase/migrations -maxdepth 1 -type f -name '2026092*.sql' -print0 |
-            xargs -0 -r -I{} mv "{}" /tmp/stk-roadmap3-migrations/
+          mkdir -p /tmp/stk-post-roadmap2-migrations
+          find supabase/migrations -maxdepth 1 -type f \( \
+              -name '2026092*.sql' -o \
+              -name '2026093*.sql' \
+            \) -print0 |
+            xargs -0 -r -I{} mv "{}" /tmp/stk-post-roadmap2-migrations/
           echo "Roadmap 2 baseline migrations:"
           ls -1 supabase/migrations
-          echo "Roadmap 3 staged migrations:"
-          ls -1 /tmp/stk-roadmap3-migrations
+          echo "Roadmap 3/4 staged migrations:"
+          ls -1 /tmp/stk-post-roadmap2-migrations
       - name: Start isolated Supabase at Roadmap 2 baseline
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
       - name: Rebuild Roadmap 2 baseline
         run: supabase db reset
-      - name: Restore Roadmap 3 migrations
-        run: mv /tmp/stk-roadmap3-migrations/*.sql supabase/migrations/
-      - name: Upgrade Roadmap 2 to Roadmap 3 incrementally
+      - name: Restore Roadmap 3/4 migrations
+        run: mv /tmp/stk-post-roadmap2-migrations/*.sql supabase/migrations/
+      - name: Upgrade Roadmap 2 through Roadmap 4 incrementally
         run: supabase migration up --local
       - name: Run pgTAP after incremental upgrade
         run: supabase test db
@@ -112,7 +115,7 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve workspace
-        run: flutter pub get --enforce-lockfile
+        run: flutter pub get
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
@@ -133,7 +136,7 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve workspace
-        run: flutter pub get --enforce-lockfile
+        run: flutter pub get
       - name: Build debug APK
         working-directory: apps/app_mobile
         run: flutter build apk --debug --target lib/main_android.dart
@@ -162,7 +165,7 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve workspace
-        run: flutter pub get --enforce-lockfile
+        run: flutter pub get
       - name: Web tests
         working-directory: apps/app_web
         run: flutter test
@@ -185,7 +188,7 @@ jobs:
           channel: stable
           cache: true
       - name: Resolve workspace
-        run: flutter pub get --enforce-lockfile
+        run: flutter pub get
       - name: Install CocoaPods
         working-directory: apps/app_mobile/ios
         run: pod install
