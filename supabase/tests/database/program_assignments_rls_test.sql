@@ -107,6 +107,14 @@ values
   ('dddddddd-dddd-dddd-dddd-ddddddddddd1', 'athlete'),
   ('dddddddd-dddd-dddd-dddd-ddddddddddd2', 'athlete');
 
+insert into public.stk_subscription_entitlements(
+  user_id, product, status, tier, client_limit,
+  starts_at, current_period_end, source
+) values (
+  'cccccccc-cccc-cccc-cccc-ccccccccccc1', 'coach_pro', 'active', 'test', 100,
+  now() - interval '1 day', now() + interval '30 days', 'pgTap'
+);
+
 insert into public.stk_coach_client_relationships (
   id,
   coach_user_id,
