@@ -11,15 +11,28 @@
 
 ---
 
+## Evidencia automática Fase 1 — 2026-09-30
+
+- Fuente funcional validada antes de documentación final: `85e64befefdb381a5814b2b2ac00384477699d00`.
+- Mirror funcional: `fd00dda0ed1a7b5bc8505e2250abb54f8cd20a47`.
+- GitHub Actions: **CI #87**, run `36808744828`.
+- Resultado: **7/7 success**.
+- Supabase validó upgrade incremental Roadmap 2 → 3 → 4 y rebuild limpio, ambos con pgTAP verde.
+- Se demostró que `coach` sin entitlement no habilita Coach Pro.
+- Se validaron límite de clientes, expiración, revocación independiente del billing e idempotencia por `event_key`.
+- Sin merge, sin deploy remoto y sin aplicar la migración Roadmap 4 a Supabase remoto.
+
+---
+
 # 0. Principios no negociables
 
-- [ ] Una sola fuente de verdad en `packages/core`; mobile/web consumen los mismos contratos.
-- [ ] Separar identidad/rol, suscripción comercial, permisos del cliente y capacidades funcionales.
-- [ ] `coach` nunca equivale a “pagó”.
-- [ ] `coach_pro` nunca concede acceso a datos de un cliente por sí solo.
-- [ ] El cliente conserva consentimiento granular y revocación inmediata.
-- [ ] Ningún entitlement pagado se confía a Hive/SharedPreferences/UI.
-- [ ] El servidor es autoridad de entitlements y límites.
+- [x] Una sola fuente de verdad en `packages/core`; mobile/web consumen los mismos contratos.
+- [x] Separar identidad/rol, suscripción comercial, permisos del cliente y capacidades funcionales.
+- [x] `coach` nunca equivale a “pagó”.
+- [x] `coach_pro` nunca concede acceso a datos de un cliente por sí solo.
+- [x] El cliente conserva consentimiento granular y revocación inmediata.
+- [x] Ningún entitlement pagado se confía a Hive/SharedPreferences/UI.
+- [x] El servidor es autoridad de entitlements y límites.
 - [ ] Coach Inteligente explica evidencia, confianza y motivo; no inventa datos.
 - [ ] Coach Inteligente no modifica silenciosamente programas, cargas, volumen o nutrición.
 - [ ] Sugerencias sensibles de salud quedan fuera del alcance: no diagnóstico ni tratamiento.
@@ -39,16 +52,16 @@ Definir cuatro capas independientes:
 3. **Entitlement comercial**: p. ej. `coach_pro`, estado, vigencia, tier y límites.
 4. **Relación + permisos**: qué cliente autorizó a qué entrenador y para qué datos/acciones.
 
-- [ ] Eliminar la posibilidad de usar `stk_user_capabilities` como bypass de pago.
-- [ ] Mantener `athlete/coach` como rol funcional, no como licencia.
-- [ ] Crear contrato `SubscriptionEntitlement`/equivalente en core.
-- [ ] Diseñar tabla/RPC server-authoritative para entitlements.
-- [ ] Definir estados: trial/active/grace/past_due/canceled/expired (sin acoplar UI al proveedor de pagos).
-- [ ] Definir límites por tier: clientes activos, funciones avanzadas y futuras capacidades.
-- [ ] Definir comportamiento seguro cuando entitlement vence: conservar datos; bloquear nuevas acciones premium sin destruir historial.
+- [x] Eliminar la posibilidad de usar `stk_user_capabilities` como bypass de pago.
+- [x] Mantener `athlete/coach` como rol funcional, no como licencia.
+- [x] Crear contrato `SubscriptionEntitlement`/equivalente en core.
+- [x] Diseñar tabla/RPC server-authoritative para entitlements.
+- [x] Definir estados: trial/active/grace/past_due/canceled/expired (sin acoplar UI al proveedor de pagos).
+- [x] Definir contrato de tier + `client_limit` server-side; los nombres/precios comerciales se decidirán en la fase de billing.
+- [x] Definir comportamiento seguro cuando entitlement vence: conservar datos; bloquear nuevas acciones premium sin destruir historial.
 - [ ] Diseñar cache local de solo lectura para UX offline, nunca como autoridad.
-- [ ] Tests anti-tampering: editar estado local no desbloquea Coach Pro.
-- [ ] Tests RLS/RPC: ser coach o conocer un UUID no permite saltarse entitlement + relación + permiso.
+- [x] Tests anti-tampering: editar estado local no desbloquea Coach Pro.
+- [x] Tests RLS/RPC: ser coach o conocer un UUID no permite saltarse entitlement + relación + permiso.
 
 ## 1.2 Billing desacoplado
 
@@ -60,8 +73,8 @@ No seleccionar proveedor de pago dentro del dominio.
 - [ ] No guardar secretos de billing en cliente.
 - [ ] Definir restore/reconcile de compra.
 - [ ] Diseñar período de gracia y fallos temporales del proveedor.
-- [ ] Auditoría de eventos de entitlement.
-- [ ] Pruebas de replay/idempotencia y downgrade.
+- [x] Auditoría de eventos de entitlement.
+- [~] Replay/idempotencia y expiración cubiertos; downgrade comercial completo queda para la integración de billing.
 
 **Gate A:** ninguna función Coach Pro depende de un booleano editable por el cliente.
 
@@ -223,7 +236,7 @@ El Smart Coach debe servir también como copiloto del entrenador, sin reemplazar
 
 # 5. Seguridad, privacidad y auditoría
 
-- [ ] Threat model específico Coach Pro.
+- [x] Threat model específico Coach Pro: `docs/roadmap/ROADMAP_4_COACH_PRO_THREAT_MODEL.md`.
 - [ ] Tests IDOR entre coach A/coach B/clientes.
 - [ ] RLS por relación activa + permiso.
 - [ ] Entitlement server-side además del permiso para acciones premium.
@@ -282,24 +295,24 @@ El Smart Coach debe servir también como copiloto del entrenador, sin reemplazar
 ## Unitarias/core
 
 - [ ] SmartCoachEngine.
-- [ ] Entitlement policy.
-- [ ] límites de plan.
+- [x] Entitlement policy.
+- [x] límites de plan.
 - [ ] conflictos entrenador vs Smart Coach.
 - [ ] progresión/plateau/volumen/recovery.
 - [ ] serialización y compatibilidad.
 
 ## Database/RLS
 
-- [ ] coach sin plan.
-- [ ] coach con plan.
-- [ ] plan expirado.
+- [x] coach sin plan.
+- [x] coach con plan.
+- [x] plan expirado.
 - [ ] cliente no vinculado.
 - [ ] permiso parcial.
 - [ ] relación revocada.
 - [ ] dos coaches del mismo cliente.
 - [ ] dos clientes del mismo coach.
 - [ ] downgrade por límite.
-- [ ] intento de entitlement falsificado.
+- [x] intento de entitlement falsificado.
 - [ ] anon rechazado.
 
 ## UI
@@ -313,14 +326,14 @@ El Smart Coach debe servir también como copiloto del entrenador, sin reemplazar
 
 ## CI
 
-- [ ] Analyze + Core.
-- [ ] Mobile tests.
-- [ ] Web tests + dart2js + WASM.
-- [ ] Android artifacts.
-- [ ] iOS release/profile.
-- [ ] Supabase DB + RLS en instancia efímera.
-- [ ] Edge Functions static check si se agregan funciones.
-- [ ] 7/7 obligatorio antes de preview.
+- [x] Analyze + Core — CI #87.
+- [x] Mobile tests — CI #87.
+- [x] Web tests + dart2js + WASM — CI #87.
+- [x] Android artifacts — CI #87.
+- [x] iOS release/profile — CI #87.
+- [x] Supabase DB + RLS en instancia efímera — upgrade incremental + rebuild limpio en CI #87.
+- [x] Edge Functions static check — CI #87 (sin nuevas Edge Functions en Fase 1).
+- [x] 7/7 obligatorio antes de preview — CI #87, run `36808744828`.
 
 ## Smoke físico final
 
