@@ -1,6 +1,6 @@
 begin;
 
-select plan(15);
+select plan(24);
 
 select has_function(
   'public',
@@ -195,7 +195,7 @@ select is(
       from public.stk_list_coach_pro_clients(null,25,0)
      where client_user_id = '52000000-0000-0000-0000-000000000002'
   ),
-  0,
+  null::integer,
   'task count is not leaked without assign_tasks permission'
 );
 
@@ -239,6 +239,85 @@ select throws_ok(
   'P0001',
   'Coach Pro search is too long',
   'server bounds search payload size'
+);
+
+
+-- Two coaches share one client: check-ins belong to their own relationship.
+reset role;
+insert into public.stk_subscription_entitlements(
+  user_id,product,status,tier,client_limit,starts_at,current_period_end,source
+) values (
+  '51000000-0000-0000-0000-000000000002','coach_pro','active','test',10,
+  now()-interval '1 day',now()+interval '30 days','pgTap'
+);
+insert into public.stk_coach_client_relationships(id,coach_user_id,client_user_id,status,permissions)
+values ('53000000-0000-0000-0000-000000000003',
+  '51000000-0000-0000-0000-000000000002','52000000-0000-0000-0000-000000000001',
+  'active','{"view_checkins":true}');
+insert into public.stk_coach_checkins(id,relationship_id,coach_user_id,client_user_id,energy,recovery,note,created_at)
+values ('54000000-0000-0000-0000-000000000002','53000000-0000-0000-0000-000000000003',
+  '51000000-0000-0000-0000-000000000002','52000000-0000-0000-0000-000000000001',
+  3,3,'Other relationship',now()-interval '1 hour');
+set local role authenticated;
+select is(
+  (select latest_checkin_at from public.stk_list_coach_pro_clients('alpha',25,0)),
+  now()-interval '2 hours',
+  'dashboard excludes a newer check-in belonging to another coach'
+);
+select is(
+  (select count(*)::integer from public.stk_list_coach_checkins('52000000-0000-0000-0000-000000000001')),
+  1,'legacy check-in RPC also isolates coach relationships'
+);
+select throws_ok(
+  $$select * from public.stk_list_coach_pro_clients(null,25,-1)$$,
+  'P0001','Coach Pro page offset is invalid','negative page offset is rejected'
+);
+select set_config('request.jwt.claims',
+  '{"sub":"51000000-0000-0000-0000-000000000002","role":"authenticated","is_anonymous":false}',true);
+select is(
+  (select latest_checkin_at from public.stk_list_coach_pro_clients('alpha',25,0)),
+  now()-interval '1 hour','second coach sees only own relationship check-in'
+);
+select set_config('request.jwt.claims',
+  '{"sub":"52000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);
+select is(
+  (select count(*)::integer from public.stk_list_coach_checkins('52000000-0000-0000-0000-000000000001')),
+  2,'client retains both own check-ins'
+);
+reset role;
+update public.stk_coach_client_relationships set permissions='{"assign_tasks":true}'
+  where id='53000000-0000-0000-0000-000000000002';
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"51000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);
+select is(
+  (select active_task_count from public.stk_list_coach_pro_clients('beta',25,0)),
+  0::bigint,'zero means permission granted with no active tasks'
+);
+reset role;
+update public.stk_coach_client_relationships set status='paused'
+  where id='53000000-0000-0000-0000-000000000001';
+set local role authenticated;
+select ok(
+  (select workouts_7d is null and workouts_30d is null and average_rir_7d is null
+    and last_workout_at is null and latest_checkin_at is null and active_task_count is null
+    and not progress_available and not needs_review
+    from public.stk_list_coach_pro_clients('alpha',25,0)),
+  'paused relationship hides every protected aggregate despite stored permissions'
+);
+reset role;
+update public.stk_coach_client_relationships set status='revoked',revoked_at=now()
+  where id='53000000-0000-0000-0000-000000000001';
+set local role authenticated;
+select is(
+  (select count(*)::integer from public.stk_list_coach_pro_clients('alpha',25,0)),
+  0,'revoked relationship disappears from professional roster'
+);
+select set_config('request.jwt.claims',
+  '{"sub":"51000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":true}',true);
+select throws_ok(
+  $$select * from public.stk_list_coach_pro_clients(null,25,0)$$,
+  'P0001','Permanent authenticated account required','anonymous session cannot use paid roster'
 );
 
 select * from finish();

@@ -84,6 +84,36 @@ No seleccionar proveedor de pago dentro del dominio.
 
 ## 2.1 Dashboard multi-cliente
 
+### Foundation existente y continuidad — 2026-10-02
+
+Ya están implementados (no recrear):
+- `CoachProClientSummary`, con tests de parsing/privacidad.
+- `CoachProDashboardService.listClients(search, limit, offset)`.
+- RPC agregada/paginada `stk_list_coach_pro_clients`, con búsqueda y límites server-side.
+- Tests pgTAP del roster, entitlement y aislamiento por permisos.
+
+Evidencia de recuperación de esta foundation:
+- Fix de plan pgTAP 13 → 15: privado `f9b62895caa0bd16bd8c5fc81487b7b7b0a7c1d7`.
+- Fuente con corrección del mecanismo de mirror: `55d62f56a2320611486099de673e936733ec7dd4`.
+- Snapshot sanitizado: `544e489e61aaeda41d74500df8f57e884166b344`.
+- Public CI **#95**, run `37020126701`: **7/7 success**.
+- Supabase: 248 tests aprobados tanto tras upgrade incremental como tras rebuild limpio.
+- `PUBLIC_CI_SNAPSHOT.md` se genera desde el SHA fuente; no es autoridad aislada.
+
+Siguiente slice implementado, pendiente de su propio CI:
+- proveedor de una página de 25 clientes, búsqueda y navegación anterior/siguiente;
+- aislamiento de respuestas tardías, cambio de cuenta, cierre de sesión y errores;
+- sin persistencia local del roster ni descarga de toda la cartera;
+- `activeTaskCount` nullable: sin permiso no equivale a cero tareas;
+- migración forward-only de privacidad para agregar check-ins por relación/coach;
+- RPC de detalle de check-ins alineada con el aislamiento de tabla (dos coaches);
+- nueva cobertura de relaciones pausadas/revocadas y sesiones anónimas.
+
+Pendientes: superficie profesional responsive, entrada en navegación, filtros/ordenamiento
+server-side, UX offline y ficha profesional paginada. No reutilizar la ficha legacy
+cargando toda la cartera. No hay smoke físico nuevo ni deploy de Supabase remoto.
+
+
 Crear una superficie profesional, no reutilizar simplemente la pantalla “Coach & Clientes”.
 
 - [ ] Resumen: clientes activos / pausados, tareas pendientes, check-ins recientes y alertas operativas.

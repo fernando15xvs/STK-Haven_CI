@@ -13,7 +13,7 @@ class CoachProClientSummary {
   final double? averageRir7d;
   final DateTime? lastWorkoutAt;
   final DateTime? latestCheckinAt;
-  final int activeTaskCount;
+  final int? activeTaskCount;
   final bool needsReview;
   final int totalCount;
 
@@ -42,23 +42,29 @@ class CoachProClientSummary {
       orElse: () => CoachRelationshipStatus.revoked,
     );
 
+    final permissions = parseCoachPermissions(json['permissions']);
+    final active = status == CoachRelationshipStatus.active;
+    final progress = active && permissions.contains(CoachPermission.viewProgress);
+    final checkins = active && permissions.contains(CoachPermission.viewCheckins);
+    final tasks = active && permissions.contains(CoachPermission.assignTasks);
+
     return CoachProClientSummary(
       relationshipId: json['relationship_id']?.toString() ?? '',
       clientUserId: json['client_user_id']?.toString() ?? '',
       displayName: json['display_name']?.toString() ?? '',
       relationshipStatus: status,
-      permissions: parseCoachPermissions(json['permissions']),
+      permissions: Set.unmodifiable(permissions),
       relationshipUpdatedAt:
           DateTime.tryParse(json['relationship_updated_at']?.toString() ?? '') ??
               DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
-      progressAvailable: json['progress_available'] as bool? ?? false,
-      workouts7d: (json['workouts_7d'] as num?)?.toInt(),
-      workouts30d: (json['workouts_30d'] as num?)?.toInt(),
-      averageRir7d: (json['average_rir_7d'] as num?)?.toDouble(),
-      lastWorkoutAt: _date(json['last_workout_at']),
-      latestCheckinAt: _date(json['latest_checkin_at']),
-      activeTaskCount: (json['active_task_count'] as num?)?.toInt() ?? 0,
-      needsReview: json['needs_review'] as bool? ?? false,
+      progressAvailable: progress && (json['progress_available'] as bool? ?? false),
+      workouts7d: progress ? (json['workouts_7d'] as num?)?.toInt() : null,
+      workouts30d: progress ? (json['workouts_30d'] as num?)?.toInt() : null,
+      averageRir7d: progress ? (json['average_rir_7d'] as num?)?.toDouble() : null,
+      lastWorkoutAt: progress ? _date(json['last_workout_at']) : null,
+      latestCheckinAt: checkins ? _date(json['latest_checkin_at']) : null,
+      activeTaskCount: tasks ? (json['active_task_count'] as num?)?.toInt() : null,
+      needsReview: progress && (json['needs_review'] as bool? ?? false),
       totalCount: (json['total_count'] as num?)?.toInt() ?? 0,
     );
   }

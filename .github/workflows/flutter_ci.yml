@@ -61,11 +61,12 @@ jobs:
       - name: Stage post-Roadmap 2 migrations for upgrade test
         run: |
           mkdir -p /tmp/stk-post-roadmap2-migrations
-          find supabase/migrations -maxdepth 1 -type f \( \
-              -name '2026092*.sql' -o \
-              -name '2026093*.sql' \
-            \) -print0 |
-            xargs -0 -r -I{} mv "{}" /tmp/stk-post-roadmap2-migrations/
+          for migration in supabase/migrations/*.sql; do
+            case "$(basename "$migration")" in
+              20260821101400_add_haven_faith_rate_limit.sql|20260821101537_document_haven_faith_rate_limit_rls.sql|20260902203000_stk_haven_cloud_backups.sql) ;;
+              *) mv "$migration" /tmp/stk-post-roadmap2-migrations/ ;;
+            esac
+          done
           echo "Roadmap 2 baseline migrations:"
           ls -1 supabase/migrations
           echo "Roadmap 3/4 staged migrations:"

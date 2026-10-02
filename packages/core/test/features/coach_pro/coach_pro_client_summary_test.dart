@@ -12,6 +12,7 @@ void main() {
       'permissions': <String, dynamic>{
         'view_progress': true,
         'view_checkins': false,
+        'assign_tasks': true,
       },
       'relationship_updated_at': '2026-09-30T12:00:00Z',
       'progress_available': true,
@@ -31,6 +32,7 @@ void main() {
     expect(item.workouts7d, 4);
     expect(item.latestCheckinAt, isNull);
     expect(item.totalCount, 8);
+    expect(item.activeTaskCount, 2);
   });
 
   test('null protected aggregates remain null instead of becoming zero', () {
@@ -46,7 +48,7 @@ void main() {
       'average_rir_7d': null,
       'last_workout_at': null,
       'latest_checkin_at': null,
-      'active_task_count': 0,
+      'active_task_count': null,
       'needs_review': false,
       'total_count': 1,
     });
@@ -55,5 +57,47 @@ void main() {
     expect(item.workouts30d, isNull);
     expect(item.averageRir7d, isNull);
     expect(item.lastWorkoutAt, isNull);
+    expect(item.activeTaskCount, isNull);
   });
+
+  for (final status in ['active', 'paused', 'revoked', 'unknown']) {
+    test('redacts non-null payload for $status without effective permissions', () {
+      final item = CoachProClientSummary.fromJson({
+        'relationship_id': 'rel',
+        'client_user_id': 'client',
+        'relationship_status': status,
+        'permissions': {
+          'view_progress': status != 'active',
+          'view_checkins': status != 'active',
+          'assign_tasks': status != 'active',
+        },
+        'progress_available': true,
+        'workouts_7d': 99,
+        'workouts_30d': 99,
+        'average_rir_7d': 2,
+        'last_workout_at': '2026-10-01T12:00:00Z',
+        'latest_checkin_at': '2026-10-01T12:00:00Z',
+        'active_task_count': 99,
+        'needs_review': true,
+      });
+      expect(item.progressAvailable, isFalse);
+      expect(item.workouts7d, isNull);
+      expect(item.workouts30d, isNull);
+      expect(item.averageRir7d, isNull);
+      expect(item.lastWorkoutAt, isNull);
+      expect(item.latestCheckinAt, isNull);
+      expect(item.activeTaskCount, isNull);
+      expect(item.needsReview, isFalse);
+    });
+  }
+
+  test('permitted zero task count stays zero', () {
+    final item = CoachProClientSummary.fromJson({
+      'relationship_status': 'active',
+      'permissions': {'assign_tasks': true},
+      'active_task_count': 0,
+    });
+    expect(item.activeTaskCount, 0);
+  });
+
 }
