@@ -16,7 +16,7 @@ class _Identity extends AppIdentityNotifier {
   AppIdentityState build() => const AppIdentityState(
     sessionKind: AppSessionKind.permanent, userId: 'coach',
   );
-  void signOut() => state = const AppIdentityState();
+  void signOutForTest() => state = const AppIdentityState();
 }
 
 CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compartida'}) =>
@@ -102,7 +102,7 @@ void main() {
     await tester.tap(find.text('Check-ins'));
     await tester.pumpAndSettle();
     expect(find.text('Nota compartida'), findsOneWidget);
-    (container.read(appIdentityProvider.notifier) as _Identity).signOut();
+    (container.read(appIdentityProvider.notifier) as _Identity).signOutForTest();
     await tester.pumpAndSettle();
     expect(find.text('Nota compartida'), findsNothing);
     expect(find.text('Siguiente'), findsNothing);

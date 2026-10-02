@@ -18,7 +18,7 @@ class _Identity extends AppIdentityNotifier {
   AppIdentityState build() => const AppIdentityState(
     sessionKind: AppSessionKind.permanent, userId: 'coach',
   );
-  void signOut() => state = const AppIdentityState();
+  void signOutForTest() => state = const AppIdentityState();
 }
 
 CoachProClientSummary _summary({bool permission = true, String status = 'active'}) =>
@@ -107,7 +107,7 @@ void main() {
     final provider = coachProClientDetailProvider(checkinQuery);
     container.listen(provider, (_, _) {});
     await Future<void>.delayed(Duration.zero);
-    (container.read(appIdentityProvider.notifier) as _Identity).signOut();
+    (container.read(appIdentityProvider.notifier) as _Identity).signOutForTest();
     expect(await container.read(provider.future), isNull);
     service.pending!.complete(_summary());
     await Future<void>.delayed(Duration.zero);
