@@ -82,6 +82,23 @@
 - Los recordatorios son opt-in local del cliente; su compilación está validada, pero la aparición real de la notificación queda para el smoke físico final.
 - **No se aplicó ninguna migración Roadmap 3 al Supabase remoto.**
 
+
+## Evidencia automática de cierre Roadmap 3 — CI #32 — 2026-09-26
+
+- Snapshot público: `5b50fe989967a539d7cbce5f2f25d071b01b336a`.
+- GitHub Actions run: #32, ID `36267338027`.
+- Resultado global: **success, 7/7 jobs verdes**.
+- Verdes: Analyze + Core tests, Mobile tests, Web dart2js/WASM, Edge Functions, Supabase DB + RLS, Android artifacts e iOS release/profile.
+- Supabase validó dos caminos:
+  1. baseline Roadmap 2 → `supabase migration up --local` con las 9 migraciones Roadmap 3 → pgTAP;
+  2. rebuild limpio con toda la cadena → pgTAP.
+- Android: debug/profile/release APK, AAB y split ABI.
+- iOS: release/profile sin codesign.
+- iOS personal-test: artefacto `stk-haven-ios-unsigned` generado y subido correctamente.
+- Web Push, gesto Back y audio compilan; su comportamiento real queda en L08.
+- No hubo merge ni deploy remoto.
+
+
 ---
 
 # 0. Gate previo — preservar Roadmap 2.0
@@ -830,22 +847,22 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [~] E5 Recordatorios locales opt-in implementados/compilados; smoke de notificación física diferido al gate final.
 
 ## Fase F — Alimentación V1
-- [~] F1 Contrato de plan y backend no clínico implementados; falta nuevo CI.
-- [~] F2 Editor entrenador implementado y conectado al detalle del cliente; CI final pendiente.
-- [~] F3 Vista cliente + historial de versiones implementados; CI final pendiente.
-- [~] F4 Versionado inmutable implementado en backend; falta validación dinámica del nuevo candidato.
-- [~] F5 Permisos/RLS implementados y pgTAP específico añadido; falta ejecutar CI del nuevo candidato.
-- [~] F6 Avisos/scope no clínico implementados; falta validación UI.
-- [~] F7 Tests de contrato Dart + pgTAP de Nutrición añadidos; falta UI y obtener CI verde.
+- [x] F1 Contrato de plan y backend no clínico implementados y validados en CI/pgTAP.
+- [x] F2 Editor entrenador conectado al detalle del cliente y compilado/validado.
+- [x] F3 Vista cliente + historial de versiones implementados y validados.
+- [x] F4 Versionado inmutable validado dinámicamente en Supabase efímero.
+- [x] F5 Permisos/RLS + pgTAP específicos verdes.
+- [x] F6 Avisos/scope no clínico implementados en UI compartida.
+- [x] F7 Tests Dart + pgTAP + UI con CI verde.
 
 ## Fase F2 — Nutrición Inteligente personal / Food Vision
-- [~] N1 Contrato de estimación energética por rangos para adultos.
-- [~] N2 Objetivos mantenimiento / ajuste gradual hacia pérdida / ajuste gradual hacia ganancia, bloqueados para menores.
-- [~] N3 Food Vision multimodal con foto y respuesta estructurada.
-- [~] N4 Resultado visual por rangos, ingredientes, porciones, supuestos y confianza.
-- [~] N5 Guard fail-closed: sin acceso adulto no se devuelven calorías/macros numéricos.
-- [~] N6 Privacidad: la imagen no se persiste por defecto en STK Haven.
-- [~] N7 Captura cámara/galería Mobile + selector Web implementados; falta CI/smoke.
+- [x] N1 Contrato de estimación energética por rangos para adultos.
+- [x] N2 Objetivos de mantenimiento/ajuste gradual protegidos por gate adulto backend.
+- [x] N3 Food Vision multimodal con foto y respuesta estructurada.
+- [x] N4 Resultado por rangos, ingredientes, porciones, supuestos y confianza.
+- [x] N5 Guard backend fail-closed: sin acceso adulto no se devuelven calorías/macros numéricos.
+- [x] N6 Privacidad: la imagen no se persiste; historial local guarda solo resultado/contexto.
+- [x] N7 Cámara/galería Mobile + selector Web implementados y compilados; smoke físico queda en gate local.
 - [x] N8 Reanálisis con contexto + editor estructurado de ingredientes/porciones implementados.
 - [x] N9 Historial Food Vision opt-in, local-first, borrable y sin persistir imágenes.
 - [x] N10 Rate limit dedicado + métricas agregadas sin PII/contenido + dataset contractual de evaluación.
@@ -861,18 +878,18 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [x] G6 Exportación segura de resumen mediante portapapeles implementada y validada.
 
 ## Fase H — Cierre
-- [~] H1 último candidato verde #31; cambios finales posteriores requieren un último CI.
-- [ ] H2 Migraciones desde Roadmap 2.
-- [ ] H3 Backups antiguos.
-- [ ] H4 Android.
-- [ ] H5 iOS.
-- [ ] H6 Web/PWA.
-- [~] H7 pgTAP/RLS verde en #31; cambios finales no alteran esquema y requieren CI final de cierre.
+- [x] H1 CI #32 final: Analyze/Core + Mobile + Web + Edge + Supabase + Android + iOS, 7/7 verde.
+- [x] H2 Upgrade incremental Roadmap 2 → Roadmap 3 validado en CI #32 antes del rebuild limpio.
+- [x] H3 Suite de backward compatibility v9/v10 + auditoría R2 ejecutada en Core tests.
+- [x] H4 Android debug/profile/release APK + AAB + split ABI verdes en CI #32; smoke físico permanece en L09.
+- [~] H5 iOS release/profile sin codesign verdes + IPA unsigned generado en #32; validación física permanece en L10.
+- [~] H6 Web dart2js/WASM verde en #32; smoke PWA real, gesto Back, Push y audio quedan en L08.
+- [x] H7 RLS/pgTAP verde tras upgrade incremental R2→R3 y rebuild limpio en #32.
 - [x] H8 auditoría de assets + RV1909/licencias documentadas; asset sin procedencia fue eliminado.
-- [ ] H9 Accesibilidad.
-- [~] H10 benchmarks 1k/5k y 25/100 implementados; pendiente CI final de cierre.
-- [ ] H11 Regresión completa de Roadmap 2.
-- [ ] H12 Merge solo con autorización explícita.
+- [~] H9 estructura responsive/controles compilados; teclado, Dynamic Type y UX física quedan en L08/L10.
+- [x] H10 benchmarks 1k/5k sesiones y 25/100 clientes ejecutados en Core tests de #32.
+- [x] H11 suite de regresión R2 (Memory, Unilateral, Progreso, Programas, backups) verde en #32.
+- [~] H12 política respetada: no se hizo merge; queda pendiente únicamente la autorización explícita del usuario cuando finalicen los gates manuales.
 
 ---
 
@@ -881,11 +898,11 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [x] No forzar contenido religioso: opt-in global triestado + gates Mobile/Web.
 - [x] Desactivar Fe no borra notas/favoritos/datos locales.
 - [x] Fe OFF bloquea inicialización/descarga; cubierto por test.
-- [ ] No crear dos aplicaciones separadas para “normal” y “entrenador”.
-- [ ] No usar backup cloud como base de datos multiusuario.
-- [ ] No permitir acceso del entrenador por simple conocimiento del email/id del cliente.
+- [x] Se mantiene una arquitectura compartida; coach es capacidad/feature, no una segunda app.
+- [x] Colaboración usa tablas/RPC normalizados; backup cloud no es base multiusuario.
+- [x] Acceso Coach exige relación activa + permisos + RLS.
 - [x] RV1909 y catálogo usan licencia/fuente documentada; no se distribuye contenido adicional sin permiso.
-- [ ] No transformar “plan alimenticio” en diagnóstico o tratamiento médico automático.
+- [x] Nutrición V1/Food Vision prohíben diagnóstico/tratamiento y mantienen scope no clínico.
 - [x] Snapshots Coach limitan historial reciente; test de escala verifica payload acotado.
 - [x] Se mantiene rama aislada; sin merge ni deploy remoto durante implementación.
 
@@ -919,4 +936,4 @@ Riesgo: **medio-alto** si se cargan módulos/cliente/historial de forma eager.
 - [ ] Gate G.
 - [ ] Gate H.
 
-**Estado:** EN IMPLEMENTACIÓN — Fases A y C tienen gate automático verde; Fase B mantiene únicamente sus pendientes explícitos/smoke final. Fase D está en desarrollo con invitación por código, consentimiento, permisos y revocación. Ninguna migración Roadmap 3 ha sido aplicada al Supabase remoto.
+**Estado:** IMPLEMENTACIÓN AUTOMÁTICA CERRADA — CI #32 7/7 verde. Permanecen únicamente smokes físicos/PWA, verificación live de funciones que requieren despliegue remoto y la autorización futura de merge/deploy. Ninguna migración Roadmap 3 ha sido aplicada al Supabase remoto.

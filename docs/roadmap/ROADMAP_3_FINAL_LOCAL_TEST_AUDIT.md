@@ -10,6 +10,19 @@ La fuente de verdad de implementación sigue siendo el repositorio privado. El m
 
 ---
 
+## Cierre automático confirmado — CI #32
+
+- Run: `36267338027` (#32).
+- Snapshot público: `5b50fe989967a539d7cbce5f2f25d071b01b336a`.
+- Resultado: **7/7 jobs verdes**.
+- Upgrade incremental Roadmap 2 → Roadmap 3 + pgTAP: verde.
+- Rebuild limpio + pgTAP: verde.
+- Android: debug/profile/release APK + AAB + split ABI: verde.
+- iOS: release/profile sin codesign: verde.
+- Web: dart2js + WASM: verde.
+- IPA personal-test sin firmar: artefacto `stk-haven-ios-unsigned`.
+- No merge / no deploy remoto.
+
 # 1. Qué NO se deja para pruebas locales del usuario
 
 Estas comprobaciones deben realizarlas CI/automatización durante el desarrollo:
@@ -300,6 +313,8 @@ Profiling técnico adicional solo se hace si este smoke detecta una regresión.
 ---
 
 ## L10 — iPhone físico antes de release iOS
+
+Para este gate, CI #32 ya dejó el artefacto `stk-haven-ios-unsigned`. Debe firmarse temporalmente antes de instalarlo; la guía está en `ROADMAP_3_IOS_PERSONAL_TEST.md`.
 
 Solo necesario antes de publicar/distribuir iOS.
 

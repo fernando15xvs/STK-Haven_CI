@@ -1,6 +1,6 @@
 param(
     [string]$PublicRepo = "fernando15xvs/STK-Haven_CI",
-    [string]$SourceBranch = "feat/roadmap-2-complete"
+    [string]$SourceBranch = "feat/roadmap-3-foundation"
 )
 
 $ErrorActionPreference = "Stop"
@@ -108,7 +108,8 @@ try {
         Remove-Item $WorkflowDir -Recurse -Force
     }
     New-Item -ItemType Directory -Path $WorkflowDir -Force | Out-Null
-    Copy-Item (Join-Path $RootDir "ci/public/flutter_ci.yml") (Join-Path $WorkflowDir "flutter_ci.yml") -Force
+    Copy-Item (Join-Path $Snapshot "ci/public/flutter_ci.yml") (Join-Path $WorkflowDir "flutter_ci.yml") -Force
+    Copy-Item (Join-Path $Snapshot "ci/public/preview_web.yml") (Join-Path $WorkflowDir "preview_web.yml") -Force
 
     $SnapshotNote = @"
 # Public CI snapshot

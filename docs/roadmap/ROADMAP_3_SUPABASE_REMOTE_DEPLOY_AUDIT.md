@@ -171,3 +171,20 @@ El candidato CI #29 terminó **7/7 verde**:
 - Supabase DB + RLS en entorno efímero.
 
 Esto valida el paquete local/aislado, pero **no sustituye la auditoría del ledger remoto real antes del despliegue**.
+
+
+## 9. Evidencia adicional de CI #32
+
+CI #32 validó explícitamente el camino de actualización antes de cualquier deploy remoto:
+
+1. dejó temporalmente solo las 3 migraciones Roadmap 2;
+2. reconstruyó ese baseline;
+3. restauró las 9 migraciones Roadmap 3;
+4. ejecutó `supabase migration up --local`;
+5. ejecutó pgTAP con éxito;
+6. reconstruyó desde cero con toda la cadena;
+7. volvió a ejecutar pgTAP con éxito.
+
+Resultado del job `Supabase DB + RLS tests`: **success**.
+
+Esto reduce el riesgo técnico del despliegue, pero no sustituye la comparación en solo lectura del ledger remoto real de STK Haven antes de aplicar cambios.
