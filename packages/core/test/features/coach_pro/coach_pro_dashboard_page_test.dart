@@ -124,6 +124,8 @@ void main() {
     expect(roster.searches, 1);
     expect(roster.query, 'Ana');
     await tester.ensureVisible(find.text('Siguiente'));
+    await tester.pumpAndSettle();
+    expect(find.text('Siguiente').hitTestable(), findsOneWidget);
     await tester.tap(find.text('Siguiente'));
     expect(roster.nextPages, 1);
   });

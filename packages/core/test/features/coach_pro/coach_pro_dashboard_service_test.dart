@@ -21,7 +21,7 @@ void main() {
           'workouts_7d': null,
           'active_task_count': null,
           'total_count': 31,
-        }]), 200, headers: {'content-type': 'application/json'});
+        }]), 200, request: request, headers: {'content-type': 'application/json'});
       }),
     );
     addTearDown(client.dispose);
