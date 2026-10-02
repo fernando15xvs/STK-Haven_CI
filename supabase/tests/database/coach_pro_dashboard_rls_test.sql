@@ -1,6 +1,6 @@
 begin;
 
-select plan(24);
+select plan(44);
 
 select has_function(
   'public',
@@ -242,6 +242,69 @@ select throws_ok(
 );
 
 
+-- Extended signature: filter and sort BEFORE the count/window and page.
+select has_function('public','stk_list_coach_pro_clients',
+  array['text','integer','integer','text','boolean','text'],
+  'extended roster RPC exists without ambiguous defaults');
+select results_eq(
+  $$select * from public.stk_list_coach_pro_clients()$$,
+  $$select * from public.stk_list_coach_pro_clients(null,25,0,'all',null,'review')$$,
+  'legacy defaults use the same authorized query');
+select is((select total_count from public.stk_list_coach_pro_clients('beta',1,0,'active',null,'name')),
+  1::bigint,'search and status precede total count');
+select is((select display_name from public.stk_list_coach_pro_clients(null,1,1,'active',null,'name')),
+  'Bruno Beta','name sort applies globally before offset');
+select is((select total_count from public.stk_list_coach_pro_clients(null,1,1,'active',null,'name')),
+  2::bigint,'offset retains full filtered total');
+select is((select count(*) from public.stk_list_coach_pro_clients(null,25,0,'paused',null,'name')),
+  0::bigint,'paused filter does not include active relationships');
+select throws_ok($$select * from public.stk_list_coach_pro_clients(null,25,0,'revoked',null,'name')$$,
+  'P0001','Coach Pro relationship filter is invalid','invalid status rejected');
+select throws_ok($$select * from public.stk_list_coach_pro_clients(null,25,0,'all',null,'arbitrary_sql')$$,
+  'P0001','Coach Pro sort is invalid','sort is a server allowlist');
+select is((select count(*) from public.stk_list_coach_pro_clients('Carlos',25,0,'all',null,'recent_workout')),
+  0::bigint,'extended search cannot enumerate unrelated users');
+reset role;
+-- A hidden recent workout must not outrank an authorized older one.
+update public.stk_client_progress_snapshots set last_workout_at=now()
+  where client_user_id='52000000-0000-0000-0000-000000000002';
+update public.stk_client_progress_snapshots set last_workout_at=now()-interval '8 days'
+  where client_user_id='52000000-0000-0000-0000-000000000001';
+set local role authenticated;
+select is((select display_name from public.stk_list_coach_pro_clients(null,1,0,'all',null,'recent_workout')),
+  'Ana Alpha','recent sort ignores a newer workout without permission');
+select is((select display_name from public.stk_list_coach_pro_clients(null,1,0,'active',true,'name')),
+  'Ana Alpha','review filter uses authorized stale progress');
+select is((select total_count from public.stk_list_coach_pro_clients(null,1,0,'active',true,'name')),
+  1::bigint,'review filter precedes total count');
+select is((select count(*) from public.stk_list_coach_pro_clients(null,1,1,'active',true,'name')),
+  0::bigint,'offset applies after review filter');
+reset role;
+update public.stk_client_progress_snapshots set last_workout_at=now()-interval '90 days'
+  where client_user_id='52000000-0000-0000-0000-000000000002';
+set local role authenticated;
+select is((select count(*) from public.stk_list_coach_pro_clients(null,25,0,'all',true,'review')),
+  1::bigint,'hidden stale progress cannot enter review results');
+select is((select display_name from public.stk_list_coach_pro_clients(null,1,0,'all',null,'recent_workout')),
+  'Ana Alpha','hidden progress changes cannot change recent sorting');
+-- A real granted tie resolves consistently by name and then client UUID.
+reset role;
+update public.stk_coach_client_relationships set permissions='{"view_progress":true}'
+  where id='53000000-0000-0000-0000-000000000002';
+update public.stk_client_progress_snapshots set last_workout_at=now()-interval '8 days'
+  where client_user_id='52000000-0000-0000-0000-000000000002';
+update public.stk_user_profiles set display_name='Ana Alpha'
+  where user_id='52000000-0000-0000-0000-000000000002';
+set local role authenticated;
+select is((select client_user_id from public.stk_list_coach_pro_clients(null,1,1,'all',null,'recent_workout')),
+  '52000000-0000-0000-0000-000000000002'::uuid,'ties have deterministic non-overlapping pages');
+reset role;
+update public.stk_user_profiles set display_name='Bruno Beta'
+  where user_id='52000000-0000-0000-0000-000000000002';
+update public.stk_coach_client_relationships set permissions='{}'
+  where id='53000000-0000-0000-0000-000000000002';
+set local role authenticated;
+
 -- Two coaches share one client: check-ins belong to their own relationship.
 reset role;
 insert into public.stk_subscription_entitlements(
@@ -305,6 +368,10 @@ select ok(
     from public.stk_list_coach_pro_clients('alpha',25,0)),
   'paused relationship hides every protected aggregate despite stored permissions'
 );
+select is((select count(*) from public.stk_list_coach_pro_clients(null,25,0,'paused',null,'name')),
+  1::bigint,'paused filter returns paused roster metadata');
+select is((select count(*) from public.stk_list_coach_pro_clients(null,25,0,'paused',true,'review')),
+  0::bigint,'paused stored permissions cannot enter review filter');
 reset role;
 update public.stk_coach_client_relationships set status='revoked',revoked_at=now()
   where id='53000000-0000-0000-0000-000000000001';
@@ -319,6 +386,17 @@ select throws_ok(
   $$select * from public.stk_list_coach_pro_clients(null,25,0)$$,
   'P0001','Permanent authenticated account required','anonymous session cannot use paid roster'
 );
+
+select throws_ok($$select * from public.stk_list_coach_pro_clients(null,25,0,'all',null,'name')$$,
+  'P0001','Permanent authenticated account required','anonymous cannot bypass extended RPC guard');
+reset role;
+update public.stk_subscription_entitlements set status='expired'
+  where user_id='51000000-0000-0000-0000-000000000001' and product='coach_pro';
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"51000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);
+select throws_ok($$select * from public.stk_list_coach_pro_clients(null,25,0,'all',null,'name')$$,
+  'P0001','Coach Pro entitlement required','expired plan cannot bypass extended RPC guard');
 
 select * from finish();
 rollback;

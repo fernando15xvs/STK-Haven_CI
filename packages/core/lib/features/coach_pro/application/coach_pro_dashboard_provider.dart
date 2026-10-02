@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
+
 import 'package:core/domain/models/coach_pro_client_summary.dart';
 import 'package:core/features/coach_pro/data/coach_pro_dashboard_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -17,6 +19,9 @@ class CoachProDashboardState {
   static const pageSize = 25;
   final String search;
   final int offset;
+  final CoachProClientStatusFilter clientStatus;
+  final bool onlyNeedsReview;
+  final CoachProClientSort sort;
   final List<CoachProClientSummary> clients;
   final int? totalCount;
   final CoachProDashboardStatus status;
@@ -25,6 +30,9 @@ class CoachProDashboardState {
   const CoachProDashboardState({
     this.search = '',
     this.offset = 0,
+    this.clientStatus = CoachProClientStatusFilter.all,
+    this.onlyNeedsReview = false,
+    this.sort = CoachProClientSort.review,
     this.clients = const [],
     this.totalCount,
     this.status = CoachProDashboardStatus.accountRequired,
@@ -62,7 +70,7 @@ class CoachProDashboardNotifier extends Notifier<CoachProDashboardState> {
     // Build returns an empty loading state before a request can complete.
     scheduleMicrotask(() {
       if (ref.mounted && generation == _generation) {
-        unawaited(_load(service, '', 0, generation));
+        unawaited(_load(service, const CoachProDashboardState(), generation));
       }
     });
     return const CoachProDashboardState(status: CoachProDashboardStatus.loading);
@@ -77,6 +85,13 @@ class CoachProDashboardNotifier extends Notifier<CoachProDashboardState> {
     return _request(normalized, 0);
   }
 
+  Future<void> setFilters({
+    CoachProClientStatusFilter? clientStatus,
+    bool? onlyNeedsReview,
+    CoachProClientSort? sort,
+  }) => _request(state.search, 0,
+      clientStatus: clientStatus, onlyNeedsReview: onlyNeedsReview, sort: sort);
+
   Future<void> refresh() => _request(state.search, state.offset);
 
   Future<void> nextPage() => state.hasNext
@@ -87,7 +102,11 @@ class CoachProDashboardNotifier extends Notifier<CoachProDashboardState> {
       ? _request(state.search, state.offset - CoachProDashboardState.pageSize)
       : Future.value();
 
-  Future<void> _request(String search, int offset) {
+  Future<void> _request(String search, int offset, {
+    CoachProClientStatusFilter? clientStatus,
+    bool? onlyNeedsReview,
+    CoachProClientSort? sort,
+  }) {
     final identity = ref.read(appIdentityProvider);
     if (!identity.signedIn || identity.userId == null) return Future.value();
     final service = ref.read(coachProDashboardServiceProvider);
@@ -96,26 +115,35 @@ class CoachProDashboardNotifier extends Notifier<CoachProDashboardState> {
     state = CoachProDashboardState(
       search: search,
       offset: offset,
+      clientStatus: clientStatus ?? state.clientStatus,
+      onlyNeedsReview: onlyNeedsReview ?? state.onlyNeedsReview,
+      sort: sort ?? state.sort,
       status: CoachProDashboardStatus.loading,
     );
-    return _load(service, search, offset, generation);
+    return _load(service, state, generation);
   }
 
-  Future<void> _load(CoachProDashboardService service, String search, int offset,
-      int generation) async {
+  Future<void> _load(CoachProDashboardService service,
+      CoachProDashboardState query, int generation) async {
     try {
       final clients = await service.listClients(
-        search: search,
+        search: query.search,
+        status: query.clientStatus,
+        needsReview: query.onlyNeedsReview ? true : null,
+        sort: query.sort,
         limit: CoachProDashboardState.pageSize,
-        offset: offset,
+        offset: query.offset,
       );
       if (!ref.mounted || generation != _generation) return;
       state = CoachProDashboardState(
-        search: search,
-        offset: offset,
+        search: query.search,
+        clientStatus: query.clientStatus,
+        onlyNeedsReview: query.onlyNeedsReview,
+        sort: query.sort,
+        offset: query.offset,
         clients: List.unmodifiable(clients),
         totalCount: clients.isEmpty
-            ? (offset == 0 ? 0 : null)
+            ? (query.offset == 0 ? 0 : null)
             : clients.first.totalCount,
         status: CoachProDashboardStatus.ready,
       );
@@ -123,8 +151,11 @@ class CoachProDashboardNotifier extends Notifier<CoachProDashboardState> {
       if (!ref.mounted || generation != _generation) return;
       // Never retain protected rows or expose raw backend errors/PII.
       state = CoachProDashboardState(
-        search: search,
-        offset: offset,
+        search: query.search,
+        clientStatus: query.clientStatus,
+        onlyNeedsReview: query.onlyNeedsReview,
+        sort: query.sort,
+        offset: query.offset,
         status: CoachProDashboardStatus.error,
         message: 'No se pudo cargar la cartera. Revisa la conexión y tu acceso '
             'a Coach Pro, y vuelve a intentar.',

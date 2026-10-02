@@ -144,16 +144,34 @@ Evidencia específica de este slice:
   muestra «Sin datos»; no inventar adherencia o totales globales desde una página.
 - Pruebas de widgets para 320/768/1440 px, texto ampliado, búsqueda/paginación,
   carga/error/vacío, plan y retirada de contenido al cerrar sesión.
-- Esta superficie requiere la validación del snapshot que la incorpora.
-  CI #96 arriba valida el slice anterior de privacidad/proveedor, no esta UI.
-- Todavía no se ofrece filtro u ordenamiento global configurable ni ficha Pro:
-  requieren ampliar los contratos server-side y mantener consultas acotadas.
+- Evidencia automática de esta primera UI: privado
+  `f9c7dd1e15dfbd912b5cdf1ebea6f38a9f21689f`, mirror
+  `2db2c64f638e4000bf06c68f6c9865bc22ab4a89`, Public CI #98
+  (`37063229701`): 7/7 success. Preview #59 (`37064412268`) y Pages #26
+  (`37064583759`): success. No equivale a smoke físico ni deploy Supabase.
 
-Próximo paso exacto: ampliar la RPC y el servicio con filtros/ordenamiento
-server-side y sus pruebas RLS antes de exponer los controles en el dashboard.
-Pendientes: filtros/ordenamiento configurables, ficha profesional paginada,
-UX offline adicional y smokes físicos. No reutilizar la ficha legacy
-cargando toda la cartera. No hay smoke físico nuevo ni deploy de Supabase remoto.
+### Filtros y ordenamiento server-side — 2026-10-02
+
+- Migración incremental `20261002214940_stk_coach_pro_dashboard_filters.sql`:
+  firma de seis argumentos de `stk_list_coach_pro_clients`, sin defaults;
+  la firma previa conserva sus defaults y delega en el mismo motor autorizado.
+- Filtros `all/active/paused`, revisión opcional y orden `review/name/recent_workout`.
+  Filtros antes de window count/paginación; orden estable por nombre e ID en empates.
+  El último entreno y la revisión solo consideran progreso compartido activo.
+  No se amplía el payload ni se interpreta actividad como adherencia.
+- Contrato Dart tipado, una página por petición, filtros conservados durante
+  búsqueda/paginación/reintento, offset a cero al cambiarlos y descarte de
+  respuestas tardías. UI responsive con controles de estado, orden y revisión.
+- Pruebas: parámetros HTTP de la RPC, carreras del proveedor, controles de UI,
+  compatibilidad legacy, totales filtrados, empates, permisos y guards del backend.
+- La validación de este nuevo slice requiere su propio snapshot y Public CI 7/7;
+  CI #98 valida únicamente el bloque anterior.
+
+Próximo paso exacto tras validar este slice: diseñar la ficha profesional del
+cliente con consultas paginadas por sección y autorización server-side.
+Pendientes: adherencia real y su ordenamiento, ficha profesional, UX offline
+adicional y smokes físicos. No cargar toda la cartera para resolver una ficha.
+Sin smoke físico nuevo ni deploy Supabase remoto.
 
 
 Crear una superficie profesional, no reutilizar simplemente la pantalla “Coach & Clientes”.

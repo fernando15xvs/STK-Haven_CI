@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
+
 import 'package:core/domain/models/app_identity_state.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
 import 'package:core/features/coach_pro/application/coach_pro_dashboard_provider.dart';
@@ -30,8 +32,11 @@ class _Request {
   final String search;
   final int limit;
   final int offset;
+  final CoachProClientStatusFilter status;
+  final bool? needsReview;
+  final CoachProClientSort sort;
   final result = Completer<List<CoachProClientSummary>>();
-  _Request(this.search, this.limit, this.offset);
+  _Request(this.search, this.limit, this.offset, this.status, this.needsReview, this.sort);
 }
 
 class _Service implements CoachProDashboardService {
@@ -44,8 +49,11 @@ class _Service implements CoachProDashboardService {
     String search = '',
     int limit = 25,
     int offset = 0,
+    CoachProClientStatusFilter status = CoachProClientStatusFilter.all,
+    bool? needsReview,
+    CoachProClientSort sort = CoachProClientSort.review,
   }) {
-    final request = _Request(search, limit, offset);
+    final request = _Request(search, limit, offset, status, needsReview, sort);
     requests.add(request);
     return request.result.future;
   }
@@ -124,6 +132,53 @@ void main() {
     expect(container.read(coachProDashboardProvider).hasNext, isFalse);
     expect(() => notifier.search(List.filled(81, 'x').join()), throwsArgumentError);
     expect(service.requests, hasLength(3));
+  });
+
+  test('filters reset pages, survive search/retry and discard stale results', () async {
+    await _flush();
+    service.requests.single.result.complete([_client('first')]);
+    await _flush();
+    final notifier = container.read(coachProDashboardProvider.notifier);
+    final next = notifier.nextPage();
+    final stale = service.requests.last;
+    final changed = notifier.setFilters(
+      clientStatus: CoachProClientStatusFilter.active,
+      onlyNeedsReview: true,
+      sort: CoachProClientSort.recentWorkout,
+    );
+    final filtered = service.requests.last;
+    expect(filtered.offset, 0);
+    expect(filtered.status, CoachProClientStatusFilter.active);
+    expect(filtered.needsReview, isTrue);
+    expect(filtered.sort, CoachProClientSort.recentWorkout);
+    expect(container.read(coachProDashboardProvider).clients, isEmpty);
+    filtered.result.complete([_client('filtered')]);
+    await changed;
+    stale.result.complete([_client('stale')]);
+    await next;
+    expect(container.read(coachProDashboardProvider).clients.single.relationshipId,
+        'filtered');
+    final searched = notifier.search('Ana');
+    expect(service.requests.last.status, CoachProClientStatusFilter.active);
+    expect(service.requests.last.sort, CoachProClientSort.recentWorkout);
+    expect(service.requests.last.needsReview, isTrue);
+    service.requests.last.result.completeError(StateError('offline'));
+    await searched;
+    final retry = notifier.refresh();
+    expect(service.requests.last.search, 'Ana');
+    expect(service.requests.last.needsReview, isTrue);
+    service.requests.last.result.complete([_client('retry')]);
+    await retry;
+    final page = notifier.nextPage();
+    expect(service.requests.last.offset, 25);
+    expect(service.requests.last.sort, CoachProClientSort.recentWorkout);
+    service.requests.last.result.complete([]);
+    await page;
+    final cleared = notifier.setFilters(onlyNeedsReview: false);
+    expect(service.requests.last.needsReview, isNull);
+    expect(service.requests.last.offset, 0);
+    service.requests.last.result.complete([]);
+    await cleared;
   });
 
   test('refresh failure clears protected rows and supports explicit retry',

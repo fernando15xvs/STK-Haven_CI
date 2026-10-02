@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
 import 'package:core/domain/models/app_identity_state.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
 import 'package:core/domain/models/subscription_entitlement.dart';
@@ -22,6 +23,9 @@ class _Roster extends CoachProDashboardNotifier {
   int nextPages = 0;
   int refreshes = 0;
   String? query;
+  CoachProClientStatusFilter? statusFilter;
+  CoachProClientSort? selectedSort;
+  bool? reviewFilter;
   _Roster(this.initial);
   @override
   CoachProDashboardState build() => initial;
@@ -29,6 +33,13 @@ class _Roster extends CoachProDashboardNotifier {
   Future<void> search(String value) async { searches++; query = value; }
   @override
   Future<void> nextPage() async { nextPages++; }
+  @override
+  Future<void> setFilters({CoachProClientStatusFilter? clientStatus,
+      bool? onlyNeedsReview, CoachProClientSort? sort}) async {
+    statusFilter = clientStatus ?? statusFilter;
+    selectedSort = sort ?? selectedSort;
+    reviewFilter = onlyNeedsReview ?? reviewFilter;
+  }
   @override
   Future<void> refresh() async { refreshes++; }
 }
@@ -115,6 +126,26 @@ void main() {
     await tester.ensureVisible(find.text('Siguiente'));
     await tester.tap(find.text('Siguiente'));
     expect(roster.nextPages, 1);
+  });
+
+  testWidgets('filter controls send server query changes', (tester) async {
+    final roster = _Roster(const CoachProDashboardState(
+      status: CoachProDashboardStatus.ready, totalCount: 0,
+    ));
+    await _mount(tester, roster);
+    await tester.tap(find.text('Activos y pausados'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pausados').last);
+    await tester.pumpAndSettle();
+    expect(roster.statusFilter, CoachProClientStatusFilter.paused);
+    await tester.tap(find.text('Requiere revisión').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nombre').last);
+    await tester.pumpAndSettle();
+    expect(roster.selectedSort, CoachProClientSort.name);
+    await tester.tap(find.text('Solo requiere revisión'));
+    expect(roster.reviewFilter, isTrue);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('loading never renders client rows or enables pagination', (tester) async {

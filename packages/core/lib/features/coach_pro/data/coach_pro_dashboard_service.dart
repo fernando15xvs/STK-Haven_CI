@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -10,6 +11,9 @@ class CoachProDashboardService {
     String search = '',
     int limit = 25,
     int offset = 0,
+    CoachProClientStatusFilter status = CoachProClientStatusFilter.all,
+    bool? needsReview,
+    CoachProClientSort sort = CoachProClientSort.review,
   }) async {
     final response = await client.rpc(
       'stk_list_coach_pro_clients',
@@ -17,6 +21,9 @@ class CoachProDashboardService {
         'p_search': search.trim().isEmpty ? null : search.trim(),
         'p_limit': limit,
         'p_offset': offset,
+        'p_status': status.name,
+        'p_needs_review': needsReview,
+        'p_sort': sort.wireValue,
       },
     );
     if (response is! List) return const <CoachProClientSummary>[];

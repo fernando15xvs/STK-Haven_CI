@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
+
 import 'package:core/domain/models/coach_pro_client_summary.dart';
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/domain/models/subscription_entitlement.dart';
@@ -160,13 +162,73 @@ class _DashboardState extends ConsumerState<_Dashboard>
                       onSubmitted: _searchChanged,
                     ),
                     Wrap(
+                      spacing: 16,
+                      runSpacing: 12,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 250,
+                          child: DropdownButtonFormField<CoachProClientStatusFilter>(
+                            key: ValueKey('status-${state.clientStatus.name}'),
+                            initialValue: state.clientStatus,
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'Estado'),
+                            items: const [
+                              DropdownMenuItem(value: CoachProClientStatusFilter.all,
+                                  child: Text('Activos y pausados', overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: CoachProClientStatusFilter.active,
+                                  child: Text('Activos', overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: CoachProClientStatusFilter.paused,
+                                  child: Text('Pausados', overflow: TextOverflow.ellipsis)),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) unawaited(ref.read(
+                                coachProDashboardProvider.notifier,
+                              ).setFilters(clientStatus: value));
+                            },
+                          ),
+                        ),
+                        SizedBox(
+                          width: 250,
+                          child: DropdownButtonFormField<CoachProClientSort>(
+                            key: ValueKey('sort-${state.sort.name}'),
+                            initialValue: state.sort,
+                            isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'Ordenar por'),
+                            items: const [
+                              DropdownMenuItem(value: CoachProClientSort.review,
+                                  child: Text('Requiere revisión', overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: CoachProClientSort.name,
+                                  child: Text('Nombre', overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: CoachProClientSort.recentWorkout,
+                                  child: Text('Último entreno', overflow: TextOverflow.ellipsis)),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) unawaited(ref.read(
+                                coachProDashboardProvider.notifier,
+                              ).setFilters(sort: value));
+                            },
+                          ),
+                        ),
+                        FilterChip(
+                          label: const Text('Solo requiere revisión'),
+                          selected: state.onlyNeedsReview,
+                          onSelected: (value) => unawaited(ref.read(
+                            coachProDashboardProvider.notifier,
+                          ).setFilters(onlyNeedsReview: value)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Revisión y último entreno usan solo el progreso compartido.'),
+                    const SizedBox(height: 8),
+                    Wrap(
                       spacing: 12,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(state.totalCount == null
                             ? 'Página ${state.offset ~/ 25 + 1}'
                             : '${state.totalCount} resultados'),
-                        const Text('Prioridad: requiere revisión'),
                         TextButton.icon(
                           onPressed: loading ? null : _refresh,
                           icon: const Icon(Icons.refresh),
@@ -189,7 +251,9 @@ class _DashboardState extends ConsumerState<_Dashboard>
                     else if (state.clients.isEmpty)
                       _Message(text: state.offset > 0
                           ? 'Esta página ya no tiene clientes. Vuelve a la anterior.'
-                          : state.search.isEmpty
+                          : state.clientStatus != CoachProClientStatusFilter.all || state.onlyNeedsReview
+                              ? 'No hay clientes que coincidan con los filtros.'
+                              : state.search.isEmpty
                               ? 'Tu cartera todavía no tiene clientes activos o pausados.'
                               : 'No hay clientes que coincidan con la búsqueda.')
                     else if (table)
