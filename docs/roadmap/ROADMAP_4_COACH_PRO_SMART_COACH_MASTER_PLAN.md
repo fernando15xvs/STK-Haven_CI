@@ -100,7 +100,7 @@ Evidencia de recuperación de esta foundation:
 - Supabase: 248 tests aprobados tanto tras upgrade incremental como tras rebuild limpio.
 - `PUBLIC_CI_SNAPSHOT.md` se genera desde el SHA fuente; no es autoridad aislada.
 
-Siguiente slice implementado, pendiente de su propio CI:
+Slice de privacidad y estado paginado validado automáticamente:
 - proveedor de una página de 25 clientes, búsqueda y navegación anterior/siguiente;
 - aislamiento de respuestas tardías, cambio de cuenta, cierre de sesión y errores;
 - sin persistencia local del roster ni descarga de toda la cartera;
@@ -108,6 +108,31 @@ Siguiente slice implementado, pendiente de su propio CI:
 - migración forward-only de privacidad para agregar check-ins por relación/coach;
 - RPC de detalle de check-ins alineada con el aislamiento de tabla (dos coaches);
 - nueva cobertura de relaciones pausadas/revocadas y sesiones anónimas.
+
+Evidencia específica de este slice:
+- Fuente funcional: `70beea85ef4d1e2b7d3e1b0a2abcb52f3fb2ef33`.
+- Snapshot público: `1b7c75794c7f0fb67b9a1eae22ec2c74ee0259e3`.
+- Public CI **#96**, run `37022686776`: **7/7 success**.
+- Supabase: 257 tests aprobados tras upgrade incremental y tras rebuild limpio;
+  el archivo del dashboard declara y ejecuta 24 assertions.
+- Core incluye tests de paginación, respuestas fuera de orden, error/reintento,
+  cambio de cuenta, cierre de sesión, sesión anónima y disposal.
+- Preview **#57**, run `37024044956`: success, iniciado por el gate de CI.
+- Pages run `37024227283`: success. Esta evidencia corresponde al preview aislado.
+- Se preservan las migraciones anteriores; la corrección se añade en
+  `20261002144044_stk_coach_pro_dashboard_privacy.sql`.
+- El staging de CI conserva las tres migraciones exactas de Roadmap 2 y aparta
+  todas las posteriores, incluidas las de octubre.
+- Sin merge a main, sin aplicar migraciones a Supabase remoto y sin smoke físico.
+- En esta sesión el snapshot se transportó mediante GitHub API tras verificar
+  los blobs contra la fuente y pasar las guardas de secretos; el script PowerShell
+  recibió comprobaciones estructurales, no una ejecución integral local.
+
+Próximo paso exacto: crear `CoachProDashboardPage` sobre
+`coachProDashboardProvider`, con tarjetas móviles/tabla de escritorio, búsqueda,
+paginación, estados de cuenta/carga/error/vacío y acceso independiente de Coach MVP.
+Antes de mostrar filtros u ordenamientos globales, extender su contrato server-side;
+no filtrar solo la página actual ni cargar toda la cartera.
 
 Pendientes: superficie profesional responsive, entrada en navegación, filtros/ordenamiento
 server-side, UX offline y ficha profesional paginada. No reutilizar la ficha legacy
