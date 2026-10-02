@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/presentation/coach_pro_client_detail_page.dart';
 import 'dart:async';
 
 import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
@@ -100,6 +101,13 @@ class _DashboardState extends ConsumerState<_Dashboard>
         unawaited(ref.read(coachProDashboardProvider.notifier).search(value));
       }
     });
+  }
+
+  Future<void> _openClient(String relationshipId) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => CoachProClientDetailPage(relationshipId: relationshipId),
+    ));
+    if (mounted) await _refresh();
   }
 
   @override
@@ -270,9 +278,10 @@ class _DashboardState extends ConsumerState<_Dashboard>
                           ],
                           rows: [for (final client in state.clients)
                             DataRow(cells: [
-                              DataCell(SizedBox(width: 200, child: Text(
-                                _name(client), maxLines: 2,
-                                overflow: TextOverflow.ellipsis))),
+                              DataCell(SizedBox(width: 200, child: TextButton(
+                                onPressed: () => _openClient(client.relationshipId),
+                                child: Text(_name(client), maxLines: 2,
+                                  overflow: TextOverflow.ellipsis)))),
                               DataCell(Text(_status(client))),
                               for (final metric in _metrics(context, client))
                                 DataCell(Text(metric.$2)),
@@ -289,6 +298,9 @@ class _DashboardState extends ConsumerState<_Dashboard>
                             children: [
                               Text(_name(client), style: Theme.of(context)
                                   .textTheme.titleMedium),
+                              TextButton(
+                                onPressed: () => _openClient(client.relationshipId),
+                                child: const Text('Abrir ficha')),
                               const SizedBox(height: 4),
                               Text(_status(client)),
                               const SizedBox(height: 12),

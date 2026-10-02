@@ -1,0 +1,116 @@
+import 'dart:async';
+
+import 'package:core/domain/models/app_identity_state.dart';
+import 'package:core/domain/models/coach_checkin.dart';
+import 'package:core/domain/models/coach_pro_client_summary.dart';
+import 'package:core/features/coach_pro/application/coach_pro_client_detail_provider.dart';
+import 'package:core/features/coach_pro/data/coach_pro_client_detail_service.dart';
+import 'package:core/features/coach_pro/presentation/coach_pro_client_detail_page.dart';
+import 'package:core/features/identity/application/app_identity_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+class _Identity extends AppIdentityNotifier {
+  @override
+  AppIdentityState build() => const AppIdentityState(
+    sessionKind: AppSessionKind.permanent, userId: 'coach',
+  );
+  void signOut() => state = const AppIdentityState();
+}
+
+CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compartida'}) =>
+    CoachProClientDetail(CoachProClientSummary.fromJson({
+      'relationship_id': 'rel', 'client_user_id': 'client', 'display_name': 'Ana',
+      'relationship_status': 'active', 'permissions': {'view_checkins': permitted},
+      'workouts_7d': 99,
+    }), checkins: CoachProCheckinPage(totalCount: 26, items: [
+      CoachCheckin.fromJson({'id': 'checkin', 'relationship_id': 'rel',
+        'energy': 3, 'recovery': 4, 'note': note, 'created_at': '2026-10-02T00:00:00Z'}),
+    ]));
+
+Future<ProviderContainer> _mount(WidgetTester tester, {
+  double width = 390, double scale = 1,
+  required Future<CoachProClientDetail?> Function(CoachProClientDetailQuery) load,
+}) async {
+  tester.view.physicalSize = Size(width, 1100);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  final container = ProviderContainer(overrides: [
+    appIdentityProvider.overrideWith(_Identity.new),
+    coachProClientDetailProvider.overrideWith((ref, query) => load(query)),
+  ]);
+  addTearDown(container.dispose);
+  await tester.pumpWidget(UncontrolledProviderScope(container: container,
+    child: MaterialApp(builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+      child: child!), home: const CoachProClientDetailPage(relationshipId: 'rel')),
+  ));
+  await tester.pump();
+  return container;
+}
+
+void main() {
+  for (final width in [320.0, 768.0, 1440.0]) {
+    testWidgets('detail at $width respects permission and loads selected page', (tester) async {
+      final queries = <CoachProClientDetailQuery>[];
+      await _mount(tester, width: width, load: (query) async {
+        queries.add(query); return _detail();
+      });
+      expect(find.text('Ana'), findsOneWidget);
+      expect(find.textContaining('99'), findsNothing);
+      expect(find.text('Nota compartida'), findsNothing);
+      await tester.tap(find.text('Check-ins'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nota compartida'), findsOneWidget);
+      await tester.ensureVisible(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Siguiente'));
+      await tester.pumpAndSettle();
+      expect(queries.last.offset, 25);
+      expect(queries.last.relationshipId, 'rel');
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('missing permission cannot render check-in payload, including large text', (tester) async {
+    await _mount(tester, width: 320, scale: 1.8,
+      load: (_) async => _detail(permitted: false));
+    await tester.tap(find.text('Check-ins'));
+    await tester.pumpAndSettle();
+    expect(find.text('Check-ins: no compartidos en esta relación.'), findsOneWidget);
+    expect(find.text('Nota compartida'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('refresh clears old content while loading and on error', (tester) async {
+    var refresh = false;
+    final pending = Completer<CoachProClientDetail?>();
+    await _mount(tester, load: (_) => refresh ? pending.future : Future.value(_detail()));
+    refresh = true;
+    await tester.tap(find.text('Actualizar'));
+    await tester.pump();
+    expect(find.text('Ana'), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    pending.completeError(StateError('private backend detail'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ana'), findsNothing);
+    expect(find.textContaining('private backend detail'), findsNothing);
+    expect(find.text('Reintentar'), findsOneWidget);
+  });
+  testWidgets('sign-out removes shared notes and prevents further navigation', (tester) async {
+    final container = await _mount(tester, load: (_) async => _detail());
+    await tester.tap(find.text('Check-ins'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nota compartida'), findsOneWidget);
+    (container.read(appIdentityProvider.notifier) as _Identity).signOut();
+    await tester.pumpAndSettle();
+    expect(find.text('Nota compartida'), findsNothing);
+    expect(find.text('Siguiente'), findsNothing);
+    expect(find.textContaining('cuenta permanente'), findsOneWidget);
+  });
+  testWidgets('unavailable relationship has no stale summary', (tester) async {
+    await _mount(tester, load: (_) async => null);
+    expect(find.text('La relación no está disponible.'), findsOneWidget);
+    expect(find.text('Ana'), findsNothing);
+  });
+}

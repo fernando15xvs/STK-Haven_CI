@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/application/coach_pro_client_detail_provider.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
 import 'package:core/domain/models/app_identity_state.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
@@ -66,6 +67,7 @@ Future<ProviderContainer> _mount(WidgetTester tester, _Roster roster, {
   addTearDown(tester.view.resetDevicePixelRatio);
   final container = ProviderContainer(overrides: [
     appIdentityProvider.overrideWith(_Identity.new),
+    coachProClientDetailProvider.overrideWith((ref, query) async => null),
     coachProDashboardProvider.overrideWith(() => roster),
     coachProDashboardPlanProvider('coach').overrideWith((ref) async => plan),
   ]);
@@ -148,6 +150,22 @@ void main() {
     await tester.tap(find.text('Solo requiere revisión'));
     expect(roster.reviewFilter, isTrue);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('opens targeted Pro detail from a roster card', (tester) async {
+    final roster = _Roster(CoachProDashboardState(
+      status: CoachProDashboardStatus.ready, clients: [_client()], totalCount: 1,
+    ));
+    await _mount(tester, roster);
+    await tester.ensureVisible(find.text('Abrir ficha'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Abrir ficha'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ficha Coach Pro'), findsOneWidget);
+    expect(find.text('La relación no está disponible.'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(roster.refreshes, 1);
   });
 
   testWidgets('loading never renders client rows or enables pagination', (tester) async {

@@ -164,14 +164,38 @@ Evidencia específica de este slice:
   respuestas tardías. UI responsive con controles de estado, orden y revisión.
 - Pruebas: parámetros HTTP de la RPC, carreras del proveedor, controles de UI,
   compatibilidad legacy, totales filtrados, empates, permisos y guards del backend.
-- La validación de este nuevo slice requiere su propio snapshot y Public CI 7/7;
-  CI #98 valida únicamente el bloque anterior.
+- Evidencia de filtros: privado `8d38339fe256733dca4ea3b4d94930293f00e609`,
+  mirror `10cf21dceab2ee2eb0a54e61590babe9d9b99c21`, Public CI #100
+  (`37070253014`): 7/7 success, 347 tests Core y 277 pgTAP en cada ruta.
+  Preview #61 (`37071325044`) y Pages #27 (`37071464135`): success.
 
-Próximo paso exacto tras validar este slice: diseñar la ficha profesional del
-cliente con consultas paginadas por sección y autorización server-side.
-Pendientes: adherencia real y su ordenamiento, ficha profesional, UX offline
-adicional y smokes físicos. No cargar toda la cartera para resolver una ficha.
-Sin smoke físico nuevo ni deploy Supabase remoto.
+### Ficha profesional: resumen y check-ins — 2026-10-02
+
+- Entrada desde tarjetas/tabla del dashboard por `relationshipId`; no depende
+  de `coachClientProvider` ni descarga toda la cartera para resolver la ficha.
+- RPC `stk_get_coach_pro_client`: resumen de una sola relación del coach;
+  misma redacción del dashboard, metadata de pausadas y ninguna fila de revocadas
+  o relaciones ajenas. Exige cuenta permanente, capability y entitlement.
+- RPC `stk_list_coach_pro_client_checkins`: permiso activo `view_checkins`,
+  aislamiento simultáneo por relación/coach/cliente, páginas de 25 (máximo 100),
+  offset acotado y total por window count. Orden estable fecha/ID.
+  Usa PK de relaciones e índice existente `stk_coach_checkins_relationship_created_idx`.
+- Reutiliza modelos existentes; consulta check-ins solo al abrir la sección,
+  con una página en memoria. Cada página revalida resumen y permisos.
+  Carga, error y refresh ocultan el contenido anterior; sesión y relación
+  separan la consulta. Cerrar sesión elimina la ficha y respuestas tardías.
+- Lectura únicamente: sin comentarios ni mutaciones nuevas. El payload de
+  check-ins contiene solo los campos compartidos del contrato existente.
+- Tests de IDOR entre dos coaches, paginación con empates, permisos, pausa,
+  revocación, expiry, anonimato; servicio HTTP, proveedor y UI responsive.
+- Este slice necesita su propio Public CI 7/7 antes de declararse validado;
+  la evidencia #100 corresponde a filtros, no a esta ficha.
+
+Próximo paso tras validar: añadir a la ficha programas/tareas con contratos
+paginados por relación y pruebas de sus permisos específicos. Siguen pendientes
+entrenamientos, progreso ampliado, alimentación, comentarios/historial,
+adherencia real, exportación y smokes físicos. No hay despliegue Supabase remoto.
+
 
 
 Crear una superficie profesional, no reutilizar simplemente la pantalla “Coach & Clientes”.
