@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/presentation/coach_pro_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/core/constants/preset_programs.dart';
@@ -109,6 +110,18 @@ class ProfilePageWeb extends ConsumerWidget {
                         builder: (_) => const CoachConnectionsPage(),
                       ),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _Section(
+                  title: 'Coach Pro',
+                  child: _ActionTile(
+                    icon: Icons.dashboard_outlined,
+                    title: 'Cartera profesional',
+                    subtitle: 'Seguimiento y resumen de tus clientes vinculados.',
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const CoachProDashboardPage(),
+                    )),
                   ),
                 ),
                 const SizedBox(height: 18),

@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/presentation/coach_pro_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
@@ -114,6 +115,19 @@ class ProfilePage extends ConsumerWidget {
                   builder: (_) => const CoachConnectionsPage(),
                 ),
               ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          PremiumCard(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              leading: const Icon(Icons.dashboard_outlined, color: AppColors.primary),
+              title: const Text('Coach Pro'),
+              subtitle: const Text('Cartera profesional y seguimiento de clientes'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const CoachProDashboardPage(),
+              )),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),

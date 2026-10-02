@@ -128,14 +128,31 @@ Evidencia específica de este slice:
   los blobs contra la fuente y pasar las guardas de secretos; el script PowerShell
   recibió comprobaciones estructurales, no una ejecución integral local.
 
-Próximo paso exacto: crear `CoachProDashboardPage` sobre
-`coachProDashboardProvider`, con tarjetas móviles/tabla de escritorio, búsqueda,
-paginación, estados de cuenta/carga/error/vacío y acceso independiente de Coach MVP.
-Antes de mostrar filtros u ordenamientos globales, extender su contrato server-side;
-no filtrar solo la página actual ni cargar toda la cartera.
+### Primera superficie Coach Pro — 2026-10-02
 
-Pendientes: superficie profesional responsive, entrada en navegación, filtros/ordenamiento
-server-side, UX offline y ficha profesional paginada. No reutilizar la ficha legacy
+- `features/coach_pro/presentation/coach_pro_dashboard_page.dart`: superficie
+  independiente de Coach & Clientes, con entradas desde Perfil móvil y web.
+- Tarjetas en móvil/tablet y tabla con scroll horizontal en escritorio;
+  texto ampliado utiliza tarjetas.
+- Búsqueda con debounce de 350 ms y límite de 80 caracteres, páginas de 25,
+  navegación anterior/siguiente y actualización manual/al volver al foreground.
+- Estados de cuenta requerida, carga, error con reintento, vacío y orientación
+  para reconectar; no se almacena una cartera offline con permisos caducados.
+- El estado del plan se consulta por sesión y se muestra separado de los permisos;
+  las consultas del roster continúan autorizándose exclusivamente en el servidor.
+- Cada métrica sin permiso muestra «No compartido». Una métrica permitida sin dato
+  muestra «Sin datos»; no inventar adherencia o totales globales desde una página.
+- Pruebas de widgets para 320/768/1440 px, texto ampliado, búsqueda/paginación,
+  carga/error/vacío, plan y retirada de contenido al cerrar sesión.
+- Esta superficie requiere la validación del snapshot que la incorpora.
+  CI #96 arriba valida el slice anterior de privacidad/proveedor, no esta UI.
+- Todavía no se ofrece filtro u ordenamiento global configurable ni ficha Pro:
+  requieren ampliar los contratos server-side y mantener consultas acotadas.
+
+Próximo paso exacto: ampliar la RPC y el servicio con filtros/ordenamiento
+server-side y sus pruebas RLS antes de exponer los controles en el dashboard.
+Pendientes: filtros/ordenamiento configurables, ficha profesional paginada,
+UX offline adicional y smokes físicos. No reutilizar la ficha legacy
 cargando toda la cartera. No hay smoke físico nuevo ni deploy de Supabase remoto.
 
 
