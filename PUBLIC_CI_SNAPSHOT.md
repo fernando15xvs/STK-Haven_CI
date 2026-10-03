@@ -2,7 +2,7 @@
 
 This repository is a history-free CI mirror of the private STK Haven source.
 
-Source commit: 6a83a7ce8c45441b330c7ca2a746c16a8da3db74
+Source commit: 78bdc55f32800d2572d0f5c2f700f2e2cf54a76c
 Source branch: feat/roadmap-3-foundation
 
 The private Git history, local signing material, environment files, credentials,

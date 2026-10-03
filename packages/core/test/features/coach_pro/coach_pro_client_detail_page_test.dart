@@ -1,3 +1,4 @@
+import 'package:core/domain/models/coach_client_progress.dart';
 import 'package:core/features/coach_pro/application/coach_pro_task_provider.dart';
 import 'package:core/features/coach_pro/application/coach_pro_program_provider.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
@@ -23,12 +24,16 @@ class _Identity extends AppIdentityNotifier {
   void signOutForTest() => state = const AppIdentityState();
 }
 
-CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compartida', bool programs = false, bool tasks = false}) =>
+CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compartida', bool programs = false, bool tasks = false, bool workouts = false}) =>
     CoachProClientDetail(CoachProClientSummary.fromJson({
       'relationship_id': 'rel', 'client_user_id': 'client', 'display_name': 'Ana',
-      'relationship_status': 'active', 'permissions': {'view_checkins': permitted, 'assign_programs': programs, 'assign_tasks': tasks},
+      'relationship_status': 'active', 'permissions': {'view_checkins': permitted, 'assign_programs': programs, 'assign_tasks': tasks, 'view_workouts': workouts},
       'workouts_7d': 99,
-    }), checkins: CoachProCheckinPage(totalCount: 26, items: [
+    }), workouts: CoachProSectionPage(totalCount: 27, items: [
+      CoachSharedWorkoutSummary(workoutId: 'w', startedAt: DateTime(2026, 10, 1),
+        routineName: 'Rutina compartida', durationSeconds: 1200, plannedWorkingSets: 10,
+        completedWorkingSets: 8, completionPercent: 80, volume: 2400),
+    ]), checkins: CoachProCheckinPage(totalCount: 26, items: [
       CoachCheckin.fromJson({'id': 'checkin', 'relationship_id': 'rel',
         'energy': 3, 'recovery': 4, 'note': note, 'created_at': '2026-10-02T00:00:00Z'}),
     ]), programs: CoachProSectionPage(totalCount: 26, items: [
@@ -67,6 +72,41 @@ Future<ProviderContainer> _mount(WidgetTester tester, {
 }
 
 void main() {
+  for (final width in [320.0, 768.0, 1440.0]) {
+    testWidgets('workout summaries at $width paginate only on selection', (tester) async {
+      final queries = <CoachProClientDetailQuery>[];
+      await _mount(tester, width: width, load: (q) async { queries.add(q); return _detail(workouts: true); });
+      expect(find.text('Rutina compartida'), findsNothing);
+      await tester.tap(find.text('Entrenamientos')); await tester.pumpAndSettle();
+      expect(queries.last.section, CoachProClientSection.workouts);
+      expect(find.text('Rutina compartida'), findsOneWidget);
+      expect(find.text('RIR medio: Sin datos'), findsOneWidget);
+      expect(find.textContaining('No es el historial completo'), findsOneWidget);
+      await tester.ensureVisible(find.text('Siguiente')); await tester.pumpAndSettle();
+      await tester.tap(find.text('Siguiente')); await tester.pumpAndSettle();
+      expect(queries.last.offset, 25); expect(find.text('Rutina compartida'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets('workout permission masks injected payload and refresh redacts prior page', (tester) async {
+    bool permitted = false, refreshing = false;
+    final pending = Completer<CoachProClientDetail?>();
+    final container = await _mount(tester, width: 320, scale: 1.8,
+      load: (_) => refreshing ? pending.future : Future.value(_detail(workouts: permitted)));
+    await tester.tap(find.text('Entrenamientos')); await tester.pumpAndSettle();
+    expect(find.text('Rutina compartida'), findsNothing);
+    expect(find.text('Entrenamientos: no compartidos en esta relación.'), findsOneWidget);
+    permitted = true; await tester.tap(find.text('Actualizar')); await tester.pumpAndSettle();
+    expect(find.text('Rutina compartida'), findsOneWidget);
+    refreshing = true; await tester.tap(find.text('Actualizar')); await tester.pump();
+    expect(find.text('Rutina compartida'), findsNothing);
+    pending.completeError(StateError('private data')); await tester.pumpAndSettle();
+    expect(find.textContaining('private data'), findsNothing);
+    expect(find.text('Reintentar'), findsOneWidget);
+    (container.read(appIdentityProvider.notifier) as _Identity).signOutForTest();
+    await tester.pumpAndSettle(); expect(find.text('Rutina compartida'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   for (final width in [320.0, 768.0, 1440.0]) {
     testWidgets('detail at $width respects permission and loads selected page', (tester) async {
       final queries = <CoachProClientDetailQuery>[];

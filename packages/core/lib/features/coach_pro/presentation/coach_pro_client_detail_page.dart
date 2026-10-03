@@ -97,6 +97,29 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                 const SizedBox(height: 16),
                 const Text('Los permisos los administra el cliente. El plan Coach Pro '
                     'no concede acceso adicional a sus datos.'),
+              ] else if (_section == CoachProClientSection.workouts) ...[
+                if (!detail.canViewWorkouts)
+                  const Text('Entrenamientos: no compartidos en esta relación.')
+                else ...[
+                  const Text('Resúmenes recientes compartidos (hasta 30). No es el historial completo; no incluye notas ni series individuales.'),
+                  if (detail.workouts!.items.isEmpty)
+                    Text(_offset == 0 ? 'Todavía no hay resúmenes de entrenamientos compartidos.'
+                        : 'Esta página está vacía. Vuelve a la anterior.'),
+                  for (final item in detail.workouts!.items)
+                    Card(child: Padding(padding: const EdgeInsets.all(16),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(item.routineName.isEmpty ? 'Entrenamiento' : item.routineName,
+                          style: Theme.of(context).textTheme.titleMedium),
+                        Text(_date(context, item.startedAt)),
+                        Text('Duración registrada: ${item.durationSeconds ~/ 60} min'),
+                        Text('Series de trabajo: ${item.completedWorkingSets}/${item.plannedWorkingSets}'),
+                        Text('Completado: ${item.completionPercent}%'),
+                        Text('Volumen registrado: ${item.volume}'),
+                        Text('RIR medio: ${item.averageRir?.toString() ?? 'Sin datos'}'),
+                      ]),
+                    )),
+                  _pagination(detail.workouts!.items.length, detail.workouts!.totalCount, 'resúmenes'),
+                ],
               ] else if (_section == CoachProClientSection.programs) ...[
                 if (!detail.canViewPrograms)
                   const Text('Programas: no compartidos en esta relación.')
@@ -200,6 +223,7 @@ String _sectionLabel(CoachProClientSection section) => switch (section) {
   CoachProClientSection.checkins => 'Check-ins',
   CoachProClientSection.programs => 'Programas',
   CoachProClientSection.tasks => 'Tareas',
+  CoachProClientSection.workouts => 'Entrenamientos',
 };
 String _programStatus(AssignedProgramStatus status) => switch (status) {
   AssignedProgramStatus.assigned => 'Asignado',

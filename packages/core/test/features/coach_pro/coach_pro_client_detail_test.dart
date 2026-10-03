@@ -1,3 +1,4 @@
+import 'package:core/domain/models/coach_client_progress.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
 import 'dart:async';
@@ -34,6 +35,15 @@ class _Service implements CoachProClientDetailService {
   final offsets = <int>[];
   final programOffsets = <int>[];
   final taskOffsets = <int>[];
+  final workoutOffsets = <int>[];
+  @override
+  Future<CoachProSectionPage<CoachSharedWorkoutSummary>> listWorkouts(
+      String relationshipId, String clientUserId, {int limit = 25, int offset = 0}) async {
+    expect(clientUserId, 'client');
+    workoutOffsets.add(offset);
+    if (fail) throw StateError('sensitive');
+    return const CoachProSectionPage(totalCount: 0);
+  }
   CoachProClientSummary? summary = _summary();
   Completer<CoachProClientSummary?>? pending;
   bool fail = false;
@@ -81,6 +91,74 @@ void main() {
     ]);
   });
   tearDown(() => container.dispose());
+
+  test('workouts are lazy, independent of progress, and revocation stops subsequent queries', () async {
+    service.summary = CoachProClientSummary.fromJson({
+      'relationship_id': 'rel', 'client_user_id': 'client', 'relationship_status': 'active',
+      'permissions': {'view_workouts': true, 'view_progress': false},
+    });
+    await container.read(coachProClientDetailProvider(summaryQuery).future);
+    expect(service.workoutOffsets, isEmpty);
+    final provider = coachProClientDetailProvider(
+      (relationshipId: 'rel', section: CoachProClientSection.workouts, offset: 25));
+    container.listen(provider, (_, _) {});
+    expect((await container.read(provider.future))!.workouts, isNotNull);
+    expect(service.workoutOffsets, [25]);
+    expect(service.offsets, isEmpty); expect(service.programOffsets, isEmpty); expect(service.taskOffsets, isEmpty);
+    service.summary = _summary(programs: true, tasks: true);
+    container.invalidate(provider);
+    expect((await container.read(provider.future))!.workouts, isNull);
+    expect(service.workoutOffsets, [25]);
+  });
+  test('paused workouts are hidden and authorized query errors fail the whole detail', () async {
+    final provider = coachProClientDetailProvider(
+      (relationshipId: 'rel', section: CoachProClientSection.workouts, offset: 0));
+    service.summary = CoachProClientSummary.fromJson({
+      'relationship_id': 'rel', 'client_user_id': 'client', 'relationship_status': 'paused',
+      'permissions': {'view_workouts': true},
+    });
+    container.listen(provider, (_, _) {});
+    expect((await container.read(provider.future))!.workouts, isNull);
+    expect(service.workoutOffsets, isEmpty);
+    service.summary = CoachProClientSummary.fromJson({
+      'relationship_id': 'rel', 'client_user_id': 'client', 'relationship_status': 'active',
+      'permissions': {'view_workouts': true},
+    });
+    service.fail = true; container.invalidate(provider);
+    await expectLater(container.read(provider.future), throwsStateError);
+  });
+  test('workout RPC validates client scope, exact counts and null RIR without inventing data', () async {
+    String? corrupt; bool empty = false;
+    final requests = <http.Request>[];
+    final client = SupabaseClient('https://example.test', 'test-key', httpClient: MockClient((request) async {
+      requests.add(request);
+      final row = <String, dynamic>{'client_user_id': 'client', 'workout_id': 'w',
+        'started_at': '2026-10-01T00:00:00Z', 'routine_name': 'Fuerza', 'duration_seconds': 0,
+        'planned_working_sets': 0, 'completed_working_sets': 0, 'completion_percent': 0,
+        'volume': 0, 'average_rir': null};
+      if (corrupt == 'client') row['client_user_id'] = 'other';
+      if (corrupt == 'date') row['started_at'] = null;
+      if (corrupt == 'duration') row['duration_seconds'] = null;
+      if (corrupt == 'sets') row['completed_working_sets'] = 1;
+      if (corrupt == 'rir') row['average_rir'] = 11;
+      return http.Response(jsonEncode({'relationship_id': corrupt == 'relationship' ? 'other' : 'rel',
+        'client_user_id': 'client', 'total_count': 27, 'items': empty ? [] : [row]}),200,
+        request: request, headers: {'content-type': 'application/json'});
+    }));
+    addTearDown(client.dispose);
+    final live = CoachProClientDetailService(client);
+    final page = await live.listWorkouts('rel', 'client', offset: 25);
+    expect(requests.single.url.path, '/rest/v1/rpc/stk_list_coach_pro_client_workouts');
+    expect(jsonDecode(requests.single.body), {'p_relationship_id': 'rel', 'p_limit': 25, 'p_offset': 25});
+    expect(page.items.single.averageRir, isNull); expect(page.items.single.volume, 0);
+    expect(() => page.items.clear(), throwsUnsupportedError);
+    for (final key in ['client', 'date', 'duration', 'sets', 'rir', 'relationship']) {
+      corrupt = key; await expectLater(live.listWorkouts('rel', 'client'), throwsFormatException);
+    }
+    corrupt = null; empty = true;
+    final last = await live.listWorkouts('rel', 'client', offset: 50);
+    expect(last.items, isEmpty); expect(last.totalCount, 27);
+  });
 
   test('summary is targeted; check-in section loads exactly one selected page', () async {
     container.listen(coachProClientDetailProvider(summaryQuery), (_, _) {});

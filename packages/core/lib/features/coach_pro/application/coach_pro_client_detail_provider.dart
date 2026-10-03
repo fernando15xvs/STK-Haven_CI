@@ -1,3 +1,4 @@
+import 'package:core/domain/models/coach_client_progress.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
@@ -7,7 +8,7 @@ import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum CoachProClientSection { summary, checkins, programs, tasks }
+enum CoachProClientSection { summary, checkins, programs, tasks, workouts }
 
 typedef CoachProClientDetailQuery = ({String relationshipId, CoachProClientSection section, int offset});
 
@@ -16,7 +17,9 @@ class CoachProClientDetail {
   final CoachProCheckinPage? checkins;
   final CoachProSectionPage<CoachProgramAssignmentSummary>? programs;
   final CoachProSectionPage<CoachProTaskSummary>? tasks;
-  const CoachProClientDetail(this.summary, {this.checkins, this.programs, this.tasks});
+  final CoachProSectionPage<CoachSharedWorkoutSummary>? workouts;
+  const CoachProClientDetail(this.summary, {this.checkins, this.programs, this.tasks, this.workouts});
+  bool get canViewWorkouts => canView(CoachPermission.viewWorkouts);
   bool canView(CoachPermission permission) =>
       summary.relationshipStatus == CoachRelationshipStatus.active &&
       summary.permissions.contains(permission);
@@ -46,6 +49,10 @@ final coachProClientDetailProvider = FutureProvider.autoDispose
   switch (query.section) {
     case CoachProClientSection.summary:
       return detail;
+    case CoachProClientSection.workouts:
+      if (!detail.canViewWorkouts) return detail;
+      return CoachProClientDetail(summary, workouts:
+        await service.listWorkouts(query.relationshipId, summary.clientUserId, offset: query.offset));
     case CoachProClientSection.checkins:
       if (!detail.canViewCheckins) return detail;
       return CoachProClientDetail(summary, checkins:

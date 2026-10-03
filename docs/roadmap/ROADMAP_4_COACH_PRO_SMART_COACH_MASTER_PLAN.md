@@ -48,6 +48,19 @@
 
 ---
 
+## Continuidad Fase 2 — resúmenes de entrenamientos (2026-10-03)
+
+- Envío de comentarios validado: fuente `6a83a7ce8c45441b330c7ca2a746c16a8da3db74`, mirror `2088b7ae0a06cf25fc08cfcb18ab1d23a355ea40`, CI #108/run `37157129790` **7/7 success**; 404 Core y 471 pgTAP tras upgrade y rebuild. Preview #69/run `37157769649` y Pages/run `37157860292`: success.
+- Nuevo slice: sección Entrenamientos en la ficha profesional, servicio/provider y RPC `stk_list_coach_pro_client_workouts`. Reutiliza `CoachSharedWorkoutSummary` y `stk_client_workout_summaries` de Roadmap 3.
+- Alcance explícito: el sync existente reemplaza un snapshot de hasta 30 resúmenes recientes. Esto NO es historial completo ni detalle de ejercicios/series. No se cambia ese contrato ni se comparten notas. La pantalla comunica esta limitación.
+- Una página de 25 por selección, orden estable por fecha/id y conteo exacto incluso en páginas vacías. Summary + página seleccionada; sin N+1 ni precarga de secciones vecinas.
+- Exige cuenta permanente, capability coach, Coach Pro y relación activa del coach actual con `view_workouts`. `view_progress` no sustituye ese consentimiento. Dos coaches necesitan permisos propios; cliente distinto permanece aislado.
+- Parsing estricto antes de reutilizar el modelo legado: no inventar fechas/ceros ante payload incompleto; RIR ausente permanece null. Estado loading/error y cambios de sesión usan la redacción y descarte ya implementados.
+- Tests de paginación, privacidad, parser, provider y responsive añadidos. Este slice requiere su propio CI 7/7; sin smoke físico ni despliegue remoto acreditados.
+- Próximo bloque: revisar y ampliar la sección de progreso compartido bajo `view_progress`, manteniendo separados workouts, medidas corporales y nutrición.
+
+---
+
 # 0. Principios no negociables
 
 - [x] Una sola fuente de verdad en `packages/core`; mobile/web consumen los mismos contratos.
