@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/application/coach_pro_task_provider.dart';
 import 'package:core/features/coach_pro/application/coach_pro_program_provider.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
@@ -51,6 +52,7 @@ Future<ProviderContainer> _mount(WidgetTester tester, {
   addTearDown(tester.view.resetDevicePixelRatio);
   final container = ProviderContainer(overrides: [
     appIdentityProvider.overrideWith(_Identity.new),
+    coachProTaskPageProvider.overrideWith((ref, query) async => null),
     coachProProgramPageProvider.overrideWith((ref, query) async => null),
     coachProClientDetailProvider.overrideWith((ref, query) => load(query)),
   ]);
@@ -147,6 +149,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Programa asignado'), findsOneWidget);
     expect(find.text('Programa no disponible.'), findsOneWidget);
+  });
+
+  testWidgets('task card opens professional history', (tester) async {
+    await _mount(tester, load: (_) async => _detail(tasks: true));
+    await tester.tap(find.text('Tareas'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Ver historial'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver historial'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tarea asignada'), findsOneWidget);
+    expect(find.text('Tarea no disponible.'), findsOneWidget);
   });
 
   testWidgets('missing permission cannot render check-in payload, including large text', (tester) async {

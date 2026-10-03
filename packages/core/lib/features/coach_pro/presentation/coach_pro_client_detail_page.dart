@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/presentation/coach_pro_task_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_program_page.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/coach_assigned_task.dart';
@@ -126,6 +127,8 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                     Card(child: Padding(padding: const EdgeInsets.all(16),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(item.title, style: Theme.of(context).textTheme.titleMedium),
+                        TextButton(onPressed: () => _openTask(item.id),
+                          child: const Text('Ver historial')),
                         Text('${item.category} · ${item.status == CoachAssignedTaskStatus.active ? 'Activa' : 'Archivada'}'),
                         Text('Inicio: ${_date(context, item.startsOn)}'),
                         if (item.dueAt != null) Text('Vencimiento: ${_date(context, item.dueAt)}'),
@@ -154,6 +157,12 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
         ),
       ]),
     )));
+  }
+
+  Future<void> _openTask(String taskId) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) =>
+      CoachProTaskDetailPage(relationshipId: widget.relationshipId, taskId: taskId)));
+    if (mounted) _refresh();
   }
 
   Future<void> _openProgram(CoachProgramAssignmentSummary program) async {

@@ -237,12 +237,37 @@ Evidencia específica de este slice:
   soportan estas consultas. Sin consultas por ejercicio ni descarga de toda la cartera.
 - Pruebas SQL de IDOR, versión, paginación, payload acotado, revocación, pausa,
   expiración y anonimato; tests HTTP, sesión, widgets y navegación.
-- La validación de este slice requiere su propio Public CI 7/7; #103 valida listas.
+- Evidencia de detalle de programa: privado
+  `9be138148081e193c18f12eb2d43d9e789181860`, mirror
+  `d61d900f6d1c0fdb2e7806da5da29e56ec6eea1a`, Public CI #104
+  (`37097301328`): 7/7 success; 384 tests Core y 386 pgTAP en cada ruta.
+  Preview #65 (`37097868575`) y Pages #30 (`37097961307`): success.
 
-Próximo paso tras validar: detalle de tarea con ocurrencias paginadas por relación,
-conservando el historial y los permisos del contrato existente. Pendientes:
-historial de cambios de programa, entrenamientos, progreso ampliado, alimentación,
-comentarios, adherencia real, exportación y smokes físicos. Sin deploy Supabase remoto.
+### Detalle de tarea e historial paginado — 2026-10-03 UTC
+
+- RPC `stk_get_coach_pro_task_page`: exige cuenta permanente, capability coach,
+  entitlement y relación activa con `assign_tasks`. Aísla tarea por relación,
+  coach y cliente; filtra ocurrencias también por `task_id` y `client_user_id`.
+- Una llamada por página devuelve la tarea asignada y hasta 25 registros
+  (máximo 100, offset 0..10000), orden por fecha descendente/ID y total incluso
+  para páginas vacías. Reutiliza índice `(task_id, occurrence_date desc)`.
+- Reutiliza `CoachAssignedTask` y `CoachTaskOccurrence`. El detalle muestra
+  instrucciones asignadas, calendario, estado y registros finalizados. No devuelve
+  comentarios ni notas privadas; no infiere días incumplidos ni adherencia.
+- Conserva estados `completed/skipped`, minutos y timestamps; archivar no elimina
+  historia. Sin mutaciones, nuevos estados ni versión artificial para tareas.
+- Entrada «Ver historial» desde Tareas, páginas por sesión/relación/tarea, refresh
+  al regresar o recuperar foreground. Carga/error ocultan contenido anterior;
+  cerrar sesión elimina instrucciones e historial y descarta respuestas tardías.
+- Tests de aislamiento entre tareas/coaches/clientes, acceso revocado/pausado,
+  expiry/anonimato, límites, preservación íntegra del historial, contrato HTTP,
+  proveedor y UI a 320/768/1440 px y texto ampliado.
+- Este slice requiere su propio Public CI 7/7; #104 valida el programa anterior.
+
+Próximo paso tras validar: comentarios de tarea paginados con permiso `comment`
+independiente, empezando por lectura y aislamiento. Siguen pendientes historial de
+cambios de programa, entrenamientos, progreso ampliado, alimentación, adherencia
+real, exportación y smokes físicos. Sin deploy Supabase remoto ni cambios de billing.
 
 
 
