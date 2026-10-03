@@ -30,6 +30,15 @@ CoachProTaskCommentsPage _page({bool empty = false}) => CoachProTaskCommentsPage
 class _Service implements CoachProTaskCommentsService {
   final pending = Completer<CoachProTaskCommentsPage>();
   int calls = 0;
+  int writes = 0;
+  String? sentBody;
+  final sent = Completer<void>();
+  @override
+  Future<void> add({required String relationshipId, required String taskId, required String body}) {
+    writes++; sentBody = body;
+    expect(relationshipId, 'rel'); expect(taskId, 'task');
+    return sent.future;
+  }
   @override
   Never get client => throw UnimplementedError();
   @override
@@ -51,6 +60,63 @@ Future<ProviderContainer> _mount(WidgetTester tester, {
   await tester.pump(); return container;
 }
 void main() {
+  test('write uses scoped RPC, trims body and rejects invalid input before HTTP', () async {
+    final requests = <http.Request>[];
+    final client = SupabaseClient('https://example.test', 'test-key', httpClient: MockClient((request) async {
+      requests.add(request);
+      return http.Response(jsonEncode('comment-id'), 200, request: request,
+        headers: {'content-type': 'application/json'});
+    }));
+    addTearDown(client.dispose);
+    final service = CoachProTaskCommentsService(client);
+    await service.add(relationshipId: 'rel', taskId: 'task', body: '  Hola  ');
+    expect(requests.single.url.path, '/rest/v1/rpc/stk_add_coach_pro_task_comment');
+    expect(jsonDecode(requests.single.body), {'p_relationship_id': 'rel', 'p_task_id': 'task', 'p_body': 'Hola'});
+    for (final body in ['   ', 'a' * 2001]) {
+      await expectLater(service.add(relationshipId: 'rel', taskId: 'task', body: body), throwsFormatException);
+    }
+    expect(requests, hasLength(1));
+    await service.add(relationshipId: 'rel', taskId: 'task', body: '😀' * 2000);
+    expect(requests, hasLength(2));
+  });
+  for (final outcome in ['success', 'error', 'signout']) {
+    testWidgets('write $outcome prevents duplicate submits and revalidates safely', (tester) async {
+      final service = _Service(); int loads = 0;
+      final container = ProviderContainer(overrides: [appIdentityProvider.overrideWith(_Identity.new),
+        coachProTaskCommentsServiceProvider.overrideWithValue(service),
+        coachProTaskCommentsProvider.overrideWith((ref, query) async { loads++; return _page(); })]);
+      addTearDown(container.dispose);
+      await tester.pumpWidget(UncontrolledProviderScope(container: container, child: const MaterialApp(
+        home: CoachProTaskCommentsScreen(relationshipId: 'rel', taskId: 'task'))));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Enviar comentario')); await tester.pump();
+      expect(find.text('Escribe entre 1 y 2000 caracteres.'), findsOneWidget);
+      expect(service.writes, 0);
+      await tester.enterText(find.byType(TextField), 'Un mensaje');
+      await tester.tap(find.text('Enviar comentario')); await tester.pump();
+      await tester.tap(find.text('Enviando…')); await tester.pump();
+      expect(service.writes, 1); expect(service.sentBody, 'Un mensaje');
+      if (outcome == 'signout') {
+        (container.read(appIdentityProvider.notifier) as _Identity).signOutForTest();
+        await tester.pumpAndSettle();
+      }
+      if (outcome == 'error') { service.sent.completeError(StateError('private server error')); }
+      else { service.sent.complete(); }
+      await tester.pumpAndSettle();
+      expect(find.textContaining('private server error'), findsNothing);
+      expect(find.text('Un mensaje'), findsNothing);
+      if (outcome == 'signout') {
+        expect(find.text('Comentario enviado.'), findsNothing);
+        expect(find.byType(TextField), findsNothing); expect(loads, 1);
+      } else {
+        expect(loads, 2);
+        expect(find.text(outcome == 'success' ? 'Comentario enviado.' :
+          'No se pudo confirmar el envío. Revisa los comentarios antes de volver a enviarlo.'), findsOneWidget);
+        expect(find.text('Enviar comentario'), findsOneWidget);
+      }
+    });
+  }
+
   test('comments RPC validates scope, authors, dates and bounded immutable pages', () async {
     final requests = <http.Request>[];
     String? corrupt; bool empty = false;

@@ -25,6 +25,7 @@ class _Comments extends ConsumerStatefulWidget {
 }
 class _CommentsState extends ConsumerState<_Comments> with WidgetsBindingObserver {
   int _offset = 0;
+  int _composerVersion = 0;
   CoachProTaskQuery get _query =>
       (relationshipId: widget.relationshipId, taskId: widget.taskId, offset: _offset);
   @override
@@ -55,7 +56,12 @@ class _CommentsState extends ConsumerState<_Comments> with WidgetsBindingObserve
           data: (page) {
             if (page == null) return const Text('Comentarios no disponibles.');
             return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              const Text('Comentarios compartidos · Solo lectura'),
+              const Text('Comentarios compartidos'),
+              _CommentComposer(key: ValueKey(_composerVersion), relationshipId: widget.relationshipId, taskId: widget.taskId,
+                onFinished: () {
+                  setState(() { _offset = 0; _composerVersion++; });
+                  ref.invalidate(coachProTaskCommentsProvider(_query));
+                }),
               if (page.items.isEmpty) Text(_offset == 0 ? 'Todavía no hay comentarios.'
                 : 'Esta página está vacía. Vuelve a la anterior.'),
               for (final item in page.items)
@@ -79,4 +85,56 @@ class _CommentsState extends ConsumerState<_Comments> with WidgetsBindingObserve
       ]),
     )));
   }
+}
+
+class _CommentComposer extends ConsumerStatefulWidget {
+  final String relationshipId, taskId;
+  final VoidCallback onFinished;
+  const _CommentComposer({super.key, required this.relationshipId, required this.taskId, required this.onFinished});
+  @override
+  ConsumerState<_CommentComposer> createState() => _CommentComposerState();
+}
+class _CommentComposerState extends ConsumerState<_CommentComposer> {
+  final _text = TextEditingController();
+  bool _sending = false;
+  String? _error;
+  @override
+  void dispose() { _text.dispose(); super.dispose(); }
+  Future<void> _send() async {
+    if (_sending) return;
+    final body = _text.text.trim();
+    if (body.isEmpty || body.runes.length > 2000) {
+      setState(() => _error = 'Escribe entre 1 y 2000 caracteres.');
+      return;
+    }
+    setState(() { _sending = true; _error = null; });
+    try {
+      await ref.read(coachProTaskCommentsServiceProvider).add(
+        relationshipId: widget.relationshipId, taskId: widget.taskId, body: body);
+      if (!mounted) return;
+      _text.clear();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Comentario enviado.')));
+      widget.onFinished();
+    } catch (_) {
+      if (!mounted) return;
+      // A lost response may follow a committed insert. Never retry automatically.
+      // Revalidation removes stale protected content and any in-memory draft.
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(
+        'No se pudo confirmar el envío. Revisa los comentarios antes de volver a enviarlo.')));
+      widget.onFinished();
+    }
+  }
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 16),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      TextField(controller: _text, enabled: !_sending, minLines: 2, maxLines: 5,
+        decoration: InputDecoration(labelText: 'Nuevo comentario',
+          helperText: 'Compartido con el cliente. Máximo 2000 caracteres.',
+          helperMaxLines: 3, errorText: _error)),
+      const SizedBox(height: 8),
+      FilledButton(onPressed: _sending ? null : _send,
+        child: Text(_sending ? 'Enviando…' : 'Enviar comentario')),
+    ]),
+  );
 }

@@ -36,6 +36,18 @@
 
 ---
 
+## Continuidad Fase 2 — envío de comentarios (2026-10-03)
+
+- Lectura paginada validada: fuente `dc5445e34dfe8e1b49acb17fc32021b98980f919`, mirror `6d9f67eb148b242a5363cecd5530c8139bf977ae`, CI #106/run `37140270993` **7/7 success**; 400 Core y 448 pgTAP tras upgrade y rebuild. Preview #67/run `37140922189` y Pages/run `37141025642`: success.
+- Nuevo slice: formulario para comentarios generales de tarea. `stk_add_coach_pro_task_comment` valida identidad permanente, capability coach, entitlement y relación/tarea exactas con `comment`, bloqueando la relación durante la escritura; delega el append en `stk_add_coach_task_comment` existente.
+- No altera el flujo del cliente ni los registros existentes. No infiere fecha de ocurrencia. `assign_tasks` no sustituye `comment`.
+- Valida 1–2000 puntos de código tras trim, bloquea doble toque y recarga la primera página al finalizar. Los borradores son efímeros y se descartan al cambiar sesión o revalidar la pantalla; no se persiste contenido privado.
+- Si falla la respuesta, no reintenta automáticamente: revalida la lista y pide comprobarla antes de reenviar. La RPC heredada no ofrece idempotencia; un reenvío manual tras respuesta perdida puede duplicar un comentario. No se acredita entrega exactamente una vez.
+- Añade pruebas HTTP, formulario, doble toque, errores y respuesta tardía tras logout, además de pgTAP sobre escritura autorizada/denegada y conservación del historial. Requiere CI propio 7/7. Sin despliegue remoto ni smoke físico acreditado.
+- Próximo bloque: revisar la cobertura de la ficha profesional frente al Master Plan y continuar la consulta paginada de workouts bajo `view_workouts`, reutilizando contratos Roadmap 3.
+
+---
+
 # 0. Principios no negociables
 
 - [x] Una sola fuente de verdad en `packages/core`; mobile/web consumen los mismos contratos.

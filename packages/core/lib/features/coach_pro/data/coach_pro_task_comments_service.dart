@@ -12,6 +12,19 @@ class CoachProTaskCommentsPage {
 class CoachProTaskCommentsService {
   final SupabaseClient client;
   const CoachProTaskCommentsService(this.client);
+  Future<void> add({required String relationshipId, required String taskId, required String body}) async {
+    final trimmed = body.trim();
+    if (trimmed.isEmpty || trimmed.runes.length > 2000) {
+      throw const FormatException('Comment length is invalid');
+    }
+    final result = await client.rpc('stk_add_coach_pro_task_comment', params: {
+      'p_relationship_id': relationshipId, 'p_task_id': taskId, 'p_body': trimmed,
+    });
+    if (result is! String || result.isEmpty) {
+      throw const FormatException('Comment acknowledgement missing');
+    }
+  }
+
   Future<CoachProTaskCommentsPage> load(CoachProTaskQuery query) async {
     final raw = await client.rpc('stk_list_coach_pro_task_comments', params: {
       'p_relationship_id': query.relationshipId, 'p_task_id': query.taskId,
