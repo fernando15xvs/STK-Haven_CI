@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/presentation/coach_pro_program_page.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/coach_assigned_task.dart';
 import 'package:core/domain/models/coach_relationship.dart';
@@ -106,6 +107,8 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                     Card(child: Padding(padding: const EdgeInsets.all(16),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(item.name, style: Theme.of(context).textTheme.titleMedium),
+                        TextButton(onPressed: () => _openProgram(item),
+                          child: const Text('Ver rutinas')),
                         Text('${_programStatus(item.status)} · Versión ${item.version}'),
                         Text('${item.durationWeeks} semanas · Inicio: ${_date(context, item.startsOn)}'),
                       ]),
@@ -151,6 +154,13 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
         ),
       ]),
     )));
+  }
+
+  Future<void> _openProgram(CoachProgramAssignmentSummary program) async {
+    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) =>
+      CoachProProgramDetailPage(relationshipId: widget.relationshipId,
+        assignmentId: program.id, version: program.version)));
+    if (mounted) _refresh();
   }
 
   Widget _pagination(int count, int? total, String label) => Column(

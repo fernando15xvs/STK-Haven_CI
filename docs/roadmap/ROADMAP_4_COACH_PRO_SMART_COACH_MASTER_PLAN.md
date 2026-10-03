@@ -213,13 +213,36 @@ Evidencia específica de este slice:
 - Tests para separación de permisos, IDOR entre coaches con un mismo cliente,
   límites, páginas empatadas, redacción del payload, revocación/pausa/expiry,
   contrato HTTP, carga selectiva y UI responsive con respuestas tardías.
-- Este slice requiere su propio Public CI 7/7; #102 valida la ficha anterior.
+- Evidencia programas/tareas: privado `83909f7ae23ba428d8fb49109373cb3482efec17`,
+  mirror `b81508d6e4640ca33a5cc9b1302f950526207950`, Public CI #103
+  (`37096148102`): 7/7 success; 376 tests Core y 353 pgTAP en cada ruta.
+  Preview #64 (`37096603952`) y Pages #29 (`37096688277`): success.
 
-Próximo paso tras validar: detalle de un programa asignado, cargando rutinas
-por páginas y conservando el contrato versionado existente. Siguen pendientes
-historial de cambios, detalle/ocurrencias de tareas, entrenamientos, progreso
-ampliado, alimentación, comentarios, adherencia real, exportación y smokes físicos.
-No hay despliegue de Supabase remoto ni cambios de la PWA estable.
+### Programa asignado: rutinas y ejercicios paginados — 2026-10-03 UTC
+
+- RPC `stk_get_coach_pro_program_page`: relación y programa concretos, versión
+  esperada obligatoria y rutina opcional. Página de 25 (máximo 100), offset
+  0..10000, orden por posición/ID y total incluso para páginas vacías.
+- Cuenta permanente, capability coach, entitlement y `assign_programs` en relación
+  activa se verifican en cada petición. Una rutina debe pertenecer al programa
+  autorizado. Una versión cambiada obliga a volver a la ficha y abrirla de nuevo.
+- Una llamada por página. La lista de rutinas no incorpora ejercicios anidados;
+  abrir una rutina consulta únicamente su página de prescripción existente.
+  No se devuelven notas del programa o rutina. No se modifica asignación,
+  aceptación, instalación local ni versionado; archivados siguen legibles con acceso.
+- Reutiliza `AssignedExerciseSnapshot`; resumen mínimo de rutina sin listas
+  anidadas. Proveedor por sesión/consulta; carga/errores no muestran contenido
+  anterior. UI responsive con navegación desde Programas y refresh al regresar.
+- Índices existentes `(assignment_id, position)` y `(routine_id, position)`
+  soportan estas consultas. Sin consultas por ejercicio ni descarga de toda la cartera.
+- Pruebas SQL de IDOR, versión, paginación, payload acotado, revocación, pausa,
+  expiración y anonimato; tests HTTP, sesión, widgets y navegación.
+- La validación de este slice requiere su propio Public CI 7/7; #103 valida listas.
+
+Próximo paso tras validar: detalle de tarea con ocurrencias paginadas por relación,
+conservando el historial y los permisos del contrato existente. Pendientes:
+historial de cambios de programa, entrenamientos, progreso ampliado, alimentación,
+comentarios, adherencia real, exportación y smokes físicos. Sin deploy Supabase remoto.
 
 
 
