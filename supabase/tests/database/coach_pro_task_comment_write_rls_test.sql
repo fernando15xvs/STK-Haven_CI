@@ -102,9 +102,9 @@ select ok(not has_function_privilege('anon','public.stk_add_coach_pro_task_comme
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"51000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);
 select lives_ok($$select public.stk_add_coach_pro_task_comment('53000000-0000-0000-0000-000000000001','55000000-0000-0000-0000-000000000001','  Shared comment  ')$$,'comment-only permission can send');
-select is((select count(*)::int from public.stk_coach_task_comments where body='Shared comment'),1,'one trimmed append');
-select is((select author_user_id::text from public.stk_coach_task_comments where body='Shared comment'),'51000000-0000-0000-0000-000000000001','server sets coach author');
-select ok((select occurrence_date is null from public.stk_coach_task_comments where body='Shared comment'),'no fabricated occurrence date');
+select is((select count(*)::int from jsonb_array_elements(public.stk_list_coach_pro_task_comments('53000000-0000-0000-0000-000000000001','55000000-0000-0000-0000-000000000001',25,0)->'items') as item where item->>'body'='Shared comment'),1,'one trimmed append');
+select is((select item->>'author_user_id' from jsonb_array_elements(public.stk_list_coach_pro_task_comments('53000000-0000-0000-0000-000000000001','55000000-0000-0000-0000-000000000001',25,0)->'items') as item where item->>'body'='Shared comment'),'51000000-0000-0000-0000-000000000001','server sets coach author');
+select ok((select item->'occurrence_date'='null'::jsonb from jsonb_array_elements(public.stk_list_coach_pro_task_comments('53000000-0000-0000-0000-000000000001','55000000-0000-0000-0000-000000000001',25,0)->'items') as item where item->>'body'='Shared comment'),'no fabricated occurrence date');
 select throws_ok($$select public.stk_add_coach_pro_task_comment('53000000-0000-0000-0000-000000000001','55000000-0000-0000-0000-000000000001','')$$,'P0001','Comment length is invalid','invalid body ');
 select throws_ok($$select public.stk_add_coach_pro_task_comment('53000000-0000-0000-0000-000000000001','55000000-0000-0000-0000-000000000001',repeat('a',2001))$$,'P0001','Comment length is invalid','invalid body repeat(a,2001)');
 select throws_ok($$select public.stk_add_coach_pro_task_comment('53000000-0000-0000-0000-000000000001','55000000-0000-0000-0000-000000000001',null)$$,'P0001','Comment length is invalid','invalid body null');
