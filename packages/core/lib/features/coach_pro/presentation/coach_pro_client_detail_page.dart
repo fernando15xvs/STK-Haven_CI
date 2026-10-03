@@ -1,3 +1,5 @@
+import 'package:core/domain/models/coach_program_assignment.dart';
+import 'package:core/domain/models/coach_assigned_task.dart';
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/features/coach_pro/application/coach_pro_client_detail_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -28,10 +30,10 @@ class _Detail extends ConsumerStatefulWidget {
 }
 
 class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
-  bool _checkins = false;
+  CoachProClientSection _section = CoachProClientSection.summary;
   int _offset = 0;
   CoachProClientDetailQuery get _query =>
-      (relationshipId: widget.relationshipId, checkins: _checkins, offset: _offset);
+      (relationshipId: widget.relationshipId, section: _section, offset: _offset);
 
   @override
   void initState() {
@@ -56,10 +58,9 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
       constraints: const BoxConstraints(maxWidth: 820),
       child: ListView(padding: const EdgeInsets.all(20), children: [
         Wrap(spacing: 12, runSpacing: 8, children: [
-          ChoiceChip(label: const Text('Resumen'), selected: !_checkins,
-            onSelected: (_) => setState(() { _checkins = false; _offset = 0; })),
-          ChoiceChip(label: const Text('Check-ins'), selected: _checkins,
-            onSelected: (_) => setState(() { _checkins = true; _offset = 0; })),
+          for (final section in CoachProClientSection.values)
+            ChoiceChip(label: Text(_sectionLabel(section)), selected: _section == section,
+              onSelected: (_) => setState(() { _section = section; _offset = 0; })),
           TextButton.icon(onPressed: result.isLoading ? null : _refresh,
             icon: const Icon(Icons.refresh), label: const Text('Actualizar')),
         ]),
@@ -86,7 +87,7 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
               Text(summary.relationshipStatus == CoachRelationshipStatus.active
                   ? 'Relación activa' : 'Relación pausada'),
               const SizedBox(height: 16),
-              if (!_checkins) ...[
+              if (_section == CoachProClientSection.summary) ...[
                 Text('Entrenos 7 días: ${metric(summary.workouts7d)}'),
                 Text('Entrenos 30 días: ${metric(summary.workouts30d)}'),
                 Text('RIR medio 7 días: ${metric(summary.averageRir7d)}'),
@@ -94,6 +95,41 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                 const SizedBox(height: 16),
                 const Text('Los permisos los administra el cliente. El plan Coach Pro '
                     'no concede acceso adicional a sus datos.'),
+              ] else if (_section == CoachProClientSection.programs) ...[
+                if (!detail.canViewPrograms)
+                  const Text('Programas: no compartidos en esta relación.')
+                else ...[
+                  if (detail.programs!.items.isEmpty)
+                    Text(_offset == 0 ? 'No hay programas asignados en esta relación.'
+                        : 'Esta página ya no tiene programas. Vuelve a la anterior.'),
+                  for (final item in detail.programs!.items)
+                    Card(child: Padding(padding: const EdgeInsets.all(16),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(item.name, style: Theme.of(context).textTheme.titleMedium),
+                        Text('${_programStatus(item.status)} · Versión ${item.version}'),
+                        Text('${item.durationWeeks} semanas · Inicio: ${_date(context, item.startsOn)}'),
+                      ]),
+                    )),
+                  _pagination(detail.programs!.items.length, detail.programs!.totalCount, 'programas'),
+                ],
+              ] else if (_section == CoachProClientSection.tasks) ...[
+                if (!detail.canViewTasks)
+                  const Text('Tareas: no compartidas en esta relación.')
+                else ...[
+                  if (detail.tasks!.items.isEmpty)
+                    Text(_offset == 0 ? 'No hay tareas asignadas en esta relación.'
+                        : 'Esta página ya no tiene tareas. Vuelve a la anterior.'),
+                  for (final item in detail.tasks!.items)
+                    Card(child: Padding(padding: const EdgeInsets.all(16),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(item.title, style: Theme.of(context).textTheme.titleMedium),
+                        Text('${item.category} · ${item.status == CoachAssignedTaskStatus.active ? 'Activa' : 'Archivada'}'),
+                        Text('Inicio: ${_date(context, item.startsOn)}'),
+                        if (item.dueAt != null) Text('Vencimiento: ${_date(context, item.dueAt)}'),
+                      ]),
+                    )),
+                  _pagination(detail.tasks!.items.length, detail.tasks!.totalCount, 'tareas'),
+                ],
               ] else if (!detail.canViewCheckins)
                 const Text('Check-ins: no compartidos en esta relación.')
               else ...[
@@ -108,18 +144,7 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                       if (item.note.isNotEmpty) Text(item.note),
                     ]),
                   )),
-                const SizedBox(height: 12),
-                Text(detail.checkins!.totalCount == null ? 'Página ${_offset ~/ 25 + 1}'
-                    : '${detail.checkins!.totalCount} check-ins · Página ${_offset ~/ 25 + 1}'),
-                Wrap(spacing: 12, runSpacing: 8, children: [
-                  OutlinedButton(onPressed: _offset > 0
-                      ? () => setState(() => _offset -= 25) : null,
-                    child: const Text('Anterior')),
-                  OutlinedButton(onPressed: detail.checkins!.items.isNotEmpty &&
-                      _offset + 25 < (detail.checkins!.totalCount ?? 0) && _offset + 25 <= 10000
-                      ? () => setState(() => _offset += 25) : null,
-                    child: const Text('Siguiente')),
-                ]),
+                _pagination(detail.checkins!.items.length, detail.checkins!.totalCount, 'check-ins'),
               ],
             ]);
           },
@@ -127,7 +152,38 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
       ]),
     )));
   }
+
+  Widget _pagination(int count, int? total, String label) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const SizedBox(height: 12),
+      Text(total == null ? 'Página ${_offset ~/ 25 + 1}'
+          : '$total $label · Página ${_offset ~/ 25 + 1}'),
+      Wrap(spacing: 12, runSpacing: 8, children: [
+        OutlinedButton(onPressed: _offset > 0
+            ? () => setState(() => _offset -= 25) : null,
+          child: const Text('Anterior')),
+        OutlinedButton(onPressed: count > 0 && _offset + 25 < (total ?? 0) &&
+            _offset + 25 <= 10000 ? () => setState(() => _offset += 25) : null,
+          child: const Text('Siguiente')),
+      ]),
+    ],
+  );
+
 }
 
 String _date(BuildContext context, DateTime? value) => value == null ? 'Sin datos'
     : MaterialLocalizations.of(context).formatMediumDate(value.toLocal());
+
+
+String _sectionLabel(CoachProClientSection section) => switch (section) {
+  CoachProClientSection.summary => 'Resumen',
+  CoachProClientSection.checkins => 'Check-ins',
+  CoachProClientSection.programs => 'Programas',
+  CoachProClientSection.tasks => 'Tareas',
+};
+String _programStatus(AssignedProgramStatus status) => switch (status) {
+  AssignedProgramStatus.assigned => 'Asignado',
+  AssignedProgramStatus.accepted => 'Aceptado',
+  AssignedProgramStatus.archived => 'Archivado',
+};

@@ -188,13 +188,38 @@ Evidencia específica de este slice:
   check-ins contiene solo los campos compartidos del contrato existente.
 - Tests de IDOR entre dos coaches, paginación con empates, permisos, pausa,
   revocación, expiry, anonimato; servicio HTTP, proveedor y UI responsive.
-- Este slice necesita su propio Public CI 7/7 antes de declararse validado;
-  la evidencia #100 corresponde a filtros, no a esta ficha.
+- Evidencia de ficha resumen/check-ins: privado
+  `83b2d09298ea2c090aa2b34db24b1c972301decc`, mirror
+  `abfe53d90023fc7bbd4941a4438e9adfdb379c49`, Public CI #102
+  (`37076476358`): 7/7 success; 362 tests Core y 305 pgTAP en cada ruta.
+  Preview #63 (`37077377324`) y Pages #28 (`37077483265`): success.
 
-Próximo paso tras validar: añadir a la ficha programas/tareas con contratos
-paginados por relación y pruebas de sus permisos específicos. Siguen pendientes
-entrenamientos, progreso ampliado, alimentación, comentarios/historial,
-adherencia real, exportación y smokes físicos. No hay despliegue Supabase remoto.
+### Ficha profesional: programas y tareas — 2026-10-03 UTC
+
+- Migración `20261003040927_stk_coach_pro_program_task_pages.sql` añade
+  `stk_list_coach_pro_client_programs` y `stk_list_coach_pro_client_tasks`.
+  Cada consulta exige cuenta permanente, capability coach, entitlement vigente,
+  relación activa y su permiso específico (`assign_programs` o `assign_tasks`).
+- Predicados explícitos por relación/coach/cliente, páginas de 25, máximo 100,
+  offset 0..10000, conteo filtrado y orden `updated_at desc, id`.
+  Índices nuevos `(relationship_id, updated_at desc, id)` en ambas tablas.
+- Reutiliza `CoachProgramAssignmentSummary` y añade `CoachProTaskSummary`
+  mínimo: ID/relación, título, categoría, estado y fechas. No incorpora notas,
+  instrucciones, rutinas, ejercicios, comentarios ni ocurrencias al listado.
+- La ficha usa una sección tipada y consulta solo la elegida; cambiar sección
+  reinicia offset. Resumen y permisos se revalidan en cada página. Los errores
+  no conservan datos protegidos anteriores. Filas archivadas siguen visibles
+  mientras exista acceso; no se añade escritura ni se altera aceptación/versionado.
+- Tests para separación de permisos, IDOR entre coaches con un mismo cliente,
+  límites, páginas empatadas, redacción del payload, revocación/pausa/expiry,
+  contrato HTTP, carga selectiva y UI responsive con respuestas tardías.
+- Este slice requiere su propio Public CI 7/7; #102 valida la ficha anterior.
+
+Próximo paso tras validar: detalle de un programa asignado, cargando rutinas
+por páginas y conservando el contrato versionado existente. Siguen pendientes
+historial de cambios, detalle/ocurrencias de tareas, entrenamientos, progreso
+ampliado, alimentación, comentarios, adherencia real, exportación y smokes físicos.
+No hay despliegue de Supabase remoto ni cambios de la PWA estable.
 
 
 

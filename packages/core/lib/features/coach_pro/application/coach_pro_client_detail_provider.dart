@@ -1,3 +1,5 @@
+import 'package:core/domain/models/coach_program_assignment.dart';
+import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/features/coach_pro/data/coach_pro_client_detail_service.dart';
@@ -5,12 +7,21 @@ import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-typedef CoachProClientDetailQuery = ({String relationshipId, bool checkins, int offset});
+enum CoachProClientSection { summary, checkins, programs, tasks }
+
+typedef CoachProClientDetailQuery = ({String relationshipId, CoachProClientSection section, int offset});
 
 class CoachProClientDetail {
   final CoachProClientSummary summary;
   final CoachProCheckinPage? checkins;
-  const CoachProClientDetail(this.summary, {this.checkins});
+  final CoachProSectionPage<CoachProgramAssignmentSummary>? programs;
+  final CoachProSectionPage<CoachProTaskSummary>? tasks;
+  const CoachProClientDetail(this.summary, {this.checkins, this.programs, this.tasks});
+  bool canView(CoachPermission permission) =>
+      summary.relationshipStatus == CoachRelationshipStatus.active &&
+      summary.permissions.contains(permission);
+  bool get canViewPrograms => canView(CoachPermission.assignPrograms);
+  bool get canViewTasks => canView(CoachPermission.assignTasks);
   bool get canViewCheckins =>
       summary.relationshipStatus == CoachRelationshipStatus.active &&
       summary.permissions.contains(CoachPermission.viewCheckins);
@@ -31,8 +42,21 @@ final coachProClientDetailProvider = FutureProvider.autoDispose
   final summary = await service.getSummary(query.relationshipId);
   if (!ref.mounted || summary == null) return null;
   final detail = CoachProClientDetail(summary);
-  if (!query.checkins || !detail.canViewCheckins) return detail;
-  final page = await service.listCheckins(query.relationshipId, offset: query.offset);
-  // Errors propagate for the entire view; never retain a stale protected summary.
-  return CoachProClientDetail(summary, checkins: page);
+  // A fixed summary + one selected page; no eager sibling sections or N+1.
+  switch (query.section) {
+    case CoachProClientSection.summary:
+      return detail;
+    case CoachProClientSection.checkins:
+      if (!detail.canViewCheckins) return detail;
+      return CoachProClientDetail(summary, checkins:
+        await service.listCheckins(query.relationshipId, offset: query.offset));
+    case CoachProClientSection.programs:
+      if (!detail.canViewPrograms) return detail;
+      return CoachProClientDetail(summary, programs:
+        await service.listPrograms(query.relationshipId, offset: query.offset));
+    case CoachProClientSection.tasks:
+      if (!detail.canViewTasks) return detail;
+      return CoachProClientDetail(summary, tasks:
+        await service.listTasks(query.relationshipId, offset: query.offset));
+  }
 });

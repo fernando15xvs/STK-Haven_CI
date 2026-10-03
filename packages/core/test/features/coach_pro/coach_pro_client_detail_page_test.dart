@@ -1,3 +1,5 @@
+import 'package:core/domain/models/coach_program_assignment.dart';
+import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
 import 'dart:async';
 
 import 'package:core/domain/models/app_identity_state.dart';
@@ -19,14 +21,23 @@ class _Identity extends AppIdentityNotifier {
   void signOutForTest() => state = const AppIdentityState();
 }
 
-CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compartida'}) =>
+CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compartida', bool programs = false, bool tasks = false}) =>
     CoachProClientDetail(CoachProClientSummary.fromJson({
       'relationship_id': 'rel', 'client_user_id': 'client', 'display_name': 'Ana',
-      'relationship_status': 'active', 'permissions': {'view_checkins': permitted},
+      'relationship_status': 'active', 'permissions': {'view_checkins': permitted, 'assign_programs': programs, 'assign_tasks': tasks},
       'workouts_7d': 99,
     }), checkins: CoachProCheckinPage(totalCount: 26, items: [
       CoachCheckin.fromJson({'id': 'checkin', 'relationship_id': 'rel',
         'energy': 3, 'recovery': 4, 'note': note, 'created_at': '2026-10-02T00:00:00Z'}),
+    ]), programs: CoachProSectionPage(totalCount: 26, items: [
+      CoachProgramAssignmentSummary.fromJson({'id': 'p', 'relationship_id': 'rel',
+        'name': 'Programa fuerza', 'version': 2, 'status': 'accepted',
+        'duration_weeks': 8, 'starts_on': '2026-10-01',
+        'created_at': '2026-10-01T00:00:00Z', 'updated_at': '2026-10-02T00:00:00Z'}),
+    ]), tasks: CoachProSectionPage(totalCount: 26, items: [
+      CoachProTaskSummary.fromJson({'id': 't', 'relationship_id': 'rel',
+        'title': 'Tarea movilidad', 'category': 'General', 'status': 'active',
+        'starts_on': '2026-10-01', 'updated_at': '2026-10-02T00:00:00Z'}),
     ]));
 
 Future<ProviderContainer> _mount(WidgetTester tester, {
@@ -73,6 +84,59 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+  for (final width in [320.0, 1440.0]) {
+    for (final section in [CoachProClientSection.programs, CoachProClientSection.tasks]) {
+      testWidgets('$section at $width paginates and section changes reset offset', (tester) async {
+        final queries = <CoachProClientDetailQuery>[];
+        await _mount(tester, width: width, load: (query) async {
+          queries.add(query); return _detail(programs: true, tasks: true);
+        });
+        final programs = section == CoachProClientSection.programs;
+        await tester.tap(find.text(programs ? 'Programas' : 'Tareas'));
+        await tester.pumpAndSettle();
+        expect(find.text(programs ? 'Programa fuerza' : 'Tarea movilidad'), findsOneWidget);
+        expect(find.text(programs ? 'Tarea movilidad' : 'Programa fuerza'), findsNothing);
+        await tester.ensureVisible(find.text('Siguiente'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Siguiente'));
+        await tester.pumpAndSettle();
+        expect(queries.last.offset, 25);
+        expect(queries.last.section, section);
+        await tester.ensureVisible(find.text(programs ? 'Tareas' : 'Programas'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(programs ? 'Tareas' : 'Programas'));
+        await tester.pumpAndSettle();
+        expect(queries.last.offset, 0);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+  testWidgets('independent permissions mask even an injected section payload', (tester) async {
+    await _mount(tester, width: 320, scale: 1.8,
+      load: (_) async => _detail(programs: false, tasks: true));
+    await tester.tap(find.text('Programas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Programas: no compartidos en esta relación.'), findsOneWidget);
+    expect(find.text('Programa fuerza'), findsNothing);
+    await tester.tap(find.text('Tareas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tarea movilidad'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('late program response cannot replace a selected task section', (tester) async {
+    final pending = Completer<CoachProClientDetail?>();
+    await _mount(tester, load: (query) => query.section == CoachProClientSection.programs
+        ? pending.future : Future.value(_detail(programs: true, tasks: true)));
+    await tester.tap(find.text('Programas'));
+    await tester.pump();
+    await tester.tap(find.text('Tareas'));
+    await tester.pumpAndSettle();
+    pending.complete(_detail(programs: true, tasks: true));
+    await tester.pumpAndSettle();
+    expect(find.text('Tarea movilidad'), findsOneWidget);
+    expect(find.text('Programa fuerza'), findsNothing);
+  });
+
   testWidgets('missing permission cannot render check-in payload, including large text', (tester) async {
     await _mount(tester, width: 320, scale: 1.8,
       load: (_) async => _detail(permitted: false));

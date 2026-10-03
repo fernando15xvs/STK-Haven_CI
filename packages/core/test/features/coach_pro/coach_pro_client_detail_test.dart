@@ -1,3 +1,5 @@
+import 'package:core/domain/models/coach_program_assignment.dart';
+import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -21,15 +23,17 @@ class _Identity extends AppIdentityNotifier {
   void signOutForTest() => state = const AppIdentityState();
 }
 
-CoachProClientSummary _summary({bool permission = true, String status = 'active'}) =>
+CoachProClientSummary _summary({bool permission = true, String status = 'active', bool programs = false, bool tasks = false}) =>
     CoachProClientSummary.fromJson({
       'relationship_id': 'rel', 'client_user_id': 'client',
-      'relationship_status': status, 'permissions': {'view_checkins': permission},
+      'relationship_status': status, 'permissions': {'view_checkins': permission, 'assign_programs': programs, 'assign_tasks': tasks},
     });
 
 class _Service implements CoachProClientDetailService {
   int summaries = 0;
   final offsets = <int>[];
+  final programOffsets = <int>[];
+  final taskOffsets = <int>[];
   CoachProClientSummary? summary = _summary();
   Completer<CoachProClientSummary?>? pending;
   bool fail = false;
@@ -47,11 +51,26 @@ class _Service implements CoachProClientDetailService {
     if (fail) throw StateError('sensitive');
     return const CoachProCheckinPage(totalCount: 0);
   }
+  @override
+  Future<CoachProSectionPage<CoachProgramAssignmentSummary>> listPrograms(
+      String relationshipId, {int limit = 25, int offset = 0}) async {
+    programOffsets.add(offset);
+    if (fail) throw StateError('sensitive');
+    return const CoachProSectionPage(totalCount: 0);
+  }
+  @override
+  Future<CoachProSectionPage<CoachProTaskSummary>> listTasks(
+      String relationshipId, {int limit = 25, int offset = 0}) async {
+    taskOffsets.add(offset);
+    if (fail) throw StateError('sensitive');
+    return const CoachProSectionPage(totalCount: 0);
+  }
+
 }
 
 void main() {
-  const summaryQuery = (relationshipId: 'rel', checkins: false, offset: 0);
-  const checkinQuery = (relationshipId: 'rel', checkins: true, offset: 25);
+  const summaryQuery = (relationshipId: 'rel', section: CoachProClientSection.summary, offset: 0);
+  const checkinQuery = (relationshipId: 'rel', section: CoachProClientSection.checkins, offset: 25);
   late _Service service;
   late ProviderContainer container;
   setUp(() {
@@ -114,6 +133,84 @@ void main() {
     expect(container.read(provider).value, isNull);
     expect(service.offsets, isEmpty);
   });
+
+  for (final section in [CoachProClientSection.programs, CoachProClientSection.tasks]) {
+    test('$section loads only selected page and permission revocation stops reload', () async {
+      service.summary = _summary(programs: section == CoachProClientSection.programs,
+        tasks: section == CoachProClientSection.tasks);
+      final provider = coachProClientDetailProvider(
+        (relationshipId: 'rel', section: section, offset: 25));
+      container.listen(provider, (_, _) {});
+      final value = await container.read(provider.future);
+      expect(value, isNotNull);
+      expect(service.offsets, isEmpty);
+      expect(service.programOffsets, section == CoachProClientSection.programs ? [25] : isEmpty);
+      expect(service.taskOffsets, section == CoachProClientSection.tasks ? [25] : isEmpty);
+      service.summary = _summary(programs: section != CoachProClientSection.programs,
+        tasks: section != CoachProClientSection.tasks);
+      container.invalidate(provider);
+      final denied = await container.read(provider.future);
+      expect(denied!.programs, isNull);
+      expect(denied.tasks, isNull);
+      expect(service.programOffsets.length + service.taskOffsets.length, 1);
+    });
+    test('$section paused relationships cannot load stored permissions', () async {
+      service.summary = _summary(status: 'paused', programs: true, tasks: true);
+      final provider = coachProClientDetailProvider(
+        (relationshipId: 'rel', section: section, offset: 0));
+      container.listen(provider, (_, _) {});
+      await container.read(provider.future);
+      expect(service.programOffsets, isEmpty);
+      expect(service.taskOffsets, isEmpty);
+    });
+    test('$section error does not return a partial protected detail', () async {
+      service.summary = _summary(programs: true, tasks: true);
+      service.fail = true;
+      final provider = coachProClientDetailProvider(
+        (relationshipId: 'rel', section: section, offset: 0));
+      container.listen(provider, (_, _) {});
+      await expectLater(container.read(provider.future), throwsStateError);
+      expect(container.read(provider).hasError, isTrue);
+    });
+  }
+
+  for (final programs in [true, false]) {
+    test('${programs ? 'program' : 'task'} RPC sends bounded query and validates relationship', () async {
+      final requests = <http.Request>[];
+      bool bad = false;
+      bool empty = false;
+      final client = SupabaseClient('https://example.test', 'test-key',
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          return http.Response(jsonEncode(empty ? [] : [{
+            'id': 'row', 'relationship_id': bad ? 'other' : 'rel',
+            'coach_user_id': 'coach', 'client_user_id': 'client',
+            'name': 'Programa', 'title': 'Tarea', 'category': 'General',
+            'duration_weeks': 8, 'training_weekdays': [1, 3], 'version': 2,
+            'status': programs ? 'accepted' : 'active',
+            'starts_on': '2026-10-01', 'created_at': '2026-10-01T00:00:00Z',
+            'updated_at': '2026-10-02T00:00:00Z', 'total_count': 27,
+          }]), 200, request: request, headers: {'content-type': 'application/json'});
+        }));
+      addTearDown(client.dispose);
+      final live = CoachProClientDetailService(client);
+      Future<CoachProSectionPage<dynamic>> load() async => programs
+          ? await live.listPrograms('rel', offset: 25)
+          : await live.listTasks('rel', offset: 25);
+      final page = await load();
+      expect(page.totalCount, 27);
+      expect(page.items, hasLength(1));
+      expect(requests.single.url.path,
+        '/rest/v1/rpc/stk_list_coach_pro_client_${programs ? 'programs' : 'tasks'}');
+      expect(jsonDecode(requests.single.body), {
+        'p_relationship_id': 'rel', 'p_limit': 25, 'p_offset': 25,
+      });
+      bad = true;
+      await expectLater(load(), throwsFormatException);
+      empty = true;
+      expect((await load()).totalCount, isNull);
+    });
+  }
 
   test('service uses targeted RPCs and rejects a mismatched relationship payload', () async {
     final requests = <http.Request>[];
