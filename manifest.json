@@ -1,0 +1,50 @@
+{
+  "id": "./roadmap3-preview",
+  "name": "STK Haven Preview",
+  "short_name": "STK Preview",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#090A0C",
+  "theme_color": "#090A0C",
+  "description": "Preview aislado de STK Haven Roadmap 3. No comparte almacenamiento con la PWA estable.",
+  "orientation": "any",
+  "lang": "es",
+  "categories": [
+    "health",
+    "fitness",
+    "lifestyle"
+  ],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/stk-haven-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/stk-haven-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/stk-haven-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/stk-haven-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
