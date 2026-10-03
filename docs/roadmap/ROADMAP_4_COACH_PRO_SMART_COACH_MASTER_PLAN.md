@@ -24,6 +24,18 @@
 
 ---
 
+## Continuidad Fase 2 — comentarios de tareas (2026-10-03)
+
+- Detalle de tareas e historial: fuente `4867f5a7692c38cb1d7adc1ea63ecb7b454798bd`, mirror `e69f48865d58aa6a9d204eb4342d427722c20289`, CI #105/run `37138630292` **7/7 success**; 392 tests Core y 420 pgTAP tras upgrade y rebuild. Preview #66/run `37139325990` y Pages/run `37139414414`: success.
+- Nuevo slice: RPC `stk_list_coach_pro_task_comments`, servicio/provider y pantalla de solo lectura desde el detalle. Una página de 25 comentarios por consulta, orden estable por fecha/id y total exacto incluso en páginas vacías; sin N+1 ni descarga anticipada.
+- La RPC exige cuenta permanente, capability coach, entitlement, tarea/relación del coach actual y relación activa con `comment`. `assign_tasks` no sustituye ese consentimiento ni es requisito adicional de la RPC. La entrada desde el detalle conserva el gate propio de esa pantalla.
+- Solo devuelve comentarios de los dos participantes de la tarea; no incluye progreso, instrucciones ni ocurrencias. Archivar/revocar/expirar no elimina registros.
+- Cambio de sesión descarta respuestas anteriores; refrescar o volver a foreground oculta datos previos mientras revalida. La revocación se comprueba en cada consulta; no se añade suscripción realtime en este slice.
+- Tests HTTP/parser, navegación diferida, sesión, redacción durante refresh, responsive y pgTAP adversarial añadidos. Este slice requiere su propio CI 7/7 antes de considerarse validado. No se acredita smoke físico ni backend remoto.
+- Próximo bloque: revisar el flujo de escritura de comentarios existente y su integración profesional con `comment`, confirmando entitlement, aislamiento y manejo de errores antes de habilitar envío.
+
+---
+
 # 0. Principios no negociables
 
 - [x] Una sola fuente de verdad en `packages/core`; mobile/web consumen los mismos contratos.

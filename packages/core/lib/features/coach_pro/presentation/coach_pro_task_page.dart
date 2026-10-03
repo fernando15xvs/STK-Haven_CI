@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/presentation/coach_pro_task_comments_page.dart';
 import 'package:core/domain/models/coach_assigned_task.dart';
 import 'package:core/domain/models/habit_task.dart';
 import 'package:core/features/coach_pro/application/coach_pro_task_provider.dart';
@@ -57,6 +58,11 @@ class _TaskState extends ConsumerState<_Task> with WidgetsBindingObserver {
             if (page == null) return const Text('Tarea no disponible.');
             final task = page.task;
             return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              TextButton(onPressed: () async {
+                await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) =>
+                  CoachProTaskCommentsScreen(relationshipId: widget.relationshipId, taskId: widget.taskId)));
+                if (mounted) _refresh();
+              }, child: const Text('Ver comentarios')),
               Text(task.title, style: Theme.of(context).textTheme.headlineSmall),
               Text('${task.category} · ${task.isActive ? 'Activa' : 'Archivada'}'),
               Text('${_type(task.type)} · ${_recurrence(task.recurrence)}'),

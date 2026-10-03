@@ -1,3 +1,5 @@
+import 'package:core/features/coach_pro/application/coach_pro_task_comments_provider.dart';
+import 'package:core/features/coach_pro/data/coach_pro_task_comments_service.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:core/domain/models/app_identity_state.dart';
@@ -58,6 +60,22 @@ Future<ProviderContainer> _mount(WidgetTester tester, {
   await tester.pump(); return container;
 }
 void main() {
+  testWidgets('comments are loaded only after explicit navigation', (tester) async {
+    int calls = 0;
+    final container = ProviderContainer(overrides: [appIdentityProvider.overrideWith(_Identity.new),
+      coachProTaskPageProvider.overrideWith((ref, query) async => _page()),
+      coachProTaskCommentsProvider.overrideWith((ref, query) async {
+        calls++;
+        expect(query.relationshipId, 'rel'); expect(query.taskId, 'task');
+        return const CoachProTaskCommentsPage(items: [], totalCount: 0, coachUserId: 'coach');
+      })]);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(UncontrolledProviderScope(container: container, child: const MaterialApp(
+      home: CoachProTaskDetailPage(relationshipId: 'rel', taskId: 'task'))));
+    await tester.pumpAndSettle(); expect(calls, 0);
+    await tester.tap(find.text('Ver comentarios')); await tester.pumpAndSettle();
+    expect(calls, 1); expect(find.text('Todavía no hay comentarios.'), findsOneWidget);
+  });
   test('targeted HTTP page preserves finalized status and rejects cross-task/client records', () async {
     final requests = <http.Request>[];
     String? corrupt;
