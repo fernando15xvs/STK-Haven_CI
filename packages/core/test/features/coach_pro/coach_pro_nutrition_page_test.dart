@@ -16,7 +16,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class _Identity extends AppIdentityNotifier {
   @override
   AppIdentityState build() => const AppIdentityState(sessionKind: AppSessionKind.permanent, userId: 'coach');
-  void signOut() => state = const AppIdentityState();
+  void signOutForTest() => state = const AppIdentityState();
 }
 const CoachProNutritionQuery _query = (relationshipId: 'rel', clientUserId: 'client', planId: 'plan', version: 1, offset: 0);
 Map<String, dynamic> _json() => {'id': 'plan', 'relationship_id': 'rel', 'coach_user_id': 'coach',
@@ -90,7 +90,7 @@ void main() {
     expect(find.text('Texto de la versión uno'), findsNothing);
     pending.completeError(StateError('private nutrition')); await tester.pumpAndSettle();
     expect(find.textContaining('private nutrition'), findsNothing); expect(find.text('Reintentar'), findsOneWidget);
-    (container.read(appIdentityProvider.notifier) as _Identity).signOut(); await tester.pumpAndSettle();
+    (container.read(appIdentityProvider.notifier) as _Identity).signOutForTest(); await tester.pumpAndSettle();
     expect(find.text('Reintentar'), findsNothing); expect(find.textContaining('cuenta permanente'), findsOneWidget);
   });
 }
