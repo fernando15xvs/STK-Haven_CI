@@ -1,4 +1,5 @@
 import 'package:core/domain/models/nutrition_guidance.dart';
+import 'package:core/features/coach_pro/presentation/coach_pro_nutrition_versions_page.dart';
 import 'package:core/features/coach_pro/application/coach_pro_nutrition_provider.dart';
 import 'package:core/features/coach_pro/data/coach_pro_nutrition_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -25,11 +26,12 @@ class _Detail extends ConsumerStatefulWidget {
 }
 class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
   int _offset = 0;
+  late int _version;
   CoachProNutritionQuery get _query => (relationshipId: widget.query.relationshipId,
     clientUserId: widget.query.clientUserId, planId: widget.query.planId,
-    version: widget.query.version, offset: _offset);
+    version: _version, offset: _offset);
   @override
-  void initState() { super.initState(); WidgetsBinding.instance.addObserver(this); }
+  void initState() { super.initState(); _version = widget.query.version; WidgetsBinding.instance.addObserver(this); }
   @override
   void dispose() { WidgetsBinding.instance.removeObserver(this); super.dispose(); }
   void _refresh() => ref.invalidate(coachProNutritionProvider(_query));
@@ -56,6 +58,13 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
             return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Text(plan.title, style: Theme.of(context).textTheme.headlineSmall),
               Text('${plan.status == NutritionGuidanceStatus.active ? 'Activa' : 'Archivada'} · Versión ${plan.version} de ${plan.currentVersion}'),
+              TextButton(onPressed: () async {
+                final selected = await Navigator.of(context).push<int>(MaterialPageRoute(builder: (_) =>
+                  CoachProNutritionVersionsScreen(query: _query)));
+                if (!mounted) return;
+                if (selected != null) setState(() { _version = selected; _offset = 0; });
+                _refresh();
+              }, child: const Text('Ver versiones')),
               const Text(NutritionGuidancePlan.defaultScopeNotice),
               if (plan.scopeNotice != NutritionGuidancePlan.defaultScopeNotice) Text(plan.scopeNotice),
               if (plan.overview.isNotEmpty) Text(plan.overview),

@@ -5,6 +5,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 final coachProNutritionServiceProvider = Provider<CoachProNutritionService>(
   (ref) => CoachProNutritionService(Supabase.instance.client));
+final coachProNutritionVersionsProvider = FutureProvider.autoDispose
+    .family<CoachProNutritionVersionsPage?, CoachProNutritionQuery>((ref, query) async {
+  final identity = ref.watch(appIdentityProvider.select((s) => (s.signedIn, s.userId)));
+  if (!identity.$1 || identity.$2 == null) return null;
+  return ref.watch(coachProNutritionServiceProvider).listVersions(query);
+});
 final coachProNutritionProvider = FutureProvider.autoDispose
     .family<CoachProNutritionPage?, CoachProNutritionQuery>((ref, query) async {
   final identity = ref.watch(appIdentityProvider.select((s) => (s.signedIn, s.userId)));

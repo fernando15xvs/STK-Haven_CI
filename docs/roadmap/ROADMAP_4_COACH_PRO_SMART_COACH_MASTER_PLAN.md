@@ -80,7 +80,10 @@
 - RPCs `stk_list_coach_pro_nutrition` y `stk_get_coach_pro_nutrition_page`: cuenta permanente, capability coach, entitlement y relación activa propia con `view_nutrition`. Plan, cliente, coach y versión quedan delimitados explícitamente; no mezcla planes de otro coach del mismo cliente.
 - Versiones inmutables y planes archivados siguen legibles mientras exista acceso; leer no muta historial. Cada página mantiene la versión elegida aunque haya una más reciente. Conserva el alcance no clínico y no añade campos de calorías, macros, peso objetivo, diagnóstico ni tratamiento.
 - Parsing estricto de ámbito, fechas, versión y estructura anidada. Mantiene estados de carga/error/sin contenido, revocación en cada consulta, limpieza al refrescar y cambio de sesión. Tests HTTP/provider/UI/pgTAP añadidos; exige CI propio 7/7. No acredita smoke físico ni despliegue remoto.
-- Próximo bloque: selección explícita y paginada del historial de versiones de orientación alimentaria, conservando aislamiento y lectura sin edición.
+- Lectura validada: fuente `5ada82c3bcf6936243118bde6621e26f32e60f51`, mirror `91ed6943f337464f56cf4e8bc155f89077a58660`, CI #112/run `37215241251`: **7/7 success**, 426 Core y 559 pgTAP en upgrade y rebuild. Preview #73/run `37215952406` y Pages/run `37216036666`: success. El intento #111 falló por un nombre de helper de test incompatible; corregido sin cambiar el contrato funcional.
+- Historial añadido: RPC `stk_list_coach_pro_nutrition_versions`, servicio/provider y selector con páginas de 25 metadatos (versión, título y fecha). Conserva ámbito de plan/relación/cliente/coach, entitlement y `view_nutrition` en cada consulta; no entrega comidas ni notas en la lista.
+- Seleccionar una versión reinicia la paginación de comidas y vuelve a consultar el detalle autorizado. Cancelar también refresca el detalle; no cambia la versión vigente ni restaura contenido. Incluye estados vacíos/error/carga y redacción al refrescar/cerrar sesión, tests de servicio/UI y 29 assertions pgTAP. Este slice requiere su propio CI 7/7 antes de considerarlo validado.
+- Próximo bloque tras validar: contrastar la ficha profesional implementada con los pendientes de Fase 2 y priorizar el siguiente flujo, manteniendo separados los smokes físicos y el despliegue remoto.
 
 ---
 

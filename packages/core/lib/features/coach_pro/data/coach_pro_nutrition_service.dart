@@ -8,9 +8,44 @@ class CoachProNutritionPage {
   final int totalCount;
   const CoachProNutritionPage(this.plan, this.totalCount);
 }
+class CoachProNutritionVersion {
+  final int version;
+  final String title;
+  final DateTime createdAt;
+  const CoachProNutritionVersion(this.version, this.title, this.createdAt);
+}
+class CoachProNutritionVersionsPage {
+  final List<CoachProNutritionVersion> items;
+  final int totalCount, currentVersion;
+  const CoachProNutritionVersionsPage(this.items, this.totalCount, this.currentVersion);
+}
 class CoachProNutritionService {
   final SupabaseClient client;
   const CoachProNutritionService(this.client);
+  Future<CoachProNutritionVersionsPage> listVersions(CoachProNutritionQuery query) async {
+    final raw = await client.rpc('stk_list_coach_pro_nutrition_versions', params: {
+      'p_relationship_id': query.relationshipId, 'p_plan_id': query.planId,
+      'p_limit': 25, 'p_offset': query.offset,
+    });
+    if (raw is! Map || raw['relationship_id'] != query.relationshipId || raw['plan_id'] != query.planId ||
+        raw['client_user_id'] != query.clientUserId || raw['items'] is! List || !_count(raw['total_count']) ||
+        raw['current_version'] is! int || (raw['current_version'] as int) < 1 ||
+        (raw['current_version'] as int) > 10000) throw const FormatException('Invalid version history scope');
+    final items = <CoachProNutritionVersion>[];
+    int previous = (raw['current_version'] as int) + 1;
+    for (final row in raw['items'] as List) {
+      if (row is! Map || row['version'] is! int || (row['version'] as int) < 1 ||
+          (row['version'] as int) >= previous || !_text(row['title'], 120, min: 1) ||
+          row['created_at'] is! String || DateTime.tryParse('${row['created_at']}') == null) {
+        throw const FormatException('Invalid version history row');
+      }
+      previous = row['version'] as int;
+      items.add(CoachProNutritionVersion(previous, row['title'] as String, DateTime.parse(row['created_at'] as String)));
+    }
+    if (items.length > 25 || items.length > (raw['total_count'] as int) ||
+        (raw['total_count'] as int) > (raw['current_version'] as int)) throw const FormatException('Invalid history count');
+    return CoachProNutritionVersionsPage(List.unmodifiable(items), raw['total_count'] as int, raw['current_version'] as int);
+  }
   Future<CoachProSectionPage<NutritionGuidanceSummary>> list(String relationshipId,
       String clientUserId, {int offset = 0}) async {
     final raw = await client.rpc('stk_list_coach_pro_nutrition', params: {
