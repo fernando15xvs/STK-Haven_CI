@@ -44,7 +44,7 @@ void main() {
       if (corrupt == 'title') row['title'] = '';
       if (corrupt == 'count') data['total_count'] = 3;
       if (corrupt == 'order') data['items'] = [row, row];
-      return http.Response(jsonEncode(data), 200, headers: {'content-type': 'application/json'});
+      return http.Response(jsonEncode(data), 200, request: request, headers: {'content-type': 'application/json'});
     }));
     addTearDown(client.dispose); final service = CoachProNutritionService(client);
     final page = await service.listVersions(_query);

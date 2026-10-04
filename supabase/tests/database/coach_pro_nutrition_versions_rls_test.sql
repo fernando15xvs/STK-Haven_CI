@@ -178,6 +178,7 @@ select throws_ok($$select public.stk_list_coach_pro_nutrition_versions('53000000
 reset role;
 insert into public.stk_subscription_entitlements(user_id,product,status,tier,client_limit,starts_at,current_period_end,source)
 values ('51000000-0000-0000-0000-000000000002','coach_pro','active','test',10,now()-interval '1 day',now()+interval '30 days','pgTap');
+update public.stk_subscription_entitlements set status='active' where user_id='51000000-0000-0000-0000-000000000001';
 update public.stk_coach_client_relationships set status='active',revoked_at=null where id='53000000-0000-0000-0000-000000000001';
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"51000000-0000-0000-0000-000000000002","role":"authenticated","is_anonymous":false}',true);
