@@ -73,6 +73,17 @@
 
 ---
 
+## Continuidad Fase 2 — lectura de orientación alimentaria (2026-10-04 UTC)
+
+- Progreso validado: fuente `448772e67e66d4a0cec8cb221b31a02697e14439`, mirror `4834f0143b8d63b75df9995b0cc8298263bb11d4`, CI #110/run `37178090514` **7/7 success**; 418 Core y 522 pgTAP tras upgrade y rebuild. Preview #71/run `37178470459` y Pages/run `37178539153`: success.
+- Nuevo slice: lista paginada por relación y detalle fijado a la versión seleccionada. Reutiliza tablas y modelos `NutritionGuidanceSummary`/`NutritionGuidancePlan` de Roadmap 3. Lista de 25 metadatos; detalle de cinco comidas por página con ejemplos existentes, sin llamadas Flutter por comida ni descarga de toda la cartera.
+- RPCs `stk_list_coach_pro_nutrition` y `stk_get_coach_pro_nutrition_page`: cuenta permanente, capability coach, entitlement y relación activa propia con `view_nutrition`. Plan, cliente, coach y versión quedan delimitados explícitamente; no mezcla planes de otro coach del mismo cliente.
+- Versiones inmutables y planes archivados siguen legibles mientras exista acceso; leer no muta historial. Cada página mantiene la versión elegida aunque haya una más reciente. Conserva el alcance no clínico y no añade campos de calorías, macros, peso objetivo, diagnóstico ni tratamiento.
+- Parsing estricto de ámbito, fechas, versión y estructura anidada. Mantiene estados de carga/error/sin contenido, revocación en cada consulta, limpieza al refrescar y cambio de sesión. Tests HTTP/provider/UI/pgTAP añadidos; exige CI propio 7/7. No acredita smoke físico ni despliegue remoto.
+- Próximo bloque: selección explícita y paginada del historial de versiones de orientación alimentaria, conservando aislamiento y lectura sin edición.
+
+---
+
 # 0. Principios no negociables
 
 - [x] Una sola fuente de verdad en `packages/core`; mobile/web consumen los mismos contratos.

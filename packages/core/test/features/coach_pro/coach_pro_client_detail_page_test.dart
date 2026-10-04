@@ -1,4 +1,6 @@
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/domain/models/nutrition_guidance.dart';
+import 'package:core/features/coach_pro/application/coach_pro_nutrition_provider.dart';
 import 'package:core/features/coach_pro/application/coach_pro_task_provider.dart';
 import 'package:core/features/coach_pro/application/coach_pro_program_provider.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
@@ -24,12 +26,15 @@ class _Identity extends AppIdentityNotifier {
   void signOutForTest() => state = const AppIdentityState();
 }
 
-CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compartida', bool programs = false, bool tasks = false, bool workouts = false, bool progress = false, bool missingProgress = false}) =>
+CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compartida', bool programs = false, bool tasks = false, bool workouts = false, bool progress = false, bool missingProgress = false, bool nutrition = false}) =>
     CoachProClientDetail(CoachProClientSummary.fromJson({
       'relationship_id': 'rel', 'client_user_id': 'client', 'display_name': 'Ana',
-      'relationship_status': 'active', 'permissions': {'view_checkins': permitted, 'assign_programs': programs, 'assign_tasks': tasks, 'view_workouts': workouts, 'view_progress': progress},
+      'relationship_status': 'active', 'permissions': {'view_checkins': permitted, 'assign_programs': programs, 'assign_tasks': tasks, 'view_workouts': workouts, 'view_progress': progress, 'view_nutrition': nutrition},
       'workouts_7d': 99,
-    }), progress: missingProgress ? null : CoachClientProgress(workouts7d: 0, workouts30d: 0,
+    }), nutrition: CoachProSectionPage(totalCount: 26, items: [NutritionGuidanceSummary(
+      id: 'plan', relationshipId: 'rel', coachUserId: 'coach', clientUserId: 'client',
+      status: NutritionGuidanceStatus.active, currentVersion: 2, title: 'Plan compartido', updatedAt: DateTime(2026))]),
+    progress: missingProgress ? null : CoachClientProgress(workouts7d: 0, workouts30d: 0,
       trainingMinutes7d: 0, completedWorkingSets7d: 0, volume7d: 0, generatedAt: DateTime(2026, 9, 1)),
     workouts: CoachProSectionPage(totalCount: 27, items: [
       CoachSharedWorkoutSummary(workoutId: 'w', startedAt: DateTime(2026, 10, 1),
@@ -60,6 +65,10 @@ Future<ProviderContainer> _mount(WidgetTester tester, {
   final container = ProviderContainer(overrides: [
     appIdentityProvider.overrideWith(_Identity.new),
     coachProTaskPageProvider.overrideWith((ref, query) async => null),
+    coachProNutritionProvider.overrideWith((ref, query) async {
+      expect(query.planId, 'plan'); expect(query.version, 2); expect(query.relationshipId, 'rel');
+      return null;
+    }),
     coachProProgramPageProvider.overrideWith((ref, query) async => null),
     coachProClientDetailProvider.overrideWith((ref, query) => load(query)),
   ]);
@@ -74,6 +83,27 @@ Future<ProviderContainer> _mount(WidgetTester tester, {
 }
 
 void main() {
+  testWidgets('nutrition list loads lazily, paginates and opens the selected version', (tester) async {
+    final queries = <CoachProClientDetailQuery>[];
+    await _mount(tester, load: (q) async { queries.add(q); return _detail(nutrition: true); });
+    expect(find.text('Plan compartido'), findsNothing);
+    await tester.tap(find.text('Alimentación')); await tester.pumpAndSettle();
+    expect(queries.last.section, CoachProClientSection.nutrition);
+    expect(find.text('Plan compartido'), findsOneWidget);
+    await tester.ensureVisible(find.text('Siguiente')); await tester.pumpAndSettle();
+    await tester.tap(find.text('Siguiente')); await tester.pumpAndSettle();
+    expect(queries.last.offset, 25);
+    await tester.ensureVisible(find.text('Ver orientación')); await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver orientación')); await tester.pumpAndSettle();
+    expect(find.text('Orientación no disponible.'), findsOneWidget);
+  });
+  testWidgets('nutrition consent masks an injected list independently of other permissions', (tester) async {
+    await _mount(tester, width: 320, scale: 1.8, load: (_) async => _detail(progress: true, workouts: true));
+    await tester.tap(find.text('Alimentación')); await tester.pumpAndSettle();
+    expect(find.text('Plan compartido'), findsNothing);
+    expect(find.text('Orientación alimentaria: no compartida en esta relación.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   for (final width in [320.0, 768.0, 1440.0]) {
     testWidgets('progress snapshot at $width displays recorded zero and missing RIR with period context', (tester) async {
       final queries = <CoachProClientDetailQuery>[];

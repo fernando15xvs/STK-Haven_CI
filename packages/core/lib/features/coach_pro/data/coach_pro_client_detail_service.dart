@@ -1,4 +1,6 @@
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/domain/models/nutrition_guidance.dart';
+import 'package:core/features/coach_pro/data/coach_pro_nutrition_service.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
 import 'package:core/domain/models/coach_checkin.dart';
@@ -14,6 +16,9 @@ class CoachProCheckinPage {
 class CoachProClientDetailService {
   final SupabaseClient client;
   const CoachProClientDetailService(this.client);
+  Future<CoachProSectionPage<NutritionGuidanceSummary>> listNutrition(
+      String relationshipId, String clientUserId, {int offset = 0}) =>
+    CoachProNutritionService(client).list(relationshipId, clientUserId, offset: offset);
 
   Future<CoachClientProgress?> getProgress(String relationshipId, String clientUserId) async {
     final raw = await client.rpc('stk_get_coach_pro_client_progress', params: {

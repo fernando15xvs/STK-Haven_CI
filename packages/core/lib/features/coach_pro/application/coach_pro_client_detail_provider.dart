@@ -1,4 +1,5 @@
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
@@ -8,7 +9,7 @@ import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum CoachProClientSection { summary, checkins, programs, tasks, workouts, progress }
+enum CoachProClientSection { summary, checkins, programs, tasks, workouts, progress, nutrition }
 
 typedef CoachProClientDetailQuery = ({String relationshipId, CoachProClientSection section, int offset});
 
@@ -19,7 +20,9 @@ class CoachProClientDetail {
   final CoachProSectionPage<CoachProTaskSummary>? tasks;
   final CoachProSectionPage<CoachSharedWorkoutSummary>? workouts;
   final CoachClientProgress? progress;
-  const CoachProClientDetail(this.summary, {this.checkins, this.programs, this.tasks, this.workouts, this.progress});
+  final CoachProSectionPage<NutritionGuidanceSummary>? nutrition;
+  const CoachProClientDetail(this.summary, {this.checkins, this.programs, this.tasks, this.workouts, this.progress, this.nutrition});
+  bool get canViewNutrition => canView(CoachPermission.viewNutrition);
   bool get canViewProgress => canView(CoachPermission.viewProgress);
   bool get canViewWorkouts => canView(CoachPermission.viewWorkouts);
   bool canView(CoachPermission permission) =>
@@ -51,6 +54,10 @@ final coachProClientDetailProvider = FutureProvider.autoDispose
   switch (query.section) {
     case CoachProClientSection.summary:
       return detail;
+    case CoachProClientSection.nutrition:
+      if (!detail.canViewNutrition) return detail;
+      return CoachProClientDetail(summary, nutrition:
+        await service.listNutrition(query.relationshipId, summary.clientUserId, offset: query.offset));
     case CoachProClientSection.progress:
       if (!detail.canViewProgress) return detail;
       return CoachProClientDetail(summary, progress:

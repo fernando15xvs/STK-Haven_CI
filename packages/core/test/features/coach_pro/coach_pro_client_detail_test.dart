@@ -1,4 +1,5 @@
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
 import 'dart:async';
@@ -37,6 +38,13 @@ class _Service implements CoachProClientDetailService {
   final taskOffsets = <int>[];
   final workoutOffsets = <int>[];
   int progressReads = 0;
+  final nutritionOffsets = <int>[];
+  @override
+  Future<CoachProSectionPage<NutritionGuidanceSummary>> listNutrition(
+      String relationshipId, String clientUserId, {int offset = 0}) async {
+    expect(clientUserId, 'client'); nutritionOffsets.add(offset);
+    return const CoachProSectionPage(totalCount: 0);
+  }
   Completer<CoachClientProgress?>? progressPending;
   @override
   Future<CoachClientProgress?> getProgress(String relationshipId, String clientUserId) async {
@@ -99,6 +107,22 @@ void main() {
     ]);
   });
   tearDown(() => container.dispose());
+  test('nutrition list is lazy and independent from progress consent', () async {
+    service.summary = CoachProClientSummary.fromJson({'relationship_id': 'rel', 'client_user_id': 'client',
+      'relationship_status': 'active', 'permissions': {'view_nutrition': true}});
+    await container.read(coachProClientDetailProvider(summaryQuery).future);
+    expect(service.nutritionOffsets, isEmpty);
+    final provider = coachProClientDetailProvider(
+      (relationshipId: 'rel', section: CoachProClientSection.nutrition, offset: 25));
+    container.listen(provider, (_, _) {});
+    expect((await container.read(provider.future))!.nutrition, isNotNull);
+    expect(service.nutritionOffsets, [25]); expect(service.progressReads, 0);
+    service.summary = CoachProClientSummary.fromJson({'relationship_id': 'rel', 'client_user_id': 'client',
+      'relationship_status': 'active', 'permissions': {'view_progress': true}});
+    container.invalidate(provider);
+    expect((await container.read(provider.future))!.nutrition, isNull);
+    expect(service.nutritionOffsets, [25]);
+  });
 
   test('progress is lazy, requires its own consent and stops after revocation', () async {
     service.summary = CoachProClientSummary.fromJson({

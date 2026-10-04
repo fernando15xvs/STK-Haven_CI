@@ -1,4 +1,6 @@
 import 'package:core/features/coach_pro/presentation/coach_pro_task_page.dart';
+import 'package:core/domain/models/nutrition_guidance.dart';
+import 'package:core/features/coach_pro/presentation/coach_pro_nutrition_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_program_page.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/coach_assigned_task.dart';
@@ -97,6 +99,28 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                 const SizedBox(height: 16),
                 const Text('Los permisos los administra el cliente. El plan Coach Pro '
                     'no concede acceso adicional a sus datos.'),
+              ] else if (_section == CoachProClientSection.nutrition) ...[
+                if (!detail.canViewNutrition)
+                  const Text('Orientación alimentaria: no compartida en esta relación.')
+                else ...[
+                  const Text(NutritionGuidancePlan.defaultScopeNotice),
+                  if (detail.nutrition!.items.isEmpty)
+                    Text(_offset == 0 ? 'No hay orientaciones alimentarias compartidas.'
+                      : 'Esta página está vacía. Vuelve a la anterior.'),
+                  for (final item in detail.nutrition!.items)
+                    Card(child: Padding(padding: const EdgeInsets.all(16),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(item.title),
+                        Text('${item.status == NutritionGuidanceStatus.active ? 'Activa' : 'Archivada'} · Versión ${item.currentVersion}'),
+                        TextButton(onPressed: () async {
+                          await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) =>
+                            CoachProNutritionDetailPage(query: (relationshipId: widget.relationshipId,
+                              clientUserId: summary.clientUserId, planId: item.id, version: item.currentVersion, offset: 0))));
+                          if (mounted) _refresh();
+                        }, child: const Text('Ver orientación')),
+                      ]))),
+                  _pagination(detail.nutrition!.items.length, detail.nutrition!.totalCount, 'orientaciones'),
+                ],
               ] else if (_section == CoachProClientSection.progress) ...[
                 if (!detail.canViewProgress)
                   const Text('Progreso: no compartido en esta relación.')
@@ -243,6 +267,7 @@ String _sectionLabel(CoachProClientSection section) => switch (section) {
   CoachProClientSection.tasks => 'Tareas',
   CoachProClientSection.workouts => 'Entrenamientos',
   CoachProClientSection.progress => 'Progreso',
+  CoachProClientSection.nutrition => 'Alimentación',
 };
 String _programStatus(AssignedProgramStatus status) => switch (status) {
   AssignedProgramStatus.assigned => 'Asignado',
