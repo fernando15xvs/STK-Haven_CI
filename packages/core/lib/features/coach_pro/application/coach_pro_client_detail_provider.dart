@@ -8,7 +8,7 @@ import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum CoachProClientSection { summary, checkins, programs, tasks, workouts }
+enum CoachProClientSection { summary, checkins, programs, tasks, workouts, progress }
 
 typedef CoachProClientDetailQuery = ({String relationshipId, CoachProClientSection section, int offset});
 
@@ -18,7 +18,9 @@ class CoachProClientDetail {
   final CoachProSectionPage<CoachProgramAssignmentSummary>? programs;
   final CoachProSectionPage<CoachProTaskSummary>? tasks;
   final CoachProSectionPage<CoachSharedWorkoutSummary>? workouts;
-  const CoachProClientDetail(this.summary, {this.checkins, this.programs, this.tasks, this.workouts});
+  final CoachClientProgress? progress;
+  const CoachProClientDetail(this.summary, {this.checkins, this.programs, this.tasks, this.workouts, this.progress});
+  bool get canViewProgress => canView(CoachPermission.viewProgress);
   bool get canViewWorkouts => canView(CoachPermission.viewWorkouts);
   bool canView(CoachPermission permission) =>
       summary.relationshipStatus == CoachRelationshipStatus.active &&
@@ -49,6 +51,10 @@ final coachProClientDetailProvider = FutureProvider.autoDispose
   switch (query.section) {
     case CoachProClientSection.summary:
       return detail;
+    case CoachProClientSection.progress:
+      if (!detail.canViewProgress) return detail;
+      return CoachProClientDetail(summary, progress:
+        await service.getProgress(query.relationshipId, summary.clientUserId));
     case CoachProClientSection.workouts:
       if (!detail.canViewWorkouts) return detail;
       return CoachProClientDetail(summary, workouts:

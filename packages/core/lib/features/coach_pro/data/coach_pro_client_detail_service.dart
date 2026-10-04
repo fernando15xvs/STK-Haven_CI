@@ -15,6 +15,43 @@ class CoachProClientDetailService {
   final SupabaseClient client;
   const CoachProClientDetailService(this.client);
 
+  Future<CoachClientProgress?> getProgress(String relationshipId, String clientUserId) async {
+    final raw = await client.rpc('stk_get_coach_pro_client_progress', params: {
+      'p_relationship_id': relationshipId,
+    });
+    if (raw is! Map || raw['relationship_id'] != relationshipId ||
+        raw['client_user_id'] != clientUserId || !raw.containsKey('snapshot')) {
+      throw const FormatException('Invalid progress scope');
+    }
+    if (raw['snapshot'] == null) return null;
+    if (raw['snapshot'] is! Map) throw const FormatException('Invalid progress snapshot');
+    final row = Map<String, dynamic>.from(raw['snapshot'] as Map);
+    bool integer(String key, int max) => row[key] is int &&
+        (row[key] as int) >= 0 && (row[key] as int) <= max;
+    bool numeric(String key, num max) => row[key] is num &&
+        (row[key] as num).isFinite && (row[key] as num) >= 0 && (row[key] as num) <= max;
+    final generatedAt = DateTime.tryParse('${row['generated_at']}');
+    final lastWorkoutAt = row['last_workout_at'] == null ? null
+        : DateTime.tryParse('${row['last_workout_at']}');
+    if (!integer('workouts_7d', 1000) || !integer('workouts_30d', 4000) ||
+        !integer('training_minutes_7d', 10080) || !integer('completed_working_sets_7d', 100000) ||
+        !numeric('volume_7d', 1000000000000) || generatedAt == null ||
+        (row['last_workout_at'] != null && lastWorkoutAt == null) ||
+        (row['average_rir_7d'] != null && !numeric('average_rir_7d', 10))) {
+      throw const FormatException('Invalid progress values');
+    }
+    if ((row['workouts_7d'] as int) > (row['workouts_30d'] as int)) {
+      throw const FormatException('Invalid progress period counts');
+    }
+    return CoachClientProgress(clientUserId: clientUserId, workoutsVisible: false,
+      workouts7d: row['workouts_7d'] as int, workouts30d: row['workouts_30d'] as int,
+      trainingMinutes7d: row['training_minutes_7d'] as int,
+      completedWorkingSets7d: row['completed_working_sets_7d'] as int,
+      volume7d: (row['volume_7d'] as num).toDouble(),
+      averageRir7d: (row['average_rir_7d'] as num?)?.toDouble(),
+      lastWorkoutAt: lastWorkoutAt, generatedAt: generatedAt);
+  }
+
   Future<CoachProSectionPage<CoachSharedWorkoutSummary>> listWorkouts(
       String relationshipId, String clientUserId, {int limit = 25, int offset = 0}) async {
     final raw = await client.rpc('stk_list_coach_pro_client_workouts', params: {

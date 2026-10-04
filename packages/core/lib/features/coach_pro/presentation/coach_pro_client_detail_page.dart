@@ -97,6 +97,24 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                 const SizedBox(height: 16),
                 const Text('Los permisos los administra el cliente. El plan Coach Pro '
                     'no concede acceso adicional a sus datos.'),
+              ] else if (_section == CoachProClientSection.progress) ...[
+                if (!detail.canViewProgress)
+                  const Text('Progreso: no compartido en esta relación.')
+                else if (detail.progress == null)
+                  const Text('Todavía no hay una instantánea de progreso compartida.')
+                else ...[
+                  Text('Instantánea generada: ${_date(context, detail.progress!.generatedAt)}'),
+                  const Text('Los periodos de 7 y 30 días corresponden a esa instantánea. Actualizar consulta lo último compartido; no recalcula la actividad del cliente.'),
+                  Text('Entrenos en 7 días: ${detail.progress!.workouts7d}'),
+                  Text('Entrenos en 30 días: ${detail.progress!.workouts30d}'),
+                  Text('Minutos de entrenamiento en 7 días: ${detail.progress!.trainingMinutes7d}'),
+                  Text('Series de trabajo en 7 días: ${detail.progress!.completedWorkingSets7d}'),
+                  Text('Volumen registrado en 7 días: ${detail.progress!.volume7d}'),
+                  Text('RIR medio en 7 días: ${detail.progress!.averageRir7d?.toString() ?? 'Sin datos'}'),
+                  Text('Último entreno registrado: ${_date(context, detail.progress!.lastWorkoutAt)}'),
+                  const SizedBox(height: 12),
+                  const Text('Estos agregados no indican por sí solos adherencia, récords ni una tendencia de mejora.'),
+                ],
               ] else if (_section == CoachProClientSection.workouts) ...[
                 if (!detail.canViewWorkouts)
                   const Text('Entrenamientos: no compartidos en esta relación.')
@@ -224,6 +242,7 @@ String _sectionLabel(CoachProClientSection section) => switch (section) {
   CoachProClientSection.programs => 'Programas',
   CoachProClientSection.tasks => 'Tareas',
   CoachProClientSection.workouts => 'Entrenamientos',
+  CoachProClientSection.progress => 'Progreso',
 };
 String _programStatus(AssignedProgramStatus status) => switch (status) {
   AssignedProgramStatus.assigned => 'Asignado',

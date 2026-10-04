@@ -36,6 +36,14 @@ class _Service implements CoachProClientDetailService {
   final programOffsets = <int>[];
   final taskOffsets = <int>[];
   final workoutOffsets = <int>[];
+  int progressReads = 0;
+  Completer<CoachClientProgress?>? progressPending;
+  @override
+  Future<CoachClientProgress?> getProgress(String relationshipId, String clientUserId) async {
+    expect(clientUserId, 'client'); progressReads++;
+    if (fail) throw StateError('sensitive');
+    return progressPending == null ? null : await progressPending!.future;
+  }
   @override
   Future<CoachProSectionPage<CoachSharedWorkoutSummary>> listWorkouts(
       String relationshipId, String clientUserId, {int limit = 25, int offset = 0}) async {
@@ -91,6 +99,75 @@ void main() {
     ]);
   });
   tearDown(() => container.dispose());
+
+  test('progress is lazy, requires its own consent and stops after revocation', () async {
+    service.summary = CoachProClientSummary.fromJson({
+      'relationship_id': 'rel', 'client_user_id': 'client', 'relationship_status': 'active',
+      'permissions': {'view_progress': true},
+    });
+    await container.read(coachProClientDetailProvider(summaryQuery).future);
+    expect(service.progressReads, 0);
+    final provider = coachProClientDetailProvider(
+      (relationshipId: 'rel', section: CoachProClientSection.progress, offset: 0));
+    container.listen(provider, (_, _) {});
+    final detail = await container.read(provider.future);
+    expect(detail!.canViewProgress, isTrue); expect(detail.progress, isNull);
+    expect(service.progressReads, 1); expect(service.workoutOffsets, isEmpty);
+    service.summary = CoachProClientSummary.fromJson({
+      'relationship_id': 'rel', 'client_user_id': 'client', 'relationship_status': 'active',
+      'permissions': {'view_workouts': true},
+    });
+    container.invalidate(provider);
+    expect((await container.read(provider.future))!.canViewProgress, isFalse);
+    expect(service.progressReads, 1);
+  });
+  test('progress response after sign-out is discarded', () async {
+    service.summary = CoachProClientSummary.fromJson({
+      'relationship_id': 'rel', 'client_user_id': 'client', 'relationship_status': 'active',
+      'permissions': {'view_progress': true},
+    });
+    service.progressPending = Completer<CoachClientProgress?>();
+    final provider = coachProClientDetailProvider(
+      (relationshipId: 'rel', section: CoachProClientSection.progress, offset: 0));
+    container.listen(provider, (_, _) {});
+    await Future<void>.delayed(Duration.zero); expect(service.progressReads, 1);
+    (container.read(appIdentityProvider.notifier) as _Identity).signOutForTest();
+    expect(await container.read(provider.future), isNull);
+    service.progressPending!.complete(CoachClientProgress(workouts7d: 1, workouts30d: 1,
+      trainingMinutes7d: 10, completedWorkingSets7d: 1, volume7d: 0, generatedAt: DateTime(2026)));
+    await Future<void>.delayed(Duration.zero);
+    expect(container.read(provider).value, isNull);
+  });
+  test('progress parser preserves missing snapshot and genuine zero, rejects incomplete values and wrong scope', () async {
+    final requests = <http.Request>[];
+    String? corrupt; bool missing = false;
+    final client = SupabaseClient('https://example.test', 'test-key', httpClient: MockClient((request) async {
+      requests.add(request);
+      final snapshot = <String, dynamic>{'workouts_7d': 0, 'workouts_30d': 0,
+        'training_minutes_7d': 0, 'completed_working_sets_7d': 0, 'volume_7d': 0,
+        'average_rir_7d': null, 'last_workout_at': null, 'generated_at': '2026-09-01T00:00:00Z'};
+      if (corrupt == 'minutes') snapshot.remove('training_minutes_7d');
+      if (corrupt == 'date') snapshot['generated_at'] = null;
+      if (corrupt == 'last') snapshot['last_workout_at'] = 'invalid';
+      if (corrupt == 'rir') snapshot['average_rir_7d'] = 11;
+      if (corrupt == 'count') snapshot['workouts_7d'] = 1;
+      return http.Response(jsonEncode({'relationship_id': corrupt == 'relationship' ? 'other' : 'rel',
+        'client_user_id': corrupt == 'client' ? 'other' : 'client', 'snapshot': missing ? null : snapshot}),
+        200, request: request, headers: {'content-type': 'application/json'});
+    }));
+    addTearDown(client.dispose); final live = CoachProClientDetailService(client);
+    final value = await live.getProgress('rel', 'client');
+    expect(requests.single.url.path, '/rest/v1/rpc/stk_get_coach_pro_client_progress');
+    expect(jsonDecode(requests.single.body), {'p_relationship_id': 'rel'});
+    expect(value!.workouts7d, 0); expect(value.trainingMinutes7d, 0);
+    expect(value.averageRir7d, isNull); expect(value.lastWorkoutAt, isNull);
+    expect(value.generatedAt, DateTime.utc(2026, 9, 1));
+    expect(value.workoutsVisible, isFalse); expect(value.recentWorkouts, isEmpty);
+    for (final key in ['minutes', 'date', 'last', 'rir', 'count', 'relationship', 'client']) {
+      corrupt = key; await expectLater(live.getProgress('rel', 'client'), throwsFormatException);
+    }
+    corrupt = null; missing = true; expect(await live.getProgress('rel', 'client'), isNull);
+  });
 
   test('workouts are lazy, independent of progress, and revocation stops subsequent queries', () async {
     service.summary = CoachProClientSummary.fromJson({

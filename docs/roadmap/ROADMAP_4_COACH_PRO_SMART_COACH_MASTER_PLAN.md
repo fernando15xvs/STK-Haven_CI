@@ -61,6 +61,18 @@
 
 ---
 
+## Continuidad Fase 2 — instantánea de progreso (2026-10-04 UTC)
+
+- Resúmenes paginados de entrenamientos validados: fuente `78bdc55f32800d2572d0f5c2f700f2e2cf54a76c`, mirror `3734cf700cb7154e88b4cbe433a9463986ffbc18`, CI #109/run `37161591291` **7/7 success**; 411 Core y 498 pgTAP tras upgrade y rebuild. Preview #70/run `37162142471` y Pages #34/run `37162210694`: success.
+- Nuevo slice: sección Progreso con RPC `stk_get_coach_pro_client_progress`, reutilizando la tabla `stk_client_progress_snapshots` y el modelo `CoachClientProgress` de Roadmap 3. Devuelve solo la instantánea del cliente de la relación seleccionada, sin datasets vecinos.
+- Autorización independiente: cuenta permanente + capability coach + entitlement + relación activa del coach actual con `view_progress`. `view_workouts` no sustituye ese permiso. No incluye medidas corporales, nutrición, notas ni series individuales.
+- Muestra entrenos 7/30 días, minutos, series de trabajo, volumen, RIR, último entreno y fecha de generación. Los periodos corresponden a esa fecha; actualizar no recalcula la actividad ni transforma datos antiguos en actuales.
+- Snapshot ausente permanece null y la UI indica falta de datos; valores cero registrados se conservan. Parser estricto, sin fallback a DateTime.now ni fabricación de ceros; RIR/último entreno ausentes permanecen null. No se infieren tendencias, PRs ni adherencia.
+- Mantiene carga diferida, redacción durante refresh/error y descarte al cambiar sesión. Tests HTTP/provider/UI y pgTAP adversarial añadidos; requiere su propio CI 7/7 antes de validarse. Sin despliegue remoto ni smoke físico acreditados.
+- Próximo bloque: revisar el contrato de orientación alimentaria de Roadmap 3 e integrar su lectura profesional bajo `view_nutrition`, sin mezclar permisos ni añadir funciones clínicas.
+
+---
+
 # 0. Principios no negociables
 
 - [x] Una sola fuente de verdad en `packages/core`; mobile/web consumen los mismos contratos.
