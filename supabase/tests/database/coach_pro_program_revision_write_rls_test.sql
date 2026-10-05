@@ -498,10 +498,13 @@ select is(
     (select assignment_id from _program_revision_write_test),
     (select revision_two_id from _program_revision_write_test),
     (
-      select id from public.stk_assigned_program_revision_routines
-      where revision_id=(select revision_two_id from _program_revision_write_test)
-      order by position limit 1
-    ),
+      public.stk_get_coach_pro_program_revision_page(
+        '73000000-0000-0000-0000-000000000001',
+        (select assignment_id from _program_revision_write_test),
+        (select revision_two_id from _program_revision_write_test),
+        null,25,0
+      )->'items'->0->>'id'
+    )::uuid,
     25,0
   )->'items'->1->>'name',
   'One Arm Row',
