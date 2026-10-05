@@ -10,12 +10,20 @@ import android.hardware.SensorManager
 import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
+import com.google.android.gms.fitness.FitnessLocal
+import com.google.android.gms.fitness.LocalRecordingClient
+import com.google.android.gms.fitness.data.LocalDataType
+import com.google.android.gms.fitness.request.LocalDataReadRequest
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.text.SimpleDateFormat
+import java.time.ZonedDateTime
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 class MainActivity : FlutterActivity(), SensorEventListener {
     private val channelName = "stk_haven/daily_steps"
@@ -26,6 +34,7 @@ class MainActivity : FlutterActivity(), SensorEventListener {
     private var pendingAccessResult: MethodChannel.Result? = null
     private var pendingStepsResult: MethodChannel.Result? = null
     private var pendingStepsWrapAccess = false
+    private var recordingSubscriptionReady = false
     private lateinit var sensorManager: SensorManager
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -119,6 +128,96 @@ class MainActivity : FlutterActivity(), SensorEventListener {
             return
         }
 
+        // Prefer Google's accountless local Recording API. Its subscription
+        // continues collecting step deltas while STK Haven is not running and
+        // survives system restarts. If Play services is unavailable, fall back
+        // to the hardware TYPE_STEP_COUNTER implementation below.
+        if (tryReadTodayStepsFromRecordingApi(result, wrapAccess)) {
+            return
+        }
+
+        readTodayStepsFromSensor(result, wrapAccess)
+    }
+
+    private fun tryReadTodayStepsFromRecordingApi(
+        result: MethodChannel.Result,
+        wrapAccess: Boolean,
+    ): Boolean {
+        val playServicesStatus = GoogleApiAvailability.getInstance()
+            .isGooglePlayServicesAvailable(
+                this,
+                LocalRecordingClient.LOCAL_RECORDING_CLIENT_STEPS_MIN_VERSION_CODE,
+            )
+        if (playServicesStatus != ConnectionResult.SUCCESS) {
+            return false
+        }
+
+        return try {
+            val client = FitnessLocal.getLocalRecordingClient(this)
+            if (recordingSubscriptionReady) {
+                readRecordedTodaySteps(client, result, wrapAccess)
+            } else {
+                client.subscribe(LocalDataType.TYPE_STEP_COUNT_DELTA)
+                    .addOnSuccessListener {
+                        recordingSubscriptionReady = true
+                        readRecordedTodaySteps(client, result, wrapAccess)
+                    }
+                    .addOnFailureListener {
+                        readTodayStepsFromSensor(result, wrapAccess)
+                    }
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun readRecordedTodaySteps(
+        client: LocalRecordingClient,
+        result: MethodChannel.Result,
+        wrapAccess: Boolean,
+    ) {
+        val end = ZonedDateTime.now()
+        val start = end.toLocalDate().atStartOfDay(end.zone)
+        val request = LocalDataReadRequest.Builder()
+            .setTimeRange(
+                start.toInstant().toEpochMilli(),
+                end.toInstant().toEpochMilli(),
+                TimeUnit.MILLISECONDS,
+            )
+            .read(LocalDataType.TYPE_STEP_COUNT_DELTA)
+            .build()
+
+        client.readData(request)
+            .addOnSuccessListener { response ->
+                val dataSet = response.getDataSet(
+                    LocalDataType.TYPE_STEP_COUNT_DELTA,
+                )
+                var total = 0
+                for (point in dataSet.dataPoints) {
+                    val field = point.dataType.fields.firstOrNull() ?: continue
+                    val value = try {
+                        point.getValue(field).asInt()
+                    } catch (_: IllegalStateException) {
+                        0
+                    }
+                    total += value.coerceAtLeast(0)
+                }
+                deliverSteps(
+                    result,
+                    total.coerceIn(0, 250000),
+                    wrapAccess,
+                )
+            }
+            .addOnFailureListener {
+                readTodayStepsFromSensor(result, wrapAccess)
+            }
+    }
+
+    private fun readTodayStepsFromSensor(
+        result: MethodChannel.Result,
+        wrapAccess: Boolean,
+    ) {
         val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         if (sensor == null) {
             if (wrapAccess) {
@@ -171,6 +270,23 @@ class MainActivity : FlutterActivity(), SensorEventListener {
         }
     }
 
+    private fun deliverSteps(
+        result: MethodChannel.Result,
+        steps: Int,
+        wrapAccess: Boolean,
+    ) {
+        if (wrapAccess) {
+            result.success(
+                mapOf(
+                    "status" to "authorized",
+                    "steps" to steps,
+                ),
+            )
+        } else {
+            result.success(steps)
+        }
+    }
+
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type != Sensor.TYPE_STEP_COUNTER) return
 
@@ -198,16 +314,7 @@ class MainActivity : FlutterActivity(), SensorEventListener {
         }
 
         val todaySteps = (cumulative - baseline).coerceAtLeast(0)
-        if (wrapAccess) {
-            result.success(
-                mapOf(
-                    "status" to "authorized",
-                    "steps" to todaySteps,
-                ),
-            )
-        } else {
-            result.success(todaySteps)
-        }
+        deliverSteps(result, todaySteps, wrapAccess)
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
