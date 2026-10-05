@@ -14,8 +14,13 @@ Future<bool> configureDailyVerseNotifications(bool enable) async {
   await prefs.setBool('verse_notifications_enabled', effectiveValue);
 
   if (effectiveValue) {
+    await VerseNotificationService.scheduleDailyReminder(
+      hour: 8,
+      minute: 0,
+    );
     await VerseBackgroundService.scheduleDailyVerse(8, 0);
   } else {
+    await VerseNotificationService.cancelDailyReminder();
     await VerseBackgroundService.cancelDailyVerse();
   }
 
