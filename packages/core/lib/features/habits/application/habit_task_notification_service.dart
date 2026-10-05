@@ -102,6 +102,10 @@ class HabitTaskNotificationService {
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents:
+          task.recurrence == HabitRecurrenceType.daily
+              ? DateTimeComponents.time
+              : null,
     );
     return true;
   }
