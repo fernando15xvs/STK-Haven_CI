@@ -121,7 +121,8 @@ class _StudyHabitsMobilePageState extends ConsumerState<StudyHabitsMobilePage> {
         break;
       }
     }
-    task ??= await notifier.createFromTemplate(template);
+    final resolvedTask =
+        task ?? await notifier.createFromTemplate(template);
     final now = DateTime.now();
     final scheduledAt = DateTime(
       now.year,
@@ -131,7 +132,7 @@ class _StudyHabitsMobilePageState extends ConsumerState<StudyHabitsMobilePage> {
       minute,
     );
     final ok = await notifier.setReminder(
-      taskId: task.id,
+      taskId: resolvedTask.id,
       enabled: true,
       scheduledAt: scheduledAt,
     );
