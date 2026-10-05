@@ -105,7 +105,10 @@ class WorkoutNotificationService {
       iOS: iosDetails,
     );
 
-    final scheduledDate = tz.TZDateTime.from(endTime, tz.local);
+    final scheduledDate = tz.TZDateTime.from(
+      endTime.add(const Duration(seconds: 2)),
+      tz.local,
+    );
     if (scheduledDate.isAfter(tz.TZDateTime.now(tz.local))) {
       await _notificationsPlugin.zonedSchedule(
         id: _restTimerNotificationId,
