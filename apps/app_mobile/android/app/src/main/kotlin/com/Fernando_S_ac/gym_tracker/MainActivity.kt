@@ -19,9 +19,13 @@ import java.util.Locale
 
 class MainActivity : FlutterActivity(), SensorEventListener {
     private val channelName = "stk_haven/daily_steps"
-    private val activityRecognitionRequest = 7412
+    private val legacyPermissionRequest = 7412
+    private val accessPermissionRequest = 7413
+
     private var pendingPermissionResult: MethodChannel.Result? = null
+    private var pendingAccessResult: MethodChannel.Result? = null
     private var pendingStepsResult: MethodChannel.Result? = null
+    private var pendingStepsWrapAccess = false
     private lateinit var sensorManager: SensorManager
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -33,6 +37,7 @@ class MainActivity : FlutterActivity(), SensorEventListener {
             channelName,
         ).setMethodCallHandler { call, result ->
             when (call.method) {
+                "requestAccess" -> requestActivityRecognitionAccess(result)
                 "requestPermission" -> requestActivityRecognition(result)
                 "getTodaySteps" -> readTodaySteps(result)
                 else -> result.notImplemented()
@@ -48,6 +53,40 @@ class MainActivity : FlutterActivity(), SensorEventListener {
             ) == PackageManager.PERMISSION_GRANTED
     }
 
+    private fun hasStepCounterSensor(): Boolean {
+        return sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null
+    }
+
+    private fun requestActivityRecognitionAccess(result: MethodChannel.Result) {
+        if (!hasStepCounterSensor()) {
+            result.success(
+                mapOf(
+                    "status" to "unavailable",
+                    "message" to "Step counter sensor is unavailable.",
+                ),
+            )
+            return
+        }
+
+        if (hasActivityRecognitionPermission()) {
+            readTodaySteps(result, wrapAccess = true)
+            return
+        }
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            readTodaySteps(result, wrapAccess = true)
+            return
+        }
+
+        pendingAccessResult?.success(mapOf("status" to "query_failed"))
+        pendingAccessResult = result
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
+            accessPermissionRequest,
+        )
+    }
+
     private fun requestActivityRecognition(result: MethodChannel.Result) {
         if (hasActivityRecognitionPermission()) {
             result.success(true)
@@ -59,27 +98,43 @@ class MainActivity : FlutterActivity(), SensorEventListener {
         ActivityCompat.requestPermissions(
             this,
             arrayOf(Manifest.permission.ACTIVITY_RECOGNITION),
-            activityRecognitionRequest,
+            legacyPermissionRequest,
         )
     }
 
-    private fun readTodaySteps(result: MethodChannel.Result) {
+    private fun readTodaySteps(
+        result: MethodChannel.Result,
+        wrapAccess: Boolean = false,
+    ) {
         if (!hasActivityRecognitionPermission()) {
-            result.error(
-                "permission_denied",
-                "Activity recognition permission is required.",
-                null,
-            )
+            if (wrapAccess) {
+                result.success(mapOf("status" to "denied"))
+            } else {
+                result.error(
+                    "permission_denied",
+                    "Activity recognition permission is required.",
+                    null,
+                )
+            }
             return
         }
 
         val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
         if (sensor == null) {
-            result.error(
-                "sensor_unavailable",
-                "Step counter sensor is unavailable.",
-                null,
-            )
+            if (wrapAccess) {
+                result.success(
+                    mapOf(
+                        "status" to "unavailable",
+                        "message" to "Step counter sensor is unavailable.",
+                    ),
+                )
+            } else {
+                result.error(
+                    "sensor_unavailable",
+                    "Step counter sensor is unavailable.",
+                    null,
+                )
+            }
             return
         }
 
@@ -89,18 +144,40 @@ class MainActivity : FlutterActivity(), SensorEventListener {
             null,
         )
         pendingStepsResult = result
-        sensorManager.registerListener(
+        pendingStepsWrapAccess = wrapAccess
+
+        val registered = sensorManager.registerListener(
             this,
             sensor,
             SensorManager.SENSOR_DELAY_NORMAL,
         )
+        if (!registered) {
+            pendingStepsResult = null
+            pendingStepsWrapAccess = false
+            if (wrapAccess) {
+                result.success(
+                    mapOf(
+                        "status" to "query_failed",
+                        "message" to "Step counter could not be started.",
+                    ),
+                )
+            } else {
+                result.error(
+                    "sensor_start_failed",
+                    "Step counter could not be started.",
+                    null,
+                )
+            }
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type != Sensor.TYPE_STEP_COUNTER) return
 
         val result = pendingStepsResult ?: return
+        val wrapAccess = pendingStepsWrapAccess
         pendingStepsResult = null
+        pendingStepsWrapAccess = false
         sensorManager.unregisterListener(this)
 
         val cumulative = event.values.firstOrNull()?.toInt() ?: 0
@@ -120,7 +197,17 @@ class MainActivity : FlutterActivity(), SensorEventListener {
                 .apply()
         }
 
-        result.success((cumulative - baseline).coerceAtLeast(0))
+        val todaySteps = (cumulative - baseline).coerceAtLeast(0)
+        if (wrapAccess) {
+            result.success(
+                mapOf(
+                    "status" to "authorized",
+                    "steps" to todaySteps,
+                ),
+            )
+        } else {
+            result.success(todaySteps)
+        }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
@@ -136,22 +223,39 @@ class MainActivity : FlutterActivity(), SensorEventListener {
             grantResults,
         )
 
-        if (requestCode == activityRecognitionRequest) {
-            val granted = grantResults.isNotEmpty() &&
-                grantResults[0] == PackageManager.PERMISSION_GRANTED
-            pendingPermissionResult?.success(granted)
-            pendingPermissionResult = null
+        val granted = grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+
+        when (requestCode) {
+            legacyPermissionRequest -> {
+                pendingPermissionResult?.success(granted)
+                pendingPermissionResult = null
+            }
+            accessPermissionRequest -> {
+                val result = pendingAccessResult
+                pendingAccessResult = null
+                if (result != null) {
+                    if (granted) {
+                        readTodaySteps(result, wrapAccess = true)
+                    } else {
+                        result.success(mapOf("status" to "denied"))
+                    }
+                }
+            }
         }
     }
 
     override fun onPause() {
-        sensorManager.unregisterListener(this)
+        if (::sensorManager.isInitialized) {
+            sensorManager.unregisterListener(this)
+        }
         pendingStepsResult?.error(
             "cancelled",
             "Step read cancelled.",
             null,
         )
         pendingStepsResult = null
+        pendingStepsWrapAccess = false
         super.onPause()
     }
 }
