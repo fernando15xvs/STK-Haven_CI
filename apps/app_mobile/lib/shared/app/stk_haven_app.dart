@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/layout/mobile_content_frame.dart';
 import '../../core/theme/app_theme.dart';
-import '../../splash/splash_screen.dart';
+import '../../app_root.dart';
 
 /// Shared Flutter application shell for Android and iOS.
 ///
@@ -83,7 +83,7 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
           child: MobileContentFrame(child: content),
         );
       },
-      home: const SplashScreen(),
+      home: const AppRoot(),
     );
   }
 }
