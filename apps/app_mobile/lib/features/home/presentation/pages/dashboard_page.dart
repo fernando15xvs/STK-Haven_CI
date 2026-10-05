@@ -197,8 +197,6 @@ class _DailyMessageCard extends ConsumerWidget {
                     const SizedBox(height: 6),
                     Text(
                       '“${verse.text}”',
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.bodyLarge.copyWith(fontStyle: FontStyle.italic, height: 1.45),
                     ),
                     const SizedBox(height: 6),
