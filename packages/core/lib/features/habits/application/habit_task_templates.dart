@@ -37,6 +37,33 @@ class HabitTaskTemplates {
     notes: 'Lee durante 10 minutos y guarda una referencia o reflexión si quieres.',
   );
 
+  static const HabitTaskTemplate personalReading20Minutes = HabitTaskTemplate(
+    title: 'Lectura personal',
+    category: 'Lectura',
+    type: HabitTaskType.readingTimer,
+    targetMinutes: 20,
+    recurrence: HabitRecurrenceType.daily,
+    notes: 'Lee cualquier libro o PDF durante 20 minutos.',
+  );
+
+  static const HabitTaskTemplate windDown10Minutes = HabitTaskTemplate(
+    title: 'Rutina nocturna',
+    category: 'Sueño',
+    type: HabitTaskType.reflection,
+    targetMinutes: 10,
+    recurrence: HabitRecurrenceType.daily,
+    notes: 'Respira, descarga la mente y prepara el entorno para dormir.',
+  );
+
+  static const HabitTaskTemplate recoveryPause = HabitTaskTemplate(
+    title: 'Pausa de recuperación',
+    category: 'Recuperación',
+    type: HabitTaskType.reflection,
+    targetMinutes: 10,
+    recurrence: HabitRecurrenceType.daily,
+    notes: 'Pausa breve para atravesar un impulso sin actuar automáticamente.',
+  );
+
   static const HabitTaskTemplate mobility10Minutes = HabitTaskTemplate(
     title: 'Movilidad 10 min',
     category: 'Movilidad',
