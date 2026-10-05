@@ -127,15 +127,13 @@ class PersonalReadingLibraryRepository {
   }
 
   Future<PersonalReadingDocument?> importPdf() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: const <String>['pdf'],
-      withData: false,
     );
-    if (result == null || result.files.isEmpty) return null;
+    if (result.isEmpty) return null;
 
-    final picked = result.files.single;
+    final picked = result.first;
     final sourcePath = picked.path;
     if (sourcePath == null || sourcePath.trim().isEmpty) return null;
 
