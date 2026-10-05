@@ -1,5 +1,6 @@
 import 'package:core/domain/models/daily_steps_state.dart';
 import 'package:core/domain/models/hydration_preferences.dart';
+import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -23,6 +24,28 @@ void main() {
 
     expect(restored.targetMl, 5000);
     expect(restored.reminderHour, 6);
+  });
+
+  test('step goal preferences restore goal and cadence', () {
+    final restored = StepGoalPreferences.fromJson({
+      'targetSteps': 12500,
+      'reminderEnabled': true,
+      'reminderCadence': 'gentle',
+    });
+
+    expect(restored.targetSteps, 12500);
+    expect(restored.reminderEnabled, isTrue);
+    expect(restored.reminderCadence, StepReminderCadence.gentle);
+  });
+
+  test('step goal preferences clamp malformed targets', () {
+    final restored = StepGoalPreferences.fromJson({
+      'targetSteps': 999999,
+      'reminderCadence': 'unknown',
+    });
+
+    expect(restored.targetSteps, 50000);
+    expect(restored.reminderCadence, StepReminderCadence.balanced);
   });
 
   test('daily steps state survives json round-trip', () {
