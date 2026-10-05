@@ -87,6 +87,25 @@
 
 ---
 
+## Auditoría de continuidad de Fase 2 — 2026-10-05 UTC
+
+Estado consolidado: [ROADMAP_4_PHASE_2_CURRENT_AUDIT.md](ROADMAP_4_PHASE_2_CURRENT_AUDIT.md).
+Esta auditoría contrasta las casillas históricas con el código actual; no declara
+cerrada Fase 2 ni acredita smokes físicos.
+
+- Historial de nutrición validado: privado `74eb3c818b65d72f369cb962ac4f9706d18d9deb`,
+  mirror `394871a31549db9f104e78b2ea33018584d2b459`, Public CI #114/run
+  `37221166087`: **7/7 success**, 432 Core y 588 pgTAP tras upgrade y rebuild.
+  Preview #75/run `37221712478` y Pages #37/run `37221821332`: success.
+- Dashboard, filtros, ficha por secciones, tareas/comentarios, resúmenes de
+  entrenamientos, snapshot de progreso y nutrición ya existen. No recrearlos.
+- El historial de cambios de programas sigue pendiente: el campo `version`
+  protege la lectura de la asignación actual; no hay revisiones históricas
+  persistidas ni un instalador local por revisión.
+- Próximo bloque: contrato backend de revisiones inmutables, baseline legacy
+  explícito y pruebas de aislamiento/compatibilidad antes de añadir un selector.
+  No inferir revisiones a partir de nombres, fechas o números de versión.
+
 # 0. Principios no negociables
 
 - [x] Una sola fuente de verdad en `packages/core`; mobile/web consumen los mismos contratos.
@@ -337,14 +356,14 @@ real, exportación y smokes físicos. Sin deploy Supabase remoto ni cambios de b
 Crear una superficie profesional, no reutilizar simplemente la pantalla “Coach & Clientes”.
 
 - [ ] Resumen: clientes activos / pausados, tareas pendientes, check-ins recientes y alertas operativas.
-- [ ] Buscar/filtrar clientes.
+- [x] Buscar/filtrar clientes (estado y requiere revisión, server-side).
 - [ ] Ordenar por actividad reciente, adherencia y “requiere revisión”.
 - [ ] Tarjetas compactas con último entreno, entrenos 7d, adherencia y check-in más reciente cuando exista permiso.
-- [ ] Estados vacíos y errores claros.
-- [ ] Responsive: móvil, tablet y web escritorio.
-- [ ] Paginación/consulta escalable; no descargar toda la cartera para cada rebuild.
-- [ ] Evitar N+1 RPC/query.
-- [ ] Índices SQL necesarios documentados y probados.
+- [x] Estados vacíos y errores con reintento/reconexión, cubiertos por tests.
+- [x] Responsive móvil/tablet/web en widgets; smoke físico sigue pendiente.
+- [x] Paginación acotada; no descargar toda la cartera para cada rebuild. Profiling de escala sigue pendiente.
+- [x] Evitar N+1 en la superficie profesional implementada.
+- [x] Índices de las consultas implementadas documentados y cubiertos por CI; profiling de escala pendiente.
 
 ## 2.2 Ficha profesional del cliente
 
