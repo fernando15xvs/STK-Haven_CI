@@ -22,6 +22,18 @@ import UserNotifications
     )
 
     if let controller = window?.rootViewController as? FlutterViewController {
+      let timezoneChannel = FlutterMethodChannel(
+        name: "stk_haven/timezone",
+        binaryMessenger: controller.binaryMessenger
+      )
+      timezoneChannel.setMethodCallHandler { call, result in
+        guard call.method == "getTimeZoneName" else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        result(TimeZone.current.identifier)
+      }
+
       let channel = FlutterMethodChannel(
         name: "stk_haven/daily_steps",
         binaryMessenger: controller.binaryMessenger
