@@ -53,6 +53,10 @@ class DailyStepsBridge {
         steps: steps,
         message: raw['message']?.toString(),
       );
+    } on MissingPluginException {
+      return const DailyStepsAccessResult(
+        status: DailyStepsAccessStatus.unavailable,
+      );
     } on PlatformException catch (error) {
       return DailyStepsAccessResult(
         status: DailyStepsAccessStatus.queryFailed,
@@ -65,6 +69,8 @@ class DailyStepsBridge {
     try {
       final value = await _channel.invokeMethod<int>('getTodaySteps');
       return value == null ? null : value.clamp(0, 250000);
+    } on MissingPluginException {
+      return null;
     } on PlatformException {
       return null;
     }
