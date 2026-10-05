@@ -1,5 +1,5 @@
 import 'package:core/domain/models/settings_state.dart';
-import 'package:core/features/habits/presentation/pages/study_habits_page.dart';
+import 'package:gym_tracker/features/habits/presentation/study_habits_mobile_page.dart';
 import 'package:core/features/profile/presentation/pages/training_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -349,7 +349,7 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                         _MenuOption(
                           icon: Icons.task_alt_outlined,
                           label: 'Hábitos',
-                          onTap: () => _openPage(const StudyHabitsPage()),
+                          onTap: () => _openPage(const StudyHabitsMobilePage()),
                         ),
                         if (widget.faithEnabled) ...[
                           _MenuOption(
