@@ -146,7 +146,7 @@ class MainActivity : FlutterActivity(), SensorEventListener {
         val playServicesStatus = GoogleApiAvailability.getInstance()
             .isGooglePlayServicesAvailable(
                 this,
-                LocalRecordingClient.LOCAL_RECORDING_CLIENT_STEPS_MIN_VERSION_CODE,
+                LocalRecordingClient.LOCAL_RECORDING_CLIENT_MIN_VERSION_CODE,
             )
         if (playServicesStatus != ConnectionResult.SUCCESS) {
             return false
