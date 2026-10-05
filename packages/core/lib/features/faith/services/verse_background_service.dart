@@ -3,7 +3,6 @@ import 'package:workmanager/workmanager.dart';
 import 'package:core/features/faith/data/bible_database.dart';
 import 'package:core/features/faith/data/bible_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'verse_notification_service.dart';
 
 const String dailyVerseTask = 'dailyVerseTask';
 
@@ -23,16 +22,11 @@ void callbackDispatcher() {
         final newVerse = await repo.getRandomVerse(mood: currentMood);
 
         if (newVerse != null) {
+          final now = DateTime.now();
+          final today = '${now.year}-${now.month}-${now.day}';
           await prefs.setString('saved_verse', newVerse.text);
           await prefs.setString('saved_reference', newVerse.reference);
-
-          // Background tasks execute in a separate isolate, so initialize the
-          // local notification plugin in this isolate before displaying.
-          await VerseNotificationService.initialize();
-          await VerseNotificationService.showNotification(
-            title: 'Fortaleza: ${newVerse.reference}',
-            body: newVerse.text,
-          );
+          await prefs.setString('daily_verse_date', today);
         }
       } catch (_) {
         return false;
@@ -51,7 +45,7 @@ class VerseBackgroundService {
   static Future<void> scheduleDailyVerse(int hour, int minute) async {
     if (kIsWeb) return;
     final now = DateTime.now();
-    DateTime scheduledTime = DateTime(
+    var scheduledTime = DateTime(
       now.year,
       now.month,
       now.day,
@@ -59,7 +53,7 @@ class VerseBackgroundService {
       minute,
     );
 
-    if (scheduledTime.isBefore(now)) {
+    if (!scheduledTime.isAfter(now)) {
       scheduledTime = scheduledTime.add(const Duration(days: 1));
     }
 
