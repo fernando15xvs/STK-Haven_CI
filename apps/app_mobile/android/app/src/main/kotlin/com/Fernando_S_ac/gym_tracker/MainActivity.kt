@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat
 import java.time.ZonedDateTime
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 class MainActivity : FlutterActivity(), SensorEventListener {
@@ -40,6 +41,16 @@ class MainActivity : FlutterActivity(), SensorEventListener {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "stk_haven/timezone",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getTimeZoneName" -> result.success(TimeZone.getDefault().id)
+                else -> result.notImplemented()
+            }
+        }
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
