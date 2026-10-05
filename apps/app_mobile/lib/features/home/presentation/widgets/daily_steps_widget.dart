@@ -26,26 +26,40 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      final granted = await DailyStepsBridge.requestPermission();
-      if (!granted) {
+      final access = await DailyStepsBridge.requestAccess();
+      if (access.status != DailyStepsAccessStatus.authorized) {
         if (mounted) {
+          final message = switch (access.status) {
+            DailyStepsAccessStatus.denied =>
+              'STK Haven no tiene permiso de Movimiento y condición física. '
+                  'Actívalo en Ajustes > Privacidad y seguridad > '
+                  'Movimiento y condición física.',
+            DailyStepsAccessStatus.restricted =>
+              'El acceso a Movimiento y condición física está restringido '
+                  'por el sistema o por controles del dispositivo.',
+            DailyStepsAccessStatus.unavailable =>
+              'Este iPhone no ofrece conteo de pasos mediante Core Motion.',
+            DailyStepsAccessStatus.notDetermined =>
+              'iOS todavía no resolvió el permiso de movimiento. '
+                  'Vuelve a intentarlo después de responder al aviso del sistema.',
+            DailyStepsAccessStatus.queryFailed =>
+              'No se pudo leer Core Motion. Verifica que Seguimiento de '
+                  'condición física esté activado en Ajustes.',
+            DailyStepsAccessStatus.authorized => '',
+          };
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'No se concedió acceso al contador de movimiento del dispositivo.',
-              ),
-            ),
+            SnackBar(content: Text(message)),
           );
         }
         return;
       }
-      final steps = await DailyStepsBridge.readTodaySteps();
+      final steps = access.steps ?? await DailyStepsBridge.readTodaySteps();
       if (steps == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Este dispositivo no pudo proporcionar los pasos de hoy.',
+                'El permiso está activo, pero iOS no devolvió pasos de hoy.',
               ),
             ),
           );
