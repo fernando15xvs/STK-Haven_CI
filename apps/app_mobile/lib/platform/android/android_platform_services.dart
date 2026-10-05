@@ -26,8 +26,13 @@ Future<void> initializeAndroidPlatformServices() async {
   );
 
   if (settings.dailyVerseNotifications) {
+    await VerseNotificationService.scheduleDailyReminder(
+      hour: 8,
+      minute: 0,
+    );
     await VerseBackgroundService.scheduleDailyVerse(8, 0);
   } else {
+    await VerseNotificationService.cancelDailyReminder();
     await VerseBackgroundService.cancelDailyVerse();
   }
 
