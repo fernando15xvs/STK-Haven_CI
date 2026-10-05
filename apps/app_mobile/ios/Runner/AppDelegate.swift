@@ -39,13 +39,15 @@ import UserNotifications
         }
 
         switch call.method {
+        case "requestAccess":
+          self.requestStepAccess(result: result)
         case "requestPermission":
-          self.readTodaySteps { steps, _ in
-            // Core Motion presents/uses the motion authorization state through
-            // the pedometer query itself. A successful step result is enough
-            // to confirm access; avoid relying on CMError internals whose Swift
-            // API differs across SDK versions.
-            result(steps != nil)
+          self.requestStepAccess { payload in
+            guard let map = payload as? [String: Any] else {
+              result(false)
+              return
+            }
+            result(map["status"] as? String == "authorized")
           }
         case "getTodaySteps":
           self.readTodaySteps { steps, error in
@@ -69,6 +71,69 @@ import UserNotifications
     }
 
     return launched
+  }
+
+  private func requestStepAccess(result: @escaping FlutterResult) {
+    guard CMPedometer.isStepCountingAvailable() else {
+      result([
+        "status": "unavailable",
+        "message": "Step counting is not available on this device.",
+      ])
+      return
+    }
+
+    let currentStatus = stepAuthorizationStatus()
+    if currentStatus == "denied" || currentStatus == "restricted" {
+      result(["status": currentStatus])
+      return
+    }
+
+    // Querying the pedometer is what triggers the system Motion & Fitness
+    // authorization prompt the first time. Resolve the status again after the
+    // query so Flutter can distinguish denial, restriction and sensor errors.
+    readTodaySteps { [weak self] steps, error in
+      guard let self else {
+        result(["status": "query_failed"])
+        return
+      }
+
+      let resolvedStatus = self.stepAuthorizationStatus()
+      if let steps {
+        result([
+          "status": "authorized",
+          "steps": steps,
+        ])
+        return
+      }
+
+      if resolvedStatus == "denied" || resolvedStatus == "restricted" {
+        result(["status": resolvedStatus])
+        return
+      }
+
+      result([
+        "status": resolvedStatus == "not_determined"
+          ? "query_failed"
+          : resolvedStatus,
+        "message": error?.localizedDescription ??
+          "Pedometer query did not return data.",
+      ])
+    }
+  }
+
+  private func stepAuthorizationStatus() -> String {
+    switch CMPedometer.authorizationStatus() {
+    case .authorized:
+      return "authorized"
+    case .denied:
+      return "denied"
+    case .restricted:
+      return "restricted"
+    case .notDetermined:
+      return "not_determined"
+    @unknown default:
+      return "query_failed"
+    }
   }
 
   private func readTodaySteps(
