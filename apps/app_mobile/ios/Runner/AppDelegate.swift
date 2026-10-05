@@ -1,5 +1,6 @@
 import CoreMotion
 import Flutter
+import PDFKit
 import UIKit
 import UserNotifications
 
@@ -25,6 +26,45 @@ import UserNotifications
         name: "stk_haven/daily_steps",
         binaryMessenger: controller.binaryMessenger
       )
+
+      let pdfChannel = FlutterMethodChannel(
+        name: "stk_haven/pdf_reader",
+        binaryMessenger: controller.binaryMessenger
+      )
+
+      pdfChannel.setMethodCallHandler { call, result in
+        guard call.method == "openPdf",
+              let args = call.arguments as? [String: Any],
+              let path = args["path"] as? String else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+
+        let fileURL = URL(fileURLWithPath: path)
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+          result(
+            FlutterError(
+              code: "pdf_missing",
+              message: "The PDF file is no longer available.",
+              details: nil
+            )
+          )
+          return
+        }
+
+        let title = args["title"] as? String ?? fileURL.lastPathComponent
+        let initialPage = args["initialPage"] as? Int ?? 1
+        let reader = StkPdfReaderViewController(
+          fileURL: fileURL,
+          titleText: title,
+          initialPage: initialPage
+        ) { payload in
+          result(payload)
+        }
+        let navigation = UINavigationController(rootViewController: reader)
+        navigation.modalPresentationStyle = .fullScreen
+        controller.present(navigation, animated: true)
+      }
 
       channel.setMethodCallHandler { [weak self] call, result in
         guard let self else {
@@ -153,5 +193,95 @@ import UserNotifications
         completion(data?.numberOfSteps.intValue, error)
       }
     }
+  }
+}
+
+
+private final class StkPdfReaderViewController: UIViewController {
+  private let fileURL: URL
+  private let titleText: String
+  private let initialPage: Int
+  private let onClose: ([String: Int]) -> Void
+  private let pdfView = PDFView()
+  private var didComplete = false
+
+  init(
+    fileURL: URL,
+    titleText: String,
+    initialPage: Int,
+    onClose: @escaping ([String: Int]) -> Void
+  ) {
+    self.fileURL = fileURL
+    self.titleText = titleText
+    self.initialPage = max(1, initialPage)
+    self.onClose = onClose
+    super.init(nibName: nil, bundle: nil)
+    isModalInPresentation = true
+  }
+
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func viewDidLoad() {
+    super.viewDidLoad()
+    view.backgroundColor = .systemBackground
+    title = titleText
+    navigationItem.rightBarButtonItem = UIBarButtonItem(
+      barButtonSystemItem: .done,
+      target: self,
+      action: #selector(closeReader)
+    )
+
+    pdfView.translatesAutoresizingMaskIntoConstraints = false
+    pdfView.autoScales = true
+    pdfView.displayMode = .singlePageContinuous
+    pdfView.displayDirection = .vertical
+    view.addSubview(pdfView)
+
+    NSLayoutConstraint.activate([
+      pdfView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      pdfView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      pdfView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+      pdfView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+    ])
+
+    guard let document = PDFDocument(url: fileURL) else {
+      complete(currentPage: initialPage, totalPages: 0)
+      dismiss(animated: true)
+      return
+    }
+
+    pdfView.document = document
+    let pageIndex = min(
+      max(initialPage - 1, 0),
+      max(document.pageCount - 1, 0)
+    )
+    if let page = document.page(at: pageIndex) {
+      pdfView.go(to: page)
+    }
+  }
+
+  @objc private func closeReader() {
+    let totalPages = pdfView.document?.pageCount ?? 0
+    var currentPage = min(initialPage, max(totalPages, 1))
+    if let document = pdfView.document,
+       let page = pdfView.currentPage {
+      let index = document.index(for: page)
+      if index >= 0 {
+        currentPage = index + 1
+      }
+    }
+    complete(currentPage: currentPage, totalPages: totalPages)
+    dismiss(animated: true)
+  }
+
+  private func complete(currentPage: Int, totalPages: Int) {
+    guard !didComplete else { return }
+    didComplete = true
+    onClose([
+      "currentPage": currentPage,
+      "totalPages": totalPages,
+    ])
   }
 }
