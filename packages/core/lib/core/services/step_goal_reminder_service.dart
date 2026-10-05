@@ -1,7 +1,7 @@
 import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:core/core/services/local_notification_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 class StepGoalReminderService {
@@ -16,7 +16,7 @@ class StepGoalReminderService {
   }
 
   static Future<void> _initialize() async {
-    tz.initializeTimeZones();
+    await LocalNotificationTimezone.ensureInitialized();
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: false,
