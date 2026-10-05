@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/features/home/application/wellness_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,108 +13,101 @@ class DailyStepsWidget extends ConsumerStatefulWidget {
   ConsumerState<DailyStepsWidget> createState() => _DailyStepsWidgetState();
 }
 
-class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget> {
+class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
+    with WidgetsBindingObserver {
+  static const Duration _refreshInterval = Duration(minutes: 1);
+
+  Timer? _refreshTimer;
   bool _busy = false;
+  DailyStepsAccessStatus? _accessStatus;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(dailyStepsProvider.notifier).checkDateAndRefresh();
+      _refreshFromDevice(requestAccess: true);
+      _refreshTimer = Timer.periodic(_refreshInterval, (_) {
+        ref.read(dailyStepsProvider.notifier).checkDateAndRefresh();
+        _refreshFromDevice();
+      });
     });
   }
 
-  Future<void> _syncDevice() async {
-    if (_busy) return;
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    ref.read(dailyStepsProvider.notifier).checkDateAndRefresh();
+    _refreshFromDevice();
+  }
+
+  Future<void> _refreshFromDevice({bool requestAccess = false}) async {
+    if (_busy || !mounted) return;
     setState(() => _busy = true);
+
     try {
-      final access = await DailyStepsBridge.requestAccess();
-      if (access.status != DailyStepsAccessStatus.authorized) {
-        if (mounted) {
-          final message = switch (access.status) {
-            DailyStepsAccessStatus.denied =>
-              'STK Haven no tiene permiso de Movimiento y condición física. '
-                  'Actívalo en Ajustes > Privacidad y seguridad > '
-                  'Movimiento y condición física.',
-            DailyStepsAccessStatus.restricted =>
-              'El acceso a Movimiento y condición física está restringido '
-                  'por el sistema o por controles del dispositivo.',
-            DailyStepsAccessStatus.unavailable =>
-              'Este iPhone no ofrece conteo de pasos mediante Core Motion.',
-            DailyStepsAccessStatus.notDetermined =>
-              'iOS todavía no resolvió el permiso de movimiento. '
-                  'Vuelve a intentarlo después de responder al aviso del sistema.',
-            DailyStepsAccessStatus.queryFailed =>
-              'No se pudo leer Core Motion. Verifica que Seguimiento de '
-                  'condición física esté activado en Ajustes.',
-            DailyStepsAccessStatus.authorized => '',
-          };
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
-          );
+      int? steps;
+
+      if (requestAccess) {
+        final access = await DailyStepsBridge.requestAccess();
+        _accessStatus = access.status;
+        if (access.status == DailyStepsAccessStatus.authorized) {
+          steps = access.steps ?? await DailyStepsBridge.readTodaySteps();
         }
-        return;
-      }
-      final steps = access.steps ?? await DailyStepsBridge.readTodaySteps();
-      if (steps == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'El permiso está activo, pero iOS no devolvió pasos de hoy.',
-              ),
-            ),
-          );
+      } else {
+        steps = await DailyStepsBridge.readTodaySteps();
+        if (steps != null) {
+          _accessStatus = DailyStepsAccessStatus.authorized;
         }
-        return;
       }
-      await ref
-          .read(dailyStepsProvider.notifier)
-          .setSteps(steps, deviceSynced: true);
+
+      if (steps != null) {
+        await ref
+            .read(dailyStepsProvider.notifier)
+            .setSteps(steps, deviceSynced: true);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _editManually() async {
-    final current = ref.read(dailyStepsProvider).steps;
-    final controller = TextEditingController(text: '$current');
-    final value = await showDialog<int>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Registrar pasos'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Pasos de hoy',
-            hintText: 'Ej. 4500',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(
-              dialogContext,
-              int.tryParse(controller.text.trim()),
-            ),
-            child: const Text('Guardar'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (value != null) {
-      await ref.read(dailyStepsProvider.notifier).setSteps(value);
+  String _statusText(bool deviceSynced) {
+    if (_busy) return 'Actualizando automáticamente…';
+
+    if (deviceSynced &&
+        _accessStatus == DailyStepsAccessStatus.authorized) {
+      return 'Se actualiza automáticamente desde el dispositivo.';
     }
+
+    return switch (_accessStatus) {
+      DailyStepsAccessStatus.denied =>
+        'Permiso de actividad/movimiento desactivado en Ajustes.',
+      DailyStepsAccessStatus.restricted =>
+        'El acceso al sensor de movimiento está restringido.',
+      DailyStepsAccessStatus.unavailable =>
+        'El contador de pasos no está disponible en este dispositivo.',
+      DailyStepsAccessStatus.notDetermined =>
+        'Esperando permiso del sistema para leer pasos.',
+      DailyStepsAccessStatus.queryFailed =>
+        'No se pudo leer el sensor de pasos.',
+      DailyStepsAccessStatus.authorized =>
+        'Conectado al contador de pasos del dispositivo.',
+      null => 'Conectando con el contador de pasos…',
+    };
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(dailyStepsProvider);
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -139,7 +134,10 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget> {
                 children: [
                   const Text(
                     'Pasos de hoy',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -150,9 +148,7 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget> {
                     ),
                   ),
                   Text(
-                    state.deviceSynced
-                        ? 'Sincronizado con el dispositivo'
-                        : 'Sincroniza el sensor o registra el dato manualmente.',
+                    _statusText(state.deviceSynced),
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 12,
@@ -161,28 +157,22 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget> {
                 ],
               ),
             ),
-            Column(
-              children: [
-                IconButton(
-                  tooltip: state.deviceSynced
-                      ? 'Actualizar pasos'
-                      : 'Conectar pasos del dispositivo',
-                  onPressed: _busy ? null : _syncDevice,
-                  icon: _busy
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.sync_rounded),
-                ),
-                IconButton(
-                  tooltip: 'Registrar manualmente',
-                  onPressed: _editManually,
-                  icon: const Icon(Icons.edit_outlined),
-                ),
-              ],
-            ),
+            const SizedBox(width: 10),
+            if (_busy)
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              Icon(
+                state.deviceSynced
+                    ? Icons.check_circle_outline_rounded
+                    : Icons.directions_walk_rounded,
+                color: state.deviceSynced
+                    ? AppColors.primary
+                    : AppColors.textSecondary,
+              ),
           ],
         ),
       ),
