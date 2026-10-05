@@ -41,7 +41,7 @@ declare
   v_unilateral_target text;
   v_superset_key text;
 begin
-  if pg_catalog.jsonb_typeof(p_program) <> 'object' then
+  if pg_catalog.jsonb_typeof(p_program) is distinct from 'object' then
     raise exception 'Program revision payload must be an object';
   end if;
 
@@ -79,7 +79,7 @@ begin
     raise exception 'training_weekdays contains an invalid day';
   end if;
 
-  if pg_catalog.jsonb_typeof(p_program -> 'routines') <> 'array' then
+  if pg_catalog.jsonb_typeof(p_program -> 'routines') is distinct from 'array' then
     raise exception 'Program routines must be an array';
   end if;
 
@@ -134,7 +134,7 @@ begin
     if char_length(coalesce(v_routine ->> 'notes', '')) > 4000 then
       raise exception 'Routine notes are too long';
     end if;
-    if pg_catalog.jsonb_typeof(v_routine -> 'exercises') <> 'array' then
+    if pg_catalog.jsonb_typeof(v_routine -> 'exercises') is distinct from 'array' then
       raise exception 'Routine exercises must be an array';
     end if;
 
