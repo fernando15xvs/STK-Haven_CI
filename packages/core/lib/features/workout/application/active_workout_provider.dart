@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:core/database/hive/hive_boxes.dart';
@@ -898,6 +900,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       } else {
         timer.cancel();
         if (state.session == null) return;
+        _playRestCompletionFeedbackIfForeground();
         state = state.copyWith(
           isResting: false,
           restTimerSeconds: 0,
@@ -906,6 +909,25 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         _persistDraft();
       }
     });
+  }
+
+  void _playRestCompletionFeedbackIfForeground() {
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
+      return;
+    }
+
+    // The background notification is intentionally scheduled a moment after
+    // the timer. Cancel it here so foreground users receive one direct cue,
+    // while suspended apps still receive the local notification.
+    unawaited(WorkoutNotificationService.cancelRestTimerNotification());
+
+    final settings = ref.read(settingsProvider);
+    if (settings.timerSoundEnabled) {
+      unawaited(SystemSound.play(SystemSoundType.alert));
+    }
+    if (settings.vibrationEnabled) {
+      unawaited(HapticFeedback.mediumImpact());
+    }
   }
 
   void _cancelTimers() {
