@@ -1,6 +1,7 @@
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/daily_steps_state.dart';
 import 'package:core/domain/models/hydration_preferences.dart';
+import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:core/features/home/data/wellness_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -41,6 +42,35 @@ class HydrationPreferencesNotifier extends Notifier<HydrationPreferences> {
 final hydrationPreferencesProvider =
     NotifierProvider<HydrationPreferencesNotifier, HydrationPreferences>(
   HydrationPreferencesNotifier.new,
+);
+
+class StepGoalPreferencesNotifier extends Notifier<StepGoalPreferences> {
+  WellnessRepository get _repository => ref.read(wellnessRepositoryProvider);
+
+  @override
+  StepGoalPreferences build() => _repository.getStepGoalPreferences();
+
+  Future<void> setTargetSteps(int value) async {
+    state = state.copyWith(
+      targetSteps: value.clamp(1000, 50000).toInt(),
+    );
+    await _repository.saveStepGoalPreferences(state);
+  }
+
+  Future<void> setReminderEnabled(bool enabled) async {
+    state = state.copyWith(reminderEnabled: enabled);
+    await _repository.saveStepGoalPreferences(state);
+  }
+
+  Future<void> setReminderCadence(StepReminderCadence cadence) async {
+    state = state.copyWith(reminderCadence: cadence);
+    await _repository.saveStepGoalPreferences(state);
+  }
+}
+
+final stepGoalPreferencesProvider =
+    NotifierProvider<StepGoalPreferencesNotifier, StepGoalPreferences>(
+  StepGoalPreferencesNotifier.new,
 );
 
 class DailyStepsNotifier extends Notifier<DailyStepsState> {
