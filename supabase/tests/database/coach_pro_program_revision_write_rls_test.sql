@@ -258,11 +258,20 @@ select throws_ok(
   'invalid revision payload rolls back without partial revision'
 );
 
+reset role;
+
 select is(
   (select count(*)::integer from public.stk_assigned_program_revisions
    where assignment_id=(select assignment_id from _program_revision_write_test)),
   2,
   'failed payload leaves revision history unchanged'
+);
+
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"71000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',
+  true
 );
 
 select throws_ok(
