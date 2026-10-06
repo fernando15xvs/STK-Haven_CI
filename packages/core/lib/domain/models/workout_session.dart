@@ -1,4 +1,5 @@
 import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/settings_state.dart';
 
 enum WorkoutSetType {
   mobility,
@@ -249,6 +250,8 @@ class WorkoutExercise {
   final String notes;
   final bool unilateral;
   final UnilateralTarget unilateralTarget;
+  final bool preparationUnilateral;
+  final PreferredWorkoutSide preferredUnilateralStartSide;
 
   /// Identificador compartido por exactamente dos ejercicios cuando forman
   /// una superserie durante la sesión. `null` significa ejercicio individual.
@@ -262,11 +265,22 @@ class WorkoutExercise {
     this.notes = '',
     this.unilateral = false,
     this.unilateralTarget = UnilateralTarget.other,
+    this.preparationUnilateral = true,
+    this.preferredUnilateralStartSide = PreferredWorkoutSide.automatic,
     this.supersetGroupId,
   });
 
   bool get completed => sets.isNotEmpty && sets.every((set) => set.completed);
   bool get isInSuperset => supersetGroupId != null;
+
+  bool usesUnilateralTracking(WorkoutSet set) {
+    if (!unilateral) return false;
+    if (set.setType == WorkoutSetType.warmup ||
+        set.setType == WorkoutSetType.approach) {
+      return preparationUnilateral;
+    }
+    return true;
+  }
 
   WorkoutExercise copyWith({
     String? exerciseId,
@@ -276,6 +290,8 @@ class WorkoutExercise {
     String? notes,
     bool? unilateral,
     UnilateralTarget? unilateralTarget,
+    bool? preparationUnilateral,
+    PreferredWorkoutSide? preferredUnilateralStartSide,
     String? supersetGroupId,
     bool clearSupersetGroup = false,
   }) {
@@ -288,6 +304,10 @@ class WorkoutExercise {
       notes: notes ?? this.notes,
       unilateral: unilateral ?? this.unilateral,
       unilateralTarget: unilateralTarget ?? this.unilateralTarget,
+      preparationUnilateral:
+          preparationUnilateral ?? this.preparationUnilateral,
+      preferredUnilateralStartSide:
+          preferredUnilateralStartSide ?? this.preferredUnilateralStartSide,
       supersetGroupId:
           clearSupersetGroup ? null : (supersetGroupId ?? this.supersetGroupId),
     );
