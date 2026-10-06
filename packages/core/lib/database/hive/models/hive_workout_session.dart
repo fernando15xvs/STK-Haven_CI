@@ -75,6 +75,10 @@ class HiveWorkoutExercise {
   String unilateralTarget;
   @HiveField(7)
   String? supersetGroupId;
+  @HiveField(8)
+  bool preparationUnilateral;
+  @HiveField(9)
+  String preferredUnilateralStartSide;
 
   HiveWorkoutExercise({
     required this.exerciseId,
@@ -85,6 +89,8 @@ class HiveWorkoutExercise {
     this.unilateral = false,
     this.unilateralTarget = 'other',
     this.supersetGroupId,
+    this.preparationUnilateral = true,
+    this.preferredUnilateralStartSide = 'automatic',
   });
 }
 
