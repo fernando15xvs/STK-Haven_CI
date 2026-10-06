@@ -28,6 +28,16 @@ class HiveRoutineExercise {
   String? supersetGroupId;
   @HiveField(11)
   String phase;
+  @HiveField(12)
+  int? warmupRestSeconds;
+  @HiveField(13)
+  int? approachRestSeconds;
+  @HiveField(14)
+  bool preparationUnilateral;
+  @HiveField(15)
+  int? unilateralSideRestSeconds;
+  @HiveField(16)
+  String? preferredUnilateralStartSide;
 
   HiveRoutineExercise({
     required this.exerciseId,
@@ -42,6 +52,11 @@ class HiveRoutineExercise {
     this.unilateralTarget = 'other',
     this.supersetGroupId,
     this.phase = 'main',
+    this.warmupRestSeconds,
+    this.approachRestSeconds,
+    this.preparationUnilateral = true,
+    this.unilateralSideRestSeconds,
+    this.preferredUnilateralStartSide,
   });
 }
 
