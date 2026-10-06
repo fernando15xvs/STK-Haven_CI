@@ -1,6 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
+import 'package:core/domain/models/settings_state.dart';
 import 'package:core/database/hive/models/hive_workout_session.dart';
 
 class WorkoutRepository {
@@ -35,6 +36,9 @@ class WorkoutRepository {
               notes: e.notes,
               unilateral: e.unilateral,
               unilateralTarget: e.unilateralTarget.name,
+              preparationUnilateral: e.preparationUnilateral,
+              preferredUnilateralStartSide:
+                  e.preferredUnilateralStartSide.name,
               supersetGroupId: e.supersetGroupId,
               sets: e.sets
                   .map(
@@ -85,6 +89,12 @@ class WorkoutRepository {
               unilateralTarget: UnilateralTarget.values.firstWhere(
                 (target) => target.name == e.unilateralTarget,
                 orElse: () => UnilateralTarget.other,
+              ),
+              preparationUnilateral: e.preparationUnilateral,
+              preferredUnilateralStartSide:
+                  PreferredWorkoutSide.values.firstWhere(
+                (side) => side.name == e.preferredUnilateralStartSide,
+                orElse: () => PreferredWorkoutSide.automatic,
               ),
               supersetGroupId: e.supersetGroupId,
               sets: e.sets
