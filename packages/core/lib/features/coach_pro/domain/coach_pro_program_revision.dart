@@ -38,14 +38,14 @@ class CoachProProgramRevisionSummary {
   DateTime get displayDate => authoredAt ?? recordedAt;
 }
 
-class CoachProProgramRevisionHistoryPage {
+class CoachProProgramRevisionHistoryResult {
   final String assignmentId;
   final String relationshipId;
   final int currentAssignmentVersion;
   final int totalCount;
   final List<CoachProProgramRevisionSummary> items;
 
-  const CoachProProgramRevisionHistoryPage({
+  const CoachProProgramRevisionHistoryResult({
     required this.assignmentId,
     required this.relationshipId,
     required this.currentAssignmentVersion,
