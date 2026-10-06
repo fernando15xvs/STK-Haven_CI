@@ -1,6 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
+import 'package:core/domain/models/settings_state.dart';
 
 /// Persiste el borrador del entrenamiento activo mientras está en progreso.
 /// Usa startedAt para recalcular la duración sin escribir cada segundo.
@@ -57,6 +58,9 @@ class ActiveWorkoutRepository {
                 'notes': exercise.notes,
                 'unilateral': exercise.unilateral,
                 'unilateralTarget': exercise.unilateralTarget.name,
+                'preparationUnilateral': exercise.preparationUnilateral,
+                'preferredUnilateralStartSide':
+                    exercise.preferredUnilateralStartSide.name,
                 'supersetGroupId': exercise.supersetGroupId,
                 'sets': exercise.sets
                     .map(
@@ -126,6 +130,13 @@ class ActiveWorkoutRepository {
         unilateralTarget: UnilateralTarget.values.firstWhere(
           (target) => target.name == exercise['unilateralTarget'],
           orElse: () => UnilateralTarget.other,
+        ),
+        preparationUnilateral:
+            exercise['preparationUnilateral'] as bool? ?? true,
+        preferredUnilateralStartSide:
+            PreferredWorkoutSide.values.firstWhere(
+          (side) => side.name == exercise['preferredUnilateralStartSide'],
+          orElse: () => PreferredWorkoutSide.automatic,
         ),
         supersetGroupId: exercise['supersetGroupId'] as String?,
         sets: sets,
