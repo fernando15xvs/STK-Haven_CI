@@ -1,3 +1,5 @@
+import 'package:core/domain/models/settings_state.dart';
+
 enum RoutineExercisePhase {
   mobility,
   main,
@@ -53,9 +55,23 @@ class RoutineExercise {
   final int restSeconds;
   final int warmupSets;
   final int approachSets;
+
+  /// Descansos específicos de preparación. Cuando son null, las rutinas
+  /// antiguas conservan el descanso efectivo como fallback.
+  final int? warmupRestSeconds;
+  final int? approachRestSeconds;
+
   final RoutineExercisePhase phase;
   final bool unilateral;
   final UnilateralTarget unilateralTarget;
+
+  /// Permite que un ejercicio tenga trabajo efectivo unilateral y, a la vez,
+  /// calentamiento/aproximación bilateral.
+  final bool preparationUnilateral;
+
+  /// Override por ejercicio. null conserva el valor predeterminado del perfil.
+  final int? unilateralSideRestSeconds;
+  final PreferredWorkoutSide? preferredUnilateralStartSide;
 
   /// Stable identifier shared by the two exercises that form a superset.
   /// `null` means the exercise runs independently.
@@ -70,9 +86,14 @@ class RoutineExercise {
     required this.restSeconds,
     this.warmupSets = 0,
     this.approachSets = 0,
+    this.warmupRestSeconds,
+    this.approachRestSeconds,
     this.phase = RoutineExercisePhase.main,
     this.unilateral = false,
     this.unilateralTarget = UnilateralTarget.other,
+    this.preparationUnilateral = true,
+    this.unilateralSideRestSeconds,
+    this.preferredUnilateralStartSide,
     this.supersetGroupId,
   });
 
@@ -88,9 +109,14 @@ class RoutineExercise {
     int? restSeconds,
     int? warmupSets,
     int? approachSets,
+    int? warmupRestSeconds,
+    int? approachRestSeconds,
     RoutineExercisePhase? phase,
     bool? unilateral,
     UnilateralTarget? unilateralTarget,
+    bool? preparationUnilateral,
+    int? unilateralSideRestSeconds,
+    PreferredWorkoutSide? preferredUnilateralStartSide,
     String? supersetGroupId,
     bool clearSupersetGroupId = false,
   }) {
@@ -103,9 +129,17 @@ class RoutineExercise {
       restSeconds: restSeconds ?? this.restSeconds,
       warmupSets: warmupSets ?? this.warmupSets,
       approachSets: approachSets ?? this.approachSets,
+      warmupRestSeconds: warmupRestSeconds ?? this.warmupRestSeconds,
+      approachRestSeconds: approachRestSeconds ?? this.approachRestSeconds,
       phase: phase ?? this.phase,
       unilateral: unilateral ?? this.unilateral,
       unilateralTarget: unilateralTarget ?? this.unilateralTarget,
+      preparationUnilateral:
+          preparationUnilateral ?? this.preparationUnilateral,
+      unilateralSideRestSeconds:
+          unilateralSideRestSeconds ?? this.unilateralSideRestSeconds,
+      preferredUnilateralStartSide:
+          preferredUnilateralStartSide ?? this.preferredUnilateralStartSide,
       supersetGroupId:
           clearSupersetGroupId ? null : (supersetGroupId ?? this.supersetGroupId),
     );
