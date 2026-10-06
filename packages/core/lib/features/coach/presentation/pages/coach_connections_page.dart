@@ -9,7 +9,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CoachConnectionsPage extends ConsumerStatefulWidget {
-  const CoachConnectionsPage({super.key});
+  const CoachConnectionsPage({
+    super.key,
+    this.clientOnly = false,
+    this.professionalOnly = false,
+  }) : assert(!(clientOnly && professionalOnly));
+
+  final bool clientOnly;
+  final bool professionalOnly;
 
   @override
   ConsumerState<CoachConnectionsPage> createState() =>
@@ -51,6 +58,15 @@ class _CoachConnectionsPageState
     final userId = identity.userId;
     final isCoach =
         profile?.capabilities.contains(UserCapability.coach) ?? false;
+    final visibleRelationships = widget.clientOnly
+        ? coachState.relationships
+            .where((relationship) => relationship.isClient(userId))
+            .toList(growable: false)
+        : widget.professionalOnly
+            ? coachState.relationships
+                .where((relationship) => relationship.isCoach(userId))
+                .toList(growable: false)
+            : coachState.relationships;
 
     _scheduleInitialLoad(identity.signedIn);
 
@@ -65,7 +81,15 @@ class _CoachConnectionsPageState
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Coach & Clientes')),
+      appBar: AppBar(
+        title: Text(
+          widget.clientOnly
+              ? 'Mi Coach'
+              : widget.professionalOnly
+                  ? 'Clientes'
+                  : 'Coach',
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -83,7 +107,7 @@ class _CoachConnectionsPageState
                   _AccountCard(
                     signedIn: identity.signedIn,
                     email: identity.email,
-                    isCoach: isCoach,
+                    isCoach: widget.clientOnly ? false : isCoach,
                   ),
                   if (!identity.signedIn) ...[
                     const SizedBox(height: 16),
@@ -92,13 +116,13 @@ class _CoachConnectionsPageState
                         padding: EdgeInsets.all(18),
                         child: Text(
                           'Las funciones Coach/Cliente requieren una cuenta '
-                          'permanente. Inicia sesión desde Perfil > Copia en la '
-                          'nube y vuelve aquí.',
+                          'permanente. Inicia sesión desde Perfil > Datos y '
+                          'sincronización y vuelve aquí.',
                         ),
                       ),
                     ),
                   ] else ...[
-                    if (isCoach) ...[
+                    if (isCoach && !widget.clientOnly) ...[
                       const SizedBox(height: 24),
                       _SectionHeader(
                         title: 'Invitar cliente',
@@ -125,37 +149,43 @@ class _CoachConnectionsPageState
                         ),
                       ],
                     ],
-                    const SizedBox(height: 24),
-                    const _SectionHeader(
-                      title: 'Vincular entrenador',
+                    if (!widget.professionalOnly) ...[
+                      const SizedBox(height: 24),
+                      const _SectionHeader(
+                        title: 'Vincular entrenador',
                       subtitle:
                           'Revisa quién invita y qué permisos pide antes de aceptar.',
                     ),
                     const SizedBox(height: 10),
-                    _AcceptInvitationCard(
-                      controller: _codeController,
-                      busy: coachState.busy,
-                      onPreview: _previewInvitation,
-                    ),
+                      _AcceptInvitationCard(
+                        controller: _codeController,
+                        busy: coachState.busy,
+                        onPreview: _previewInvitation,
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     _SectionHeader(
-                      title: isCoach
-                          ? 'Mis relaciones'
-                          : 'Mi entrenador',
+                      title: widget.clientOnly
+                          ? 'Mi entrenador'
+                          : widget.professionalOnly
+                              ? 'Mis clientes'
+                              : isCoach
+                                  ? 'Mis relaciones'
+                                  : 'Mi entrenador',
                       subtitle:
                           'Solo aparecen cuentas vinculadas a tu usuario.',
                     ),
                     const SizedBox(height: 10),
                     if (coachState.operation ==
                             CoachClientOperation.loading &&
-                        coachState.relationships.isEmpty)
+                        visibleRelationships.isEmpty)
                       const Center(
                         child: Padding(
                           padding: EdgeInsets.all(24),
                           child: CircularProgressIndicator(),
                         ),
                       )
-                    else if (coachState.relationships.isEmpty)
+                    else if (visibleRelationships.isEmpty)
                       const Card(
                         child: Padding(
                           padding: EdgeInsets.all(20),
@@ -166,7 +196,7 @@ class _CoachConnectionsPageState
                       )
                     else
                       for (final relationship
-                          in coachState.relationships) ...[
+                          in visibleRelationships) ...[
                         _RelationshipCard(
                           relationship: relationship,
                           currentUserId: userId,
