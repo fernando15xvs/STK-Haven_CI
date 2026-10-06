@@ -154,7 +154,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     _cancelTimers();
     _undoSession = null;
     final settings = ref.read(settingsProvider);
-    final configuredSideRest = settings.unilateralSideRestSeconds;
+    final defaultSideRest = settings.unilateralSideRestSeconds;
 
     var exercises = routine.exercises.map((re) {
       final ex = allExercises.firstWhere(
@@ -173,6 +173,14 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         RoutineExercisePhase.stretching => WorkoutSetType.stretching,
       };
 
+      final sideRest =
+          re.unilateralSideRestSeconds ?? defaultSideRest;
+      final preferredStartSide =
+          re.preferredUnilateralStartSide ??
+              settings.preferredUnilateralStartSide;
+      final warmupRest = re.warmupRestSeconds ?? re.restSeconds;
+      final approachRest = re.approachRestSeconds ?? re.restSeconds;
+
       final sets = <WorkoutSet>[
         if (isMainExercise)
           ...List.generate(
@@ -182,8 +190,8 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
               reps: 0,
               completed: false,
               setType: WorkoutSetType.warmup,
-              restSeconds: re.restSeconds,
-              sideRestSeconds: configuredSideRest,
+              restSeconds: warmupRest,
+              sideRestSeconds: sideRest,
             ),
           ),
         if (isMainExercise)
@@ -194,8 +202,8 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
               reps: 0,
               completed: false,
               setType: WorkoutSetType.approach,
-              restSeconds: re.restSeconds,
-              sideRestSeconds: configuredSideRest,
+              restSeconds: approachRest,
+              sideRestSeconds: sideRest,
             ),
           ),
         ...List.generate(
@@ -206,7 +214,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
             completed: false,
             setType: phaseSetType,
             restSeconds: re.restSeconds,
-            sideRestSeconds: configuredSideRest,
+            sideRestSeconds: sideRest,
           ),
         ),
       ];
@@ -217,6 +225,8 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         muscleGroupSnapshot: ex.muscleGroup,
         unilateral: re.unilateral,
         unilateralTarget: re.unilateralTarget,
+        preparationUnilateral: re.preparationUnilateral,
+        preferredUnilateralStartSide: preferredStartSide,
         supersetGroupId: re.supersetGroupId,
         sets: sets,
       );
@@ -409,9 +419,8 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
   }) {
     if (state.session == null) return;
     final exercise = state.session!.exercises[exerciseIndex];
-    if (!exercise.unilateral) return;
-
     final current = exercise.sets[setIndex];
+    if (!exercise.usesUnilateralTracking(current)) return;
     final settings = ref.read(settingsProvider);
     final result = UnilateralSetCoordinator.toggleSide(
       current,
@@ -437,19 +446,20 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       return null;
     }
     final exercise = state.session!.exercises[exerciseIndex];
-    if (!exercise.unilateral || setIndex < 0 || setIndex >= exercise.sets.length) {
+    if (setIndex < 0 || setIndex >= exercise.sets.length) {
       return null;
     }
-    final preferred = switch (
-      ref.read(settingsProvider).preferredUnilateralStartSide
-    ) {
+    final set = exercise.sets[setIndex];
+    if (!exercise.usesUnilateralTracking(set)) return null;
+
+    final preferred = switch (exercise.preferredUnilateralStartSide) {
       PreferredWorkoutSide.left => WorkoutSide.left,
       PreferredWorkoutSide.right => WorkoutSide.right,
       PreferredWorkoutSide.automatic => null,
     };
     return UnilateralSetCoordinator.recommendedFirstSide(
       preferred: preferred,
-      set: exercise.sets[setIndex],
+      set: set,
     );
   }
 
@@ -468,15 +478,33 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     int exerciseIndex, {
     required bool unilateral,
     UnilateralTarget target = UnilateralTarget.other,
+    bool preparationUnilateral = true,
+    int? sideRestSeconds,
+    PreferredWorkoutSide? preferredStartSide,
   }) {
     if (state.session == null) return;
     _captureUndo();
     final exercises = List<WorkoutExercise>.from(state.session!.exercises);
     final current = exercises[exerciseIndex];
+    final settings = ref.read(settingsProvider);
     final configuredSideRest =
-        ref.read(settingsProvider).unilateralSideRestSeconds;
+        (sideRestSeconds ?? settings.unilateralSideRestSeconds)
+            .clamp(0, 600)
+            .toInt();
+    final configuredStartSide =
+        preferredStartSide ?? settings.preferredUnilateralStartSide;
+
+    bool usesUnilateral(WorkoutSet set) {
+      if (!unilateral) return false;
+      if (set.setType == WorkoutSetType.warmup ||
+          set.setType == WorkoutSetType.approach) {
+        return preparationUnilateral;
+      }
+      return true;
+    }
+
     final sets = current.sets.map((set) {
-      if (unilateral) {
+      if (usesUnilateral(set)) {
         if (set.completed && !set.leftCompleted && !set.rightCompleted) {
           return set.copyWith(
             completed: true,
@@ -505,6 +533,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         rightCompleted: false,
         clearLeftPerformance: true,
         clearRightPerformance: true,
+        sideRestSeconds: configuredSideRest,
       );
     }).toList();
 
@@ -512,6 +541,8 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       sets: sets,
       unilateral: unilateral,
       unilateralTarget: target,
+      preparationUnilateral: preparationUnilateral,
+      preferredUnilateralStartSide: configuredStartSide,
     );
     state = state.copyWith(
       session: _rebuildSession(exercises, state.session?.currentRestEndsAt),
@@ -660,11 +691,21 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
 
     _captureUndo();
     final exercises = List<WorkoutExercise>.from(state.session!.exercises);
-    final sets = List<WorkoutSet>.from(exercises[exerciseIndex].sets);
-    final inheritedRest = sets.isNotEmpty ? sets.last.restSeconds : 90;
-    final inheritedSideRest = sets.isNotEmpty
-        ? sets.last.sideRestSeconds
-        : ref.read(settingsProvider).unilateralSideRestSeconds;
+    final exercise = exercises[exerciseIndex];
+    final sets = List<WorkoutSet>.from(exercise.sets);
+    WorkoutSet? sameType;
+    for (final candidate in sets.reversed) {
+      if (candidate.setType == setType) {
+        sameType = candidate;
+        break;
+      }
+    }
+    final inheritedRest = sameType?.restSeconds ??
+        (sets.isNotEmpty ? sets.last.restSeconds : 90);
+    final inheritedSideRest = sameType?.sideRestSeconds ??
+        (sets.isNotEmpty
+            ? sets.last.sideRestSeconds
+            : ref.read(settingsProvider).unilateralSideRestSeconds);
     sets.add(
       WorkoutSet(
         weight: 0,
