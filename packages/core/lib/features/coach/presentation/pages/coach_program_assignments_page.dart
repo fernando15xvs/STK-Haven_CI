@@ -1,6 +1,8 @@
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/coach/application/coach_program_assignment_provider.dart';
+import 'package:core/features/coach/application/coach_program_revision_acceptance_provider.dart';
+import 'package:core/features/coach/presentation/pages/coach_program_revision_review_page.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:flutter/material.dart';
@@ -274,6 +276,12 @@ class _CoachProgramAssignmentsPageState
           child: ListView(
             children: [
               _ProgramMetadata(assignment: assignment),
+              if (isClient) ...[
+                const SizedBox(height: 14),
+                _ClientRevisionStateCard(
+                  assignmentId: assignment.summary.id,
+                ),
+              ],
               const SizedBox(height: 14),
               for (final routine in assignment.routines) ...[
                 Card(
@@ -365,6 +373,98 @@ class _CoachProgramAssignmentsPageState
           assignmentId,
           activate: activate,
         );
+  }
+}
+
+class _ClientRevisionStateCard extends ConsumerWidget {
+  final String assignmentId;
+
+  const _ClientRevisionStateCard({
+    required this.assignmentId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(coachProgramRevisionStateProvider(assignmentId));
+    return state.when(
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Expanded(child: Text('Comprobando revisiones…')),
+            ],
+          ),
+        ),
+      ),
+      error: (_, _) => Card(
+        child: ListTile(
+          leading: const Icon(Icons.sync_problem_outlined),
+          title: const Text('No se pudieron comprobar las revisiones'),
+          trailing: IconButton(
+            tooltip: 'Reintentar',
+            onPressed: () =>
+                ref.invalidate(coachProgramRevisionStateProvider(assignmentId)),
+            icon: const Icon(Icons.refresh),
+          ),
+        ),
+      ),
+      data: (value) {
+        if (value == null) return const SizedBox.shrink();
+
+        final latestRevisionId = value.latestRevisionId;
+        if (value.hasPendingRevision &&
+            value.canAcceptLatest &&
+            latestRevisionId != null) {
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.new_releases_outlined),
+              title: Text(
+                'Revisión ${value.latestRevisionNumber} disponible',
+              ),
+              subtitle: const Text(
+                'Revísala y acéptala explícitamente. '
+                'Aceptar no instala ni cambia tu programa local.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CoachProgramRevisionReviewPage(
+                      assignmentId: assignmentId,
+                      revisionId: latestRevisionId,
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }
+
+        if (value.acceptedRevisionNumber != null) {
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.verified_outlined),
+              title: Text(
+                'Revisión ${value.acceptedRevisionNumber} aceptada',
+              ),
+              subtitle: Text(
+                value.revisionAccessActive
+                    ? 'No hay una revisión nueva pendiente.'
+                    : 'La revisión aceptada sigue disponible para recuperación.',
+              ),
+            ),
+          );
+        }
+
+        return const SizedBox.shrink();
+      },
+    );
   }
 }
 
