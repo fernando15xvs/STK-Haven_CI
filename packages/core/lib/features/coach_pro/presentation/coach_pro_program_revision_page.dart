@@ -563,7 +563,9 @@ class _RevisionComparison extends ConsumerWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               SizedBox(width: 10),
-              Text('Comparando con la revisión anterior…'),
+              Expanded(
+                child: Text('Comparando con la revisión anterior…'),
+              ),
             ],
           ),
           error: (_, _) => const Text(
