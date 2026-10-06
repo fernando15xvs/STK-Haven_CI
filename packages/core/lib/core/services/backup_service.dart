@@ -24,7 +24,7 @@ class BackupValidationResult {
 }
 
 class BackupService {
-  static const int currentBackupSchemaVersion = 10;
+  static const int currentBackupSchemaVersion = 11;
 
   String createBackup() {
     final metaBox = Hive.box(HiveBoxes.metadata);
@@ -254,8 +254,15 @@ class BackupService {
                 'restSeconds': exercise.restSeconds,
                 'warmupSets': exercise.warmupSets,
                 'approachSets': exercise.approachSets,
+                'warmupRestSeconds': exercise.warmupRestSeconds,
+                'approachRestSeconds': exercise.approachRestSeconds,
                 'unilateral': exercise.unilateral,
                 'unilateralTarget': exercise.unilateralTarget,
+                'preparationUnilateral': exercise.preparationUnilateral,
+                'unilateralSideRestSeconds':
+                    exercise.unilateralSideRestSeconds,
+                'preferredUnilateralStartSide':
+                    exercise.preferredUnilateralStartSide,
                 'supersetGroupId': exercise.supersetGroupId,
                 'phase': exercise.phase,
               },
@@ -281,6 +288,9 @@ class BackupService {
                 'muscleGroupSnapshot': exercise.muscleGroupSnapshot,
                 'unilateral': exercise.unilateral,
                 'unilateralTarget': exercise.unilateralTarget,
+                'preparationUnilateral': exercise.preparationUnilateral,
+                'preferredUnilateralStartSide':
+                    exercise.preferredUnilateralStartSide,
                 'supersetGroupId': exercise.supersetGroupId,
                 'sets': exercise.sets
                     .map(
@@ -394,9 +404,19 @@ class BackupService {
                         restSeconds: exercise['restSeconds'],
                         warmupSets: exercise['warmupSets'] ?? 0,
                         approachSets: exercise['approachSets'] ?? 0,
+                        warmupRestSeconds:
+                            exercise['warmupRestSeconds'] as int?,
+                        approachRestSeconds:
+                            exercise['approachRestSeconds'] as int?,
                         unilateral: exercise['unilateral'] ?? false,
                         unilateralTarget:
                             exercise['unilateralTarget'] ?? 'other',
+                        preparationUnilateral:
+                            exercise['preparationUnilateral'] as bool? ?? true,
+                        unilateralSideRestSeconds:
+                            exercise['unilateralSideRestSeconds'] as int?,
+                        preferredUnilateralStartSide:
+                            exercise['preferredUnilateralStartSide'] as String?,
                         supersetGroupId: exercise['supersetGroupId'] as String?,
                         phase: exercise['phase'] ?? 'main',
                       ),
@@ -432,6 +452,11 @@ class BackupService {
                         unilateral: exercise['unilateral'] ?? false,
                         unilateralTarget:
                             exercise['unilateralTarget'] ?? 'other',
+                        preparationUnilateral:
+                            exercise['preparationUnilateral'] as bool? ?? true,
+                        preferredUnilateralStartSide:
+                            exercise['preferredUnilateralStartSide'] as String? ??
+                                'automatic',
                         supersetGroupId: exercise['supersetGroupId'] as String?,
                         sets: (exercise['sets'] as List)
                             .map(
