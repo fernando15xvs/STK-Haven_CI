@@ -3,6 +3,7 @@ import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/features/coach_pro/application/coach_pro_nutrition_provider.dart';
 import 'package:core/features/coach_pro/application/coach_pro_task_provider.dart';
 import 'package:core/features/coach_pro/application/coach_pro_program_provider.dart';
+import 'package:core/features/coach_pro/application/coach_pro_program_revision_provider.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
 import 'dart:async';
@@ -70,6 +71,7 @@ Future<ProviderContainer> _mount(WidgetTester tester, {
       return null;
     }),
     coachProProgramPageProvider.overrideWith((ref, query) async => null),
+    coachProProgramRevisionHistoryProvider.overrideWith((ref, query) async => null),
     coachProClientDetailProvider.overrideWith((ref, query) => load(query)),
   ]);
   addTearDown(container.dispose);
@@ -256,6 +258,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Programa asignado'), findsOneWidget);
     expect(find.text('Programa no disponible.'), findsOneWidget);
+  });
+
+  testWidgets('program card opens immutable revision history', (tester) async {
+    await _mount(tester, load: (_) async => _detail(programs: true));
+    await tester.tap(find.text('Programas'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Historial de revisiones'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Historial de revisiones'));
+    await tester.pumpAndSettle();
+    expect(find.text('Historial de revisiones'), findsOneWidget);
+    expect(find.text('Historial no disponible.'), findsOneWidget);
   });
 
   testWidgets('task card opens professional history', (tester) async {
