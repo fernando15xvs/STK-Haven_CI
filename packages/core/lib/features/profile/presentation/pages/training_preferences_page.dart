@@ -155,13 +155,14 @@ class TrainingPreferencesPage extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
           _Section(
-            title: 'Unilateral Pro',
+            title: 'Unilateral Pro · predeterminados',
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Descanso entre lados'),
+                title: const Text('Descanso entre lados por defecto'),
                 subtitle: const Text(
-                  'Independiente del descanso posterior a la serie completa.',
+                  'Se aplica al añadir un ejercicio unilateral nuevo. '
+                  'Cada ejercicio puede sobrescribirlo.',
                 ),
                 trailing: DropdownButton<int>(
                   value: settings.unilateralSideRestSeconds,
@@ -170,7 +171,7 @@ class TrainingPreferencesPage extends ConsumerWidget {
                         (seconds) => DropdownMenuItem(
                           value: seconds,
                           child: Text(
-                            seconds == 0 ? 'Sin descanso' : '${seconds}s',
+                            seconds == 0 ? 'Cambio directo' : '${seconds}s',
                           ),
                         ),
                       )
@@ -195,8 +196,11 @@ class TrainingPreferencesPage extends ConsumerWidget {
               const Divider(height: 1),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Lado inicial preferido'),
-                subtitle: const Text('Guía visual; no bloquea el otro lado.'),
+                title: const Text('Lado inicial por defecto'),
+                subtitle: const Text(
+                  'Guía visual para ejercicios nuevos; cada ejercicio puede '
+                  'elegir Izquierda, Derecha o Automático.',
+                ),
                 trailing: DropdownButton<PreferredWorkoutSide>(
                   value: settings.preferredUnilateralStartSide,
                   items: PreferredWorkoutSide.values
