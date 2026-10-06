@@ -22,7 +22,7 @@ class CoachProProgramRevisionService {
   final SupabaseClient client;
   const CoachProProgramRevisionService(this.client);
 
-  Future<CoachProProgramRevisionHistoryPage> list(
+  Future<CoachProProgramRevisionHistoryResult> list(
     CoachProProgramRevisionHistoryQuery query,
   ) async {
     final raw = await client.rpc(
@@ -58,7 +58,7 @@ class CoachProProgramRevisionService {
       throw const FormatException('Invalid revision history count');
     }
 
-    return CoachProProgramRevisionHistoryPage(
+    return CoachProProgramRevisionHistoryResult(
       assignmentId: query.assignmentId,
       relationshipId: query.relationshipId,
       currentAssignmentVersion: json['current_assignment_version'] as int,
