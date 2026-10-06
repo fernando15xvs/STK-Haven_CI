@@ -103,9 +103,16 @@ class CoachProgramInstaller {
               restSeconds: prescription.restSeconds,
               warmupSets: prescription.warmupSets,
               approachSets: prescription.approachSets,
+              warmupRestSeconds: prescription.warmupRestSeconds,
+              approachRestSeconds: prescription.approachRestSeconds,
               unilateral: prescription.unilateral,
               unilateralTarget:
                   _unilateralTarget(prescription.unilateralTarget),
+              preparationUnilateral: prescription.preparationUnilateral,
+              unilateralSideRestSeconds:
+                  prescription.unilateralSideRestSeconds,
+              preferredUnilateralStartSide:
+                  prescription.preferredUnilateralStartSide,
               supersetGroupId: prescription.supersetKey,
             ),
           );
