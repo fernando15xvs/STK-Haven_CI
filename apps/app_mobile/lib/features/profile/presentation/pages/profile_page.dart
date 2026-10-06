@@ -1,6 +1,5 @@
 import 'package:core/core/constants/preset_programs.dart';
 import 'package:core/features/coach/presentation/pages/coach_connections_page.dart';
-import 'package:core/features/coach_pro/presentation/coach_pro_dashboard_page.dart';
 import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:core/features/profile/presentation/pages/notifications_settings_page.dart';
 import 'package:core/features/profile/presentation/pages/training_preferences_page.dart';
@@ -79,15 +78,15 @@ class ProfilePage extends ConsumerWidget {
             padding: EdgeInsets.zero,
             child: ListTile(
               leading: const Icon(
-                Icons.groups_2_outlined,
+                Icons.sports_outlined,
                 color: AppColors.primary,
               ),
               title: Text(
-                'Coach & Clientes',
+                'Mi Coach',
                 style: AppTypography.headlineMedium,
               ),
               subtitle: Text(
-                'Invitaciones, permisos y relaciones vinculadas',
+                'Entrenador vinculado, invitaciones y permisos que compartes',
                 style: AppTypography.bodySmall,
               ),
               trailing: const Icon(
@@ -97,22 +96,11 @@ class ProfilePage extends ConsumerWidget {
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const CoachConnectionsPage(),
+                  builder: (_) => const CoachConnectionsPage(
+                    clientOnly: true,
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              leading: const Icon(Icons.dashboard_outlined, color: AppColors.primary),
-              title: const Text('Coach Pro'),
-              subtitle: const Text('Cartera profesional y seguimiento de clientes'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) => const CoachProDashboardPage(),
-              )),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
