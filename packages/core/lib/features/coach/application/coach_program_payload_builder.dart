@@ -54,8 +54,15 @@ class CoachProgramPayloadBuilder {
           'rest_seconds': routineExercise.restSeconds,
           'warmup_sets': routineExercise.warmupSets,
           'approach_sets': routineExercise.approachSets,
+          'warmup_rest_seconds': routineExercise.warmupRestSeconds,
+          'approach_rest_seconds': routineExercise.approachRestSeconds,
           'unilateral': routineExercise.unilateral,
           'unilateral_target': routineExercise.unilateralTarget.name,
+          'preparation_unilateral': routineExercise.preparationUnilateral,
+          'unilateral_side_rest_seconds':
+              routineExercise.unilateralSideRestSeconds,
+          'preferred_unilateral_start_side':
+              routineExercise.preferredUnilateralStartSide?.name,
           'superset_key': routineExercise.supersetGroupId,
         });
       }
