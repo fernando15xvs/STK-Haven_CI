@@ -7,6 +7,7 @@ import 'package:core/features/profile/presentation/pages/training_preferences_pa
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/profile/presentation/widgets/platform_settings_page.dart';
+import 'package:core/features/onboarding/application/program_service.dart';
 import 'package:core/features/sync/presentation/backup_status_page.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
