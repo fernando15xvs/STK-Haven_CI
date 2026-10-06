@@ -10,7 +10,7 @@ final coachProProgramRevisionServiceProvider =
 );
 
 final coachProProgramRevisionHistoryProvider = FutureProvider.autoDispose
-    .family<CoachProProgramRevisionHistoryPage?,
+    .family<CoachProProgramRevisionHistoryResult?,
         CoachProProgramRevisionHistoryQuery>((ref, query) async {
   final identity = ref.watch(
     appIdentityProvider.select((state) => (state.signedIn, state.userId)),
