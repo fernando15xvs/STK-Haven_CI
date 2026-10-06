@@ -4,6 +4,8 @@ import 'package:uuid/uuid.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/domain/models/settings_state.dart';
+import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/routines/application/routine_order_coordinator.dart';
 import 'package:core/features/routines/application/routine_superset_coordinator.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
@@ -100,6 +102,20 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
     int rest = current?.restSeconds ?? 90;
     int warmupSets = current?.warmupSets ?? personal.warmupSets;
     int approachSets = current?.approachSets ?? personal.approachSets;
+    int warmupRest = current?.warmupRestSeconds ??
+        current?.restSeconds ??
+        60;
+    int approachRest = current?.approachRestSeconds ??
+        current?.restSeconds ??
+        90;
+    final settings = ref.read(settingsProvider);
+    bool preparationUnilateral =
+        current?.preparationUnilateral ?? false;
+    int sideRestSeconds = current?.unilateralSideRestSeconds ??
+        settings.unilateralSideRestSeconds;
+    PreferredWorkoutSide preferredStartSide =
+        current?.preferredUnilateralStartSide ??
+            settings.preferredUnilateralStartSide;
     RoutineExercisePhase phase =
         current?.phase ?? RoutineExercisePhase.main;
     bool unilateral = current?.unilateral ?? false;
@@ -234,6 +250,18 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                           onChanged: (value) =>
                               setBottomState(() => warmupSets = value),
                         ),
+                        if (warmupSets > 0) ...[
+                          const SizedBox(height: 10),
+                          _CounterRow(
+                            label: 'Descanso calentamiento (s)',
+                            value: warmupRest,
+                            min: 0,
+                            max: 300,
+                            step: 15,
+                            onChanged: (value) =>
+                                setBottomState(() => warmupRest = value),
+                          ),
+                        ],
                         const SizedBox(height: 10),
                         _CounterRow(
                           label: 'Aproximación',
@@ -243,6 +271,18 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                           onChanged: (value) =>
                               setBottomState(() => approachSets = value),
                         ),
+                        if (approachSets > 0) ...[
+                          const SizedBox(height: 10),
+                          _CounterRow(
+                            label: 'Descanso aproximación (s)',
+                            value: approachRest,
+                            min: 0,
+                            max: 300,
+                            step: 15,
+                            onChanged: (value) =>
+                                setBottomState(() => approachRest = value),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -277,7 +317,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                         onChanged: (value) =>
                             setBottomState(() => unilateral = value),
                       ),
-                      if (unilateral)
+                      if (unilateral) ...[
                         DropdownButtonFormField<UnilateralTarget>(
                           initialValue: unilateralTarget,
                           decoration: const InputDecoration(
@@ -299,6 +339,72 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                             }
                           },
                         ),
+                        if (warmupSets > 0 || approachSets > 0) ...[
+                          const SizedBox(height: 8),
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            title: const Text(
+                              'Preparación también unilateral',
+                            ),
+                            subtitle: const Text(
+                              'Desactívalo si calentamiento y aproximación '
+                              'los haces bilateral.',
+                            ),
+                            value: preparationUnilateral,
+                            onChanged: (value) => setBottomState(
+                              () => preparationUnilateral = value,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<int>(
+                          initialValue: sideRestSeconds,
+                          decoration: const InputDecoration(
+                            labelText: 'Descanso entre lados',
+                          ),
+                          items: const [0, 15, 30, 45, 60, 90, 120, 180]
+                              .map(
+                                (seconds) => DropdownMenuItem(
+                                  value: seconds,
+                                  child: Text(
+                                    seconds == 0
+                                        ? 'Cambio directo'
+                                        : '$seconds s',
+                                  ),
+                                ),
+                              )
+                              .toList(growable: false),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setBottomState(
+                                () => sideRestSeconds = value,
+                              );
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        DropdownButtonFormField<PreferredWorkoutSide>(
+                          initialValue: preferredStartSide,
+                          decoration: const InputDecoration(
+                            labelText: 'Lado inicial',
+                          ),
+                          items: PreferredWorkoutSide.values
+                              .map(
+                                (side) => DropdownMenuItem(
+                                  value: side,
+                                  child: Text(side.label),
+                                ),
+                              )
+                              .toList(growable: false),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setBottomState(
+                                () => preferredStartSide = value,
+                              );
+                            }
+                          },
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -328,9 +434,25 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                             phase == RoutineExercisePhase.main ? warmupSets : 0,
                         approachSets:
                             phase == RoutineExercisePhase.main ? approachSets : 0,
+                        warmupRestSeconds:
+                            phase == RoutineExercisePhase.main
+                                ? warmupRest
+                                : null,
+                        approachRestSeconds:
+                            phase == RoutineExercisePhase.main
+                                ? approachRest
+                                : null,
                         phase: phase,
                         unilateral: unilateral,
                         unilateralTarget: unilateralTarget,
+                        preparationUnilateral:
+                            unilateral && phase == RoutineExercisePhase.main
+                                ? preparationUnilateral
+                                : true,
+                        unilateralSideRestSeconds:
+                            unilateral ? sideRestSeconds : null,
+                        preferredUnilateralStartSide:
+                            unilateral ? preferredStartSide : null,
                         supersetGroupId: current?.supersetGroupId,
                       );
                       setState(() {
