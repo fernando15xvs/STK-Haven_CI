@@ -109,7 +109,6 @@ try {
     }
     New-Item -ItemType Directory -Path $WorkflowDir -Force | Out-Null
     Copy-Item (Join-Path $Snapshot "ci/public/flutter_ci.yml") (Join-Path $WorkflowDir "flutter_ci.yml") -Force
-    Copy-Item (Join-Path $Snapshot "ci/public/preview_web.yml") (Join-Path $WorkflowDir "preview_web.yml") -Force
 
     $SnapshotNote = @"
 # Public CI snapshot
