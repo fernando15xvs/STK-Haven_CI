@@ -1,38 +1,22 @@
+import 'package:core/core/constants/preset_programs.dart';
+import 'package:core/features/coach/presentation/pages/coach_connections_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_dashboard_page.dart';
+import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
+import 'package:core/features/profile/presentation/pages/notifications_settings_page.dart';
+import 'package:core/features/profile/presentation/pages/training_preferences_page.dart';
+import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/presentation/widgets/platform_settings_page.dart';
+import 'package:core/features/sync/presentation/backup_status_page.dart';
+import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
-import 'package:gym_tracker/core/platform/platform_capabilities.dart';
-import 'package:core/core/utils/weight_converter.dart';
-import 'package:core/domain/models/settings_state.dart';
-import 'package:core/features/coach/presentation/pages/coach_connections_page.dart';
-import 'package:core/features/habits/application/habit_study_timer_provider.dart';
-import 'package:core/features/habits/application/habit_tasks_provider.dart';
-import 'package:core/features/habits/application/study_plan_provider.dart';
-import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
-import 'package:core/features/programs/data/training_program_repository.dart';
-import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
-import 'package:core/core/services/backup_service.dart';
-import 'package:core/core/services/backup_file_service.dart';
-import 'package:core/features/onboarding/application/program_service.dart';
-import 'package:core/core/constants/preset_programs.dart';
-import 'package:gym_tracker/features/onboarding/presentation/widgets/program_preview_modal.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
-import 'package:core/features/workout/application/workout_history_provider.dart';
-import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
-import 'package:core/features/progress/application/body_measurement_provider.dart';
-import 'package:core/features/workout/application/active_workout_provider.dart';
-import 'package:core/features/profile/application/data_export_service.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
-import 'package:gym_tracker/features/profile/presentation/pages/achievements_page.dart';
 import 'package:gym_tracker/features/faith/presentation/pages/favorites_page.dart';
-
-final _backupService = BackupService();
-final _backupFileService = BackupFileService();
+import 'package:gym_tracker/features/onboarding/presentation/widgets/program_preview_modal.dart';
+import 'package:gym_tracker/features/profile/presentation/pages/achievements_page.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -74,7 +58,7 @@ class ProfilePage extends ConsumerWidget {
                 style: AppTypography.headlineMedium,
               ),
               subtitle: Text(
-                'Objetivo, días, duración, entorno, unidad, recordatorios y Fe',
+                'Objetivo, días, duración, entorno y Fe',
                 style: AppTypography.bodySmall,
               ),
               trailing: const Icon(
@@ -130,6 +114,117 @@ class ProfilePage extends ConsumerWidget {
               )),
             ),
           ),
+          const SizedBox(height: AppSpacing.xl),
+
+          const SectionHeading(title: 'AJUSTES'),
+          const SizedBox(height: AppSpacing.sm),
+          PremiumCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(
+                    Icons.fitness_center_outlined,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    'Entrenamiento y unidades',
+                    style: AppTypography.headlineMedium,
+                  ),
+                  subtitle: Text(
+                    'RIR, descansos, feedback, unilateral, peso e incrementos',
+                    style: AppTypography.bodySmall,
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textSecondary,
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TrainingPreferencesPage(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1, color: AppColors.surfaceBorder),
+                ListTile(
+                  leading: const Icon(
+                    Icons.notifications_outlined,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    'Notificaciones',
+                    style: AppTypography.headlineMedium,
+                  ),
+                  subtitle: Text(
+                    'Entrenamiento, agua, pasos y fortaleza diaria',
+                    style: AppTypography.bodySmall,
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textSecondary,
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsSettingsPage(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1, color: AppColors.surfaceBorder),
+                ListTile(
+                  leading: const Icon(
+                    Icons.cloud_sync_outlined,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    'Datos y sincronización',
+                    style: AppTypography.headlineMedium,
+                  ),
+                  subtitle: Text(
+                    'Nube, copias locales, restauración y CSV',
+                    style: AppTypography.bodySmall,
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textSecondary,
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const BackupStatusPage(),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1, color: AppColors.surfaceBorder),
+                ListTile(
+                  leading: const Icon(
+                    Icons.devices_outlined,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    'App y dispositivo',
+                    style: AppTypography.headlineMedium,
+                  ),
+                  subtitle: Text(
+                    'Rendimiento, accesibilidad, sensores y licencias',
+                    style: AppTypography.bodySmall,
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textSecondary,
+                  ),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PlatformSettingsPage(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           const SizedBox(height: AppSpacing.xl),
 
           if (settings.activeProgram != null) ...[
@@ -198,33 +293,6 @@ class ProfilePage extends ConsumerWidget {
           
           const SizedBox(height: AppSpacing.xl),
           
-          const SectionHeading(title: 'ENTRENAMIENTO'),
-          const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: Text('RIR habilitado', style: AppTypography.headlineMedium),
-                  subtitle: Text('Registro de repeticiones en reserva', style: AppTypography.bodySmall),
-                  value: settings.isRirEnabled,
-                  onChanged: (val) => notifier.setRirEnabled(val),
-                  activeThumbColor: AppColors.primary,
-                ),
-                const Divider(height: 1, color: AppColors.surfaceBorder),
-                SwitchListTile(
-                  title: Text('Descanso automático', style: AppTypography.headlineMedium),
-                  subtitle: Text('Iniciar temporizador tras completar serie', style: AppTypography.bodySmall),
-                  value: settings.autoRestEnabled,
-                  onChanged: (val) => notifier.setAutoRestEnabled(val),
-                  activeThumbColor: AppColors.primary,
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: AppSpacing.xl),
-
           if (faithEnabled) ...[
             const SectionHeading(title: 'FORTALEZA'),
             const SizedBox(height: AppSpacing.sm),
@@ -239,17 +307,6 @@ class ProfilePage extends ConsumerWidget {
                   onChanged: (val) => notifier.setShowDailyVerse(val),
                   activeThumbColor: AppColors.primary,
                 ),
-                if (PlatformCapabilities.current.supportsLocalNotifications) ...[
-                  const Divider(height: 1, color: AppColors.surfaceBorder),
-                  SwitchListTile(
-                    title: Text('Notificaciones diarias', style: AppTypography.headlineMedium),
-                    subtitle: Text('Recibir la fortaleza de hoy (8:00 AM)', style: AppTypography.bodySmall),
-                    value: settings.dailyVerseNotifications,
-                    onChanged: notifier.setDailyVerseNotifications,
-                    activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-                    activeThumbColor: AppColors.primary,
-                  ),
-                ],
                 const Divider(height: 1, color: AppColors.surfaceBorder),
                 ListTile(
                   title: Text('Versículos Favoritos', style: AppTypography.headlineMedium),
@@ -265,215 +322,10 @@ class ProfilePage extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xl),
           ],
           
-          const SectionHeading(title: 'UNIDADES'),
-          const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text('Peso', style: AppTypography.headlineMedium),
-                  trailing: DropdownButtonHideUnderline(
-                    child: DropdownButton<WeightUnit>(
-                      value: settings.weightUnit,
-                      dropdownColor: AppColors.surfaceHigh,
-                      items: WeightUnit.values.map((u) => DropdownMenuItem(
-                        value: u,
-                        child: Text(u.label.toUpperCase(), style: AppTypography.bodyMedium),
-                      )).toList(),
-                      onChanged: (val) {
-                        if (val != null) notifier.setWeightUnit(val);
-                      },
-                    ),
-                  ),
-                ),
-                const Divider(height: 1, color: AppColors.surfaceBorder),
-                 Builder(builder: (context) {
-                   final unit = settings.weightUnit;
-                   final displayOptions = unit == WeightUnit.kg
-                       ? [1.25, 2.5, 5.0]
-                       : [2.5, 5.0, 10.0];
-
-                   final currentDisplayValue = WeightConverter.displayWeight(
-                       settings.defaultIncrement, unit);
-                   double? selectedOption;
-                   for (final opt in displayOptions) {
-                     if ((opt - currentDisplayValue).abs() < 0.01) {
-                       selectedOption = opt;
-                       break;
-                     }
-                   }
-                   selectedOption ??= displayOptions.reduce((a, b) =>
-                       (a - currentDisplayValue).abs() < (b - currentDisplayValue).abs() ? a : b);
-
-                   return ListTile(
-                     title: Text('Incremento por defecto', style: AppTypography.headlineMedium),
-                     subtitle: Text('Sugerencia de progreso en motores', style: AppTypography.bodySmall),
-                     trailing: DropdownButtonHideUnderline(
-                       child: DropdownButton<double>(
-                         value: selectedOption,
-                         dropdownColor: AppColors.surfaceHigh,
-                         items: displayOptions.map((v) => DropdownMenuItem(
-                           value: v,
-                           child: Text(
-                             '${v % 1 == 0 ? v.toInt() : v} ${unit.label}',
-                             style: AppTypography.bodyMedium,
-                           ),
-                         )).toList(),
-                         onChanged: (val) {
-                           if (val != null) notifier.setDefaultIncrement(val, unit);
-                         },
-                       ),
-                     ),
-                   );
-                 }),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: AppSpacing.xl),
-
-          const SectionHeading(title: 'DATOS'),
-          const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.upload_file, color: AppColors.textPrimary),
-                  title: Text('Exportar backup', style: AppTypography.headlineMedium),
-                  subtitle: Text('Crear archivo .json de respaldo', style: AppTypography.bodySmall),
-                  onTap: () async {
-                    try {
-                      final jsonString = _backupService.createBackup();
-                      await _backupFileService.exportFile(jsonString);
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al exportar: $e')));
-                      }
-                    }
-                  },
-                ),
-                const Divider(height: 1, color: AppColors.surfaceBorder),
-                ListTile(
-                  leading: const Icon(Icons.table_chart, color: AppColors.textPrimary),
-                  title: Text('Exportar a CSV', style: AppTypography.headlineMedium),
-                  subtitle: Text('Exportar tus entrenamientos a Excel', style: AppTypography.bodySmall),
-                  onTap: () async {
-                    final history = ref.read(workoutHistoryProvider);
-                    if (history.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No hay entrenamientos para exportar.')),
-                      );
-                      return;
-                    }
-                    try {
-                      await DataExportService().exportWorkoutsToCSV(history);
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error al exportar: $e')),
-                        );
-                      }
-                    }
-                  },
-                ),
-                const Divider(height: 1, color: AppColors.surfaceBorder),
-                ListTile(
-                  leading: const Icon(Icons.download, color: AppColors.textPrimary),
-                  title: Text('Importar backup', style: AppTypography.headlineMedium),
-                  subtitle: Text('Restaurar desde archivo .json', style: AppTypography.bodySmall),
-                  onTap: () async {
-                    final activeWorkout = ref.read(activeWorkoutProvider);
-                    if (activeWorkout.session != null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Termina tu entrenamiento actual antes de restaurar un backup.')),
-                      );
-                      return;
-                    }
-
-                    final jsonString = await _backupFileService.pickBackupFile();
-                    if (jsonString == null) return; // User canceled
-
-                    final result = _backupService.validateBackup(jsonString);
-                    
-                    if (!context.mounted) return;
-
-                    if (!result.isValid) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(result.errorMessage ?? 'Error desconocido al leer backup')),
-                      );
-                      return;
-                    }
-
-                    // Show confirmation
-                    final parsed = result.parsedData!;
-                    final routines = (parsed['routines'] as List).length;
-                    final workouts = (parsed['workouts'] as List).length;
-                    final exercises = (parsed['exercises'] as List).length;
-                    final prs = (parsed['personalRecords'] as List).length;
-
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        backgroundColor: AppColors.surfaceHigh,
-                        title: const Text('BACKUP ENCONTRADO', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-                        content: Text(
-                          'Contenido:\n\n$routines rutinas\n$workouts entrenamientos\n$exercises ejercicios\n$prs récords personales\n\nEste proceso reemplazará los datos actuales del dispositivo.',
-                          style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text('CANCELAR', style: TextStyle(color: AppColors.textSecondary)),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text('RESTAURAR BACKUP', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                    );
-
-                    if (confirm == true) {
-                      try {
-                        await _backupService.restoreBackup(parsed);
-                        await TrainingProgramRepository.fromHive()
-                            .hydrateFromBackupMetadata();
-                        ref.invalidate(settingsProvider);
-                        ref.invalidate(userExperienceProfileProvider);
-                        ref.invalidate(habitTasksProvider);
-                        ref.invalidate(habitStudyTimerProvider);
-                        ref.invalidate(studyPlanEnrollmentsProvider);
-                        ref.invalidate(trainingProgramListProvider);
-                        ref.invalidate(routineListProvider);
-                        ref.invalidate(exerciseListProvider);
-                        ref.invalidate(workoutHistoryProvider);
-                        ref.invalidate(personalRecordRepositoryProvider);
-                        ref.invalidate(bodyMeasurementProvider);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('✓ Backup restaurado correctamente')),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error crítico al restaurar: $e')),
-                          );
-                        }
-                      }
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-
           const SizedBox(height: AppSpacing.xxxl),
           Center(
             child: Text(
-              'Gym Tracker v1.0.0 (RC)\nConstruido para ti',
+              'STK Haven v1.0.0 (RC)\nConstruido para ti',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.5), fontSize: 12),
             ),
