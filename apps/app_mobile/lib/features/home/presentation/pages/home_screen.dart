@@ -1,12 +1,9 @@
 import 'package:core/domain/models/settings_state.dart';
 import 'package:gym_tracker/features/habits/presentation/study_habits_mobile_page.dart';
-import 'package:core/features/profile/presentation/pages/training_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
-import 'package:core/features/profile/presentation/widgets/platform_settings_page.dart';
 import 'package:core/features/programs/presentation/pages/training_programs_page.dart';
 import 'package:core/features/progress/presentation/pages/progress_intelligence_page.dart';
-import 'package:core/features/sync/presentation/backup_status_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -336,17 +333,6 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                               _openPage(const ProgressIntelligencePage()),
                         ),
                         _MenuOption(
-                          icon: Icons.tune_rounded,
-                          label: 'Preferencias',
-                          onTap: () =>
-                              _openPage(const TrainingPreferencesPage()),
-                        ),
-                        _MenuOption(
-                          icon: Icons.settings_backup_restore_rounded,
-                          label: 'Copias',
-                          onTap: () => _openPage(const BackupStatusPage()),
-                        ),
-                        _MenuOption(
                           icon: Icons.task_alt_outlined,
                           label: 'Hábitos',
                           onTap: () => _openPage(const StudyHabitsMobilePage()),
@@ -374,12 +360,6 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                           icon: Icons.build_circle_outlined,
                           label: 'Herramientas',
                           onTap: () => _openPage(const TrainingToolsPage()),
-                        ),
-                        _MenuOption(
-                          icon: Icons.devices_outlined,
-                          label: 'Plataforma',
-                          onTap: () =>
-                              _openPage(const PlatformSettingsPage()),
                         ),
                       ],
                     ),
