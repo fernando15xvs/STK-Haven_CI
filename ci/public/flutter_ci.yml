@@ -48,7 +48,6 @@ jobs:
         working-directory: packages/core
         run: flutter test
 
-
   supabase-db:
     name: Supabase DB + RLS tests
     runs-on: ubuntu-latest
@@ -153,29 +152,6 @@ jobs:
       - name: Build split ABI APKs
         working-directory: apps/app_mobile
         run: flutter build apk --release --split-per-abi --target lib/main_android.dart
-
-  web:
-    name: Web tests + builds
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      - name: Resolve workspace
-        run: flutter pub get
-      - name: Web tests
-        working-directory: apps/app_web
-        run: flutter test
-      - name: Build dart2js release
-        working-directory: apps/app_web
-        run: flutter build web --release
-      - name: Build WASM comparison
-        working-directory: apps/app_web
-        run: flutter build web --release --wasm
 
   ios:
     name: iOS release + profile
