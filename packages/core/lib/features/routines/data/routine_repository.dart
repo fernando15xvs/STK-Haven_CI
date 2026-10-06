@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/settings_state.dart';
 import 'package:core/database/hive/models/hive_routine.dart';
 
 class RoutineRepository {
@@ -49,8 +50,14 @@ class RoutineRepository {
                 restSeconds: e.restSeconds,
                 warmupSets: e.warmupSets,
                 approachSets: e.approachSets,
+                warmupRestSeconds: e.warmupRestSeconds,
+                approachRestSeconds: e.approachRestSeconds,
                 unilateral: e.unilateral,
                 unilateralTarget: e.unilateralTarget.name,
+                preparationUnilateral: e.preparationUnilateral,
+                unilateralSideRestSeconds: e.unilateralSideRestSeconds,
+                preferredUnilateralStartSide:
+                    e.preferredUnilateralStartSide?.name,
                 supersetGroupId: e.supersetGroupId,
                 phase: e.phase.name,
               ),
@@ -75,11 +82,23 @@ class RoutineRepository {
                 restSeconds: e.restSeconds,
                 warmupSets: e.warmupSets,
                 approachSets: e.approachSets,
+                warmupRestSeconds: e.warmupRestSeconds,
+                approachRestSeconds: e.approachRestSeconds,
                 unilateral: e.unilateral,
                 unilateralTarget: UnilateralTarget.values.firstWhere(
                   (target) => target.name == e.unilateralTarget,
                   orElse: () => UnilateralTarget.other,
                 ),
+                preparationUnilateral: e.preparationUnilateral,
+                unilateralSideRestSeconds: e.unilateralSideRestSeconds,
+                preferredUnilateralStartSide:
+                    e.preferredUnilateralStartSide == null
+                        ? null
+                        : PreferredWorkoutSide.values.firstWhere(
+                            (side) =>
+                                side.name == e.preferredUnilateralStartSide,
+                            orElse: () => PreferredWorkoutSide.automatic,
+                          ),
                 supersetGroupId: e.supersetGroupId,
                 phase: RoutineExercisePhase.values.firstWhere(
                   (phase) => phase.name == e.phase,
