@@ -1,4 +1,7 @@
 import 'package:core/domain/models/settings_state.dart';
+import 'package:core/features/coach/presentation/pages/coach_hub_page.dart';
+import 'package:core/features/coach_pro/application/coach_pro_entitlement_provider.dart';
+import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:gym_tracker/features/habits/presentation/study_habits_mobile_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -61,11 +64,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       settingsProvider.select((settings) => settings.performanceMode),
     );
     final savings = performanceMode == PerformanceMode.savings;
-    final faithEnabled = ref.watch(
-      userExperienceProfileProvider.select(
-        (profile) => profile.value?.faithEnabled ?? false,
-      ),
+    final experienceProfile = ref.watch(
+      userExperienceProfileProvider,
+    ).value;
+    final faithEnabled = experienceProfile?.faithEnabled ?? false;
+    final coachCapability = experienceProfile?.isCoach ?? false;
+    final signedIn = ref.watch(
+      appIdentityProvider.select((identity) => identity.signedIn),
     );
+    final coachProAccess = signedIn
+        ? ref.watch(coachProEntitlementProvider).value?.accessActive ?? false
+        : false;
+    final coachEnabled = coachCapability || coachProAccess;
 
     return Scaffold(
       // Keeping the body out from underneath the navigation surface avoids an
@@ -101,7 +111,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   isSelected: _currentIndex == 1,
                   onTap: () => _selectTab(1),
                 ),
-                _FloatingMenuButton(faithEnabled: faithEnabled),
+                _FloatingMenuButton(
+                  faithEnabled: faithEnabled,
+                  coachEnabled: coachEnabled,
+                ),
                 _BottomNavItem(
                   icon: Icons.bar_chart_outlined,
                   activeIcon: Icons.bar_chart,
@@ -217,9 +230,13 @@ class _BottomNavItem extends StatelessWidget {
 }
 
 class _FloatingMenuButton extends StatefulWidget {
-  const _FloatingMenuButton({required this.faithEnabled});
+  const _FloatingMenuButton({
+    required this.faithEnabled,
+    required this.coachEnabled,
+  });
 
   final bool faithEnabled;
+  final bool coachEnabled;
 
   @override
   State<_FloatingMenuButton> createState() => _FloatingMenuButtonState();
@@ -332,6 +349,12 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                           onTap: () =>
                               _openPage(const ProgressIntelligencePage()),
                         ),
+                        if (widget.coachEnabled)
+                          _MenuOption(
+                            icon: Icons.groups_2_outlined,
+                            label: 'Coach',
+                            onTap: () => _openPage(const CoachHubPage()),
+                          ),
                         _MenuOption(
                           icon: Icons.task_alt_outlined,
                           label: 'Hábitos',
