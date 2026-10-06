@@ -1,3 +1,4 @@
+import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:flutter/foundation.dart';
@@ -13,10 +14,82 @@ class TrainingPreferencesPage extends ConsumerWidget {
     final notifier = ref.read(settingsProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Preferencias de entrenamiento')),
+      appBar: AppBar(title: const Text('Entrenamiento y unidades')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _Section(
+            title: 'Unidades y progresión',
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Unidad de peso'),
+                subtitle: const Text(
+                  'Se usa en entrenamientos, progresión y registros.',
+                ),
+                trailing: DropdownButton<WeightUnit>(
+                  value: settings.weightUnit,
+                  items: WeightUnit.values
+                      .map(
+                        (unit) => DropdownMenuItem(
+                          value: unit,
+                          child: Text(unit.label.toUpperCase()),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (unit) {
+                    if (unit != null) notifier.setWeightUnit(unit);
+                  },
+                ),
+              ),
+              const Divider(height: 1),
+              Builder(
+                builder: (context) {
+                  final unit = settings.weightUnit;
+                  final options = unit == WeightUnit.kg
+                      ? const [1.25, 2.5, 5.0]
+                      : const [2.5, 5.0, 10.0];
+                  final current = WeightConverter.displayWeight(
+                    settings.defaultIncrement,
+                    unit,
+                  );
+                  final selected = options.reduce(
+                    (a, b) => (a - current).abs() < (b - current).abs()
+                        ? a
+                        : b,
+                  );
+
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Incremento por defecto'),
+                    subtitle: const Text(
+                      'Sugerencia de aumento en los motores de progresión.',
+                    ),
+                    trailing: DropdownButton<double>(
+                      value: selected,
+                      items: options
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(
+                                '${value % 1 == 0 ? value.toInt() : value} '
+                                '${unit.label}',
+                              ),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) {
+                        if (value != null) {
+                          notifier.setDefaultIncrement(value, unit);
+                        }
+                      },
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
           _Section(
             title: 'Registro y memoria',
             children: [
@@ -49,7 +122,7 @@ class TrainingPreferencesPage extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Descanso automático'),
                 subtitle: const Text(
-                  'Inicia el timer correspondiente al completar trabajo válido.',
+                  'Inicia el temporizador correspondiente al completar trabajo válido.',
                 ),
                 value: settings.autoRestEnabled,
                 onChanged: notifier.setAutoRestEnabled,
@@ -73,7 +146,7 @@ class TrainingPreferencesPage extends ConsumerWidget {
                 subtitle: Text(
                   kIsWeb
                       ? 'La preferencia se conserva para Android/iOS.'
-                      : 'Controla el sonido del aviso programado del timer.',
+                      : 'Controla el sonido del aviso del temporizador.',
                 ),
                 value: settings.timerSoundEnabled,
                 onChanged: kIsWeb ? null : notifier.updateTimerSound,
@@ -143,54 +216,10 @@ class TrainingPreferencesPage extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          _Section(
-            title: 'Rendimiento y accesibilidad',
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Modo rendimiento'),
-                subtitle: Text(_performanceDescription(settings.performanceMode)),
-                trailing: DropdownButton<PerformanceMode>(
-                  value: settings.performanceMode,
-                  items: PerformanceMode.values
-                      .map(
-                        (mode) => DropdownMenuItem(
-                          value: mode,
-                          child: Text(mode.label),
-                        ),
-                      )
-                      .toList(growable: false),
-                  onChanged: (mode) {
-                    if (mode != null) notifier.setPerformanceMode(mode);
-                  },
-                ),
-              ),
-              const Divider(height: 1),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Reducir movimiento'),
-                subtitle: const Text(
-                  'Reduce transiciones y efectos sin cambiar cálculos ni datos.',
-                ),
-                value: settings.reduceMotion,
-                onChanged: notifier.setReduceMotion,
-              ),
-            ],
-          ),
         ],
       ),
     );
   }
-
-  static String _performanceDescription(PerformanceMode mode) => switch (mode) {
-        PerformanceMode.automatic =>
-          'Equilibra efectos visuales con las preferencias del sistema.',
-        PerformanceMode.quality =>
-          'Prioriza presentación visual cuando el dispositivo puede sostenerla.',
-        PerformanceMode.savings =>
-          'Reduce animaciones, blur y coste gráfico antes de reducir funcionalidad.',
-      };
 }
 
 class _Section extends StatelessWidget {
