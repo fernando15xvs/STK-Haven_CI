@@ -1,6 +1,7 @@
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/coach/application/coach_program_payload_builder.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,6 +41,9 @@ void main() {
             targetRepsMax: 8,
             restSeconds: 180,
             warmupSets: 2,
+            approachSets: 1,
+            warmupRestSeconds: 45,
+            approachRestSeconds: 75,
           ),
           RoutineExercise(
             exerciseId: 'row',
@@ -50,6 +54,9 @@ void main() {
             restSeconds: 120,
             unilateral: true,
             unilateralTarget: UnilateralTarget.back,
+            preparationUnilateral: false,
+            unilateralSideRestSeconds: 0,
+            preferredUnilateralStartSide: PreferredWorkoutSide.right,
             supersetGroupId: 'pair-1',
           ),
         ],
@@ -100,14 +107,17 @@ void main() {
 
       expect(routinePayload['name'], 'Upper A');
       expect(exercisePayloads, hasLength(2));
-      expect(
-        (exercisePayloads[1] as Map<String, dynamic>)['unilateral'],
-        isTrue,
-      );
-      expect(
-        (exercisePayloads[1] as Map<String, dynamic>)['superset_key'],
-        'pair-1',
-      );
+      final firstExercise =
+          exercisePayloads[0] as Map<String, dynamic>;
+      final secondExercise =
+          exercisePayloads[1] as Map<String, dynamic>;
+      expect(firstExercise['warmup_rest_seconds'], 45);
+      expect(firstExercise['approach_rest_seconds'], 75);
+      expect(secondExercise['unilateral'], isTrue);
+      expect(secondExercise['preparation_unilateral'], isFalse);
+      expect(secondExercise['unilateral_side_rest_seconds'], 0);
+      expect(secondExercise['preferred_unilateral_start_side'], 'right');
+      expect(secondExercise['superset_key'], 'pair-1');
 
       final serialized = payload.toString().toLowerCase();
       expect(serialized, isNot(contains('private-session')));
@@ -165,6 +175,23 @@ void main() {
       expect(assignment.summary.isCoach('coach'), isTrue);
     });
 
+    test('old transport keeps backward-compatible preparation defaults', () {
+      final exercise = AssignedExerciseSnapshot.fromJson({
+        'id': 'legacy',
+        'position': 0,
+        'name': 'Legacy',
+        'rest_seconds': 120,
+        'unilateral': true,
+        'unilateral_target': 'arm',
+      });
+
+      expect(exercise.warmupRestSeconds, isNull);
+      expect(exercise.approachRestSeconds, isNull);
+      expect(exercise.preparationUnilateral, isTrue);
+      expect(exercise.unilateralSideRestSeconds, isNull);
+      expect(exercise.preferredUnilateralStartSide, isNull);
+    });
+
     test('parses nested normalized prescription transport', () {
       final assignment = CoachProgramAssignment.fromJson({
         'id': 'a1',
@@ -197,9 +224,14 @@ void main() {
                 'target_reps_max': 8,
                 'rest_seconds': 180,
                 'warmup_sets': 2,
-                'approach_sets': 0,
-                'unilateral': false,
-                'unilateral_target': 'other',
+                'approach_sets': 1,
+                'warmup_rest_seconds': 45,
+                'approach_rest_seconds': 75,
+                'unilateral': true,
+                'unilateral_target': 'arm',
+                'preparation_unilateral': false,
+                'unilateral_side_rest_seconds': 0,
+                'preferred_unilateral_start_side': 'right',
               },
             ],
           },
@@ -208,7 +240,16 @@ void main() {
 
       expect(assignment.routines, hasLength(1));
       expect(assignment.routines.single.exercises, hasLength(1));
-      expect(assignment.routines.single.exercises.single.targetSets, 3);
+      final exercise = assignment.routines.single.exercises.single;
+      expect(exercise.targetSets, 3);
+      expect(exercise.warmupRestSeconds, 45);
+      expect(exercise.approachRestSeconds, 75);
+      expect(exercise.preparationUnilateral, isFalse);
+      expect(exercise.unilateralSideRestSeconds, 0);
+      expect(
+        exercise.preferredUnilateralStartSide,
+        PreferredWorkoutSide.right,
+      );
       expect(assignment.summary.trainingWeekdays, {1, 3, 5});
     });
   });
