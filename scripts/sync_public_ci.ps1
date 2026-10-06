@@ -1,6 +1,6 @@
 param(
     [string]$PublicRepo = "fernando15xvs/STK-Haven_CI",
-    [string]$SourceBranch = "feat/roadmap-3-foundation"
+    [string]$SourceBranch = "main"
 )
 
 $ErrorActionPreference = "Stop"
