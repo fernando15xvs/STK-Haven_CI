@@ -39,15 +39,15 @@ const CoachProProgramRevisionDetailQuery _detailQuery = (
   offset: 0,
 );
 
-CoachProProgramRevisionHistoryPage _historyPage({
+CoachProProgramRevisionHistoryResult _historyPage({
   int total = 2,
 }) =>
-    CoachProProgramRevisionHistoryPage(
+    CoachProProgramRevisionHistoryResult(
       assignmentId: 'program',
       relationshipId: 'rel',
       currentAssignmentVersion: 2,
       totalCount: total,
-      items: const [
+      items: [
         CoachProProgramRevisionSummary(
           id: 'rev-2',
           revisionNumber: 2,
@@ -129,14 +129,14 @@ CoachProProgramRevisionPage _revisionPage(
 }
 
 class _Service implements CoachProProgramRevisionService {
-  final pending = Completer<CoachProProgramRevisionHistoryPage>();
+  final pending = Completer<CoachProProgramRevisionHistoryResult>();
   int calls = 0;
 
   @override
   Never get client => throw UnimplementedError();
 
   @override
-  Future<CoachProProgramRevisionHistoryPage> list(
+  Future<CoachProProgramRevisionHistoryResult> list(
     CoachProProgramRevisionHistoryQuery query,
   ) {
     calls++;
