@@ -105,13 +105,16 @@ class HiveWorkoutExerciseAdapter extends TypeAdapter<HiveWorkoutExercise> {
       unilateral: fields[5] as bool? ?? false,
       unilateralTarget: fields[6] as String? ?? 'other',
       supersetGroupId: fields[7] as String?,
+      preparationUnilateral: fields[8] as bool? ?? true,
+      preferredUnilateralStartSide:
+          fields[9] as String? ?? 'automatic',
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveWorkoutExercise obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.exerciseId)
       ..writeByte(1)
@@ -127,7 +130,11 @@ class HiveWorkoutExerciseAdapter extends TypeAdapter<HiveWorkoutExercise> {
       ..writeByte(6)
       ..write(obj.unilateralTarget)
       ..writeByte(7)
-      ..write(obj.supersetGroupId);
+      ..write(obj.supersetGroupId)
+      ..writeByte(8)
+      ..write(obj.preparationUnilateral)
+      ..writeByte(9)
+      ..write(obj.preferredUnilateralStartSide);
   }
 
   @override
