@@ -749,7 +749,17 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
   Future<void> _configureUnilateral() async {
     bool unilateral = widget.workoutExercise.unilateral;
     UnilateralTarget target = widget.workoutExercise.unilateralTarget;
-    final result = await showDialog<(bool, UnilateralTarget)>(
+    bool preparationUnilateral =
+        widget.workoutExercise.preparationUnilateral;
+    final settings = ref.read(settingsProvider);
+    int sideRestSeconds = widget.workoutExercise.sets.isEmpty
+        ? settings.unilateralSideRestSeconds
+        : widget.workoutExercise.sets.first.sideRestSeconds;
+    PreferredWorkoutSide preferredStartSide =
+        widget.workoutExercise.preferredUnilateralStartSide;
+
+    final result = await showDialog<
+        (bool, UnilateralTarget, bool, int, PreferredWorkoutSide)>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
@@ -758,38 +768,101 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
             'Registro unilateral',
             style: AppTypography.headlineMedium,
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Separar izquierda y derecha'),
-                subtitle: const Text(
-                  'La serie se completa cuando marcas ambos lados.',
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Separar izquierda y derecha'),
+                  subtitle: const Text(
+                    'Las series configuradas como unilaterales se completan '
+                    'cuando registras ambos lados.',
+                  ),
+                  value: unilateral,
+                  onChanged: (value) =>
+                      setDialogState(() => unilateral = value),
                 ),
-                value: unilateral,
-                onChanged: (value) =>
-                    setDialogState(() => unilateral = value),
-              ),
-              if (unilateral)
-                DropdownButtonFormField<UnilateralTarget>(
-                  value: target,
-                  decoration: const InputDecoration(labelText: 'Zona'),
-                  items: UnilateralTarget.values
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text(value.label),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setDialogState(() => target = value);
-                    }
-                  },
-                ),
-            ],
+                if (unilateral) ...[
+                  DropdownButtonFormField<UnilateralTarget>(
+                    initialValue: target,
+                    decoration: const InputDecoration(labelText: 'Zona'),
+                    items: UnilateralTarget.values
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(value.label),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => target = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text(
+                      'Calentamiento y aproximación también unilaterales',
+                    ),
+                    subtitle: const Text(
+                      'Déjalo apagado si solo las series efectivas se hacen '
+                      'por lado.',
+                    ),
+                    value: preparationUnilateral,
+                    onChanged: (value) => setDialogState(
+                      () => preparationUnilateral = value,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    initialValue: sideRestSeconds,
+                    decoration: const InputDecoration(
+                      labelText: 'Descanso entre lados',
+                    ),
+                    items: const [0, 15, 30, 45, 60, 90, 120, 180]
+                        .map(
+                          (seconds) => DropdownMenuItem(
+                            value: seconds,
+                            child: Text(
+                              seconds == 0
+                                  ? 'Cambio directo'
+                                  : '$seconds s',
+                            ),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => sideRestSeconds = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<PreferredWorkoutSide>(
+                    initialValue: preferredStartSide,
+                    decoration: const InputDecoration(
+                      labelText: 'Lado inicial',
+                    ),
+                    items: PreferredWorkoutSide.values
+                        .map(
+                          (side) => DropdownMenuItem(
+                            value: side,
+                            child: Text(side.label),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => preferredStartSide = value);
+                      }
+                    },
+                  ),
+                ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -797,7 +870,16 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(ctx, (unilateral, target)),
+              onPressed: () => Navigator.pop(
+                ctx,
+                (
+                  unilateral,
+                  target,
+                  preparationUnilateral,
+                  sideRestSeconds,
+                  preferredStartSide,
+                ),
+              ),
               child: const Text('Guardar'),
             ),
           ],
@@ -809,6 +891,9 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
           widget.exIndex,
           unilateral: result.$1,
           target: result.$2,
+          preparationUnilateral: result.$3,
+          sideRestSeconds: result.$4,
+          preferredStartSide: result.$5,
         );
   }
 
@@ -930,12 +1015,13 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
         .where((set) => set.setType == WorkoutSetType.working)
         .toList();
     final doneWorking = workingSets.where((set) => set.completed).length;
-    final leftDone = widget.workoutExercise.sets
-        .where((set) => set.leftCompleted)
-        .length;
-    final rightDone = widget.workoutExercise.sets
-        .where((set) => set.rightCompleted)
-        .length;
+    final unilateralSets = widget.workoutExercise.sets
+        .where(widget.workoutExercise.usesUnilateralTracking)
+        .toList(growable: false);
+    final leftDone =
+        unilateralSets.where((set) => set.leftCompleted).length;
+    final rightDone =
+        unilateralSets.where((set) => set.rightCompleted).length;
 
     double totalVolume = 0;
     for (final set in workingSets) {
@@ -1011,7 +1097,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         const SizedBox(height: 3),
                         if (widget.workoutExercise.unilateral)
                           Text(
-                            '${widget.workoutExercise.unilateralTarget.label} · I $leftDone/${widget.workoutExercise.sets.length} · D $rightDone/${widget.workoutExercise.sets.length}${widget.workoutExercise.isInSuperset ? ' · Superserie' : ''}',
+                            '${widget.workoutExercise.unilateralTarget.label} · I $leftDone/${unilateralSets.length} · D $rightDone/${unilateralSets.length}${widget.workoutExercise.isInSuperset ? ' · Superserie' : ''}',
                             style: AppTypography.bodySmall.copyWith(
                               color: completed
                                   ? AppColors.success
@@ -1173,7 +1259,10 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         borderRadius: AppRadius.sm_,
                       ),
                       child: Text(
-                        '${widget.workoutExercise.unilateralTarget.label}: registra un lado, descansa ${settings.unilateralSideRestSeconds}s y registra el otro. Peso, reps y RIR se guardan por lado.',
+                        '${widget.workoutExercise.unilateralTarget.label}: '
+                        '${widget.workoutExercise.preparationUnilateral ? 'preparación y efectivas' : 'solo series efectivas'} '
+                        'se registran por lado. '
+                        '${widget.workoutExercise.sets.isNotEmpty && widget.workoutExercise.sets.first.sideRestSeconds == 0 ? 'Cambia directamente al otro lado.' : 'Descansa ${widget.workoutExercise.sets.isEmpty ? settings.unilateralSideRestSeconds : widget.workoutExercise.sets.first.sideRestSeconds}s entre lados.'}',
                         style: AppTypography.bodySmall.copyWith(
                           color: AppColors.primary,
                         ),
@@ -1248,9 +1337,12 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                       weightUnit: settings.weightUnit,
                       vibrationEnabled: settings.vibrationEnabled,
                       prevSet: prevSet,
-                      unilateral: widget.workoutExercise.unilateral,
+                      unilateral:
+                          widget.workoutExercise.usesUnilateralTracking(set),
                       unilateralTarget:
                           widget.workoutExercise.unilateralTarget,
+                      preferredStartSide:
+                          widget.workoutExercise.preferredUnilateralStartSide,
                     );
                   }),
                   const SizedBox(height: 6),
@@ -1343,6 +1435,7 @@ class _SetRow extends ConsumerStatefulWidget {
   final WorkoutSet? prevSet;
   final bool unilateral;
   final UnilateralTarget unilateralTarget;
+  final PreferredWorkoutSide preferredStartSide;
 
   const _SetRow({
     super.key,
@@ -1355,6 +1448,7 @@ class _SetRow extends ConsumerStatefulWidget {
     required this.prevSet,
     required this.unilateral,
     required this.unilateralTarget,
+    required this.preferredStartSide,
   });
 
   @override
@@ -1639,37 +1733,57 @@ class _SetRowState extends ConsumerState<_SetRow> {
             ),
             if (widget.unilateral) ...[
               const SizedBox(height: 5),
-              Padding(
-                padding: const EdgeInsets.only(left: 4, right: 4),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _SideButton(
-                        label: _sidePerformanceLabel(WorkoutSide.left),
-                        selected: widget.initialSet.leftCompleted,
-                        onTap: () => _toggleSide(true),
-                      ),
+              Builder(
+                builder: (context) {
+                  final rightFirst =
+                      widget.preferredStartSide ==
+                          PreferredWorkoutSide.right;
+                  final firstSide =
+                      rightFirst ? WorkoutSide.right : WorkoutSide.left;
+                  final secondSide =
+                      rightFirst ? WorkoutSide.left : WorkoutSide.right;
+
+                  Widget buttonFor(WorkoutSide side) => Expanded(
+                        child: _SideButton(
+                          label: _sidePerformanceLabel(side),
+                          selected:
+                              widget.initialSet.completedForSide(side),
+                          onTap: () =>
+                              _toggleSide(side == WorkoutSide.left),
+                        ),
+                      );
+
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 4, right: 4),
+                    child: Row(
+                      children: [
+                        buttonFor(firstSide),
+                        const SizedBox(width: 7),
+                        buttonFor(secondSide),
+                      ],
                     ),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: _SideButton(
-                        label: _sidePerformanceLabel(WorkoutSide.right),
-                        selected: widget.initialSet.rightCompleted,
-                        onTap: () => _toggleSide(false),
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 5),
               Text(
                 widget.initialSet.sideRestSeconds == 0
-                    ? 'Sin descanso automático entre lados'
+                    ? 'Cambio directo al otro lado'
                     : 'Descanso entre lados: ${widget.initialSet.sideRestSeconds}s',
                 style: AppTypography.labelSmall.copyWith(
                   color: AppColors.textSecondary,
                 ),
               ),
+              if (!widget.initialSet.leftCompleted &&
+                  !widget.initialSet.rightCompleted &&
+                  widget.preferredStartSide !=
+                      PreferredWorkoutSide.automatic)
+                Text(
+                  'Empieza por ${widget.preferredStartSide.label.toLowerCase()}',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
             ],
           ],
         ),
