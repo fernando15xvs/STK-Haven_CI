@@ -45,6 +45,12 @@ class _PendingService implements CoachProgramRevisionAcceptanceService {
       throw UnimplementedError();
 
   @override
+  Future<AcceptedProgramRevisionSnapshot> loadAcceptedRevision({
+    required String assignmentId,
+    required String revisionId,
+  }) => throw UnimplementedError();
+
+  @override
   Future<CoachProgramRevisionAcceptanceResult> accept({
     required String assignmentId,
     required String revisionId,
@@ -68,6 +74,12 @@ class _AcceptanceService implements CoachProgramRevisionAcceptanceService {
     ClientProgramRevisionPageQuery query,
   ) =>
       throw UnimplementedError();
+
+  @override
+  Future<AcceptedProgramRevisionSnapshot> loadAcceptedRevision({
+    required String assignmentId,
+    required String revisionId,
+  }) => throw UnimplementedError();
 
   @override
   Future<CoachProgramRevisionAcceptanceResult> accept({
@@ -244,6 +256,7 @@ void main() {
             'source_kind': 'coach_revision',
             'observed_assignment_version': 1,
             'name': 'Plan fuerza',
+            'notes': 'Program notes',
             'duration_weeks': 10,
             'training_weekdays': [1, 3, 5],
             'starts_on': '2026-10-12',
@@ -254,10 +267,20 @@ void main() {
             'can_accept': true,
             'routine': routineId == null
                 ? null
-                : {'id': 'routine', 'name': 'Upper A', 'position': 0},
+                : {
+                    'id': 'routine',
+                    'name': 'Upper A',
+                    'position': 0,
+                    'notes': 'Routine notes',
+                  },
             'items': [
               if (routineId == null)
-                {'id': 'routine', 'name': 'Upper A', 'position': 0}
+                {
+                  'id': 'routine',
+                  'name': 'Upper A',
+                  'position': 0,
+                  'notes': 'Routine notes',
+                }
               else
                 {
                   'id': 'exercise',
@@ -339,6 +362,112 @@ void main() {
       service.loadState('program'),
       throwsFormatException,
     );
+  });
+
+  test('accepted revision loader assembles all paginated routines', () async {
+    final rootOffsets = <int>[];
+    final client = SupabaseClient(
+      'https://example.test',
+      'test-key',
+      httpClient: MockClient((request) async {
+        final params = jsonDecode(request.body) as Map<String, dynamic>;
+        final routineId = params['p_revision_routine_id'] as String?;
+        final offset = params['p_offset'] as int;
+
+        if (routineId == null) {
+          rootOffsets.add(offset);
+        }
+
+        final items = routineId == null
+            ? [
+                for (
+                  var index = offset;
+                  index < 26 && index < offset + 25;
+                  index++
+                )
+                  {
+                    'id': 'routine-$index',
+                    'name': 'Routine $index',
+                    'position': index,
+                    'notes': 'Routine note $index',
+                  },
+              ]
+            : [
+                {
+                  'id': 'exercise-$routineId',
+                  'name': 'Exercise $routineId',
+                  'position': 0,
+                  'muscle_group': 'Back',
+                  'equipment': 'Cable',
+                  'target_sets': 3,
+                  'target_reps_min': 8,
+                  'target_reps_max': 12,
+                  'rest_seconds': 120,
+                  'warmup_sets': 1,
+                  'approach_sets': 1,
+                  'warmup_rest_seconds': 45,
+                  'approach_rest_seconds': 60,
+                  'unilateral': false,
+                  'unilateral_target': 'other',
+                  'preparation_unilateral': false,
+                  'unilateral_side_rest_seconds': null,
+                  'preferred_unilateral_start_side': null,
+                  'superset_key': null,
+                },
+              ];
+
+        return http.Response(
+          jsonEncode({
+            'assignment_id': 'program',
+            'relationship_id': 'rel',
+            'revision_id': 'rev-accepted',
+            'revision_number': 4,
+            'previous_revision_id': 'rev-3',
+            'source_kind': 'coach_revision',
+            'observed_assignment_version': 1,
+            'name': 'Accepted program',
+            'notes': 'Program install notes',
+            'duration_weeks': 12,
+            'training_weekdays': [1, 3, 5],
+            'starts_on': '2026-10-20',
+            'recorded_at': '2026-10-06T20:00:00Z',
+            'authored_at': '2026-10-06T19:00:00Z',
+            'accepted_at': '2026-10-06T21:00:00Z',
+            'is_accepted': true,
+            'can_accept': false,
+            'routine': routineId == null
+                ? null
+                : {
+                    'id': routineId,
+                    'name': 'Routine ${routineId.split('-').last}',
+                    'position': int.parse(routineId.split('-').last),
+                    'notes':
+                        'Routine note ${routineId.split('-').last}',
+                  },
+            'items': items,
+            'total_count': routineId == null ? 26 : 1,
+          }),
+          200,
+          request: request,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+    addTearDown(client.dispose);
+    final service = CoachProgramRevisionAcceptanceService(client);
+
+    final snapshot = await service.loadAcceptedRevision(
+      assignmentId: 'program',
+      revisionId: 'rev-accepted',
+    );
+
+    expect(rootOffsets, [0, 25]);
+    expect(snapshot.revisionNumber, 4);
+    expect(snapshot.notes, 'Program install notes');
+    expect(snapshot.routines, hasLength(26));
+    expect(snapshot.routines.first.notes, 'Routine note 0');
+    expect(snapshot.routines.last.notes, 'Routine note 25');
+    expect(snapshot.routines.last.exercises, hasLength(1));
   });
 
   test('sign-out discards pending client revision state', () async {

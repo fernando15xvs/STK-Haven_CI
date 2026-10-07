@@ -1,6 +1,6 @@
 begin;
 
-select plan(37);
+select plan(39);
 
 select has_table(
   'public',
@@ -279,7 +279,7 @@ set revision_three_id = (
       'routines',jsonb_build_array(
         jsonb_build_object(
           'name','Upper R3',
-          'notes','',
+          'notes','Install routine note',
           'exercises',jsonb_build_array(
             jsonb_build_object(
               'name','Row R3',
@@ -486,6 +486,27 @@ select is(
   )::boolean,
   false,
   'accepted revision page cannot be accepted again from UI state'
+);
+
+
+select is(
+  public.stk_get_my_program_revision_page(
+    (select assignment_id from _revision_acceptance_test),
+    (select revision_three_id from _revision_acceptance_test),
+    null,25,0
+  )->>'notes',
+  'Current proposal',
+  'accepted revision page exposes immutable program notes for installation'
+);
+
+select is(
+  public.stk_get_my_program_revision_page(
+    (select assignment_id from _revision_acceptance_test),
+    (select revision_three_id from _revision_acceptance_test),
+    null,25,0
+  )->'items'->0->>'notes',
+  'Install routine note',
+  'accepted revision page exposes immutable routine notes for installation'
 );
 
 select is(

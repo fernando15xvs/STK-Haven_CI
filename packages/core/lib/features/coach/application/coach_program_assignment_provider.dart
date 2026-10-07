@@ -2,6 +2,7 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/coach/application/coach_program_installer.dart';
+import 'package:core/features/coach/application/coach_program_revision_acceptance_provider.dart';
 import 'package:core/features/coach/application/coach_program_payload_builder.dart';
 import 'package:core/features/coach/data/coach_program_assignment_service.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
@@ -18,6 +19,7 @@ enum CoachProgramAssignmentOperation {
   assigning,
   opening,
   accepting,
+  installingRevision,
   archiving,
 }
 
@@ -242,6 +244,68 @@ class CoachProgramAssignmentsNotifier
     } catch (error) {
       _fail(
         'La asignación fue recibida, pero no se pudo instalar localmente: '
+        '${error.toString()}',
+      );
+      return false;
+    }
+  }
+
+  Future<bool> installAcceptedRevision(
+    String assignmentId, {
+    bool activate = true,
+  }) async {
+    if (!_requirePermanentAccount() || state.busy) return false;
+
+    state = state.copyWith(
+      operation: CoachProgramAssignmentOperation.installingRevision,
+      clearMessage: true,
+      isError: false,
+    );
+
+    try {
+      final revisionService =
+          ref.read(coachProgramRevisionAcceptanceServiceProvider);
+      final revisionState = await revisionService.loadState(assignmentId);
+      final revisionId = revisionState.acceptedRevisionId;
+      final revisionNumber = revisionState.acceptedRevisionNumber;
+      if (revisionId == null || revisionNumber == null) {
+        _fail('No hay una revisión aceptada para instalar.');
+        return false;
+      }
+
+      final revision = await revisionService.loadAcceptedRevision(
+        assignmentId: assignmentId,
+        revisionId: revisionId,
+      );
+      if (revision.revisionNumber != revisionNumber) {
+        _fail('La revisión aceptada cambió; vuelve a intentarlo.');
+        return false;
+      }
+
+      await ref.read(coachProgramInstallerProvider).installAcceptedRevision(
+            revision,
+            activate: activate,
+          );
+
+      ref.invalidate(exerciseListProvider);
+      ref.invalidate(routineListProvider);
+      ref.invalidate(trainingProgramListProvider);
+      ref.invalidate(coachProgramRevisionStateProvider(assignmentId));
+
+      state = state.copyWith(
+        operation: CoachProgramAssignmentOperation.idle,
+        message: activate
+            ? 'Revisión $revisionNumber instalada como programa activo.'
+            : 'Revisión $revisionNumber instalada.',
+        isError: false,
+      );
+      return true;
+    } on PostgrestException catch (error) {
+      _fail(_databaseMessage(error));
+      return false;
+    } catch (error) {
+      _fail(
+        'La revisión sigue aceptada, pero no se pudo instalar localmente: '
         '${error.toString()}',
       );
       return false;

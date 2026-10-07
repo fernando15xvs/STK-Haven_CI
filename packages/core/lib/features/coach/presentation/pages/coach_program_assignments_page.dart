@@ -386,6 +386,13 @@ class _ClientRevisionStateCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(coachProgramRevisionStateProvider(assignmentId));
+    final installing = ref.watch(
+      coachProgramAssignmentsProvider.select(
+        (value) =>
+            value.operation ==
+            CoachProgramAssignmentOperation.installingRevision,
+      ),
+    );
     return state.when(
       loading: () => const Card(
         child: Padding(
@@ -446,17 +453,34 @@ class _ClientRevisionStateCard extends ConsumerWidget {
           );
         }
 
-        if (value.acceptedRevisionNumber != null) {
+        final acceptedRevisionNumber = value.acceptedRevisionNumber;
+        if (acceptedRevisionNumber != null) {
           return Card(
             child: ListTile(
-              leading: const Icon(Icons.verified_outlined),
+              leading: installing
+                  ? const SizedBox.square(
+                      dimension: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.verified_outlined),
               title: Text(
-                'Revisión ${value.acceptedRevisionNumber} aceptada',
+                'Revisión $acceptedRevisionNumber aceptada',
               ),
               subtitle: Text(
                 value.revisionAccessActive
-                    ? 'No hay una revisión nueva pendiente.'
-                    : 'La revisión aceptada sigue disponible para recuperación.',
+                    ? 'Puedes instalarla o reinstalarla de forma segura en este dispositivo.'
+                    : 'Sigue disponible para recuperación e instalación aunque el acceso del coach haya cambiado.',
+              ),
+              trailing: IconButton(
+                tooltip: 'Instalar revisión',
+                onPressed: installing
+                    ? null
+                    : () => _installAcceptedRevision(
+                          context,
+                          ref,
+                          acceptedRevisionNumber,
+                        ),
+                icon: const Icon(Icons.download_outlined),
               ),
             ),
           );
@@ -464,6 +488,58 @@ class _ClientRevisionStateCard extends ConsumerWidget {
 
         return const SizedBox.shrink();
       },
+    );
+  }
+
+  Future<void> _installAcceptedRevision(
+    BuildContext context,
+    WidgetRef ref,
+    int revisionNumber,
+  ) async {
+    final activate = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Instalar revisión $revisionNumber'),
+        content: const Text(
+          'Se instalará exactamente la revisión que ya aceptaste. '
+          'Si esta misma revisión ya está instalada, se reutilizará la copia '
+          'local existente en lugar de crear un duplicado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Instalar sin activar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Instalar y activar'),
+          ),
+        ],
+      ),
+    );
+    if (activate == null || !context.mounted) return;
+
+    final success = await ref
+        .read(coachProgramAssignmentsProvider.notifier)
+        .installAcceptedRevision(
+          assignmentId,
+          activate: activate,
+        );
+    if (!context.mounted) return;
+    final result = ref.read(coachProgramAssignmentsProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.message ??
+              (success
+                  ? 'Revisión instalada.'
+                  : 'No se pudo instalar la revisión.'),
+        ),
+      ),
     );
   }
 }

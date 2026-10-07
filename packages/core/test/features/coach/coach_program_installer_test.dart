@@ -6,6 +6,7 @@ import 'package:core/database/hive/models/hive_routine.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/coach/application/coach_program_installer.dart';
+import 'package:core/features/coach/domain/coach_program_revision_acceptance.dart';
 import 'package:core/features/exercises/data/exercise_repository.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
 import 'package:core/features/routines/data/routine_repository.dart';
@@ -122,4 +123,133 @@ void main() {
       PreferredWorkoutSide.right,
     );
   });
+
+
+  test(
+    'accepted revision install is idempotent and revision-aware',
+    () async {
+      final installer = CoachProgramInstaller(
+        exerciseRepository: exerciseRepository,
+        routineRepository: routineRepository,
+        programRepository: programRepository,
+        metadataBox: metadataBox,
+      );
+
+      final revision2 = _acceptedRevision(
+        revisionId: 'revision-2',
+        revisionNumber: 2,
+        name: 'Coach plan R2',
+        restSeconds: 150,
+      );
+
+      final first = await installer.installAcceptedRevision(
+        revision2,
+        activate: false,
+      );
+      expect(programRepository.getAll(), hasLength(1));
+      expect(first.isActive, isFalse);
+
+      final repeated = await installer.installAcceptedRevision(
+        revision2,
+        activate: true,
+      );
+      expect(repeated.id, first.id);
+      expect(repeated.isActive, isTrue);
+      expect(programRepository.getAll(), hasLength(1));
+      expect(
+        installer
+            .getInstalledRevision('assignment-1', 'revision-2')
+            ?.id,
+        first.id,
+      );
+
+      final revision3 = _acceptedRevision(
+        revisionId: 'revision-3',
+        revisionNumber: 3,
+        name: 'Coach plan R3',
+        restSeconds: 180,
+      );
+      final newer = await installer.installAcceptedRevision(
+        revision3,
+        activate: false,
+      );
+
+      expect(newer.id, isNot(first.id));
+      expect(programRepository.getAll(), hasLength(2));
+      expect(routineRepository.getAllRoutines(), hasLength(2));
+      expect(
+        installer
+            .getInstalledRevision('assignment-1', 'revision-2')
+            ?.id,
+        first.id,
+      );
+      expect(
+        installer
+            .getInstalledRevision('assignment-1', 'revision-3')
+            ?.id,
+        newer.id,
+      );
+
+      final metadata = Map<String, dynamic>.from(
+        metadataBox.get(
+              CoachProgramInstaller.revisionImportsMetadataKey,
+            ) as Map,
+      );
+      final assignmentImports =
+          Map<String, dynamic>.from(metadata['assignment-1'] as Map);
+      expect(assignmentImports['revision-2'], first.id);
+      expect(assignmentImports['revision-3'], newer.id);
+    },
+  );
+}
+
+AcceptedProgramRevisionSnapshot _acceptedRevision({
+  required String revisionId,
+  required int revisionNumber,
+  required String name,
+  required int restSeconds,
+}) {
+  return AcceptedProgramRevisionSnapshot(
+    assignmentId: 'assignment-1',
+    relationshipId: 'relationship-1',
+    revisionId: revisionId,
+    revisionNumber: revisionNumber,
+    sourceKind: 'coach_revision',
+    name: name,
+    notes: 'Revision notes',
+    durationWeeks: 8,
+    trainingWeekdays: const {1, 3, 5},
+    startsOn: DateTime(2026, 10, 12),
+    acceptedAt: DateTime(2026, 10, 6),
+    routines: [
+      AssignedRoutineSnapshot(
+        id: 'remote-routine-$revisionId',
+        position: 0,
+        name: 'Upper',
+        notes: 'Routine notes',
+        exercises: [
+          AssignedExerciseSnapshot(
+            id: 'remote-exercise-$revisionId',
+            position: 0,
+            name: 'Remo unilateral',
+            muscleGroup: 'Espalda',
+            equipment: 'Mancuerna',
+            targetSets: 3,
+            targetRepsMin: 8,
+            targetRepsMax: 12,
+            restSeconds: restSeconds,
+            warmupSets: 1,
+            approachSets: 2,
+            warmupRestSeconds: 45,
+            approachRestSeconds: 75,
+            unilateral: true,
+            unilateralTarget: 'back',
+            preparationUnilateral: false,
+            unilateralSideRestSeconds: 0,
+            preferredUnilateralStartSide: PreferredWorkoutSide.right,
+          ),
+        ],
+      ),
+    ],
+  );
 }

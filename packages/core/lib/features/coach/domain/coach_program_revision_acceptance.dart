@@ -42,11 +42,13 @@ class ClientProgramRevisionRoutineSummary {
   final String id;
   final String name;
   final int position;
+  final String notes;
 
   const ClientProgramRevisionRoutineSummary({
     required this.id,
     required this.name,
     required this.position,
+    this.notes = '',
   });
 }
 
@@ -59,6 +61,7 @@ class ClientProgramRevisionPage {
   final String sourceKind;
   final int observedAssignmentVersion;
   final String name;
+  final String notes;
   final int durationWeeks;
   final Set<int> trainingWeekdays;
   final DateTime startsOn;
@@ -81,6 +84,7 @@ class ClientProgramRevisionPage {
     required this.sourceKind,
     required this.observedAssignmentVersion,
     required this.name,
+    this.notes = '',
     required this.durationWeeks,
     required this.trainingWeekdays,
     required this.startsOn,
@@ -113,5 +117,36 @@ class CoachProgramRevisionAcceptanceResult {
     required this.acceptedAt,
     required this.alreadyAccepted,
     required this.currentAssignmentVersion,
+  });
+}
+
+
+class AcceptedProgramRevisionSnapshot {
+  final String assignmentId;
+  final String relationshipId;
+  final String revisionId;
+  final int revisionNumber;
+  final String sourceKind;
+  final String name;
+  final String notes;
+  final int durationWeeks;
+  final Set<int> trainingWeekdays;
+  final DateTime startsOn;
+  final DateTime acceptedAt;
+  final List<AssignedRoutineSnapshot> routines;
+
+  const AcceptedProgramRevisionSnapshot({
+    required this.assignmentId,
+    required this.relationshipId,
+    required this.revisionId,
+    required this.revisionNumber,
+    required this.sourceKind,
+    required this.name,
+    required this.notes,
+    required this.durationWeeks,
+    required this.trainingWeekdays,
+    required this.startsOn,
+    required this.acceptedAt,
+    required this.routines,
   });
 }

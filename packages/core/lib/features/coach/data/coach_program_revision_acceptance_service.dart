@@ -121,6 +121,7 @@ class CoachProgramRevisionAcceptanceService {
             .contains(json['source_kind']) ||
         json['name'] is! String ||
         (json['name'] as String).trim().isEmpty ||
+        json['notes'] is! String ||
         !_positiveInt(json['duration_weeks'], max: 104) ||
         json['training_weekdays'] is! List ||
         DateTime.tryParse('${json['starts_on']}') == null ||
@@ -135,6 +136,7 @@ class CoachProgramRevisionAcceptanceService {
                 routine['id'] != query.routineId ||
                 routine['name'] is! String ||
                 (routine['name'] as String).trim().isEmpty ||
+                routine['notes'] is! String ||
                 routine['position'] is! int ||
                 (routine['position'] as int) < 0)) {
       throw const FormatException('Invalid client revision scope');
@@ -176,6 +178,7 @@ class CoachProgramRevisionAcceptanceService {
           row['name'] is! String ||
           (row['name'] as String).trim().isEmpty ||
           row['position'] is! int ||
+          (query.routineId == null && row['notes'] is! String) ||
           (row['position'] as int) < 0) {
         throw const FormatException('Invalid client revision item');
       }
@@ -185,6 +188,7 @@ class CoachProgramRevisionAcceptanceService {
             id: row['id'] as String,
             name: (row['name'] as String).trim(),
             position: row['position'] as int,
+            notes: row['notes'] as String,
           ),
         );
       } else {
@@ -224,6 +228,7 @@ class CoachProgramRevisionAcceptanceService {
       sourceKind: sourceKind,
       observedAssignmentVersion: json['observed_assignment_version'] as int,
       name: (json['name'] as String).trim(),
+      notes: json['notes'] as String,
       durationWeeks: json['duration_weeks'] as int,
       trainingWeekdays: Set.unmodifiable(weekdays),
       startsOn: DateTime.parse('${json['starts_on']}'),
@@ -238,6 +243,110 @@ class CoachProgramRevisionAcceptanceService {
       routines: List.unmodifiable(routines),
       exercises: List.unmodifiable(exercises),
     );
+  }
+
+  Future<AcceptedProgramRevisionSnapshot> loadAcceptedRevision({
+    required String assignmentId,
+    required String revisionId,
+  }) async {
+    final routineSummaries = <ClientProgramRevisionRoutineSummary>[];
+    ClientProgramRevisionPage? root;
+    var offset = 0;
+
+    while (true) {
+      final page = await loadPage((
+        assignmentId: assignmentId,
+        revisionId: revisionId,
+        routineId: null,
+        offset: offset,
+      ));
+      _assertAcceptedRevisionPage(page, root);
+      root ??= page;
+      routineSummaries.addAll(page.routines);
+      if (routineSummaries.length >= page.totalCount) break;
+      if (page.routines.isEmpty) {
+        throw const FormatException('Incomplete accepted revision routines');
+      }
+      offset += page.routines.length;
+    }
+
+    final routines = <AssignedRoutineSnapshot>[];
+    for (final summary in routineSummaries) {
+      final exercises = <AssignedExerciseSnapshot>[];
+      var exerciseOffset = 0;
+      while (true) {
+        final page = await loadPage((
+          assignmentId: assignmentId,
+          revisionId: revisionId,
+          routineId: summary.id,
+          offset: exerciseOffset,
+        ));
+        _assertAcceptedRevisionPage(page, root);
+        if (page.routineName != summary.name) {
+          throw const FormatException('Invalid accepted revision routine');
+        }
+        exercises.addAll(page.exercises);
+        if (exercises.length >= page.totalCount) break;
+        if (page.exercises.isEmpty) {
+          throw const FormatException('Incomplete accepted revision exercises');
+        }
+        exerciseOffset += page.exercises.length;
+      }
+      routines.add(
+        AssignedRoutineSnapshot(
+          id: summary.id,
+          position: summary.position,
+          name: summary.name,
+          notes: summary.notes,
+          exercises: List.unmodifiable(exercises),
+        ),
+      );
+    }
+
+    final accepted = root;
+    if (accepted == null ||
+        accepted.acceptedAt == null ||
+        routines.isEmpty ||
+        routines.length != accepted.totalCount) {
+      throw const FormatException('Invalid accepted revision snapshot');
+    }
+
+    return AcceptedProgramRevisionSnapshot(
+      assignmentId: accepted.assignmentId,
+      relationshipId: accepted.relationshipId,
+      revisionId: accepted.revisionId,
+      revisionNumber: accepted.revisionNumber,
+      sourceKind: accepted.sourceKind,
+      name: accepted.name,
+      notes: accepted.notes,
+      durationWeeks: accepted.durationWeeks,
+      trainingWeekdays: accepted.trainingWeekdays,
+      startsOn: accepted.startsOn,
+      acceptedAt: accepted.acceptedAt!,
+      routines: List.unmodifiable(routines),
+    );
+  }
+
+  static void _assertAcceptedRevisionPage(
+    ClientProgramRevisionPage page,
+    ClientProgramRevisionPage? root,
+  ) {
+    if (!page.isAccepted ||
+        page.acceptedAt == null ||
+        page.canAccept ||
+        (root != null &&
+            (page.assignmentId != root.assignmentId ||
+                page.relationshipId != root.relationshipId ||
+                page.revisionId != root.revisionId ||
+                page.revisionNumber != root.revisionNumber ||
+                page.sourceKind != root.sourceKind ||
+                page.name != root.name ||
+                page.notes != root.notes ||
+                page.durationWeeks != root.durationWeeks ||
+                page.startsOn != root.startsOn ||
+                page.acceptedAt != root.acceptedAt))) {
+      throw const FormatException('Revision is not the accepted snapshot');
+    }
   }
 
   Future<CoachProgramRevisionAcceptanceResult> accept({
