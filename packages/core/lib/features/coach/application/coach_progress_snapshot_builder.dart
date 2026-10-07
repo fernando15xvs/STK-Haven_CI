@@ -12,6 +12,7 @@ class CoachProgressSnapshotBuilder {
   }) {
     final referenceNow = now ?? DateTime.now();
     final sevenDaysAgo = referenceNow.subtract(const Duration(days: 7));
+    final fourteenDaysAgo = referenceNow.subtract(const Duration(days: 14));
     final thirtyDaysAgo = referenceNow.subtract(const Duration(days: 30));
 
     final sessions = history.toList(growable: false)
@@ -25,28 +26,48 @@ class CoachProgressSnapshotBuilder {
     var rirTotal7d = 0.0;
     var rirCount7d = 0;
 
+    var workoutsPrevious7d = 0;
+    var trainingSecondsPrevious7d = 0;
+    var workingSetsPrevious7d = 0;
+    var volumePrevious7d = 0.0;
+
     for (final session in sessions) {
       if (!session.startedAt.isBefore(thirtyDaysAgo)) {
         workouts30d++;
       }
-      if (session.startedAt.isBefore(sevenDaysAgo)) continue;
 
-      workouts7d++;
-      trainingSeconds7d += session.durationSeconds < 0
-          ? 0
-          : session.durationSeconds;
+      final inCurrent7d = !session.startedAt.isBefore(sevenDaysAgo);
+      final inPrevious7d = session.startedAt.isBefore(sevenDaysAgo) &&
+          !session.startedAt.isBefore(fourteenDaysAgo);
+
+      if (!inCurrent7d && !inPrevious7d) continue;
+
+      final safeDuration =
+          session.durationSeconds < 0 ? 0 : session.durationSeconds;
+      if (inCurrent7d) {
+        workouts7d++;
+        trainingSeconds7d += safeDuration;
+      } else {
+        workoutsPrevious7d++;
+        trainingSecondsPrevious7d += safeDuration;
+      }
 
       for (final exercise in session.exercises) {
         for (final set in exercise.sets) {
           if (!set.completed || set.setType != WorkoutSetType.working) {
             continue;
           }
-          workingSets7d++;
-          volume7d += set.performedVolume;
-          final rir = set.performanceRir;
-          if (rir != null && rir >= 0 && rir <= 10) {
-            rirTotal7d += rir;
-            rirCount7d++;
+          if (inCurrent7d) {
+            workingSets7d++;
+            volume7d += set.performedVolume;
+            final rir = set.performanceRir;
+            if (rir != null && rir >= 0 && rir <= 10) {
+              rirTotal7d += rir;
+              rirCount7d++;
+            }
+          } else {
+            workingSetsPrevious7d++;
+            volumePrevious7d += set.performedVolume;
           }
         }
       }
@@ -93,6 +114,11 @@ class CoachProgressSnapshotBuilder {
       averageRir7d: rirCount7d == 0 ? null : rirTotal7d / rirCount7d,
       lastWorkoutAt: sessions.isEmpty ? null : sessions.first.startedAt,
       generatedAt: referenceNow,
+      trendBaselineAvailable: true,
+      workoutsPrevious7d: workoutsPrevious7d,
+      trainingMinutesPrevious7d: trainingSecondsPrevious7d ~/ 60,
+      completedWorkingSetsPrevious7d: workingSetsPrevious7d,
+      volumePrevious7d: volumePrevious7d,
       recentWorkouts: List.unmodifiable(recent),
     );
   }

@@ -35,8 +35,31 @@ CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compart
     }), nutrition: CoachProSectionPage(totalCount: 26, items: [NutritionGuidanceSummary(
       id: 'plan', relationshipId: 'rel', coachUserId: 'coach', clientUserId: 'client',
       status: NutritionGuidanceStatus.active, currentVersion: 2, title: 'Plan compartido', updatedAt: DateTime(2026))]),
-    progress: missingProgress ? null : CoachClientProgress(workouts7d: 0, workouts30d: 0,
-      trainingMinutes7d: 0, completedWorkingSets7d: 0, volume7d: 0, generatedAt: DateTime(2026, 9, 1)),
+    progress: missingProgress ? null : CoachClientProgress(
+      workouts7d: 0,
+      workouts30d: 0,
+      trainingMinutes7d: 0,
+      completedWorkingSets7d: 0,
+      volume7d: 0,
+      generatedAt: DateTime(2026, 9, 1),
+      trendBaselineAvailable: true,
+      workoutsPrevious7d: 2,
+      trainingMinutesPrevious7d: 90,
+      completedWorkingSetsPrevious7d: 18,
+      volumePrevious7d: 4200,
+      frequencyAdherence: CoachFrequencyAdherence(
+        assignmentId: 'assignment',
+        assignmentName: 'Programa fuerza',
+        startsOn: DateTime(2026, 8, 1),
+        endsOn: DateTime(2026, 10, 31),
+        scheduledSessions7d: 3,
+        completedSessions7d: 0,
+        percent7d: 0,
+        scheduledSessions30d: 13,
+        completedSessions30d: 0,
+        percent30d: 0,
+      ),
+    ),
     workouts: CoachProSectionPage(totalCount: 27, items: [
       CoachSharedWorkoutSummary(workoutId: 'w', startedAt: DateTime(2026, 10, 1),
         routineName: 'Rutina compartida', durationSeconds: 1200, plannedWorkingSets: 10,
@@ -117,10 +140,50 @@ void main() {
       expect(find.text('RIR medio en 7 días: Sin datos'), findsOneWidget);
       expect(find.textContaining('Instantánea generada:'), findsOneWidget);
       expect(find.textContaining('corresponden a esa instantánea'), findsOneWidget);
+      expect(find.text('Tendencia reciente'), findsOneWidget);
+      expect(find.text('Entrenos: -2 vs. los 7 días anteriores'), findsOneWidget);
+      expect(find.text('Adherencia de frecuencia'), findsOneWidget);
+      expect(find.textContaining('Programa fuerza · 7 días: 0% (0/3)'), findsOneWidget);
+      expect(find.textContaining('no confirma que se haya realizado la rutina exacta'), findsOneWidget);
       expect(find.text('Siguiente'), findsNothing); expect(find.text('Rutina compartida'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
+  testWidgets('progress explains when trend or adherence baseline is unavailable', (tester) async {
+    await _mount(
+      tester,
+      load: (_) async => CoachProClientDetail(
+        CoachProClientSummary.fromJson({
+          'relationship_id': 'rel',
+          'client_user_id': 'client',
+          'display_name': 'Ana',
+          'relationship_status': 'active',
+          'permissions': {'view_progress': true},
+        }),
+        progress: CoachClientProgress(
+          workouts7d: 2,
+          workouts30d: 8,
+          trainingMinutes7d: 100,
+          completedWorkingSets7d: 20,
+          volume7d: 5000,
+          generatedAt: DateTime(2026, 10, 7),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Progreso'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Aún no hay una ventana anterior comparable'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Requiere un programa aceptado'),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('progress distinguishes denied permission from missing snapshot and redacts on refresh', (tester) async {
     bool permitted = false, missing = false, refresh = false;
     final pending = Completer<CoachProClientDetail?>();

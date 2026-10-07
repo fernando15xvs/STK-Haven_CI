@@ -137,8 +137,73 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                   Text('Volumen registrado en 7 días: ${detail.progress!.volume7d}'),
                   Text('RIR medio en 7 días: ${detail.progress!.averageRir7d?.toString() ?? 'Sin datos'}'),
                   Text('Último entreno registrado: ${_date(context, detail.progress!.lastWorkoutAt)}'),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Tendencia reciente',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  if (!detail.progress!.trendBaselineAvailable)
+                    const Text(
+                      'Aún no hay una ventana anterior comparable. '
+                      'Se mostrará cuando el cliente vuelva a sincronizar '
+                      'con el nuevo contrato de progreso.',
+                    )
+                  else ...[
+                    Text(
+                      'Entrenos: ${_trend(detail.progress!.workoutsTrendDelta7d)} '
+                      'vs. los 7 días anteriores',
+                    ),
+                    Text(
+                      'Minutos: ${_trend(detail.progress!.trainingMinutesTrendDelta7d)} '
+                      'vs. los 7 días anteriores',
+                    ),
+                    Text(
+                      'Series efectivas: ${_trend(detail.progress!.workingSetsTrendDelta7d)} '
+                      'vs. los 7 días anteriores',
+                    ),
+                    Text(
+                      'Volumen: ${_trendNumber(detail.progress!.volumeTrendDelta7d)} '
+                      'vs. los 7 días anteriores',
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  Text(
+                    'Adherencia de frecuencia',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  if (detail.progress!.frequencyAdherence == null)
+                    const Text(
+                      'Sin cálculo disponible. Requiere un programa aceptado '
+                      'de este coach y permiso vigente para programas.',
+                    )
+                  else ...[
+                    Text(
+                      '${detail.progress!.frequencyAdherence!.assignmentName} · '
+                      '7 días: ${_adherence(detail.progress!.frequencyAdherence!.percent7d)} '
+                      '(${detail.progress!.frequencyAdherence!.completedSessions7d}/'
+                      '${detail.progress!.frequencyAdherence!.scheduledSessions7d})',
+                    ),
+                    Text(
+                      '30 días: ${_adherence(detail.progress!.frequencyAdherence!.percent30d)} '
+                      '(${detail.progress!.frequencyAdherence!.completedSessions30d}/'
+                      '${detail.progress!.frequencyAdherence!.scheduledSessions30d})',
+                    ),
+                    const Text(
+                      'Compara frecuencia planificada vs. entrenamientos '
+                      'registrados; no confirma que se haya realizado la '
+                      'rutina exacta prescrita.',
+                    ),
+                  ],
                   const SizedBox(height: 12),
-                  const Text('Estos agregados no indican por sí solos adherencia, récords ni una tendencia de mejora.'),
+                  const Text(
+                    'Las tendencias comparan dos ventanas de 7 días. '
+                    'No representan por sí solas mejora de fuerza, hipertrofia '
+                    'ni un récord personal.',
+                  ),
                 ],
               ] else if (_section == CoachProClientSection.workouts) ...[
                 if (!detail.canViewWorkouts)
@@ -294,3 +359,19 @@ String _programStatus(AssignedProgramStatus status) => switch (status) {
   AssignedProgramStatus.accepted => 'Aceptado',
   AssignedProgramStatus.archived => 'Archivado',
 };
+
+
+String _trend(int value) {
+  if (value > 0) return '+$value';
+  return value.toString();
+}
+
+String _trendNumber(double value) {
+  final normalized = value.abs() < 0.005 ? 0.0 : value;
+  final formatted = normalized.toStringAsFixed(
+    normalized == normalized.truncateToDouble() ? 0 : 1,
+  );
+  return normalized > 0 ? '+$formatted' : formatted;
+}
+
+String _adherence(int? value) => value == null ? 'Sin meta' : '$value%';

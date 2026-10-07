@@ -20,41 +20,99 @@ class CoachProClientDetailService {
       String relationshipId, String clientUserId, {int offset = 0}) =>
     CoachProNutritionService(client).list(relationshipId, clientUserId, offset: offset);
 
-  Future<CoachClientProgress?> getProgress(String relationshipId, String clientUserId) async {
-    final raw = await client.rpc('stk_get_coach_pro_client_progress', params: {
-      'p_relationship_id': relationshipId,
-    });
-    if (raw is! Map || raw['relationship_id'] != relationshipId ||
-        raw['client_user_id'] != clientUserId || !raw.containsKey('snapshot')) {
+  Future<CoachClientProgress?> getProgress(
+    String relationshipId,
+    String clientUserId,
+  ) async {
+    final raw = await client.rpc(
+      'stk_get_coach_pro_client_progress',
+      params: {
+        'p_relationship_id': relationshipId,
+      },
+    );
+    if (raw is! Map ||
+        raw['relationship_id'] != relationshipId ||
+        raw['client_user_id'] != clientUserId ||
+        !raw.containsKey('snapshot') ||
+        !raw.containsKey('adherence')) {
       throw const FormatException('Invalid progress scope');
     }
-    if (raw['snapshot'] == null) return null;
-    if (raw['snapshot'] is! Map) throw const FormatException('Invalid progress snapshot');
+    if (raw['snapshot'] == null) {
+      if (raw['adherence'] != null) {
+        throw const FormatException('Invalid progress adherence');
+      }
+      return null;
+    }
+    if (raw['snapshot'] is! Map) {
+      throw const FormatException('Invalid progress snapshot');
+    }
+
     final row = Map<String, dynamic>.from(raw['snapshot'] as Map);
-    bool integer(String key, int max) => row[key] is int &&
-        (row[key] as int) >= 0 && (row[key] as int) <= max;
-    bool numeric(String key, num max) => row[key] is num &&
-        (row[key] as num).isFinite && (row[key] as num) >= 0 && (row[key] as num) <= max;
+    bool integer(String key, int max) =>
+        row[key] is int &&
+        (row[key] as int) >= 0 &&
+        (row[key] as int) <= max;
+    bool numeric(String key, num max) =>
+        row[key] is num &&
+        (row[key] as num).isFinite &&
+        (row[key] as num) >= 0 &&
+        (row[key] as num) <= max;
+
     final generatedAt = DateTime.tryParse('${row['generated_at']}');
-    final lastWorkoutAt = row['last_workout_at'] == null ? null
+    final lastWorkoutAt = row['last_workout_at'] == null
+        ? null
         : DateTime.tryParse('${row['last_workout_at']}');
-    if (!integer('workouts_7d', 1000) || !integer('workouts_30d', 4000) ||
-        !integer('training_minutes_7d', 10080) || !integer('completed_working_sets_7d', 100000) ||
-        !numeric('volume_7d', 1000000000000) || generatedAt == null ||
+    final trendBaselineAvailable = row['trend_baseline_available'];
+    if (!integer('workouts_7d', 1000) ||
+        !integer('workouts_30d', 4000) ||
+        !integer('training_minutes_7d', 10080) ||
+        !integer('completed_working_sets_7d', 100000) ||
+        !numeric('volume_7d', 1000000000000) ||
+        generatedAt == null ||
         (row['last_workout_at'] != null && lastWorkoutAt == null) ||
-        (row['average_rir_7d'] != null && !numeric('average_rir_7d', 10))) {
+        (row['average_rir_7d'] != null && !numeric('average_rir_7d', 10)) ||
+        trendBaselineAvailable is! bool ||
+        !integer('workouts_previous_7d', 1000) ||
+        !integer('training_minutes_previous_7d', 10080) ||
+        !integer('completed_working_sets_previous_7d', 100000) ||
+        !numeric('volume_previous_7d', 1000000000000)) {
       throw const FormatException('Invalid progress values');
     }
     if ((row['workouts_7d'] as int) > (row['workouts_30d'] as int)) {
       throw const FormatException('Invalid progress period counts');
     }
-    return CoachClientProgress(clientUserId: clientUserId, workoutsVisible: false,
-      workouts7d: row['workouts_7d'] as int, workouts30d: row['workouts_30d'] as int,
+
+    CoachFrequencyAdherence? adherence;
+    if (raw['adherence'] != null) {
+      if (raw['adherence'] is! Map) {
+        throw const FormatException('Invalid progress adherence');
+      }
+      adherence = CoachFrequencyAdherence.fromJson(
+        Map<String, dynamic>.from(raw['adherence'] as Map),
+      );
+    }
+
+    return CoachClientProgress(
+      clientUserId: clientUserId,
+      workoutsVisible: false,
+      workouts7d: row['workouts_7d'] as int,
+      workouts30d: row['workouts_30d'] as int,
       trainingMinutes7d: row['training_minutes_7d'] as int,
       completedWorkingSets7d: row['completed_working_sets_7d'] as int,
       volume7d: (row['volume_7d'] as num).toDouble(),
       averageRir7d: (row['average_rir_7d'] as num?)?.toDouble(),
-      lastWorkoutAt: lastWorkoutAt, generatedAt: generatedAt);
+      lastWorkoutAt: lastWorkoutAt,
+      generatedAt: generatedAt,
+      trendBaselineAvailable: trendBaselineAvailable,
+      workoutsPrevious7d: row['workouts_previous_7d'] as int,
+      trainingMinutesPrevious7d:
+          row['training_minutes_previous_7d'] as int,
+      completedWorkingSetsPrevious7d:
+          row['completed_working_sets_previous_7d'] as int,
+      volumePrevious7d:
+          (row['volume_previous_7d'] as num).toDouble(),
+      frequencyAdherence: adherence,
+    );
   }
 
   Future<CoachProSectionPage<CoachSharedWorkoutSummary>> listWorkouts(

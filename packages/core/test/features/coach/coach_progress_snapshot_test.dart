@@ -78,6 +78,63 @@ void main() {
       expect(progress.volume7d, 3800);
       expect(progress.averageRir7d, 2.5);
       expect(progress.lastWorkoutAt, now.subtract(const Duration(days: 1)));
+      expect(progress.trendBaselineAvailable, isTrue);
+      expect(progress.workoutsPrevious7d, 0);
+      expect(progress.trainingMinutesPrevious7d, 0);
+      expect(progress.completedWorkingSetsPrevious7d, 0);
+      expect(progress.volumePrevious7d, 0);
+    });
+
+    test('captures the previous seven day comparison window', () {
+      final progress = CoachProgressSnapshotBuilder.fromHistory(
+        [
+          session(
+            id: 'current',
+            startedAt: now.subtract(const Duration(days: 2)),
+            durationSeconds: 3600,
+          ),
+          session(
+            id: 'previous-a',
+            startedAt: now.subtract(const Duration(days: 8)),
+            durationSeconds: 1800,
+          ),
+          session(
+            id: 'previous-b',
+            startedAt: now.subtract(const Duration(days: 13)),
+            durationSeconds: 1200,
+            sets: const [
+              WorkoutSet(
+                weight: 50,
+                reps: 10,
+                completed: true,
+                rir: 3,
+              ),
+            ],
+          ),
+          session(
+            id: 'too-old',
+            startedAt: now.subtract(const Duration(days: 15)),
+          ),
+        ],
+        now: now,
+      );
+
+      expect(progress.workouts7d, 1);
+      expect(progress.workoutsPrevious7d, 2);
+      expect(progress.trainingMinutesPrevious7d, 50);
+      expect(progress.completedWorkingSetsPrevious7d, 3);
+      expect(progress.volumePrevious7d, 2400);
+      expect(progress.workoutsTrendDelta7d, -1);
+      expect(progress.trainingMinutesTrendDelta7d, 10);
+      expect(progress.workingSetsTrendDelta7d, -1);
+      expect(progress.volumeTrendDelta7d, -500);
+
+      final payload = progress.snapshotToJson();
+      expect(payload['trend_baseline_available'], isTrue);
+      expect(payload['workouts_previous_7d'], 2);
+      expect(payload['training_minutes_previous_7d'], 50);
+      expect(payload['completed_working_sets_previous_7d'], 3);
+      expect(payload['volume_previous_7d'], 2400);
     });
 
     test('shared workout payload excludes notes and exercise details', () {
@@ -179,6 +236,23 @@ void main() {
           'average_rir_7d': 2.4,
           'last_workout_at': '2026-09-23T10:00:00Z',
           'generated_at': '2026-09-24T10:00:00Z',
+          'trend_baseline_available': true,
+          'workouts_previous_7d': 3,
+          'training_minutes_previous_7d': 180,
+          'completed_working_sets_previous_7d': 40,
+          'volume_previous_7d': 12000,
+        },
+        'adherence': {
+          'assignment_id': 'assignment-1',
+          'assignment_name': 'Plan fuerza',
+          'starts_on': '2026-09-01',
+          'ends_on': '2026-10-26',
+          'scheduled_sessions_7d': 3,
+          'completed_sessions_7d': 4,
+          'percent_7d': 100,
+          'scheduled_sessions_30d': 13,
+          'completed_sessions_30d': 13,
+          'percent_30d': 100,
         },
         'workouts_visible': false,
         'recent_workouts': const [],
@@ -189,6 +263,12 @@ void main() {
       expect(progress.clientUserId, 'client-1');
       expect(progress.workouts7d, 4);
       expect(progress.averageRir7d, 2.4);
+      expect(progress.trendBaselineAvailable, isTrue);
+      expect(progress.workoutsPrevious7d, 3);
+      expect(progress.workoutsTrendDelta7d, 1);
+      expect(progress.frequencyAdherence?.assignmentName, 'Plan fuerza');
+      expect(progress.frequencyAdherence?.scheduledSessions7d, 3);
+      expect(progress.frequencyAdherence?.percent7d, 100);
       expect(progress.recentWorkouts, isEmpty);
     });
 

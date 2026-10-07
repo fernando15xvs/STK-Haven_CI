@@ -167,16 +167,45 @@ void main() {
     String? corrupt; bool missing = false;
     final client = SupabaseClient('https://example.test', 'test-key', httpClient: MockClient((request) async {
       requests.add(request);
-      final snapshot = <String, dynamic>{'workouts_7d': 0, 'workouts_30d': 0,
-        'training_minutes_7d': 0, 'completed_working_sets_7d': 0, 'volume_7d': 0,
-        'average_rir_7d': null, 'last_workout_at': null, 'generated_at': '2026-09-01T00:00:00Z'};
+      final snapshot = <String, dynamic>{
+        'workouts_7d': 0,
+        'workouts_30d': 0,
+        'training_minutes_7d': 0,
+        'completed_working_sets_7d': 0,
+        'volume_7d': 0,
+        'average_rir_7d': null,
+        'last_workout_at': null,
+        'generated_at': '2026-09-01T00:00:00Z',
+        'trend_baseline_available': true,
+        'workouts_previous_7d': 2,
+        'training_minutes_previous_7d': 90,
+        'completed_working_sets_previous_7d': 20,
+        'volume_previous_7d': 5000,
+      };
       if (corrupt == 'minutes') snapshot.remove('training_minutes_7d');
       if (corrupt == 'date') snapshot['generated_at'] = null;
       if (corrupt == 'last') snapshot['last_workout_at'] = 'invalid';
       if (corrupt == 'rir') snapshot['average_rir_7d'] = 11;
       if (corrupt == 'count') snapshot['workouts_7d'] = 1;
+      final adherence = {
+        'assignment_id': 'assignment',
+        'assignment_name': 'Plan fuerza',
+        'starts_on': '2026-08-01',
+        'ends_on': '2026-10-31',
+        'scheduled_sessions_7d': 3,
+        'completed_sessions_7d': 0,
+        'percent_7d': 0,
+        'scheduled_sessions_30d': 13,
+        'completed_sessions_30d': 0,
+        'percent_30d': 0,
+      };
+      if (corrupt == 'baseline') snapshot['trend_baseline_available'] = null;
+      if (corrupt == 'previous') snapshot['workouts_previous_7d'] = -1;
+      if (corrupt == 'adherence') adherence['percent_7d'] = 101;
       return http.Response(jsonEncode({'relationship_id': corrupt == 'relationship' ? 'other' : 'rel',
-        'client_user_id': corrupt == 'client' ? 'other' : 'client', 'snapshot': missing ? null : snapshot}),
+        'client_user_id': corrupt == 'client' ? 'other' : 'client',
+        'snapshot': missing ? null : snapshot,
+        'adherence': missing ? null : adherence}),
         200, request: request, headers: {'content-type': 'application/json'});
     }));
     addTearDown(client.dispose); final live = CoachProClientDetailService(client);
@@ -186,8 +215,13 @@ void main() {
     expect(value!.workouts7d, 0); expect(value.trainingMinutes7d, 0);
     expect(value.averageRir7d, isNull); expect(value.lastWorkoutAt, isNull);
     expect(value.generatedAt, DateTime.utc(2026, 9, 1));
+    expect(value.trendBaselineAvailable, isTrue);
+    expect(value.workoutsPrevious7d, 2);
+    expect(value.frequencyAdherence?.assignmentName, 'Plan fuerza');
+    expect(value.frequencyAdherence?.percent7d, 0);
     expect(value.workoutsVisible, isFalse); expect(value.recentWorkouts, isEmpty);
-    for (final key in ['minutes', 'date', 'last', 'rir', 'count', 'relationship', 'client']) {
+    for (final key in ['minutes', 'date', 'last', 'rir', 'count', 'baseline',
+      'previous', 'adherence', 'relationship', 'client']) {
       corrupt = key; await expectLater(live.getProgress('rel', 'client'), throwsFormatException);
     }
     corrupt = null; missing = true; expect(await live.getProgress('rel', 'client'), isNull);
