@@ -456,7 +456,14 @@ class _ClientRevisionStateCard extends ConsumerWidget {
         }
 
         final acceptedRevisionNumber = value.acceptedRevisionNumber;
-        if (acceptedRevisionNumber != null) {
+        final acceptedRevisionId = value.acceptedRevisionId;
+        if (acceptedRevisionNumber != null && acceptedRevisionId != null) {
+          final installed = ref.watch(
+            coachProgramInstalledRevisionProvider((
+              assignmentId: assignmentId,
+              revisionId: acceptedRevisionId,
+            )),
+          );
           return Card(
             child: ListTile(
               leading: installing
@@ -464,17 +471,32 @@ class _ClientRevisionStateCard extends ConsumerWidget {
                       dimension: 22,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.verified_outlined),
+                  : Icon(
+                      installed
+                          ? Icons.download_done_outlined
+                          : Icons.cloud_download_outlined,
+                    ),
               title: Text(
-                'Revisión $acceptedRevisionNumber aceptada',
+                installed
+                    ? 'Revisión $acceptedRevisionNumber instalada'
+                    : 'Revisión $acceptedRevisionNumber aceptada',
               ),
               subtitle: Text(
-                value.revisionAccessActive
-                    ? 'Puedes instalarla o reinstalarla de forma segura en este dispositivo.'
-                    : 'Sigue disponible para recuperación e instalación aunque el acceso del coach haya cambiado.',
+                installed
+                    ? 'Esta revisión ya está instalada en este dispositivo. '
+                        'Puedes reinstalarla de forma segura si lo necesitas.'
+                    : value.revisionAccessActive
+                        ? 'Aceptada en tu cuenta y pendiente de instalar en '
+                            'este dispositivo. Puedes reintentar sin volver '
+                            'a aceptarla.'
+                        : 'Aceptada en tu cuenta y recuperable en este '
+                            'dispositivo aunque el acceso del coach haya '
+                            'cambiado.',
               ),
               trailing: IconButton(
-                tooltip: 'Instalar revisión',
+                tooltip: installed
+                    ? 'Reinstalar revisión'
+                    : 'Instalar revisión aceptada',
                 onPressed: installing
                     ? null
                     : () => _installAcceptedRevision(
@@ -482,7 +504,11 @@ class _ClientRevisionStateCard extends ConsumerWidget {
                           ref,
                           acceptedRevisionNumber,
                         ),
-                icon: const Icon(Icons.download_outlined),
+                icon: Icon(
+                  installed
+                      ? Icons.refresh_outlined
+                      : Icons.download_outlined,
+                ),
               ),
             ),
           );

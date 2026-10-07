@@ -784,13 +784,19 @@ class CoachProgramInstaller {
         await rollbackImport();
       } catch (_) {}
       if (createdProgramId != null) {
-        await programRepository.delete(createdProgramId);
+        try {
+          await programRepository.delete(createdProgramId);
+        } catch (_) {}
       }
       for (final routineId in createdRoutineIds.reversed) {
-        await routineRepository.deleteRoutine(routineId);
+        try {
+          await routineRepository.deleteRoutine(routineId);
+        } catch (_) {}
       }
       for (final exerciseId in createdExerciseIds.reversed) {
-        await exerciseRepository.deleteExercise(exerciseId);
+        try {
+          await exerciseRepository.deleteExercise(exerciseId);
+        } catch (_) {}
       }
       rethrow;
     }

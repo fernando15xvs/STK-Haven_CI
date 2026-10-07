@@ -74,6 +74,21 @@ final coachProgramInstallerProvider = Provider<CoachProgramInstaller>((ref) {
   );
 });
 
+typedef CoachProgramInstalledRevisionQuery = ({
+  String assignmentId,
+  String revisionId,
+});
+
+final coachProgramInstalledRevisionProvider =
+    Provider.family<bool, CoachProgramInstalledRevisionQuery>((ref, query) {
+  final installer = ref.watch(coachProgramInstallerProvider);
+  return installer.getInstalledRevision(
+        query.assignmentId,
+        query.revisionId,
+      ) !=
+      null;
+});
+
 final coachProgramAssignmentsProvider = NotifierProvider<
     CoachProgramAssignmentsNotifier,
     CoachProgramAssignmentsState>(CoachProgramAssignmentsNotifier.new);
@@ -345,6 +360,12 @@ class CoachProgramAssignmentsNotifier
       ref.invalidate(routineListProvider);
       ref.invalidate(trainingProgramListProvider);
       ref.invalidate(coachProgramRevisionStateProvider(assignmentId));
+      ref.invalidate(
+        coachProgramInstalledRevisionProvider((
+          assignmentId: assignmentId,
+          revisionId: revisionId,
+        )),
+      );
 
       state = state.copyWith(
         operation: CoachProgramAssignmentOperation.idle,

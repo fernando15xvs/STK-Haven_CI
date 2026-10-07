@@ -222,6 +222,198 @@ void main() {
   );
 
   test(
+    'accepted revision can retry after a transient local storage failure',
+    () async {
+      final revision = _acceptedRevision(
+        revisionId: 'revision-recovery',
+        revisionNumber: 5,
+        name: 'Coach recovery plan',
+        restSeconds: 165,
+      );
+      var installer = CoachProgramInstaller(
+        exerciseRepository: exerciseRepository,
+        routineRepository: routineRepository,
+        programRepository: programRepository,
+        metadataBox: metadataBox,
+      );
+
+      await routineBox.close();
+
+      await expectLater(
+        installer.installAcceptedRevision(
+          revision,
+          activate: false,
+        ),
+        throwsA(anything),
+      );
+
+      expect(exerciseRepository.getAllExercises(), isEmpty);
+      expect(programRepository.getAll(), isEmpty);
+      expect(
+        installer.getInstalledRevision(
+          revision.assignmentId,
+          revision.revisionId,
+        ),
+        isNull,
+      );
+
+      routineBox = await Hive.openBox<HiveRoutine>('routines');
+      routineRepository = RoutineRepository(routineBox);
+      installer = CoachProgramInstaller(
+        exerciseRepository: exerciseRepository,
+        routineRepository: routineRepository,
+        programRepository: programRepository,
+        metadataBox: metadataBox,
+      );
+
+      final recovered = await installer.installAcceptedRevision(
+        revision,
+        activate: false,
+      );
+
+      expect(recovered.name, 'Coach recovery plan');
+      expect(programRepository.getAll(), hasLength(1));
+      expect(routineRepository.getAllRoutines(), hasLength(1));
+      expect(
+        installer.getInstalledRevision(
+          revision.assignmentId,
+          revision.revisionId,
+        )?.id,
+        recovered.id,
+      );
+    },
+  );
+
+  test(
+    'accepted revision installs on a fresh device without local metadata',
+    () async {
+      final revision = _acceptedRevision(
+        revisionId: 'revision-device',
+        revisionNumber: 6,
+        name: 'Device recovery plan',
+        restSeconds: 170,
+      );
+
+      final device2ExerciseBox =
+          await Hive.openBox<HiveExercise>('device2_exercises');
+      final device2RoutineBox =
+          await Hive.openBox<HiveRoutine>('device2_routines');
+      final device2ProgramBox =
+          await Hive.openBox<dynamic>('device2_programs');
+      final device2MetadataBox =
+          await Hive.openBox<dynamic>('device2_metadata');
+      final device2ExerciseRepository =
+          ExerciseRepository(device2ExerciseBox);
+      final device2RoutineRepository =
+          RoutineRepository(device2RoutineBox);
+      final device2ProgramRepository = TrainingProgramRepository(
+        device2ProgramBox,
+        metadataBox: device2MetadataBox,
+      );
+      final device2Installer = CoachProgramInstaller(
+        exerciseRepository: device2ExerciseRepository,
+        routineRepository: device2RoutineRepository,
+        programRepository: device2ProgramRepository,
+        metadataBox: device2MetadataBox,
+      );
+
+      final before =
+          await device2Installer.assessAcceptedRevision(revision);
+      expect(before.targetAlreadyInstalled, isFalse);
+      expect(before.installedProgramId, isNull);
+      expect(before.localChanges, isEmpty);
+
+      final installed = await device2Installer.installAcceptedRevision(
+        revision,
+        activate: true,
+      );
+
+      expect(installed.isActive, isTrue);
+      expect(device2ProgramRepository.getAll(), hasLength(1));
+      expect(device2RoutineRepository.getAllRoutines(), hasLength(1));
+      expect(
+        device2Installer.getInstalledRevision(
+          revision.assignmentId,
+          revision.revisionId,
+        )?.id,
+        installed.id,
+      );
+    },
+  );
+
+  test(
+    'same revision id from different assignments never collides locally',
+    () async {
+      final installer = CoachProgramInstaller(
+        exerciseRepository: exerciseRepository,
+        routineRepository: routineRepository,
+        programRepository: programRepository,
+        metadataBox: metadataBox,
+      );
+      final coachA = _acceptedRevision(
+        assignmentId: 'assignment-coach-a',
+        relationshipId: 'relationship-coach-a',
+        revisionId: 'revision-2',
+        revisionNumber: 2,
+        name: 'Plan coach A',
+        restSeconds: 140,
+      );
+      final coachB = _acceptedRevision(
+        assignmentId: 'assignment-coach-b',
+        relationshipId: 'relationship-coach-b',
+        revisionId: 'revision-2',
+        revisionNumber: 2,
+        name: 'Plan coach B',
+        restSeconds: 200,
+      );
+
+      final installedA = await installer.installAcceptedRevision(
+        coachA,
+        activate: false,
+      );
+      final installedB = await installer.installAcceptedRevision(
+        coachB,
+        activate: false,
+      );
+
+      expect(installedA.id, isNot(installedB.id));
+      expect(programRepository.getAll(), hasLength(2));
+      expect(
+        installer.getInstalledRevision(
+          coachA.assignmentId,
+          coachA.revisionId,
+        )?.id,
+        installedA.id,
+      );
+      expect(
+        installer.getInstalledRevision(
+          coachB.assignmentId,
+          coachB.revisionId,
+        )?.id,
+        installedB.id,
+      );
+
+      final imports = Map<String, dynamic>.from(
+        metadataBox.get(
+              CoachProgramInstaller.revisionImportsMetadataKey,
+            ) as Map,
+      );
+      expect(
+        Map<String, dynamic>.from(
+          imports[coachA.assignmentId] as Map,
+        )[coachA.revisionId],
+        installedA.id,
+      );
+      expect(
+        Map<String, dynamic>.from(
+          imports[coachB.assignmentId] as Map,
+        )[coachB.revisionId],
+        installedB.id,
+      );
+    },
+  );
+
+  test(
     'accepted revision install is idempotent and revision-aware',
     () async {
       final installer = CoachProgramInstaller(
@@ -295,19 +487,66 @@ void main() {
           Map<String, dynamic>.from(metadata['assignment-1'] as Map);
       expect(assignmentImports['revision-2'], first.id);
       expect(assignmentImports['revision-3'], newer.id);
+
+      final revision4 = _acceptedRevision(
+        revisionId: 'revision-4',
+        revisionNumber: 4,
+        name: 'Coach plan R4',
+        restSeconds: 210,
+      );
+      final newest = await installer.installAcceptedRevision(
+        revision4,
+        activate: false,
+      );
+
+      expect(programRepository.getAll(), hasLength(3));
+      expect(
+        installer.getInstalledRevision(
+          'assignment-1',
+          'revision-2',
+        )?.id,
+        first.id,
+      );
+      expect(
+        installer.getInstalledRevision(
+          'assignment-1',
+          'revision-3',
+        )?.id,
+        newer.id,
+      );
+      expect(
+        installer.getInstalledRevision(
+          'assignment-1',
+          'revision-4',
+        )?.id,
+        newest.id,
+      );
+
+      final managed = Map<String, dynamic>.from(
+        metadataBox.get(
+              CoachProgramInstaller.managedRevisionMetadataKey,
+            ) as Map,
+      );
+      final managedAssignment =
+          Map<String, dynamic>.from(managed['assignment-1'] as Map);
+      expect(managedAssignment['revision_id'], 'revision-4');
+      expect(managedAssignment['revision_number'], 4);
+      expect(managedAssignment['program_id'], newest.id);
     },
   );
 }
 
 AcceptedProgramRevisionSnapshot _acceptedRevision({
+  String assignmentId = 'assignment-1',
+  String relationshipId = 'relationship-1',
   required String revisionId,
   required int revisionNumber,
   required String name,
   required int restSeconds,
 }) {
   return AcceptedProgramRevisionSnapshot(
-    assignmentId: 'assignment-1',
-    relationshipId: 'relationship-1',
+    assignmentId: assignmentId,
+    relationshipId: relationshipId,
     revisionId: revisionId,
     revisionNumber: revisionNumber,
     sourceKind: 'coach_revision',
