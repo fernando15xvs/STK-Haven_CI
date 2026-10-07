@@ -400,9 +400,9 @@ select set_config(
   true
 );
 select throws_ok(
-  $select public.stk_list_coach_pro_client_exercise_progress(
+  $$select public.stk_list_coach_pro_client_exercise_progress(
     '63000000-0000-0000-0000-000000000001',25,0
-  )$,
+  )$$,
   '42501',
   'permission denied for function stk_list_coach_pro_client_exercise_progress',
   'anonymous exercise progress read is rejected before RPC execution'
