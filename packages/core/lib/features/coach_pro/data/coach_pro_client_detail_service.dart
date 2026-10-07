@@ -1,4 +1,5 @@
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/domain/models/coach_exercise_progress.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/features/coach_pro/data/coach_pro_nutrition_service.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
@@ -112,6 +113,50 @@ class CoachProClientDetailService {
       volumePrevious7d:
           (row['volume_previous_7d'] as num).toDouble(),
       frequencyAdherence: adherence,
+    );
+  }
+
+  Future<CoachProSectionPage<CoachExerciseProgressSummary>>
+      listExerciseProgress(
+    String relationshipId,
+    String clientUserId, {
+    int limit = 25,
+    int offset = 0,
+  }) async {
+    final raw = await client.rpc(
+      'stk_list_coach_pro_client_exercise_progress',
+      params: {
+        'p_relationship_id': relationshipId,
+        'p_limit': limit,
+        'p_offset': offset,
+      },
+    );
+    if (raw is! Map ||
+        raw['relationship_id'] != relationshipId ||
+        raw['client_user_id'] != clientUserId ||
+        raw['items'] is! List ||
+        raw['total_count'] is! int ||
+        (raw['total_count'] as int) < 0) {
+      throw const FormatException('Invalid exercise progress page');
+    }
+
+    final items = <CoachExerciseProgressSummary>[];
+    for (final value in raw['items'] as List) {
+      if (value is! Map) {
+        throw const FormatException('Invalid exercise progress row');
+      }
+      final row = Map<String, dynamic>.from(value);
+      if (row['client_user_id'] != clientUserId) {
+        throw const FormatException('Invalid exercise progress scope');
+      }
+      items.add(CoachExerciseProgressSummary.fromJson(row));
+    }
+    if (items.length > limit || items.length > (raw['total_count'] as int)) {
+      throw const FormatException('Invalid exercise progress count');
+    }
+    return CoachProSectionPage(
+      items: List.unmodifiable(items),
+      totalCount: raw['total_count'] as int,
     );
   }
 

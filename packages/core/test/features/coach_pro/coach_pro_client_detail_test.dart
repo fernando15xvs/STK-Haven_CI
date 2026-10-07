@@ -1,4 +1,5 @@
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/domain/models/coach_exercise_progress.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
@@ -37,6 +38,7 @@ class _Service implements CoachProClientDetailService {
   final programOffsets = <int>[];
   final taskOffsets = <int>[];
   final workoutOffsets = <int>[];
+  final exerciseProgressOffsets = <int>[];
   int progressReads = 0;
   final nutritionOffsets = <int>[];
   @override
@@ -52,6 +54,20 @@ class _Service implements CoachProClientDetailService {
     if (fail) throw StateError('sensitive');
     return progressPending == null ? null : await progressPending!.future;
   }
+  @override
+  Future<CoachProSectionPage<CoachExerciseProgressSummary>>
+      listExerciseProgress(
+    String relationshipId,
+    String clientUserId, {
+    int limit = 25,
+    int offset = 0,
+  }) async {
+    expect(clientUserId, 'client');
+    exerciseProgressOffsets.add(offset);
+    if (fail) throw StateError('sensitive');
+    return const CoachProSectionPage(totalCount: 0);
+  }
+
   @override
   Future<CoachProSectionPage<CoachSharedWorkoutSummary>> listWorkouts(
       String relationshipId, String clientUserId, {int limit = 25, int offset = 0}) async {
@@ -227,6 +243,58 @@ void main() {
     corrupt = null; missing = true; expect(await live.getProgress('rel', 'client'), isNull);
   });
 
+  test(
+    'exercise progress is lazy and requires both progress and workout consent',
+    () async {
+      service.summary = CoachProClientSummary.fromJson({
+        'relationship_id': 'rel',
+        'client_user_id': 'client',
+        'relationship_status': 'active',
+        'permissions': {
+          'view_progress': true,
+          'view_workouts': false,
+        },
+      });
+      final provider = coachProClientDetailProvider((
+        relationshipId: 'rel',
+        section: CoachProClientSection.exerciseProgress,
+        offset: 25,
+      ));
+      container.listen(provider, (_, _) {});
+      expect((await container.read(provider.future))!.exerciseProgress, isNull);
+      expect(service.exerciseProgressOffsets, isEmpty);
+
+      service.summary = CoachProClientSummary.fromJson({
+        'relationship_id': 'rel',
+        'client_user_id': 'client',
+        'relationship_status': 'active',
+        'permissions': {
+          'view_progress': true,
+          'view_workouts': true,
+        },
+      });
+      container.invalidate(provider);
+      expect(
+        (await container.read(provider.future))!.exerciseProgress,
+        isNotNull,
+      );
+      expect(service.exerciseProgressOffsets, [25]);
+
+      service.summary = CoachProClientSummary.fromJson({
+        'relationship_id': 'rel',
+        'client_user_id': 'client',
+        'relationship_status': 'active',
+        'permissions': {
+          'view_progress': false,
+          'view_workouts': true,
+        },
+      });
+      container.invalidate(provider);
+      expect((await container.read(provider.future))!.exerciseProgress, isNull);
+      expect(service.exerciseProgressOffsets, [25]);
+    },
+  );
+
   test('workouts are lazy, independent of progress, and revocation stops subsequent queries', () async {
     service.summary = CoachProClientSummary.fromJson({
       'relationship_id': 'rel', 'client_user_id': 'client', 'relationship_status': 'active',
@@ -262,6 +330,105 @@ void main() {
     service.fail = true; container.invalidate(provider);
     await expectLater(container.read(provider.future), throwsStateError);
   });
+  test(
+    'exercise progress RPC validates scope and aggregate-only rows',
+    () async {
+      String? corrupt;
+      final requests = <http.Request>[];
+      final client = SupabaseClient(
+        'https://example.test',
+        'test-key',
+        httpClient: MockClient((request) async {
+          requests.add(request);
+          final row = <String, dynamic>{
+            'client_user_id': corrupt == 'client' ? 'other' : 'client',
+            'exercise_id': 'bench',
+            'exercise_name': 'Press banca',
+            'muscle_group': 'Pecho',
+            'last_performed_at': '2026-10-06T12:00:00Z',
+            'generated_at': '2026-10-07T12:00:00Z',
+            'sessions_30d': 5,
+            'working_sets_30d': 20,
+            'volume_30d': 12000,
+            'average_rir_30d': 2.5,
+            'sessions_previous_30d': 4,
+            'working_sets_previous_30d': 16,
+            'volume_previous_30d': 10000,
+            'best_estimated_1rm_30d': 120.0,
+            'best_estimated_1rm_previous_30d': 115.0,
+            'best_weight': 110.0,
+            'best_weight_at': '2026-09-30T12:00:00Z',
+            'best_estimated_1rm': 122.0,
+            'best_estimated_1rm_at': '2026-10-01T12:00:00Z',
+            'best_set_volume': 1000.0,
+            'best_set_volume_at': '2026-09-28T12:00:00Z',
+          };
+          if (corrupt == 'date') {
+            row['last_performed_at'] = 'invalid';
+          }
+          if (corrupt == 'count') row['sessions_30d'] = -1;
+          if (corrupt == 'rir') row['average_rir_30d'] = 11;
+          if (corrupt == 'pr-date') row['best_weight_at'] = null;
+          return http.Response(
+            jsonEncode({
+              'relationship_id':
+                  corrupt == 'relationship' ? 'other' : 'rel',
+              'client_user_id': 'client',
+              'total_count': 1,
+              'items': [row],
+            }),
+            200,
+            request: request,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+      addTearDown(client.dispose);
+      final live = CoachProClientDetailService(client);
+
+      final page = await live.listExerciseProgress(
+        'rel',
+        'client',
+        offset: 25,
+      );
+      expect(
+        requests.single.url.path,
+        '/rest/v1/rpc/stk_list_coach_pro_client_exercise_progress',
+      );
+      expect(
+        jsonDecode(requests.single.body),
+        {
+          'p_relationship_id': 'rel',
+          'p_limit': 25,
+          'p_offset': 25,
+        },
+      );
+      expect(page.items.single.exerciseName, 'Press banca');
+      expect(page.items.single.volumeDelta30d, 2000);
+      expect(page.items.single.estimated1RmDelta30d, 5);
+      expect(page.items.single.bestWeight, 110);
+      expect(
+        page.items.single.toSyncJson().toString(),
+        isNot(contains('notes')),
+      );
+
+      for (final key in [
+        'client',
+        'date',
+        'count',
+        'rir',
+        'pr-date',
+        'relationship',
+      ]) {
+        corrupt = key;
+        await expectLater(
+          live.listExerciseProgress('rel', 'client'),
+          throwsFormatException,
+        );
+      }
+    },
+  );
+
   test('workout RPC validates client scope, exact counts and null RIR without inventing data', () async {
     String? corrupt; bool empty = false;
     final requests = <http.Request>[];

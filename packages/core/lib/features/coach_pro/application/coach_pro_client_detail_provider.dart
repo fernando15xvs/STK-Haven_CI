@@ -1,4 +1,5 @@
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/domain/models/coach_exercise_progress.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
@@ -9,7 +10,16 @@ import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum CoachProClientSection { summary, checkins, programs, tasks, workouts, progress, nutrition }
+enum CoachProClientSection {
+  summary,
+  checkins,
+  programs,
+  tasks,
+  workouts,
+  progress,
+  exerciseProgress,
+  nutrition,
+}
 
 typedef CoachProClientDetailQuery = ({String relationshipId, CoachProClientSection section, int offset});
 
@@ -20,11 +30,22 @@ class CoachProClientDetail {
   final CoachProSectionPage<CoachProTaskSummary>? tasks;
   final CoachProSectionPage<CoachSharedWorkoutSummary>? workouts;
   final CoachClientProgress? progress;
+  final CoachProSectionPage<CoachExerciseProgressSummary>? exerciseProgress;
   final CoachProSectionPage<NutritionGuidanceSummary>? nutrition;
-  const CoachProClientDetail(this.summary, {this.checkins, this.programs, this.tasks, this.workouts, this.progress, this.nutrition});
+  const CoachProClientDetail(
+    this.summary, {
+    this.checkins,
+    this.programs,
+    this.tasks,
+    this.workouts,
+    this.progress,
+    this.exerciseProgress,
+    this.nutrition,
+  });
   bool get canViewNutrition => canView(CoachPermission.viewNutrition);
   bool get canViewProgress => canView(CoachPermission.viewProgress);
   bool get canViewWorkouts => canView(CoachPermission.viewWorkouts);
+  bool get canViewExerciseProgress => canViewProgress && canViewWorkouts;
   bool canView(CoachPermission permission) =>
       summary.relationshipStatus == CoachRelationshipStatus.active &&
       summary.permissions.contains(permission);
@@ -62,6 +83,16 @@ final coachProClientDetailProvider = FutureProvider.autoDispose
       if (!detail.canViewProgress) return detail;
       return CoachProClientDetail(summary, progress:
         await service.getProgress(query.relationshipId, summary.clientUserId));
+    case CoachProClientSection.exerciseProgress:
+      if (!detail.canViewExerciseProgress) return detail;
+      return CoachProClientDetail(
+        summary,
+        exerciseProgress: await service.listExerciseProgress(
+          query.relationshipId,
+          summary.clientUserId,
+          offset: query.offset,
+        ),
+      );
     case CoachProClientSection.workouts:
       if (!detail.canViewWorkouts) return detail;
       return CoachProClientDetail(summary, workouts:

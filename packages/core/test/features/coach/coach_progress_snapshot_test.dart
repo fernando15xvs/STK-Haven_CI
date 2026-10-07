@@ -1,7 +1,14 @@
+import 'dart:convert';
+
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/domain/models/coach_exercise_progress.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/coach/application/coach_progress_snapshot_builder.dart';
+import 'package:core/features/coach/data/coach_progress_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   group('CoachProgressSnapshotBuilder', () {
@@ -220,6 +227,78 @@ void main() {
       expect(progress.recentWorkouts, hasLength(30));
       expect(progress.workouts30d, 35);
     });
+  });
+
+  test('progress service syncs v2 exercise aggregates atomically', () async {
+    late http.Request captured;
+    final client = SupabaseClient(
+      'https://example.test',
+      'test-key',
+      httpClient: MockClient((request) async {
+        captured = request;
+        return http.Response(
+          'null',
+          200,
+          request: request,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+    addTearDown(client.dispose);
+    final service = CoachProgressService(client);
+    final progress = CoachClientProgress(
+      workouts7d: 1,
+      workouts30d: 4,
+      trainingMinutes7d: 60,
+      completedWorkingSets7d: 10,
+      volume7d: 5000,
+      generatedAt: DateTime.utc(2026, 10, 7),
+    );
+    final exercise = CoachExerciseProgressSummary(
+      exerciseId: 'bench',
+      exerciseName: 'Press banca',
+      muscleGroup: 'Pecho',
+      lastPerformedAt: DateTime.utc(2026, 10, 6),
+      generatedAt: DateTime.utc(2026, 10, 7),
+      sessions30d: 4,
+      workingSets30d: 16,
+      volume30d: 9000,
+      averageRir30d: 2.5,
+      sessionsPrevious30d: 3,
+      workingSetsPrevious30d: 12,
+      volumePrevious30d: 7000,
+      bestEstimated1Rm30d: 120,
+      bestEstimated1RmPrevious30d: 115,
+      bestWeight: 110,
+      bestWeightAt: DateTime.utc(2026, 10, 1),
+      bestEstimated1Rm: 122,
+      bestEstimated1RmAt: DateTime.utc(2026, 10, 2),
+      bestSetVolume: 1000,
+      bestSetVolumeAt: DateTime.utc(2026, 9, 30),
+    );
+
+    await service.syncOwnProgress(
+      progress,
+      exerciseProgress: [exercise],
+    );
+
+    expect(
+      captured.url.path,
+      '/rest/v1/rpc/stk_sync_own_progress_v2',
+    );
+    final body = jsonDecode(captured.body) as Map<String, dynamic>;
+    expect(body.keys, {
+      'p_progress',
+      'p_recent_workouts',
+      'p_exercise_progress',
+    });
+    final rows = body['p_exercise_progress'] as List;
+    expect(rows, hasLength(1));
+    final row = Map<String, dynamic>.from(rows.single as Map);
+    expect(row['exercise_id'], 'bench');
+    expect(row['best_estimated_1rm'], 122);
+    expect(row.toString(), isNot(contains('notes')));
+    expect(row.toString(), isNot(contains('sets')));
   });
 
   group('CoachClientProgress RPC parsing', () {

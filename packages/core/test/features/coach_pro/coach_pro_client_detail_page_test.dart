@@ -1,4 +1,5 @@
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/domain/models/coach_exercise_progress.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/features/coach_pro/application/coach_pro_nutrition_provider.dart';
 import 'package:core/features/coach_pro/application/coach_pro_task_provider.dart';
@@ -27,7 +28,7 @@ class _Identity extends AppIdentityNotifier {
   void signOutForTest() => state = const AppIdentityState();
 }
 
-CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compartida', bool programs = false, bool tasks = false, bool workouts = false, bool progress = false, bool missingProgress = false, bool nutrition = false}) =>
+CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compartida', bool programs = false, bool tasks = false, bool workouts = false, bool progress = false, bool exerciseProgress = false, bool missingProgress = false, bool nutrition = false}) =>
     CoachProClientDetail(CoachProClientSummary.fromJson({
       'relationship_id': 'rel', 'client_user_id': 'client', 'display_name': 'Ana',
       'relationship_status': 'active', 'permissions': {'view_checkins': permitted, 'assign_programs': programs, 'assign_tasks': tasks, 'view_workouts': workouts, 'view_progress': progress, 'view_nutrition': nutrition},
@@ -60,6 +61,32 @@ CoachProClientDetail _detail({bool permitted = true, String note = 'Nota compart
         percent30d: 0,
       ),
     ),
+    exerciseProgress: exerciseProgress
+        ? CoachProSectionPage(totalCount: 26, items: [
+            CoachExerciseProgressSummary(
+              exerciseId: 'bench',
+              exerciseName: 'Press banca',
+              muscleGroup: 'Pecho',
+              lastPerformedAt: DateTime(2026, 10, 6),
+              generatedAt: DateTime(2026, 10, 7),
+              sessions30d: 5,
+              workingSets30d: 20,
+              volume30d: 12000,
+              averageRir30d: 2.5,
+              sessionsPrevious30d: 4,
+              workingSetsPrevious30d: 16,
+              volumePrevious30d: 10000,
+              bestEstimated1Rm30d: 120,
+              bestEstimated1RmPrevious30d: 115,
+              bestWeight: 110,
+              bestWeightAt: DateTime(2026, 9, 30),
+              bestEstimated1Rm: 122,
+              bestEstimated1RmAt: DateTime(2026, 10, 1),
+              bestSetVolume: 1000,
+              bestSetVolumeAt: DateTime(2026, 9, 28),
+            ),
+          ])
+        : const CoachProSectionPage(totalCount: 0),
     workouts: CoachProSectionPage(totalCount: 27, items: [
       CoachSharedWorkoutSummary(workoutId: 'w', startedAt: DateTime(2026, 10, 1),
         routineName: 'Rutina compartida', durationSeconds: 1200, plannedWorkingSets: 10,
@@ -204,6 +231,69 @@ void main() {
     expect(find.textContaining('private detail'), findsNothing);
     expect(find.text('Reintentar'), findsOneWidget); expect(tester.takeException(), isNull);
   });
+  for (final width in [320.0, 768.0, 1440.0]) {
+    testWidgets(
+      'exercise trends at $width require both permissions and show PR context',
+      (tester) async {
+        final queries = <CoachProClientDetailQuery>[];
+        await _mount(
+          tester,
+          width: width,
+          load: (q) async {
+            queries.add(q);
+            return _detail(
+              progress: true,
+              workouts: true,
+              exerciseProgress: true,
+            );
+          },
+        );
+
+        expect(find.text('Press banca'), findsNothing);
+        await tester.tap(find.text('Ejercicios'));
+        await tester.pumpAndSettle();
+
+        expect(queries.last.section, CoachProClientSection.exerciseProgress);
+        expect(find.text('Press banca'), findsOneWidget);
+        expect(find.text('Pecho'), findsOneWidget);
+        expect(find.textContaining('Sesiones 30d: 5 (+1'), findsOneWidget);
+        expect(find.textContaining('Volumen 30d: 12000 (+2000)'), findsOneWidget);
+        expect(find.textContaining('Mejor e1RM 30d: 120'), findsOneWidget);
+        expect(find.textContaining('PR peso: 110'), findsOneWidget);
+        expect(find.textContaining('PR e1RM: 122'), findsOneWidget);
+        expect(find.textContaining('PR volumen de serie: 1000'), findsOneWidget);
+        expect(
+          find.textContaining('no una prueba de 1RM'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'exercise trends stay redacted when either required permission is absent',
+    (tester) async {
+      await _mount(
+        tester,
+        load: (_) async => _detail(
+          progress: true,
+          workouts: false,
+          exerciseProgress: true,
+        ),
+      );
+      await tester.tap(find.text('Ejercicios'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('requieren que el cliente comparta progreso'),
+        findsOneWidget,
+      );
+      expect(find.text('Press banca'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final width in [320.0, 768.0, 1440.0]) {
     testWidgets('workout summaries at $width paginate only on selection', (tester) async {
       final queries = <CoachProClientDetailQuery>[];

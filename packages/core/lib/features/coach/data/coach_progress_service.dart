@@ -1,4 +1,5 @@
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/domain/models/coach_exercise_progress.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CoachProgressService {
@@ -6,12 +7,19 @@ class CoachProgressService {
 
   const CoachProgressService(this.client);
 
-  Future<void> syncOwnProgress(CoachClientProgress progress) async {
+  Future<void> syncOwnProgress(
+    CoachClientProgress progress, {
+    List<CoachExerciseProgressSummary> exerciseProgress =
+        const <CoachExerciseProgressSummary>[],
+  }) async {
     await client.rpc(
-      'stk_sync_own_progress',
+      'stk_sync_own_progress_v2',
       params: <String, dynamic>{
         'p_progress': progress.snapshotToJson(),
         'p_recent_workouts': progress.recentWorkoutsToJson(),
+        'p_exercise_progress': exerciseProgress
+            .map((item) => item.toSyncJson())
+            .toList(growable: false),
       },
     );
   }

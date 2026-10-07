@@ -205,6 +205,97 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                     'ni un récord personal.',
                   ),
                 ],
+              ] else if (_section == CoachProClientSection.exerciseProgress) ...[
+                if (!detail.canViewExerciseProgress)
+                  const Text(
+                    'Tendencias por ejercicio: requieren que el cliente '
+                    'comparta progreso y entrenamientos en esta relación.',
+                  )
+                else ...[
+                  const Text(
+                    'Agregados por ejercicio: últimos 30 días frente a los '
+                    '30 días anteriores. No incluye notas ni series '
+                    'individuales.',
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Los PRs muestran el mejor valor observado en el historial '
+                    'compartido. El 1RM es una estimación, no una prueba de 1RM.',
+                  ),
+                  if (detail.exerciseProgress!.items.isEmpty)
+                    Text(
+                      _offset == 0
+                          ? 'Todavía no hay tendencias por ejercicio compartidas.'
+                          : 'Esta página está vacía. Vuelve a la anterior.',
+                    ),
+                  for (final item in detail.exerciseProgress!.items)
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.exerciseName,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            if (item.muscleGroup.isNotEmpty)
+                              Text(item.muscleGroup),
+                            Text(
+                              'Última sesión: ${_date(context, item.lastPerformedAt)}',
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Sesiones 30d: ${item.sessions30d} '
+                              '(${_trend(item.sessionsDelta30d)} vs. periodo anterior)',
+                            ),
+                            Text(
+                              'Series efectivas 30d: ${item.workingSets30d} '
+                              '(${_trend(item.workingSetsDelta30d)})',
+                            ),
+                            Text(
+                              'Volumen 30d: ${_number(item.volume30d)} '
+                              '(${_trendNumber(item.volumeDelta30d)})',
+                            ),
+                            Text(
+                              'RIR medio 30d: '
+                              '${item.averageRir30d == null ? 'Sin datos' : _number(item.averageRir30d!)}',
+                            ),
+                            Text(
+                              'Mejor e1RM 30d: '
+                              '${_optionalNumber(item.bestEstimated1Rm30d)} · '
+                              '30d anteriores: '
+                              '${_optionalNumber(item.bestEstimated1RmPrevious30d)}'
+                              '${item.estimated1RmDelta30d == null ? '' : ' '
+                                  '(${_trendNumber(item.estimated1RmDelta30d!)})'}',
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'PR peso: ${_optionalNumber(item.bestWeight)}'
+                              '${item.bestWeightAt == null ? '' : ' · '
+                                  '${_date(context, item.bestWeightAt)}'}',
+                            ),
+                            Text(
+                              'PR e1RM: ${_optionalNumber(item.bestEstimated1Rm)}'
+                              '${item.bestEstimated1RmAt == null ? '' : ' · '
+                                  '${_date(context, item.bestEstimated1RmAt)}'}',
+                            ),
+                            Text(
+                              'PR volumen de serie: '
+                              '${_optionalNumber(item.bestSetVolume)}'
+                              '${item.bestSetVolumeAt == null ? '' : ' · '
+                                  '${_date(context, item.bestSetVolumeAt)}'}',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  _pagination(
+                    detail.exerciseProgress!.items.length,
+                    detail.exerciseProgress!.totalCount,
+                    'ejercicios',
+                  ),
+                ],
               ] else if (_section == CoachProClientSection.workouts) ...[
                 if (!detail.canViewWorkouts)
                   const Text('Entrenamientos: no compartidos en esta relación.')
@@ -352,6 +443,7 @@ String _sectionLabel(CoachProClientSection section) => switch (section) {
   CoachProClientSection.tasks => 'Tareas',
   CoachProClientSection.workouts => 'Entrenamientos',
   CoachProClientSection.progress => 'Progreso',
+  CoachProClientSection.exerciseProgress => 'Ejercicios',
   CoachProClientSection.nutrition => 'Alimentación',
 };
 String _programStatus(AssignedProgramStatus status) => switch (status) {
@@ -375,3 +467,12 @@ String _trendNumber(double value) {
 }
 
 String _adherence(int? value) => value == null ? 'Sin meta' : '$value%';
+
+
+String _number(double value) {
+  if (value == value.truncateToDouble()) return value.toStringAsFixed(0);
+  return value.toStringAsFixed(1);
+}
+
+String _optionalNumber(double? value) =>
+    value == null ? 'Sin datos' : _number(value);
