@@ -127,6 +127,101 @@ void main() {
 
 
   test(
+    'local customizations require confirmation and remain preserved',
+    () async {
+      final installer = CoachProgramInstaller(
+        exerciseRepository: exerciseRepository,
+        routineRepository: routineRepository,
+        programRepository: programRepository,
+        metadataBox: metadataBox,
+      );
+
+      final revision2 = _acceptedRevision(
+        revisionId: 'revision-2',
+        revisionNumber: 2,
+        name: 'Coach plan R2',
+        restSeconds: 150,
+      );
+      final first = await installer.installAcceptedRevision(
+        revision2,
+        activate: false,
+      );
+
+      await programRepository.save(
+        first.copyWith(name: 'Mi versión personalizada'),
+      );
+      final localRoutine = routineRepository.getAllRoutines().single;
+      await routineRepository.updateRoutine(
+        localRoutine.copyWith(
+          exercises: [
+            localRoutine.exercises.single.copyWith(restSeconds: 240),
+          ],
+        ),
+        preserveExistingNotes: false,
+      );
+
+      final revision3 = _acceptedRevision(
+        revisionId: 'revision-3',
+        revisionNumber: 3,
+        name: 'Coach plan R3',
+        restSeconds: 180,
+      );
+      final assessment =
+          await installer.assessAcceptedRevision(revision3);
+
+      expect(assessment.requiresLocalChangeConfirmation, isTrue);
+      expect(
+        assessment.localChanges,
+        contains('Cambió el nombre o las notas del programa.'),
+      );
+      expect(
+        assessment.localChanges,
+        contains(
+          'Cambió la prescripción o ejercicios de la rutina «Upper».',
+        ),
+      );
+
+      await expectLater(
+        installer.installAcceptedRevision(
+          revision3,
+          activate: false,
+        ),
+        throwsA(isA<CoachProgramLocalChangesException>()),
+      );
+      expect(programRepository.getAll(), hasLength(1));
+
+      final newer = await installer.installAcceptedRevision(
+        revision3,
+        activate: false,
+        confirmLocalChanges: true,
+      );
+
+      expect(newer.id, isNot(first.id));
+      expect(programRepository.getAll(), hasLength(2));
+      expect(
+        programRepository.getById(first.id)?.name,
+        'Mi versión personalizada',
+      );
+      final preservedRoutine = routineRepository
+          .getAllRoutines()
+          .firstWhere((routine) => routine.id == localRoutine.id);
+      expect(preservedRoutine.exercises.single.restSeconds, 240);
+
+      final managed = Map<String, dynamic>.from(
+        metadataBox.get(
+              CoachProgramInstaller.managedRevisionMetadataKey,
+            ) as Map,
+      );
+      final state =
+          Map<String, dynamic>.from(managed['assignment-1'] as Map);
+      expect(state['revision_id'], 'revision-3');
+      expect(state['revision_number'], 3);
+      expect(state['program_id'], newer.id);
+      expect(state['baseline'], isA<Map>());
+    },
+  );
+
+  test(
     'accepted revision install is idempotent and revision-aware',
     () async {
       final installer = CoachProgramInstaller(

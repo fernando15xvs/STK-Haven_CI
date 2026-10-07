@@ -390,7 +390,9 @@ class _ClientRevisionStateCard extends ConsumerWidget {
       coachProgramAssignmentsProvider.select(
         (value) =>
             value.operation ==
-            CoachProgramAssignmentOperation.installingRevision,
+                CoachProgramAssignmentOperation.installingRevision ||
+            value.operation ==
+                CoachProgramAssignmentOperation.checkingRevisionInstall,
       ),
     );
     return state.when(
@@ -523,12 +525,85 @@ class _ClientRevisionStateCard extends ConsumerWidget {
     );
     if (activate == null || !context.mounted) return;
 
-    final success = await ref
-        .read(coachProgramAssignmentsProvider.notifier)
-        .installAcceptedRevision(
-          assignmentId,
-          activate: activate,
-        );
+    final notifier =
+        ref.read(coachProgramAssignmentsProvider.notifier);
+    final assessment =
+        await notifier.assessAcceptedRevisionInstall(assignmentId);
+    if (!context.mounted) return;
+    if (assessment == null) {
+      final result = ref.read(coachProgramAssignmentsProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.message ??
+                'No se pudo comprobar la copia local del programa.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    var confirmLocalChanges = false;
+    if (assessment.requiresLocalChangeConfirmation) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Cambios locales detectados'),
+          content: SizedBox(
+            width: 540,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                Text(
+                  assessment.installedRevisionNumber == null
+                      ? 'La copia instalada anteriormente no puede '
+                          'verificarse automáticamente.'
+                      : 'La copia de la revisión '
+                          '${assessment.installedRevisionNumber} tiene '
+                          'cambios locales:',
+                ),
+                const SizedBox(height: 12),
+                for (final change in assessment.localChanges)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• '),
+                        Expanded(child: Text(change)),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Tus cambios se conservarán en la copia anterior. '
+                  'La revisión nueva se instalará como una copia separada '
+                  'administrada por tu coach.',
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Conservar y cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Instalar revisión nueva'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+      confirmLocalChanges = true;
+    }
+
+    final success = await notifier.installAcceptedRevision(
+      assignmentId,
+      activate: activate,
+      confirmLocalChanges: confirmLocalChanges,
+    );
     if (!context.mounted) return;
     final result = ref.read(coachProgramAssignmentsProvider);
     ScaffoldMessenger.of(context).showSnackBar(

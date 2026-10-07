@@ -19,6 +19,7 @@ enum CoachProgramAssignmentOperation {
   assigning,
   opening,
   accepting,
+  checkingRevisionInstall,
   installingRevision,
   archiving,
 }
@@ -250,9 +251,61 @@ class CoachProgramAssignmentsNotifier
     }
   }
 
+  Future<CoachProgramInstallAssessment?> assessAcceptedRevisionInstall(
+    String assignmentId,
+  ) async {
+    if (!_requirePermanentAccount() || state.busy) return null;
+
+    state = state.copyWith(
+      operation: CoachProgramAssignmentOperation.checkingRevisionInstall,
+      clearMessage: true,
+      isError: false,
+    );
+
+    try {
+      final revisionService =
+          ref.read(coachProgramRevisionAcceptanceServiceProvider);
+      final revisionState = await revisionService.loadState(assignmentId);
+      final revisionId = revisionState.acceptedRevisionId;
+      final revisionNumber = revisionState.acceptedRevisionNumber;
+      if (revisionId == null || revisionNumber == null) {
+        _fail('No hay una revisión aceptada para instalar.');
+        return null;
+      }
+
+      final revision = await revisionService.loadAcceptedRevision(
+        assignmentId: assignmentId,
+        revisionId: revisionId,
+      );
+      if (revision.revisionNumber != revisionNumber) {
+        _fail('La revisión aceptada cambió; vuelve a intentarlo.');
+        return null;
+      }
+
+      final assessment = await ref
+          .read(coachProgramInstallerProvider)
+          .assessAcceptedRevision(revision);
+      state = state.copyWith(
+        operation: CoachProgramAssignmentOperation.idle,
+        isError: false,
+      );
+      return assessment;
+    } on PostgrestException catch (error) {
+      _fail(_databaseMessage(error));
+      return null;
+    } catch (error) {
+      _fail(
+        'No se pudo comprobar la copia local antes de instalar: '
+        '${error.toString()}',
+      );
+      return null;
+    }
+  }
+
   Future<bool> installAcceptedRevision(
     String assignmentId, {
     bool activate = true,
+    bool confirmLocalChanges = false,
   }) async {
     if (!_requirePermanentAccount() || state.busy) return false;
 
@@ -285,6 +338,7 @@ class CoachProgramAssignmentsNotifier
       await ref.read(coachProgramInstallerProvider).installAcceptedRevision(
             revision,
             activate: activate,
+            confirmLocalChanges: confirmLocalChanges,
           );
 
       ref.invalidate(exerciseListProvider);
@@ -300,6 +354,11 @@ class CoachProgramAssignmentsNotifier
         isError: false,
       );
       return true;
+    } on CoachProgramLocalChangesException {
+      _fail(
+        'La copia local tiene cambios. Revísalos y confirma antes de instalar.',
+      );
+      return false;
     } on PostgrestException catch (error) {
       _fail(_databaseMessage(error));
       return false;
