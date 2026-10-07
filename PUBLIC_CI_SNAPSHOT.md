@@ -7,3 +7,5 @@ Source branch: main
 
 The private Git history, local signing material, environment files, credentials,
 backups and other excluded local files are intentionally not mirrored.
+
+<!-- CI retry: Android NDK runner transient failure #2 -->
