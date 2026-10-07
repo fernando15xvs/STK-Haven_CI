@@ -69,14 +69,12 @@ class CoachExerciseProgressSnapshotBuilder {
           final estimated1Rm = FitnessMath.estimated1RM(weight, reps);
 
           if (inCurrent) {
-            accumulator
-              ..workingSets30d++
-              ..volume30d += volume;
+            accumulator.workingSets30d++;
+            accumulator.volume30d += volume;
             final rir = set.performanceRir;
             if (rir != null && rir >= 0 && rir <= 10) {
-              accumulator
-                ..rirTotal30d += rir
-                ..rirCount30d++;
+              accumulator.rirTotal30d += rir;
+              accumulator.rirCount30d++;
             }
             if (estimated1Rm != null &&
                 (accumulator.bestEstimated1Rm30d == null ||
@@ -84,9 +82,8 @@ class CoachExerciseProgressSnapshotBuilder {
               accumulator.bestEstimated1Rm30d = estimated1Rm;
             }
           } else if (inPrevious) {
-            accumulator
-              ..workingSetsPrevious30d++
-              ..volumePrevious30d += volume;
+            accumulator.workingSetsPrevious30d++;
+            accumulator.volumePrevious30d += volume;
             if (estimated1Rm != null &&
                 (accumulator.bestEstimated1RmPrevious30d == null ||
                     estimated1Rm >
