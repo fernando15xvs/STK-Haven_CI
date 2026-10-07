@@ -297,8 +297,9 @@ void main() {
     final row = Map<String, dynamic>.from(rows.single as Map);
     expect(row['exercise_id'], 'bench');
     expect(row['best_estimated_1rm'], 122);
-    expect(row.toString(), isNot(contains('notes')));
-    expect(row.toString(), isNot(contains('sets')));
+    expect(row.containsKey('notes'), isFalse);
+    expect(row.containsKey('sets'), isFalse);
+    expect(row.containsKey('exercises'), isFalse);
   });
 
   group('CoachClientProgress RPC parsing', () {
