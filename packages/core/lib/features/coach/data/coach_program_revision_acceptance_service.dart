@@ -304,8 +304,7 @@ class CoachProgramRevisionAcceptanceService {
     }
 
     final accepted = root;
-    if (accepted == null ||
-        accepted.acceptedAt == null ||
+    if (accepted.acceptedAt == null ||
         routines.isEmpty ||
         routines.length != accepted.totalCount) {
       throw const FormatException('Invalid accepted revision snapshot');
