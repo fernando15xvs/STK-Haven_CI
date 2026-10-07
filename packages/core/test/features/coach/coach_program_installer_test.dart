@@ -23,12 +23,13 @@ void main() {
   late RoutineRepository routineRepository;
   late TrainingProgramRepository programRepository;
 
+  setUpAll(registerHiveAdapters);
+
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp(
       'stk_coach_program_install_',
     );
     Hive.init(tempDir.path);
-    registerHiveAdapters();
 
     exerciseBox = await Hive.openBox<HiveExercise>('exercises');
     routineBox = await Hive.openBox<HiveRoutine>('routines');
