@@ -175,20 +175,21 @@ void main() {
         activate: false,
       );
 
-      expect(newer.id, isNot(first.id));
-      expect(programRepository.getAll(), hasLength(2));
+      expect(newer.id, first.id);
+      expect(newer.name, 'Coach plan R3');
+      expect(programRepository.getAll(), hasLength(1));
+      // The old routine remains locally available for historical references,
+      // while the upgraded program points at a fresh immutable prescription.
       expect(routineRepository.getAllRoutines(), hasLength(2));
       expect(
-        installer
-            .getInstalledRevision('assignment-1', 'revision-2')
-            ?.id,
-        first.id,
+        installer.getInstalledRevision('assignment-1', 'revision-2'),
+        isNull,
       );
       expect(
         installer
             .getInstalledRevision('assignment-1', 'revision-3')
             ?.id,
-        newer.id,
+        first.id,
       );
 
       final metadata = Map<String, dynamic>.from(
@@ -198,8 +199,136 @@ void main() {
       );
       final assignmentImports =
           Map<String, dynamic>.from(metadata['assignment-1'] as Map);
-      expect(assignmentImports['revision-2'], first.id);
-      expect(assignmentImports['revision-3'], newer.id);
+      expect(assignmentImports, hasLength(1));
+      expect(assignmentImports['revision-3'], first.id);
+
+      final managed = Map<String, dynamic>.from(
+        metadataBox.get(
+              CoachProgramInstaller.revisionInstallStateMetadataKey,
+            ) as Map,
+      );
+      final managedAssignment =
+          Map<String, dynamic>.from(managed['assignment-1'] as Map);
+      expect(managedAssignment['program_id'], first.id);
+      expect(managedAssignment['revision_id'], 'revision-3');
+      expect(managedAssignment['revision_number'], 3);
+      expect(managedAssignment['baseline'], isA<Map>());
+    },
+  );
+
+  test(
+    'customized imported program requires explicit overwrite confirmation',
+    () async {
+      final installer = CoachProgramInstaller(
+        exerciseRepository: exerciseRepository,
+        routineRepository: routineRepository,
+        programRepository: programRepository,
+        metadataBox: metadataBox,
+      );
+      final revision2 = _acceptedRevision(
+        revisionId: 'revision-2',
+        revisionNumber: 2,
+        name: 'Coach plan R2',
+        restSeconds: 150,
+      );
+      final first = await installer.installAcceptedRevision(
+        revision2,
+        activate: false,
+      );
+
+      await programRepository.save(
+        first.copyWith(name: 'Mi versión personalizada'),
+      );
+
+      final revision3 = _acceptedRevision(
+        revisionId: 'revision-3',
+        revisionNumber: 3,
+        name: 'Coach plan R3',
+        restSeconds: 180,
+      );
+      final inspection =
+          await installer.inspectAcceptedRevision(revision3);
+
+      expect(inspection.upgradesExistingProgram, isTrue);
+      expect(inspection.requiresOverwriteConfirmation, isTrue);
+      expect(
+        inspection.localChanges,
+        contains('Nombre, notas o duración del programa'),
+      );
+
+      await expectLater(
+        installer.installAcceptedRevision(
+          revision3,
+          activate: false,
+          expectedLocalStateToken: inspection.localStateToken,
+        ),
+        throwsA(isA<CoachProgramLocalChangesException>()),
+      );
+      expect(
+        programRepository.getById(first.id)?.name,
+        'Mi versión personalizada',
+      );
+
+      final upgraded = await installer.installAcceptedRevision(
+        revision3,
+        activate: false,
+        allowOverwriteCustomized: true,
+        expectedLocalStateToken: inspection.localStateToken,
+      );
+      expect(upgraded.id, first.id);
+      expect(upgraded.name, 'Coach plan R3');
+    },
+  );
+
+  test(
+    'revision upgrade aborts when local state changes after inspection',
+    () async {
+      final installer = CoachProgramInstaller(
+        exerciseRepository: exerciseRepository,
+        routineRepository: routineRepository,
+        programRepository: programRepository,
+        metadataBox: metadataBox,
+      );
+      final first = await installer.installAcceptedRevision(
+        _acceptedRevision(
+          revisionId: 'revision-2',
+          revisionNumber: 2,
+          name: 'Coach plan R2',
+          restSeconds: 150,
+        ),
+        activate: false,
+      );
+      final revision3 = _acceptedRevision(
+        revisionId: 'revision-3',
+        revisionNumber: 3,
+        name: 'Coach plan R3',
+        restSeconds: 180,
+      );
+      final inspection =
+          await installer.inspectAcceptedRevision(revision3);
+      expect(inspection.requiresOverwriteConfirmation, isFalse);
+
+      await programRepository.save(
+        first.copyWith(notes: 'Cambio posterior a la revisión'),
+      );
+
+      await expectLater(
+        installer.installAcceptedRevision(
+          revision3,
+          activate: false,
+          allowOverwriteCustomized: true,
+          expectedLocalStateToken: inspection.localStateToken,
+        ),
+        throwsA(isA<CoachProgramInstallStateChangedException>()),
+      );
+      expect(
+        programRepository.getById(first.id)?.notes,
+        'Cambio posterior a la revisión',
+      );
+      expect(
+        installer.getInstalledRevision('assignment-1', 'revision-3'),
+        isNull,
+      );
     },
   );
 }

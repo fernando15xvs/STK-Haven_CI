@@ -386,11 +386,13 @@ class _ClientRevisionStateCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(coachProgramRevisionStateProvider(assignmentId));
-    final installing = ref.watch(
+    final installBusy = ref.watch(
       coachProgramAssignmentsProvider.select(
         (value) =>
             value.operation ==
-            CoachProgramAssignmentOperation.installingRevision,
+                CoachProgramAssignmentOperation.checkingRevisionInstall ||
+            value.operation ==
+                CoachProgramAssignmentOperation.installingRevision,
       ),
     );
     return state.when(
@@ -457,7 +459,7 @@ class _ClientRevisionStateCard extends ConsumerWidget {
         if (acceptedRevisionNumber != null) {
           return Card(
             child: ListTile(
-              leading: installing
+              leading: installBusy
                   ? const SizedBox.square(
                       dimension: 22,
                       child: CircularProgressIndicator(strokeWidth: 2),
@@ -473,7 +475,7 @@ class _ClientRevisionStateCard extends ConsumerWidget {
               ),
               trailing: IconButton(
                 tooltip: 'Instalar revisión',
-                onPressed: installing
+                onPressed: installBusy
                     ? null
                     : () => _installAcceptedRevision(
                           context,
@@ -496,15 +498,40 @@ class _ClientRevisionStateCard extends ConsumerWidget {
     WidgetRef ref,
     int revisionNumber,
   ) async {
+    final notifier =
+        ref.read(coachProgramAssignmentsProvider.notifier);
+    final inspection =
+        await notifier.inspectAcceptedRevisionInstall(assignmentId);
+    if (!context.mounted) return;
+    if (inspection == null) {
+      final result = ref.read(coachProgramAssignmentsProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.message ?? 'No se pudo comprobar la instalación.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final installDescription = inspection.sameRevisionInstalled
+        ? 'Esta misma revisión ya está instalada. Se reutilizará la copia '
+            'local existente; no se creará un duplicado.'
+        : inspection.upgradesExistingProgram
+            ? 'La revisión aceptada actualizará el programa importado '
+                'existente. El historial de entrenamientos no se elimina.'
+            : 'Se instalará exactamente la revisión que ya aceptaste.';
+
     final activate = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Instalar revisión $revisionNumber'),
-        content: const Text(
-          'Se instalará exactamente la revisión que ya aceptaste. '
-          'Si esta misma revisión ya está instalada, se reutilizará la copia '
-          'local existente en lugar de crear un duplicado.',
+        title: Text(
+          inspection.upgradesExistingProgram
+              ? 'Actualizar a revisión $revisionNumber'
+              : 'Instalar revisión $revisionNumber',
         ),
+        content: Text(installDescription),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -512,23 +539,88 @@ class _ClientRevisionStateCard extends ConsumerWidget {
           ),
           OutlinedButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Instalar sin activar'),
+            child: Text(
+              inspection.upgradesExistingProgram
+                  ? 'Actualizar sin activar'
+                  : 'Instalar sin activar',
+            ),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Instalar y activar'),
+            child: Text(
+              inspection.upgradesExistingProgram
+                  ? 'Actualizar y activar'
+                  : 'Instalar y activar',
+            ),
           ),
         ],
       ),
     );
     if (activate == null || !context.mounted) return;
 
-    final success = await ref
-        .read(coachProgramAssignmentsProvider.notifier)
-        .installAcceptedRevision(
-          assignmentId,
-          activate: activate,
-        );
+    if (inspection.requiresOverwriteConfirmation) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Hay cambios locales'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Estos cambios hechos en este dispositivo serán '
+                  'reemplazados por la revisión aceptada:',
+                ),
+                const SizedBox(height: 12),
+                for (final change in inspection.localChanges)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(Icons.edit_outlined, size: 18),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(change)),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Tus entrenamientos registrados y su historial se '
+                  'conservan. Esta confirmación solo autoriza reemplazar '
+                  'la configuración local del programa importado.',
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Conservar mis cambios'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Reemplazar cambios'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+    }
+
+    final success = await notifier.installAcceptedRevision(
+      assignmentId,
+      activate: activate,
+      allowOverwriteCustomized:
+          inspection.requiresOverwriteConfirmation,
+      expectedLocalStateToken: inspection.upgradesExistingProgram
+          ? inspection.localStateToken
+          : null,
+    );
     if (!context.mounted) return;
     final result = ref.read(coachProgramAssignmentsProvider);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -542,6 +634,7 @@ class _ClientRevisionStateCard extends ConsumerWidget {
       ),
     );
   }
+
 }
 
 class _AssignmentSummaryCard extends StatelessWidget {

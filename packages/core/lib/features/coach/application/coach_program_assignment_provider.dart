@@ -19,6 +19,7 @@ enum CoachProgramAssignmentOperation {
   assigning,
   opening,
   accepting,
+  checkingRevisionInstall,
   installingRevision,
   archiving,
 }
@@ -250,9 +251,58 @@ class CoachProgramAssignmentsNotifier
     }
   }
 
+  Future<CoachProgramRevisionInstallInspection?>
+      inspectAcceptedRevisionInstall(String assignmentId) async {
+    if (!_requirePermanentAccount() || state.busy) return null;
+
+    state = state.copyWith(
+      operation: CoachProgramAssignmentOperation.checkingRevisionInstall,
+      clearMessage: true,
+      isError: false,
+    );
+
+    try {
+      final revisionService =
+          ref.read(coachProgramRevisionAcceptanceServiceProvider);
+      final revisionState = await revisionService.loadState(assignmentId);
+      final revisionId = revisionState.acceptedRevisionId;
+      final revisionNumber = revisionState.acceptedRevisionNumber;
+      if (revisionId == null || revisionNumber == null) {
+        _fail('No hay una revisión aceptada para instalar.');
+        return null;
+      }
+
+      final revision = await revisionService.loadAcceptedRevision(
+        assignmentId: assignmentId,
+        revisionId: revisionId,
+      );
+      if (revision.revisionNumber != revisionNumber) {
+        _fail('La revisión aceptada cambió; vuelve a intentarlo.');
+        return null;
+      }
+
+      final inspection = await ref
+          .read(coachProgramInstallerProvider)
+          .inspectAcceptedRevision(revision);
+      state = state.copyWith(
+        operation: CoachProgramAssignmentOperation.idle,
+        isError: false,
+      );
+      return inspection;
+    } on PostgrestException catch (error) {
+      _fail(_databaseMessage(error));
+      return null;
+    } catch (_) {
+      _fail('No se pudo comprobar el estado local de la revisión.');
+      return null;
+    }
+  }
+
   Future<bool> installAcceptedRevision(
     String assignmentId, {
     bool activate = true,
+    bool allowOverwriteCustomized = false,
+    String? expectedLocalStateToken,
   }) async {
     if (!_requirePermanentAccount() || state.busy) return false;
 
@@ -282,9 +332,23 @@ class CoachProgramAssignmentsNotifier
         return false;
       }
 
+      final inspection = await ref
+          .read(coachProgramInstallerProvider)
+          .inspectAcceptedRevision(revision);
+      if (expectedLocalStateToken != null &&
+          inspection.localStateToken != expectedLocalStateToken) {
+        _fail(
+          'El programa local cambió desde la comprobación. '
+          'Revísalo de nuevo antes de reemplazarlo.',
+        );
+        return false;
+      }
+
       await ref.read(coachProgramInstallerProvider).installAcceptedRevision(
             revision,
             activate: activate,
+            allowOverwriteCustomized: allowOverwriteCustomized,
+            expectedLocalStateToken: expectedLocalStateToken,
           );
 
       ref.invalidate(exerciseListProvider);
@@ -294,12 +358,28 @@ class CoachProgramAssignmentsNotifier
 
       state = state.copyWith(
         operation: CoachProgramAssignmentOperation.idle,
-        message: activate
-            ? 'Revisión $revisionNumber instalada como programa activo.'
-            : 'Revisión $revisionNumber instalada.',
+        message: inspection.upgradesExistingProgram
+            ? (activate
+                ? 'Revisión $revisionNumber aplicada al programa e instalada como activa.'
+                : 'Revisión $revisionNumber aplicada al programa.')
+            : (activate
+                ? 'Revisión $revisionNumber instalada como programa activo.'
+                : 'Revisión $revisionNumber instalada.'),
         isError: false,
       );
       return true;
+    } on CoachProgramLocalChangesException {
+      _fail(
+        'Hay cambios locales sin confirmar. '
+        'Revísalos antes de reemplazar el programa.',
+      );
+      return false;
+    } on CoachProgramInstallStateChangedException {
+      _fail(
+        'El programa local cambió desde la comprobación. '
+        'Revísalo de nuevo antes de reemplazarlo.',
+      );
+      return false;
     } on PostgrestException catch (error) {
       _fail(_databaseMessage(error));
       return false;
