@@ -1,5 +1,5 @@
 begin;
-select plan(37);
+select plan(38);
 insert into auth.users (
   id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data
@@ -168,6 +168,28 @@ insert into public.stk_assigned_programs(
   'accepted', 1, '2026-08-01T00:00:00Z', '2026-08-01T00:00:00Z',
   '2026-08-01T00:00:00Z'
 );
+
+insert into public.stk_assigned_program_revisions(
+  id, assignment_id, revision_number, previous_revision_id, source_kind,
+  observed_assignment_version, name, notes, duration_weeks,
+  training_weekdays, starts_on, authored_by, authored_at, recorded_at
+) values (
+  '57000000-0000-0000-0000-000000000001',
+  '56000000-0000-0000-0000-000000000001',
+  2, null, 'coach_revision', 1, 'Plan frecuencia revisado', '', 12,
+  array[2,4]::smallint[], '2026-08-01',
+  '51000000-0000-0000-0000-000000000001',
+  '2026-08-15T00:00:00Z', '2026-08-15T00:00:00Z'
+);
+
+insert into public.stk_assigned_program_revision_acceptances(
+  assignment_id, revision_id, client_user_id, accepted_at
+) values (
+  '56000000-0000-0000-0000-000000000001',
+  '57000000-0000-0000-0000-000000000001',
+  '52000000-0000-0000-0000-000000000001',
+  '2026-08-16T00:00:00Z'
+);
 update public.stk_coach_client_relationships
 set permissions='{"view_progress":true,"assign_programs":true}'
 where id='53000000-0000-0000-0000-000000000001';
@@ -180,14 +202,19 @@ select is(
   'adherence uses an accepted program from this exact relationship'
 );
 select is(
+  public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'assignment_name',
+  'Plan frecuencia revisado',
+  'adherence reports the latest explicitly accepted immutable revision'
+);
+select is(
   (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'scheduled_sessions_7d')::integer,
-  3,
-  'seven day frequency target respects configured weekdays'
+  2,
+  'seven day frequency target uses accepted revision weekdays'
 );
 select is(
   (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'scheduled_sessions_30d')::integer,
-  13,
-  'thirty day frequency target respects configured weekdays'
+  9,
+  'thirty day frequency target uses accepted revision weekdays'
 );
 select is(
   (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'completed_sessions_7d')::integer,

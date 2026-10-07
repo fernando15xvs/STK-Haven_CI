@@ -402,6 +402,11 @@ declare
   v_snapshot public.stk_client_progress_snapshots%rowtype;
   v_snapshot_json jsonb;
   v_program public.stk_assigned_programs%rowtype;
+  v_accepted_revision public.stk_assigned_program_revisions%rowtype;
+  v_schedule_name text;
+  v_schedule_duration_weeks integer;
+  v_schedule_weekdays smallint[];
+  v_schedule_starts_on date;
   v_program_end_date date;
   v_reference_date date;
   v_scheduled_7d integer := 0;
@@ -491,30 +496,53 @@ begin
      limit 1;
 
     if found then
+      select revision.*
+        into v_accepted_revision
+        from public.stk_assigned_program_revision_acceptances as acceptance
+        join public.stk_assigned_program_revisions as revision
+          on revision.id = acceptance.revision_id
+         and revision.assignment_id = acceptance.assignment_id
+       where acceptance.assignment_id = v_program.id
+         and acceptance.client_user_id = v_relationship.client_user_id
+       order by revision.revision_number desc, acceptance.accepted_at desc
+       limit 1;
+
+      if found then
+        v_schedule_name := v_accepted_revision.name;
+        v_schedule_duration_weeks := v_accepted_revision.duration_weeks;
+        v_schedule_weekdays := v_accepted_revision.training_weekdays;
+        v_schedule_starts_on := v_accepted_revision.starts_on;
+      else
+        v_schedule_name := v_program.name;
+        v_schedule_duration_weeks := v_program.duration_weeks;
+        v_schedule_weekdays := v_program.training_weekdays;
+        v_schedule_starts_on := v_program.starts_on;
+      end if;
+
       v_reference_date := v_snapshot.generated_at::date;
       v_program_end_date :=
-        v_program.starts_on + (v_program.duration_weeks * 7 - 1);
+        v_schedule_starts_on + (v_schedule_duration_weeks * 7 - 1);
 
-      if cardinality(v_program.training_weekdays) > 0 then
+      if cardinality(v_schedule_weekdays) > 0 then
         select count(*)::integer
           into v_scheduled_7d
           from pg_catalog.generate_series(
-            greatest(v_program.starts_on, v_reference_date - 6),
+            greatest(v_schedule_starts_on, v_reference_date - 6),
             least(v_program_end_date, v_reference_date),
             interval '1 day'
           ) as scheduled(day)
          where extract(isodow from scheduled.day)::smallint =
-               any(v_program.training_weekdays);
+               any(v_schedule_weekdays);
 
         select count(*)::integer
           into v_scheduled_30d
           from pg_catalog.generate_series(
-            greatest(v_program.starts_on, v_reference_date - 29),
+            greatest(v_schedule_starts_on, v_reference_date - 29),
             least(v_program_end_date, v_reference_date),
             interval '1 day'
           ) as scheduled(day)
          where extract(isodow from scheduled.day)::smallint =
-               any(v_program.training_weekdays);
+               any(v_schedule_weekdays);
       end if;
 
       v_percent_7d := case
@@ -540,8 +568,8 @@ begin
 
       v_adherence := pg_catalog.jsonb_build_object(
         'assignment_id', v_program.id,
-        'assignment_name', v_program.name,
-        'starts_on', v_program.starts_on,
+        'assignment_name', v_schedule_name,
+        'starts_on', v_schedule_starts_on,
         'ends_on', v_program_end_date,
         'scheduled_sessions_7d', v_scheduled_7d,
         'completed_sessions_7d', v_snapshot.workouts_7d,
@@ -577,4 +605,4 @@ grant execute on function public.stk_get_coach_pro_client_progress(uuid)
   to authenticated;
 
 comment on function public.stk_get_coach_pro_client_progress(uuid) is
-  'Coach Pro progress snapshot with client-computed previous-7-day trends. Frequency adherence is returned only when view_progress and assign_programs are both active, and compares scheduled weekdays with aggregate workout counts rather than exact routine matching.';
+  'Coach Pro progress snapshot with client-computed previous-7-day trends. Frequency adherence is returned only when view_progress and assign_programs are both active, prefers the latest explicitly accepted immutable revision schedule, and compares scheduled weekdays with aggregate workout counts rather than exact routine matching.';
