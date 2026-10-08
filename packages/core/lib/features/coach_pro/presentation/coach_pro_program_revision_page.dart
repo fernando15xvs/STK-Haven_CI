@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/application/coach_pro_template_provider.dart';
 import 'package:core/features/coach_pro/application/coach_pro_program_revision_provider.dart';
 import 'package:core/features/coach_pro/data/coach_pro_program_revision_service.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_program_revision.dart';
@@ -285,6 +286,7 @@ class _RevisionDetail extends ConsumerStatefulWidget {
 class _RevisionDetailState extends ConsumerState<_RevisionDetail>
     with WidgetsBindingObserver {
   int _offset = 0;
+  bool _savingTemplate = false;
 
   CoachProProgramRevisionDetailQuery get _query => (
         relationshipId: widget.relationshipId,
@@ -314,6 +316,66 @@ class _RevisionDetailState extends ConsumerState<_RevisionDetail>
   void _refresh() => ref.invalidate(
         coachProProgramRevisionDetailProvider(_query),
       );
+
+  Future<void> _saveAsTemplate(String currentName) async {
+    if (_savingTemplate || widget.routineId != null) return;
+    final controller = TextEditingController(text: currentName);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: const Text('Guardar como plantilla'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Se copiará la prescripción sin notas privadas '
+                'ni datos del cliente. No cambiará el programa asignado.'),
+            TextField(
+              controller: controller,
+              maxLength: 120,
+              decoration: const InputDecoration(labelText: 'Nombre de plantilla'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialog).pop(),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialog).pop(controller.text.trim()),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || title == null || title.isEmpty ||
+        title.runes.length > 120) return;
+    final user = ref.read(appIdentityProvider).userId;
+    if (user == null) return;
+    setState(() => _savingTemplate = true);
+    try {
+      await ref.read(coachProTemplateServiceProvider).saveFromRevision(
+        relationshipId: widget.relationshipId,
+        assignmentId: widget.assignmentId,
+        revisionId: widget.revisionId,
+        title: title,
+      );
+      if (!mounted || ref.read(appIdentityProvider).userId != user) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Plantilla guardada en tu biblioteca.')),
+      );
+    } catch (_) {
+      if (mounted && ref.read(appIdentityProvider).userId == user) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No se pudo guardar la plantilla. '
+              'Comprueba tu plan, permisos y conexión.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingTemplate = false);
+    }
+  }
 
   Future<void> _openRoutine(String routineId) async {
     await Navigator.of(context).push<void>(
@@ -390,6 +452,15 @@ class _RevisionDetailState extends ConsumerState<_RevisionDetail>
                         'Programa observado: v${page.observedAssignmentVersion}',
                       ),
                       if (widget.routineId == null) ...[
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            onPressed: _savingTemplate
+                                ? null : () => _saveAsTemplate(page.name),
+                            icon: const Icon(Icons.save_outlined),
+                            label: const Text('Guardar como plantilla'),
+                          ),
+                        ),
                         Text('Duración: ${page.durationWeeks} semanas'),
                         Text(
                           'Días: ${_weekdays(page.trainingWeekdays)}',
