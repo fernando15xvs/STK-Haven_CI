@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/presentation/coach_pro_task_agenda_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_task_page.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_nutrition_page.dart';
@@ -362,6 +363,21 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                 if (!detail.canViewTasks)
                   const Text('Tareas: no compartidas en esta relación.')
                 else ...[
+                  Align(alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.event_note_outlined),
+                      label: const Text('Agenda de próximas tareas'),
+                      onPressed: () async {
+                        await Navigator.of(context).push<void>(
+                          MaterialPageRoute(builder: (_) =>
+                            CoachProTaskAgendaPage(
+                              relationshipId: widget.relationshipId,
+                            )),
+                        );
+                        if (mounted) _refresh();
+                      },
+                    ),
+                  ),
                   if (detail.tasks!.items.isEmpty)
                     Text(_offset == 0 ? 'No hay tareas asignadas en esta relación.'
                         : 'Esta página ya no tiene tareas. Vuelve a la anterior.'),
