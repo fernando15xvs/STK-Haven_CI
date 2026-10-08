@@ -73,8 +73,8 @@ class BackupStatusPage extends ConsumerWidget {
                           child: FilledButton.icon(
                             onPressed: cloud.busy
                                 ? null
-                                : () => Navigator.of(context).push<void>(
-                                      MaterialPageRoute(builder: (_) =>
+                                : () => Navigator.of(context).push<bool>(
+                                      MaterialPageRoute<bool>(builder: (_) =>
                                         const CloudAuthPage()),
                                     ),
                             icon: const Icon(Icons.login),
@@ -86,8 +86,8 @@ class BackupStatusPage extends ConsumerWidget {
                           child: OutlinedButton.icon(
                             onPressed: cloud.busy
                                 ? null
-                                : () => Navigator.of(context).push<void>(
-                                      MaterialPageRoute(builder: (_) =>
+                                : () => Navigator.of(context).push<bool>(
+                                      MaterialPageRoute<bool>(builder: (_) =>
                                         const CloudAuthPage(
                                           initialMode: CloudAuthMode.signUp,
                                         )),
