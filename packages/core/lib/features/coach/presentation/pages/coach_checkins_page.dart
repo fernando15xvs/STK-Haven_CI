@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/presentation/coach_pro_checkin_cadence_page.dart';
 import 'package:core/domain/models/coach_checkin.dart';
 import 'package:core/features/coach/application/coach_checkin_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -22,6 +23,20 @@ class _CoachCheckinsPageState extends ConsumerState<CoachCheckinsPage>{
       body:RefreshIndicator(onRefresh:()=>ref.read(coachCheckinProvider.notifier).load(widget.clientUserId),child:ListView(
         physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(20,20,20,100),children:[
           const Card(child:Padding(padding:EdgeInsets.all(16),child:Text('Registro breve de energía y recuperación percibidas. No es una evaluación médica ni genera diagnósticos.'))),
+          if (widget.isClient)
+            Align(alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.event_repeat_outlined),
+                label: const Text('Frecuencia propuesta'),
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(builder: (_) =>
+                    CoachProCheckinCadencePage(
+                      relationshipId: widget.relationshipId,
+                      asCoach: false,
+                    )),
+                ),
+              ),
+            ),
           const SizedBox(height:12),
           if(s.busy&&s.items.isEmpty)const Center(child:CircularProgressIndicator())
           else if(s.items.isEmpty)const Card(child:Padding(padding:EdgeInsets.all(20),child:Text('Todavía no hay check-ins compartidos.')))
