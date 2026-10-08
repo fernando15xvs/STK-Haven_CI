@@ -264,6 +264,8 @@ class _DashboardState extends ConsumerState<_Dashboard>
                                   child: Text('Nombre', overflow: TextOverflow.ellipsis)),
                               DropdownMenuItem(value: CoachProClientSort.recentWorkout,
                                   child: Text('Último entreno', overflow: TextOverflow.ellipsis)),
+                              DropdownMenuItem(value: CoachProClientSort.adherence,
+                                  child: Text('Adherencia (menor primero)', overflow: TextOverflow.ellipsis)),
                             ],
                             onChanged: (value) {
                               if (value != null) unawaited(ref.read(
@@ -282,7 +284,7 @@ class _DashboardState extends ConsumerState<_Dashboard>
                       ],
                     ),
                     const SizedBox(height: 8),
-                    const Text('Revisión y último entreno usan solo el progreso compartido.'),
+                    const Text('Revisión y último entreno usan progreso compartido. Adherencia requiere también permiso para programas; sin datos autorizados aparece al final.'),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 12,
