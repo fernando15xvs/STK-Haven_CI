@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
 
 import 'package:core/domain/models/coach_pro_client_summary.dart';
+import 'package:core/domain/models/coach_pro_portfolio_overview.dart';
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/domain/models/subscription_entitlement.dart';
 import 'package:core/features/coach_pro/application/coach_pro_dashboard_provider.dart';
@@ -20,6 +21,16 @@ final coachProDashboardPlanProvider =
     final identity = ref.watch(appIdentityProvider);
     if (!identity.signedIn || identity.userId != userId) return null;
     return ref.watch(coachProEntitlementServiceProvider).getOwnEntitlement();
+  },
+);
+
+/// Independent from the paginated client list and scoped to the signed-in user.
+final coachProPortfolioOverviewProvider =
+    FutureProvider.autoDispose.family<CoachProPortfolioOverview?, String>(
+  (ref, userId) {
+    final identity = ref.watch(appIdentityProvider);
+    if (!identity.signedIn || identity.userId != userId) return null;
+    return ref.watch(coachProDashboardServiceProvider).getPortfolioOverview();
   },
 );
 
@@ -84,6 +95,7 @@ class _DashboardState extends ConsumerState<_Dashboard>
   Future<void> _refresh() async {
     _debounce?.cancel();
     ref.invalidate(coachProDashboardPlanProvider(widget.userId));
+    ref.invalidate(coachProPortfolioOverviewProvider(widget.userId));
     final notifier = ref.read(coachProDashboardProvider.notifier);
     if (_search.text.trim() != ref.read(coachProDashboardProvider).search) {
       await notifier.search(_search.text);
@@ -114,6 +126,7 @@ class _DashboardState extends ConsumerState<_Dashboard>
   Widget build(BuildContext context) {
     final state = ref.watch(coachProDashboardProvider);
     final plan = ref.watch(coachProDashboardPlanProvider(widget.userId));
+    final overview = ref.watch(coachProPortfolioOverviewProvider(widget.userId));
     final loading = state.status == CoachProDashboardStatus.loading;
     return LayoutBuilder(builder: (context, constraints) {
       final table = constraints.maxWidth >= 1000 &&
@@ -148,6 +161,47 @@ class _DashboardState extends ConsumerState<_Dashboard>
                               : 'Plan: ${_planStatus(value.status)} · '
                                   '${value.activeClientCount}/${value.clientLimit} clientes activos'
                                   '${value.accessActive ? '' : ' · Acceso no disponible'}'),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Resumen global de cartera',
+                                style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 8),
+                            overview.when(
+                              skipLoadingOnRefresh: false,
+                              loading: () => const Text('Consultando resumen global…'),
+                              error: (_, _) => const Text(
+                                'Resumen no disponible. Actualiza para volver a comprobar tus permisos.'),
+                              data: (value) => value == null
+                                  ? const Text('Resumen no disponible sin cuenta permanente.')
+                                  : Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Clientes: ${value.totalClients} · '
+                                            'Activos: ${value.activeClients} · '
+                                            'Pausados: ${value.pausedClients}'),
+                                        Text('Requieren revisión: ${value.clientsRequiringReview} · '
+                                            'Progreso compartido: ${value.clientsWithSharedProgress}'),
+                                        Text('Tareas activas visibles: ${value.visibleActiveTasks} · '
+                                            'Clientes con tareas: ${value.clientsWithTaskBacklog}'),
+                                        Text('Clientes con check-in reciente: ${value.clientsWithRecentCheckins}'),
+                                        const SizedBox(height: 6),
+                                        const Text(
+                                          'Cifras de toda la cartera. Tareas, check-ins y '
+                                          'progreso incluyen solo relaciones activas con '
+                                          'permiso; no representan información oculta.',
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
