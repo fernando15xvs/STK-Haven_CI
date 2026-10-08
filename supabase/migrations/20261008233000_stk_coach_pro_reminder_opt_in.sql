@@ -45,7 +45,7 @@ begin
   v_allowed := v_relation.status='active'
     and coalesce((v_relation.permissions->>'view_checkins')::boolean,false)
     and coalesce((v_relation.permissions->>'assign_tasks')::boolean,false)
-    and v_cadence.status='accepted'
+    and coalesce(v_cadence.status='accepted',false)
     and public.stk_entitlement_active_for_user(
       v_relation.coach_user_id,'coach_pro');
   return pg_catalog.jsonb_build_object(
