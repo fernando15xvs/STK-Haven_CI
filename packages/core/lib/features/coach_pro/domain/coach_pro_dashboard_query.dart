@@ -4,7 +4,8 @@ enum CoachProClientStatusFilter { all, active, paused }
 enum CoachProClientSort {
   review('review'),
   name('name'),
-  recentWorkout('recent_workout');
+  recentWorkout('recent_workout'),
+  adherence('adherence');
 
   final String wireValue;
   const CoachProClientSort(this.wireValue);
