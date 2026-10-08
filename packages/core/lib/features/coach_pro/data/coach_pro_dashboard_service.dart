@@ -1,11 +1,23 @@
 import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
+import 'package:core/domain/models/coach_pro_portfolio_overview.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CoachProDashboardService {
   final SupabaseClient client;
 
   const CoachProDashboardService(this.client);
+
+  /// Totals cover every authorized relationship, not just one roster page.
+  Future<CoachProPortfolioOverview> getPortfolioOverview() async {
+    final response = await client.rpc('stk_get_coach_pro_portfolio_overview');
+    if (response is! Map) {
+      throw const FormatException('Invalid Coach Pro portfolio response');
+    }
+    return CoachProPortfolioOverview.fromJson(
+      Map<String, dynamic>.from(response),
+    );
+  }
 
   Future<List<CoachProClientSummary>> listClients({
     String search = '',
