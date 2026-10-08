@@ -52,6 +52,6 @@ class CoachProTemplateService {
   Future<void> archive(String templateId) async {
     final result = await client.rpc('stk_archive_coach_pro_template',
         params: {'p_template_id': templateId});
-    if (result != true) throw const StateError('Template unavailable');
+    if (result != true) throw StateError('Template unavailable');
   }
 }
