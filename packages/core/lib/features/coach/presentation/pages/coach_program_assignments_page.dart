@@ -1,6 +1,8 @@
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/coach/application/coach_program_assignment_provider.dart';
+import 'package:core/features/coach/application/coach_program_revision_acceptance_provider.dart';
+import 'package:core/features/coach/presentation/pages/coach_program_revision_review_page.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:flutter/material.dart';
@@ -274,6 +276,12 @@ class _CoachProgramAssignmentsPageState
           child: ListView(
             children: [
               _ProgramMetadata(assignment: assignment),
+              if (isClient) ...[
+                const SizedBox(height: 14),
+                _ClientRevisionStateCard(
+                  assignmentId: assignment.summary.id,
+                ),
+              ],
               const SizedBox(height: 14),
               for (final routine in assignment.routines) ...[
                 Card(
@@ -365,6 +373,275 @@ class _CoachProgramAssignmentsPageState
           assignmentId,
           activate: activate,
         );
+  }
+}
+
+class _ClientRevisionStateCard extends ConsumerWidget {
+  final String assignmentId;
+
+  const _ClientRevisionStateCard({
+    required this.assignmentId,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(coachProgramRevisionStateProvider(assignmentId));
+    final installing = ref.watch(
+      coachProgramAssignmentsProvider.select(
+        (value) =>
+            value.operation ==
+                CoachProgramAssignmentOperation.installingRevision ||
+            value.operation ==
+                CoachProgramAssignmentOperation.checkingRevisionInstall,
+      ),
+    );
+    return state.when(
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Expanded(child: Text('Comprobando revisiones…')),
+            ],
+          ),
+        ),
+      ),
+      error: (_, _) => Card(
+        child: ListTile(
+          leading: const Icon(Icons.sync_problem_outlined),
+          title: const Text('No se pudieron comprobar las revisiones'),
+          trailing: IconButton(
+            tooltip: 'Reintentar',
+            onPressed: () =>
+                ref.invalidate(coachProgramRevisionStateProvider(assignmentId)),
+            icon: const Icon(Icons.refresh),
+          ),
+        ),
+      ),
+      data: (value) {
+        if (value == null) return const SizedBox.shrink();
+
+        final latestRevisionId = value.latestRevisionId;
+        if (value.hasPendingRevision &&
+            value.canAcceptLatest &&
+            latestRevisionId != null) {
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.new_releases_outlined),
+              title: Text(
+                'Revisión ${value.latestRevisionNumber} disponible',
+              ),
+              subtitle: const Text(
+                'Revísala y acéptala explícitamente. '
+                'Aceptar no instala ni cambia tu programa local.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => CoachProgramRevisionReviewPage(
+                      assignmentId: assignmentId,
+                      revisionId: latestRevisionId,
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }
+
+        final acceptedRevisionNumber = value.acceptedRevisionNumber;
+        final acceptedRevisionId = value.acceptedRevisionId;
+        if (acceptedRevisionNumber != null && acceptedRevisionId != null) {
+          final installed = ref.watch(
+            coachProgramInstalledRevisionProvider((
+              assignmentId: assignmentId,
+              revisionId: acceptedRevisionId,
+            )),
+          );
+          return Card(
+            child: ListTile(
+              leading: installing
+                  ? const SizedBox.square(
+                      dimension: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(
+                      installed
+                          ? Icons.download_done_outlined
+                          : Icons.cloud_download_outlined,
+                    ),
+              title: Text(
+                installed
+                    ? 'Revisión $acceptedRevisionNumber instalada'
+                    : 'Revisión $acceptedRevisionNumber aceptada',
+              ),
+              subtitle: Text(
+                installed
+                    ? 'Esta revisión ya está instalada en este dispositivo. '
+                        'Puedes reinstalarla de forma segura si lo necesitas.'
+                    : value.revisionAccessActive
+                        ? 'Aceptada en tu cuenta y pendiente de instalar en '
+                            'este dispositivo. Puedes reintentar sin volver '
+                            'a aceptarla.'
+                        : 'Aceptada en tu cuenta y recuperable en este '
+                            'dispositivo aunque el acceso del coach haya '
+                            'cambiado.',
+              ),
+              trailing: IconButton(
+                tooltip: installed
+                    ? 'Reinstalar revisión'
+                    : 'Instalar revisión aceptada',
+                onPressed: installing
+                    ? null
+                    : () => _installAcceptedRevision(
+                          context,
+                          ref,
+                          acceptedRevisionNumber,
+                        ),
+                icon: Icon(
+                  installed
+                      ? Icons.refresh_outlined
+                      : Icons.download_outlined,
+                ),
+              ),
+            ),
+          );
+        }
+
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Future<void> _installAcceptedRevision(
+    BuildContext context,
+    WidgetRef ref,
+    int revisionNumber,
+  ) async {
+    final activate = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Instalar revisión $revisionNumber'),
+        content: const Text(
+          'Se instalará exactamente la revisión que ya aceptaste. '
+          'Si esta misma revisión ya está instalada, se reutilizará la copia '
+          'local existente en lugar de crear un duplicado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancelar'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Instalar sin activar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Instalar y activar'),
+          ),
+        ],
+      ),
+    );
+    if (activate == null || !context.mounted) return;
+
+    final notifier =
+        ref.read(coachProgramAssignmentsProvider.notifier);
+    final assessment =
+        await notifier.assessAcceptedRevisionInstall(assignmentId);
+    if (!context.mounted) return;
+    if (assessment == null) {
+      final result = ref.read(coachProgramAssignmentsProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.message ??
+                'No se pudo comprobar la copia local del programa.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    var confirmLocalChanges = false;
+    if (assessment.requiresLocalChangeConfirmation) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Cambios locales detectados'),
+          content: SizedBox(
+            width: 540,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                Text(
+                  assessment.installedRevisionNumber == null
+                      ? 'La copia instalada anteriormente no puede '
+                          'verificarse automáticamente.'
+                      : 'La copia de la revisión '
+                          '${assessment.installedRevisionNumber} tiene '
+                          'cambios locales:',
+                ),
+                const SizedBox(height: 12),
+                for (final change in assessment.localChanges)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• '),
+                        Expanded(child: Text(change)),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Tus cambios se conservarán en la copia anterior. '
+                  'La revisión nueva se instalará como una copia separada '
+                  'administrada por tu coach.',
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Conservar y cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Instalar revisión nueva'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+      confirmLocalChanges = true;
+    }
+
+    final success = await notifier.installAcceptedRevision(
+      assignmentId,
+      activate: activate,
+      confirmLocalChanges: confirmLocalChanges,
+    );
+    if (!context.mounted) return;
+    final result = ref.read(coachProgramAssignmentsProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.message ??
+              (success
+                  ? 'Revisión instalada.'
+                  : 'No se pudo instalar la revisión.'),
+        ),
+      ),
+    );
   }
 }
 

@@ -1,6 +1,6 @@
 begin;
 
-select plan(22);
+select plan(24);
 
 select has_table(
   'public',
@@ -169,9 +169,14 @@ select lives_ok(
                 "target_reps_max":8,
                 "rest_seconds":180,
                 "warmup_sets":2,
-                "approach_sets":0,
-                "unilateral":false,
-                "unilateral_target":"other"
+                "approach_sets":1,
+                "warmup_rest_seconds":45,
+                "approach_rest_seconds":75,
+                "unilateral":true,
+                "unilateral_target":"arm",
+                "preparation_unilateral":false,
+                "unilateral_side_rest_seconds":0,
+                "preferred_unilateral_start_side":"right"
               }
             ]
           },
@@ -217,6 +222,36 @@ select is(
   (select count(*)::integer from public.stk_assigned_program_exercises),
   2,
   'coach sees normalized exercise prescriptions'
+);
+
+select is(
+  (
+    select pg_catalog.jsonb_build_object(
+      'warmup_rest_seconds', warmup_rest_seconds,
+      'approach_rest_seconds', approach_rest_seconds,
+      'preparation_unilateral', preparation_unilateral,
+      'unilateral_side_rest_seconds', unilateral_side_rest_seconds,
+      'preferred_unilateral_start_side', preferred_unilateral_start_side
+    )
+    from public.stk_assigned_program_exercises
+    where exercise_name='Press banca'
+  ),
+  '{"warmup_rest_seconds":45,"approach_rest_seconds":75,"preparation_unilateral":false,"unilateral_side_rest_seconds":0,"preferred_unilateral_start_side":"right"}'::jsonb,
+  'normalized exercise preserves preparation and unilateral overrides'
+);
+
+select is(
+  (
+    public.stk_get_assigned_program(
+      (select assignment_id from _stk_program_assignment_test limit 1)
+    ) -> 'routines' -> 0 -> 'exercises' -> 0
+  ) - array[
+    'id','position','name','muscle_group','equipment','target_sets',
+    'target_reps_min','target_reps_max','rest_seconds','warmup_sets',
+    'approach_sets','unilateral','unilateral_target','superset_key'
+  ],
+  '{"warmup_rest_seconds":45,"approach_rest_seconds":75,"preparation_unilateral":false,"unilateral_side_rest_seconds":0,"preferred_unilateral_start_side":"right"}'::jsonb,
+  'assignment transport exposes full preparation prescription'
 );
 
 select is(

@@ -2,6 +2,7 @@ import 'package:core/features/coach_pro/presentation/coach_pro_task_page.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_nutrition_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_program_page.dart';
+import 'package:core/features/coach_pro/presentation/coach_pro_program_revision_page.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/coach_assigned_task.dart';
 import 'package:core/domain/models/coach_relationship.dart';
@@ -136,8 +137,164 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                   Text('Volumen registrado en 7 días: ${detail.progress!.volume7d}'),
                   Text('RIR medio en 7 días: ${detail.progress!.averageRir7d?.toString() ?? 'Sin datos'}'),
                   Text('Último entreno registrado: ${_date(context, detail.progress!.lastWorkoutAt)}'),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Tendencia reciente',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  if (!detail.progress!.trendBaselineAvailable)
+                    const Text(
+                      'Aún no hay una ventana anterior comparable. '
+                      'Se mostrará cuando el cliente vuelva a sincronizar '
+                      'con el nuevo contrato de progreso.',
+                    )
+                  else ...[
+                    Text(
+                      'Entrenos: ${_trend(detail.progress!.workoutsTrendDelta7d)} '
+                      'vs. los 7 días anteriores',
+                    ),
+                    Text(
+                      'Minutos: ${_trend(detail.progress!.trainingMinutesTrendDelta7d)} '
+                      'vs. los 7 días anteriores',
+                    ),
+                    Text(
+                      'Series efectivas: ${_trend(detail.progress!.workingSetsTrendDelta7d)} '
+                      'vs. los 7 días anteriores',
+                    ),
+                    Text(
+                      'Volumen: ${_trendNumber(detail.progress!.volumeTrendDelta7d)} '
+                      'vs. los 7 días anteriores',
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  Text(
+                    'Adherencia de frecuencia',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                  ),
+                  if (detail.progress!.frequencyAdherence == null)
+                    const Text(
+                      'Sin cálculo disponible. Requiere un programa aceptado '
+                      'de este coach y permiso vigente para programas.',
+                    )
+                  else ...[
+                    Text(
+                      '${detail.progress!.frequencyAdherence!.assignmentName} · '
+                      '7 días: ${_adherence(detail.progress!.frequencyAdherence!.percent7d)} '
+                      '(${detail.progress!.frequencyAdherence!.completedSessions7d}/'
+                      '${detail.progress!.frequencyAdherence!.scheduledSessions7d})',
+                    ),
+                    Text(
+                      '30 días: ${_adherence(detail.progress!.frequencyAdherence!.percent30d)} '
+                      '(${detail.progress!.frequencyAdherence!.completedSessions30d}/'
+                      '${detail.progress!.frequencyAdherence!.scheduledSessions30d})',
+                    ),
+                    const Text(
+                      'Compara frecuencia planificada vs. entrenamientos '
+                      'registrados; no confirma que se haya realizado la '
+                      'rutina exacta prescrita.',
+                    ),
+                  ],
                   const SizedBox(height: 12),
-                  const Text('Estos agregados no indican por sí solos adherencia, récords ni una tendencia de mejora.'),
+                  const Text(
+                    'Las tendencias comparan dos ventanas de 7 días. '
+                    'No representan por sí solas mejora de fuerza, hipertrofia '
+                    'ni un récord personal.',
+                  ),
+                ],
+              ] else if (_section == CoachProClientSection.exerciseProgress) ...[
+                if (!detail.canViewExerciseProgress)
+                  const Text(
+                    'Tendencias por ejercicio: requieren que el cliente '
+                    'comparta progreso y entrenamientos en esta relación.',
+                  )
+                else ...[
+                  const Text(
+                    'Agregados por ejercicio: últimos 30 días frente a los '
+                    '30 días anteriores. No incluye notas ni series '
+                    'individuales.',
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Los PRs muestran el mejor valor observado en el historial '
+                    'compartido. El 1RM es una estimación, no una prueba de 1RM.',
+                  ),
+                  if (detail.exerciseProgress!.items.isEmpty)
+                    Text(
+                      _offset == 0
+                          ? 'Todavía no hay tendencias por ejercicio compartidas.'
+                          : 'Esta página está vacía. Vuelve a la anterior.',
+                    ),
+                  for (final item in detail.exerciseProgress!.items)
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.exerciseName,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            if (item.muscleGroup.isNotEmpty)
+                              Text(item.muscleGroup),
+                            Text(
+                              'Última sesión: ${_date(context, item.lastPerformedAt)}',
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Sesiones 30d: ${item.sessions30d} '
+                              '(${_trend(item.sessionsDelta30d)} vs. periodo anterior)',
+                            ),
+                            Text(
+                              'Series efectivas 30d: ${item.workingSets30d} '
+                              '(${_trend(item.workingSetsDelta30d)})',
+                            ),
+                            Text(
+                              'Volumen 30d: ${_number(item.volume30d)} '
+                              '(${_trendNumber(item.volumeDelta30d)})',
+                            ),
+                            Text(
+                              'RIR medio 30d: '
+                              '${item.averageRir30d == null ? 'Sin datos' : _number(item.averageRir30d!)}',
+                            ),
+                            Text(
+                              'Mejor e1RM 30d: '
+                              '${_optionalNumber(item.bestEstimated1Rm30d)} · '
+                              '30d anteriores: '
+                              '${_optionalNumber(item.bestEstimated1RmPrevious30d)}'
+                              '${item.estimated1RmDelta30d == null ? '' : ' '
+                                  '(${_trendNumber(item.estimated1RmDelta30d!)})'}',
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'PR peso: ${_optionalNumber(item.bestWeight)}'
+                              '${item.bestWeightAt == null ? '' : ' · '
+                                  '${_date(context, item.bestWeightAt)}'}',
+                            ),
+                            Text(
+                              'PR e1RM: ${_optionalNumber(item.bestEstimated1Rm)}'
+                              '${item.bestEstimated1RmAt == null ? '' : ' · '
+                                  '${_date(context, item.bestEstimated1RmAt)}'}',
+                            ),
+                            Text(
+                              'PR volumen de serie: '
+                              '${_optionalNumber(item.bestSetVolume)}'
+                              '${item.bestSetVolumeAt == null ? '' : ' · '
+                                  '${_date(context, item.bestSetVolumeAt)}'}',
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  _pagination(
+                    detail.exerciseProgress!.items.length,
+                    detail.exerciseProgress!.totalCount,
+                    'ejercicios',
+                  ),
                 ],
               ] else if (_section == CoachProClientSection.workouts) ...[
                 if (!detail.canViewWorkouts)
@@ -173,8 +330,12 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                     Card(child: Padding(padding: const EdgeInsets.all(16),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(item.name, style: Theme.of(context).textTheme.titleMedium),
-                        TextButton(onPressed: () => _openProgram(item),
-                          child: const Text('Ver rutinas')),
+                        Wrap(spacing: 8, runSpacing: 4, children: [
+                          TextButton(onPressed: () => _openProgram(item),
+                            child: const Text('Ver rutinas')),
+                          TextButton(onPressed: () => _openProgramHistory(item),
+                            child: const Text('Historial de revisiones')),
+                        ]),
                         Text('${_programStatus(item.status)} · Versión ${item.version}'),
                         Text('${item.durationWeeks} semanas · Inicio: ${_date(context, item.startsOn)}'),
                       ]),
@@ -237,6 +398,21 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
     if (mounted) _refresh();
   }
 
+  Future<void> _openProgramHistory(
+    CoachProgramAssignmentSummary program,
+  ) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => CoachProProgramRevisionHistoryPage(
+          relationshipId: widget.relationshipId,
+          assignmentId: program.id,
+          assignmentName: program.name,
+        ),
+      ),
+    );
+    if (mounted) _refresh();
+  }
+
   Widget _pagination(int count, int? total, String label) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -267,6 +443,7 @@ String _sectionLabel(CoachProClientSection section) => switch (section) {
   CoachProClientSection.tasks => 'Tareas',
   CoachProClientSection.workouts => 'Entrenamientos',
   CoachProClientSection.progress => 'Progreso',
+  CoachProClientSection.exerciseProgress => 'Ejercicios',
   CoachProClientSection.nutrition => 'Alimentación',
 };
 String _programStatus(AssignedProgramStatus status) => switch (status) {
@@ -274,3 +451,28 @@ String _programStatus(AssignedProgramStatus status) => switch (status) {
   AssignedProgramStatus.accepted => 'Aceptado',
   AssignedProgramStatus.archived => 'Archivado',
 };
+
+
+String _trend(int value) {
+  if (value > 0) return '+$value';
+  return value.toString();
+}
+
+String _trendNumber(double value) {
+  final normalized = value.abs() < 0.005 ? 0.0 : value;
+  final formatted = normalized.toStringAsFixed(
+    normalized == normalized.truncateToDouble() ? 0 : 1,
+  );
+  return normalized > 0 ? '+$formatted' : formatted;
+}
+
+String _adherence(int? value) => value == null ? 'Sin meta' : '$value%';
+
+
+String _number(double value) {
+  if (value == value.truncateToDouble()) return value.toStringAsFixed(0);
+  return value.toStringAsFixed(1);
+}
+
+String _optionalNumber(double? value) =>
+    value == null ? 'Sin datos' : _number(value);

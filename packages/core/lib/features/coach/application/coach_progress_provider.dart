@@ -1,6 +1,7 @@
 import 'package:core/domain/models/coach_client_progress.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/coach/application/coach_progress_snapshot_builder.dart';
+import 'package:core/features/coach/application/coach_exercise_progress_snapshot_builder.dart';
 import 'package:core/features/coach/data/coach_progress_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,7 +78,12 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
 
     try {
       final snapshot = CoachProgressSnapshotBuilder.fromHistory(history);
-      await _service.syncOwnProgress(snapshot);
+      final exerciseProgress =
+          CoachExerciseProgressSnapshotBuilder.fromHistory(history);
+      await _service.syncOwnProgress(
+        snapshot,
+        exerciseProgress: exerciseProgress,
+      );
       state = state.copyWith(
         operation: CoachProgressOperation.idle,
         message: silent ? null : 'Progreso compartido actualizado.',

@@ -1,5 +1,5 @@
 begin;
-select plan(24);
+select plan(38);
 insert into auth.users (
   id, aud, role, email, encrypted_password, email_confirmed_at,
   created_at, updated_at, raw_app_meta_data, raw_user_meta_data
@@ -95,7 +95,16 @@ insert into public.stk_coach_tasks(
 
 
 update public.stk_coach_client_relationships set permissions='{"view_progress":true}' where id='53000000-0000-0000-0000-000000000001';
-update public.stk_client_progress_snapshots set generated_at='2026-09-01T00:00:00Z',average_rir_7d=null,last_workout_at=null where client_user_id='52000000-0000-0000-0000-000000000001';
+update public.stk_client_progress_snapshots
+set generated_at='2026-09-01T00:00:00Z',
+    average_rir_7d=null,
+    last_workout_at=null,
+    trend_baseline_available=true,
+    workouts_previous_7d=3,
+    training_minutes_previous_7d=180,
+    completed_working_sets_previous_7d=40,
+    volume_previous_7d=10000
+where client_user_id='52000000-0000-0000-0000-000000000001';
 delete from public.stk_client_progress_snapshots where client_user_id='52000000-0000-0000-0000-000000000002';
 create temp table original_progress as select * from public.stk_client_progress_snapshots;
 select ok(not has_function_privilege('anon','public.stk_get_coach_pro_client_progress(uuid)','EXECUTE'),'anon execute denied');
@@ -109,7 +118,131 @@ select is((public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000
 select ok(public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot'->'average_rir_7d'='null'::jsonb,'missing RIR stays null');
 select ok(public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot'->'last_workout_at'='null'::jsonb,'missing workout timestamp stays null');
 select is((public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot'->>'generated_at')::timestamptz,'2026-09-01T00:00:00Z'::timestamptz,'old snapshot date is not rewritten as now');
-select ok(not (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001') ? 'recent_workouts') and not (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot' ? 'measurements') and not (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot' ? 'nutrition') and not (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot' ? 'adherence'),'no adjacent permission payloads or invented adherence');
+select ok(
+  not (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001') ? 'recent_workouts')
+  and not (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot' ? 'measurements')
+  and not (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot' ? 'nutrition'),
+  'progress payload excludes adjacent protected datasets'
+);
+select is(
+  (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot'->>'trend_baseline_available')::boolean,
+  true,
+  'trend baseline availability is shared under view_progress'
+);
+select is(
+  (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot'->>'workouts_previous_7d')::integer,
+  3,
+  'previous seven day workout count is shared'
+);
+select is(
+  (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot'->>'training_minutes_previous_7d')::integer,
+  180,
+  'previous seven day minutes are shared'
+);
+select is(
+  (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot'->>'completed_working_sets_previous_7d')::integer,
+  40,
+  'previous seven day working sets are shared'
+);
+select is(
+  (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'snapshot'->>'volume_previous_7d')::numeric,
+  10000::numeric,
+  'previous seven day volume is shared'
+);
+select ok(
+  public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence' = 'null'::jsonb,
+  'view_progress alone does not expose program adherence'
+);
+reset role;
+
+insert into public.stk_assigned_programs(
+  id, relationship_id, coach_user_id, client_user_id, name, notes,
+  duration_weeks, training_weekdays, starts_on, status, version,
+  created_at, accepted_at, updated_at
+) values (
+  '56000000-0000-0000-0000-000000000001',
+  '53000000-0000-0000-0000-000000000001',
+  '51000000-0000-0000-0000-000000000001',
+  '52000000-0000-0000-0000-000000000001',
+  'Plan frecuencia', '', 12, array[1,3,5]::smallint[], '2026-08-01',
+  'accepted', 1, '2026-08-01T00:00:00Z', '2026-08-01T00:00:00Z',
+  '2026-08-01T00:00:00Z'
+);
+
+insert into public.stk_assigned_program_revisions(
+  id, assignment_id, revision_number, previous_revision_id, source_kind,
+  observed_assignment_version, name, notes, duration_weeks,
+  training_weekdays, starts_on, authored_by, authored_at, recorded_at
+) values (
+  '57000000-0000-0000-0000-000000000001',
+  '56000000-0000-0000-0000-000000000001',
+  2, null, 'coach_revision', 1, 'Plan frecuencia revisado', '', 12,
+  array[2,4]::smallint[], '2026-08-01',
+  '51000000-0000-0000-0000-000000000001',
+  '2026-08-15T00:00:00Z', '2026-08-15T00:00:00Z'
+);
+
+insert into public.stk_assigned_program_revision_acceptances(
+  assignment_id, revision_id, client_user_id, accepted_at
+) values (
+  '56000000-0000-0000-0000-000000000001',
+  '57000000-0000-0000-0000-000000000001',
+  '52000000-0000-0000-0000-000000000001',
+  '2026-08-16T00:00:00Z'
+);
+update public.stk_coach_client_relationships
+set permissions='{"view_progress":true,"assign_programs":true}'
+where id='53000000-0000-0000-0000-000000000001';
+
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"51000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);
+select is(
+  public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'assignment_id',
+  '56000000-0000-0000-0000-000000000001',
+  'adherence uses an accepted program from this exact relationship'
+);
+select is(
+  public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'assignment_name',
+  'Plan frecuencia revisado',
+  'adherence reports the latest explicitly accepted immutable revision'
+);
+select is(
+  (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'scheduled_sessions_7d')::integer,
+  2,
+  'seven day frequency target uses accepted revision weekdays'
+);
+select is(
+  (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'scheduled_sessions_30d')::integer,
+  9,
+  'thirty day frequency target uses accepted revision weekdays'
+);
+select is(
+  (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'completed_sessions_7d')::integer,
+  4,
+  'adherence uses aggregate shared workout count without workout-detail permission'
+);
+select is(
+  (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'percent_7d')::integer,
+  100,
+  'frequency adherence is capped at one hundred percent'
+);
+select is(
+  (public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence'->>'percent_30d')::integer,
+  100,
+  'thirty day frequency adherence is capped at one hundred percent'
+);
+reset role;
+
+update public.stk_coach_client_relationships
+set permissions='{"view_progress":true}'
+where id='53000000-0000-0000-0000-000000000001';
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"51000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);
+select ok(
+  public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000001')->'adherence' = 'null'::jsonb,
+  'revoking assign_programs immediately removes adherence while progress remains visible'
+);
+
 select throws_ok($$select public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000002')$$,'P0001','Shared progress access unavailable','unpermitted client');
 select throws_ok($$select public.stk_get_coach_pro_client_progress('53000000-0000-0000-0000-000000000009')$$,'P0001','Shared progress access unavailable','unknown relationship');
 reset role;

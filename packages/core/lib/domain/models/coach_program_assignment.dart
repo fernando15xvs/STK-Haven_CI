@@ -1,3 +1,5 @@
+import 'package:core/domain/models/settings_state.dart';
+
 enum AssignedProgramStatus {
   assigned,
   accepted,
@@ -16,8 +18,13 @@ class AssignedExerciseSnapshot {
   final int restSeconds;
   final int warmupSets;
   final int approachSets;
+  final int? warmupRestSeconds;
+  final int? approachRestSeconds;
   final bool unilateral;
   final String unilateralTarget;
+  final bool preparationUnilateral;
+  final int? unilateralSideRestSeconds;
+  final PreferredWorkoutSide? preferredUnilateralStartSide;
   final String? supersetKey;
 
   const AssignedExerciseSnapshot({
@@ -32,8 +39,13 @@ class AssignedExerciseSnapshot {
     required this.restSeconds,
     required this.warmupSets,
     required this.approachSets,
+    this.warmupRestSeconds,
+    this.approachRestSeconds,
     required this.unilateral,
     required this.unilateralTarget,
+    this.preparationUnilateral = true,
+    this.unilateralSideRestSeconds,
+    this.preferredUnilateralStartSide,
     this.supersetKey,
   });
 
@@ -50,8 +62,28 @@ class AssignedExerciseSnapshot {
       restSeconds: (json['rest_seconds'] as num?)?.toInt() ?? 120,
       warmupSets: (json['warmup_sets'] as num?)?.toInt() ?? 0,
       approachSets: (json['approach_sets'] as num?)?.toInt() ?? 0,
+      warmupRestSeconds: _optionalIntInRange(
+        json['warmup_rest_seconds'],
+        min: 0,
+        max: 3600,
+      ),
+      approachRestSeconds: _optionalIntInRange(
+        json['approach_rest_seconds'],
+        min: 0,
+        max: 3600,
+      ),
       unilateral: json['unilateral'] as bool? ?? false,
       unilateralTarget: '${json['unilateral_target'] ?? 'other'}',
+      preparationUnilateral:
+          json['preparation_unilateral'] as bool? ?? true,
+      unilateralSideRestSeconds: _optionalIntInRange(
+        json['unilateral_side_rest_seconds'],
+        min: 0,
+        max: 600,
+      ),
+      preferredUnilateralStartSide: _preferredWorkoutSide(
+        json['preferred_unilateral_start_side']?.toString(),
+      ),
       supersetKey: json['superset_key']?.toString(),
     );
   }
@@ -193,4 +225,23 @@ AssignedProgramStatus _assignedProgramStatus(String? value) {
     if (status.name == value) return status;
   }
   return AssignedProgramStatus.archived;
+}
+
+
+int? _optionalIntInRange(
+  Object? value, {
+  required int min,
+  required int max,
+}) {
+  final number = value is num ? value.toInt() : null;
+  if (number == null || number < min || number > max) return null;
+  return number;
+}
+
+PreferredWorkoutSide? _preferredWorkoutSide(String? value) {
+  if (value == null || value.isEmpty) return null;
+  for (final side in PreferredWorkoutSide.values) {
+    if (side.name == value) return side;
+  }
+  return null;
 }

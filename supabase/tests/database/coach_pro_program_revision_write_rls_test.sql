@@ -1,6 +1,6 @@
 begin;
 
-select plan(30);
+select plan(33);
 
 select has_function(
   'public',
@@ -70,8 +70,12 @@ select public.stk_assign_program(
           jsonb_build_object(
             'name','Bench Press','muscle_group','Chest','equipment','Barbell',
             'target_sets',3,'target_reps_min',8,'target_reps_max',10,
-            'rest_seconds',120,'warmup_sets',1,'approach_sets',0,
-            'unilateral',false,'unilateral_target','other'
+            'rest_seconds',120,'warmup_sets',1,'approach_sets',1,
+            'warmup_rest_seconds',40,'approach_rest_seconds',70,
+            'unilateral',true,'unilateral_target','arm',
+            'preparation_unilateral',false,
+            'unilateral_side_rest_seconds',15,
+            'preferred_unilateral_start_side','left'
           )
         )
       )
@@ -117,7 +121,11 @@ set revision_two_id=(
               'name','Incline Press','muscle_group','Chest','equipment','Dumbbell',
               'target_sets',4,'target_reps_min',6,'target_reps_max',9,
               'rest_seconds',150,'warmup_sets',1,'approach_sets',1,
-              'unilateral',false,'unilateral_target','other'
+              'warmup_rest_seconds',50,'approach_rest_seconds',80,
+              'unilateral',true,'unilateral_target','arm',
+              'preparation_unilateral',false,
+              'unilateral_side_rest_seconds',0,
+              'preferred_unilateral_start_side','right'
             ),
             jsonb_build_object(
               'name','One Arm Row','muscle_group','Back','equipment','Dumbbell',
@@ -196,6 +204,44 @@ select is(
    where routine.revision_id=(select revision_two_id from _program_revision_write_test)),
   2,
   'new revision snapshots all proposed exercises'
+);
+
+select is(
+  (
+    select pg_catalog.jsonb_build_object(
+      'warmup_rest_seconds', exercise.warmup_rest_seconds,
+      'approach_rest_seconds', exercise.approach_rest_seconds,
+      'preparation_unilateral', exercise.preparation_unilateral,
+      'unilateral_side_rest_seconds', exercise.unilateral_side_rest_seconds,
+      'preferred_unilateral_start_side', exercise.preferred_unilateral_start_side
+    )
+    from public.stk_assigned_program_revision_exercises exercise
+    join public.stk_assigned_program_revision_routines routine
+      on routine.id=exercise.revision_routine_id
+    where routine.revision_id=(select baseline_id from _program_revision_write_test)
+      and exercise.exercise_name='Bench Press'
+  ),
+  '{"warmup_rest_seconds":40,"approach_rest_seconds":70,"preparation_unilateral":false,"unilateral_side_rest_seconds":15,"preferred_unilateral_start_side":"left"}'::jsonb,
+  'baseline snapshot copies full preparation prescription'
+);
+
+select is(
+  (
+    select pg_catalog.jsonb_build_object(
+      'warmup_rest_seconds', exercise.warmup_rest_seconds,
+      'approach_rest_seconds', exercise.approach_rest_seconds,
+      'preparation_unilateral', exercise.preparation_unilateral,
+      'unilateral_side_rest_seconds', exercise.unilateral_side_rest_seconds,
+      'preferred_unilateral_start_side', exercise.preferred_unilateral_start_side
+    )
+    from public.stk_assigned_program_revision_exercises exercise
+    join public.stk_assigned_program_revision_routines routine
+      on routine.id=exercise.revision_routine_id
+    where routine.revision_id=(select revision_two_id from _program_revision_write_test)
+      and exercise.exercise_name='Incline Press'
+  ),
+  '{"warmup_rest_seconds":50,"approach_rest_seconds":80,"preparation_unilateral":false,"unilateral_side_rest_seconds":0,"preferred_unilateral_start_side":"right"}'::jsonb,
+  'new revision stores full preparation prescription'
 );
 select is(
   (select version from public.stk_assigned_programs
@@ -509,6 +555,31 @@ select is(
   )->'items'->1->>'name',
   'One Arm Row',
   'exercise page reads the proposed immutable prescription'
+);
+
+select is(
+  (
+    public.stk_get_coach_pro_program_revision_page(
+      '73000000-0000-0000-0000-000000000001',
+      (select assignment_id from _program_revision_write_test),
+      (select revision_two_id from _program_revision_write_test),
+      (
+        public.stk_get_coach_pro_program_revision_page(
+          '73000000-0000-0000-0000-000000000001',
+          (select assignment_id from _program_revision_write_test),
+          (select revision_two_id from _program_revision_write_test),
+          null,25,0
+        )->'items'->0->>'id'
+      )::uuid,
+      25,0
+    )->'items'->0
+  ) - array[
+    'id','position','name','muscle_group','equipment','target_sets',
+    'target_reps_min','target_reps_max','rest_seconds','warmup_sets',
+    'approach_sets','unilateral','unilateral_target','superset_key'
+  ],
+  '{"warmup_rest_seconds":50,"approach_rest_seconds":80,"preparation_unilateral":false,"unilateral_side_rest_seconds":0,"preferred_unilateral_start_side":"right"}'::jsonb,
+  'revision page exposes full preparation prescription'
 );
 
 reset role;
