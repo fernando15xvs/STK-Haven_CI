@@ -142,7 +142,8 @@ class _RemindersState extends ConsumerState<_Reminders>
     // Reconcile on page open and foreground return. No automatic OS permission
     // prompts: those happen ONLY after the user enables the switch.
     ref.listen(coachProReminderConsentProvider(_query), (_, next) {
-      final current = next.valueOrNull;
+      final current = next.when(data: (value) => value,
+        error: (_, _) => null, loading: () => null);
       if (current != null) {
         unawaited(CoachProLocalReminderService.synchronize(current)
             .catchError((Object _) => CoachProLocalReminderService.cancel()));
