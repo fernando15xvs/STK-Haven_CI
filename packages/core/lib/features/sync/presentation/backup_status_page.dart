@@ -1,3 +1,4 @@
+import 'package:core/features/identity/presentation/cloud_auth_page.dart';
 import 'package:core/core/services/backup_activity_service.dart';
 import 'package:core/core/services/backup_file_service.dart';
 import 'package:core/core/services/backup_service.dart';
@@ -72,10 +73,9 @@ class BackupStatusPage extends ConsumerWidget {
                           child: FilledButton.icon(
                             onPressed: cloud.busy
                                 ? null
-                                : () => _showAuthDialog(
-                                      context,
-                                      ref,
-                                      createAccount: false,
+                                : () => Navigator.of(context).push<void>(
+                                      MaterialPageRoute(builder: (_) =>
+                                        const CloudAuthPage()),
                                     ),
                             icon: const Icon(Icons.login),
                             label: const Text('Iniciar sesión'),
@@ -86,10 +86,11 @@ class BackupStatusPage extends ConsumerWidget {
                           child: OutlinedButton.icon(
                             onPressed: cloud.busy
                                 ? null
-                                : () => _showAuthDialog(
-                                      context,
-                                      ref,
-                                      createAccount: true,
+                                : () => Navigator.of(context).push<void>(
+                                      MaterialPageRoute(builder: (_) =>
+                                        const CloudAuthPage(
+                                          initialMode: CloudAuthMode.signUp,
+                                        )),
                                     ),
                             icon: const Icon(Icons.person_add_alt_1),
                             label: const Text('Crear cuenta'),
@@ -398,91 +399,6 @@ class BackupStatusPage extends ConsumerWidget {
         );
       }
     }
-  }
-
-  static Future<void> _showAuthDialog(
-    BuildContext context,
-    WidgetRef ref, {
-    required bool createAccount,
-  }) async {
-    final emailController = TextEditingController();
-    final passwordController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-
-    final submit = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          createAccount ? 'Crear cuenta de sincronización' : 'Iniciar sesión',
-        ),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                decoration: const InputDecoration(labelText: 'Correo'),
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (!text.contains('@') || !text.contains('.')) {
-                    return 'Ingresa un correo válido.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: passwordController,
-                obscureText: true,
-                autofillHints: const [AutofillHints.password],
-                decoration: const InputDecoration(labelText: 'Contraseña'),
-                validator: (value) {
-                  if ((value ?? '').length < 6) {
-                    return 'Usa al menos 6 caracteres.';
-                  }
-                  return null;
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (formKey.currentState?.validate() == true) {
-                Navigator.pop(dialogContext, true);
-              }
-            },
-            child: Text(createAccount ? 'Crear' : 'Entrar'),
-          ),
-        ],
-      ),
-    );
-
-    if (submit == true) {
-      final notifier = ref.read(cloudSyncProvider.notifier);
-      if (createAccount) {
-        await notifier.signUp(
-          email: emailController.text,
-          password: passwordController.text,
-        );
-      } else {
-        await notifier.signIn(
-          email: emailController.text,
-          password: passwordController.text,
-        );
-      }
-    }
-
-    emailController.dispose();
-    passwordController.dispose();
   }
 
   static String _formatDate(DateTime value) {
