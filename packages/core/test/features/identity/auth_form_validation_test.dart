@@ -16,7 +16,7 @@ void main() {
         '.name@example.com', 'name@.example.com',
         'a@-example.com', 'a@example-.com', 'name@example.c',
         'test@example.com\nbcc:attacker@example.com',
-        ('x' * 65) + '@example.com', ('x' * 254) + '@example.com',
+        'x'.padRight(65, 'x') + '@example.com', 'x'.padRight(254, 'x') + '@example.com',
       ]) {
         expect(AuthFormValidation.email(sample), isNotNull,
             reason: sample);
@@ -39,7 +39,7 @@ void main() {
       expect(AuthFormValidation.signUpPassword('Stronger123!'), isNull);
       for (final bad in [
         '', 'Abc123', 'abcdefghijk12', 'ABCDEFGHIJK12',
-        'Abcdefghijk', 'Abc defghijk123', ('A' * 73) + 'bc1',
+        'Abcdefghijk', 'Abc defghijk123', 'A'.padRight(73, 'A') + 'bc1',
       ]) {
         expect(AuthFormValidation.signUpPassword(bad), isNotNull,
           reason: bad);
