@@ -2,6 +2,7 @@ import 'package:core/features/coach_pro/presentation/coach_pro_task_page.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_nutrition_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_program_page.dart';
+import 'package:core/features/coach_pro/presentation/coach_pro_checkin_cadence_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_templates_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_program_revision_page.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
@@ -380,6 +381,23 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
               ] else if (!detail.canViewCheckins)
                 const Text('Check-ins: no compartidos en esta relación.')
               else ...[
+                if (summary.permissions.contains(CoachPermission.assignTasks))
+                  Align(alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.event_repeat_outlined),
+                      label: const Text('Proponer frecuencia de check-ins'),
+                      onPressed: () async {
+                        await Navigator.of(context).push<void>(
+                          MaterialPageRoute(builder: (_) =>
+                            CoachProCheckinCadencePage(
+                              relationshipId: widget.relationshipId,
+                              asCoach: true,
+                            )),
+                        );
+                        if (mounted) _refresh();
+                      },
+                    ),
+                  ),
                 if (detail.checkins!.items.isEmpty)
                   Text(_offset == 0 ? 'Todavía no hay check-ins compartidos.'
                       : 'Esta página ya no tiene check-ins. Vuelve a la anterior.'),
