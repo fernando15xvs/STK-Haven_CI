@@ -2,6 +2,7 @@ import 'package:core/features/coach_pro/presentation/coach_pro_task_page.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_nutrition_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_program_page.dart';
+import 'package:core/features/coach_pro/presentation/coach_pro_templates_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_program_revision_page.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/coach_assigned_task.dart';
@@ -323,6 +324,20 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                 if (!detail.canViewPrograms)
                   const Text('Programas: no compartidos en esta relación.')
                 else ...[
+                  Align(alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.library_books_outlined),
+                      label: const Text('Asignar desde plantillas'),
+                      onPressed: () async {
+                        await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(builder: (_) => CoachProTemplatesPage(
+                            relationshipId: widget.relationshipId,
+                          )),
+                        );
+                        if (mounted) _refresh();
+                      },
+                    ),
+                  ),
                   if (detail.programs!.items.isEmpty)
                     Text(_offset == 0 ? 'No hay programas asignados en esta relación.'
                         : 'Esta página ya no tiene programas. Vuelve a la anterior.'),
