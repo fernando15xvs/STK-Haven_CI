@@ -152,6 +152,11 @@ void main() {
     await tester.tap(find.text('Nombre').last);
     await tester.pumpAndSettle();
     expect(roster.selectedSort, CoachProClientSort.name);
+    await tester.tap(find.text('Nombre').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Adherencia (menor primero)').last);
+    await tester.pumpAndSettle();
+    expect(roster.selectedSort, CoachProClientSort.adherence);
     await tester.tap(find.text('Solo requiere revisión'));
     expect(roster.reviewFilter, isTrue);
     expect(tester.takeException(), isNull);
