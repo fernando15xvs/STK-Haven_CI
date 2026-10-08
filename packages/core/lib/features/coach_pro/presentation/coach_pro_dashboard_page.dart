@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/presentation/coach_pro_review_inbox_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_templates_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_client_detail_page.dart';
 import 'dart:async';
@@ -157,6 +158,17 @@ class _DashboardState extends ConsumerState<_Dashboard>
                         onPressed: () => Navigator.of(context).push<void>(
                           MaterialPageRoute(builder: (_) =>
                               const CoachProTemplatesPage()),
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.fact_check_outlined),
+                        label: const Text('Bandeja de revisión'),
+                        onPressed: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute(builder: (_) =>
+                              const CoachProReviewInboxPage()),
                         ),
                       ),
                     ),

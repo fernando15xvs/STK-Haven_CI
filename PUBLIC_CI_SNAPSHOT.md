@@ -2,7 +2,7 @@
 
 This repository is a history-free CI mirror of the private STK Haven source.
 
-Source commit: 44b30a9064eacd11b98558158d6895549f66112d
+Source commit: 9ae09ab4881a16637e1e8ae50710bf708d66e92d
 Source branch: main
 
 The private Git history, local signing material, environment files, credentials,
