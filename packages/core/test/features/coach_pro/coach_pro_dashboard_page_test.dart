@@ -196,6 +196,8 @@ void main() {
     ));
     await _mount(tester, roster);
     expect(find.textContaining('sin conexión'), findsOneWidget);
+    await tester.ensureVisible(find.text('Reintentar'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Reintentar'));
     expect(roster.refreshes, 1);
     await tester.pumpWidget(const SizedBox.shrink());
