@@ -1,3 +1,4 @@
+import 'package:core/features/coach_pro/presentation/coach_pro_templates_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_client_detail_page.dart';
 import 'dart:async';
 
@@ -147,6 +148,18 @@ class _DashboardState extends ConsumerState<_Dashboard>
                         style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 8),
                     const Text('Cada cliente decide qué información comparte.'),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.library_books_outlined),
+                        label: const Text('Biblioteca de plantillas'),
+                        onPressed: () => Navigator.of(context).push<void>(
+                          MaterialPageRoute(builder: (_) =>
+                              const CoachProTemplatesPage()),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Card(
                       child: Padding(
