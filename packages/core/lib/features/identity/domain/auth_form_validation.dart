@@ -9,7 +9,7 @@ class AuthFormValidation {
     if (value.isEmpty) return 'Escribe tu correo electrónico.';
     if (value.length > 254 || value.contains('..') ||
         value.startsWith('.') || value.contains('@.') ||
-        !RegExp(r'^[^\s@]+@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$')
+        !RegExp(r'^[^\s@]+@[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,63}$')
             .hasMatch(value) ||
         value.split('@').first.length > 64) {
       return 'Ingresa un correo válido, por ejemplo nombre@correo.com.';
