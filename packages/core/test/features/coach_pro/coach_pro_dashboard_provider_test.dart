@@ -4,6 +4,7 @@ import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
 
 import 'package:core/domain/models/app_identity_state.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
+import 'package:core/domain/models/coach_pro_portfolio_overview.dart';
 import 'package:core/features/coach_pro/application/coach_pro_dashboard_provider.dart';
 import 'package:core/features/coach_pro/data/coach_pro_dashboard_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -41,6 +42,10 @@ class _Request {
 
 class _Service implements CoachProDashboardService {
   final requests = <_Request>[];
+  @override
+  Future<CoachProPortfolioOverview> getPortfolioOverview() =>
+      throw UnimplementedError();
+
   @override
   Never get client => throw UnimplementedError();
 
