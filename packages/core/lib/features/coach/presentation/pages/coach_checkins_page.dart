@@ -1,4 +1,5 @@
 import 'package:core/features/coach_pro/presentation/coach_pro_checkin_cadence_page.dart';
+import 'package:core/features/coach_pro/presentation/coach_pro_reminder_settings_page.dart';
 import 'package:core/domain/models/coach_checkin.dart';
 import 'package:core/features/coach/application/coach_checkin_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -33,6 +34,19 @@ class _CoachCheckinsPageState extends ConsumerState<CoachCheckinsPage>{
                     CoachProCheckinCadencePage(
                       relationshipId: widget.relationshipId,
                       asCoach: false,
+                    )),
+                ),
+              ),
+            ),
+          if (widget.isClient)
+            Align(alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.notifications_active_outlined),
+                label: const Text('Recordatorios voluntarios'),
+                onPressed: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(builder: (_) =>
+                    CoachProReminderSettingsPage(
+                      relationshipId: widget.relationshipId,
                     )),
                 ),
               ),
