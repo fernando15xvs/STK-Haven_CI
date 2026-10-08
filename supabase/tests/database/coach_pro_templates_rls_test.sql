@@ -1,5 +1,5 @@
 begin;
-select plan(24);
+select plan(28);
 select has_table('public','stk_coach_pro_templates','private template store exists');
 select has_function('public','stk_save_coach_pro_template_from_revision',array['uuid','uuid','uuid','text'],'save RPC exists');
 select has_function('public','stk_list_coach_pro_templates',array['integer','integer'],'paged list RPC exists');
