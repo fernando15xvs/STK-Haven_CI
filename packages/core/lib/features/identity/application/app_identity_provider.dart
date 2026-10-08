@@ -285,4 +285,5 @@ class AppIdentityNotifier extends Notifier<AppIdentityState> {
       return 'El registro no está disponible en este momento.';
     }
     return 'No pudimos completar la autenticación. Vuelve a intentarlo.';
-  }}
+  }
+}
