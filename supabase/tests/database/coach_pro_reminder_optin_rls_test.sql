@@ -45,9 +45,15 @@ select set_config('request.jwt.claims','{"sub":"e5000000-0000-0000-0000-00000000
 select is(public.stk_respond_coach_pro_checkin_cadence('e6000000-0000-0000-0000-000000000002',1,true),2,'second cadence accepted');
 select ok(public.stk_set_coach_pro_reminder_opt_in('e6000000-0000-0000-0000-000000000002',true,18,2),'switch coach reminder');
 select is(public.stk_get_coach_pro_reminder_opt_in('e6000000-0000-0000-0000-000000000001')->>'enabled','false','previous coach reminder off');
+reset role;
 select is((select count(*)::integer from public.stk_coach_pro_reminder_opt_ins where client_user_id='e5000000-0000-0000-0000-000000000001' and enabled),1,'at most one active reminder');
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"e5000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);
 select is(public.stk_set_coach_pro_reminder_opt_in('e6000000-0000-0000-0000-000000000002',false,19,null),false,'client can opt out');
+reset role;
 select is((select count(*)::integer from public.stk_coach_pro_reminder_opt_ins where client_user_id='e5000000-0000-0000-0000-000000000001' and enabled),0,'opt-out persists');
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"e5000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);
 select ok(public.stk_set_coach_pro_reminder_opt_in('e6000000-0000-0000-0000-000000000001',true,20,2),'explicit re-optin works');
 select set_config('request.jwt.claims','{"sub":"e4000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);
 select is(public.stk_propose_coach_pro_checkin_cadence('e6000000-0000-0000-0000-000000000001',array[3]::smallint[],2),3,'new proposal revokes acceptance');
