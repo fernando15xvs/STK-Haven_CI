@@ -1,6 +1,6 @@
 begin;
 
-select plan(44);
+select plan(47);
 
 select has_function(
   'public',
@@ -265,6 +265,54 @@ select throws_ok($$select * from public.stk_list_coach_pro_clients(null,25,0,'al
 select is((select count(*) from public.stk_list_coach_pro_clients('Carlos',25,0,'all',null,'recent_workout')),
   0::bigint,'extended search cannot enumerate unrelated users');
 reset role;
+-- The new adherence sort is computed server-side BEFORE pagination.
+-- Only progress and schedule explicitly shared with this coach can rank.
+update public.stk_coach_client_relationships
+  set permissions = '{"view_progress":true,"view_checkins":true,"assign_tasks":true,"assign_programs":true}'::jsonb
+  where id = '53000000-0000-0000-0000-000000000001';
+insert into public.stk_assigned_programs (
+ id, relationship_id, coach_user_id, client_user_id, name, status,
+ training_weekdays, starts_on, duration_weeks, accepted_at
+) values (
+ '56000000-0000-0000-0000-000000000001',
+ '53000000-0000-0000-0000-000000000001',
+ '51000000-0000-0000-0000-000000000001',
+ '52000000-0000-0000-0000-000000000001',
+ 'Ana schedule','accepted',array[1,2,3,4,5,6,7]::smallint[],current_date - 14,8,now()
+);
+set local role authenticated;
+select is(
+  (select display_name from public.stk_list_coach_pro_clients(null,1,0,'all',null,'adherence')),
+  'Ana Alpha', 'hidden client cannot outrank permitted adherence');
+reset role;
+update public.stk_coach_client_relationships
+  set permissions = '{"view_progress":true,"assign_programs":true}'::jsonb
+  where id = '53000000-0000-0000-0000-000000000002';
+insert into public.stk_assigned_programs (
+ id, relationship_id, coach_user_id, client_user_id, name, status,
+ training_weekdays, starts_on, duration_weeks, accepted_at
+) values (
+ '56000000-0000-0000-0000-000000000002',
+ '53000000-0000-0000-0000-000000000002',
+ '51000000-0000-0000-0000-000000000001',
+ '52000000-0000-0000-0000-000000000002',
+ 'Bruno schedule','accepted',array[1]::smallint[],current_date - 14,8,now()
+);
+set local role authenticated;
+select is(
+  (select display_name from public.stk_list_coach_pro_clients(null,1,0,'all',null,'adherence')),
+  'Ana Alpha','lower consented adherence comes first');
+select is(
+  (select display_name from public.stk_list_coach_pro_clients(null,1,1,'all',null,'adherence')),
+  'Bruno Beta','higher adherence paginates after lower adherence');
+reset role;
+update public.stk_coach_client_relationships
+  set permissions = '{"view_progress":true,"view_checkins":true,"assign_tasks":true}'::jsonb
+  where id = '53000000-0000-0000-0000-000000000001';
+update public.stk_coach_client_relationships
+  set permissions = '{}'::jsonb
+  where id = '53000000-0000-0000-0000-000000000002';
+
 -- A hidden recent workout must not outrank an authorized older one.
 update public.stk_client_progress_snapshots set last_workout_at=now()
   where client_user_id='52000000-0000-0000-0000-000000000002';
