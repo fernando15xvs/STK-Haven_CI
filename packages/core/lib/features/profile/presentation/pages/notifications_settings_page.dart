@@ -38,9 +38,9 @@ class NotificationsSettingsPage extends ConsumerWidget {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.favorite_outline_rounded),
-                title: const Text('Mi recordatorio personal'),
-                subtitle: const Text('Escribe una frase y recíbela '
-                  'cada 30 minutos o cada hora, cuando tú lo decidas.'),
+                title: const Text('Mis mensajes personales'),
+                subtitle: const Text('Escribe mensajes con título y hasta 3.000 '
+                  'caracteres. Recíbelos por turnos cada 30 o 60 minutos.'),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(
