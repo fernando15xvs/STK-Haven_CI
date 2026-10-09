@@ -42,7 +42,7 @@ class PersonalReminderSettings {
     final showMessage = raw['showMessageInNotification'];
     if (message is! String ||
         message.runes.length > maxMessageLength ||
-        !const [30, 60].contains(interval) ||
+        (interval is! int || !const [30, 60].contains(interval)) ||
         enabled is! bool ||
         showMessage is! bool) {
       return const PersonalReminderSettings();
