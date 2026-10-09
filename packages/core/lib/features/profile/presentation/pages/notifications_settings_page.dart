@@ -1,5 +1,6 @@
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/core/services/step_goal_reminder_service.dart';
+import 'package:core/features/profile/presentation/pages/personal_reminder_page.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:core/features/home/application/hydration_provider.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
@@ -31,6 +32,25 @@ class NotificationsSettingsPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _Section(
+            title: 'Mensajes personales',
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.favorite_outline_rounded),
+                title: const Text('Mi recordatorio personal'),
+                subtitle: const Text('Escribe una frase y recíbela '
+                  'cada 30 minutos o cada hora, cuando tú lo decidas.'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => const PersonalReminderPage(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
           _Section(
             title: 'Entrenamiento',
             children: [
