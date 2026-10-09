@@ -49,7 +49,7 @@ class PersonalReminderSettings {
     }
     final candidate = PersonalReminderSettings(
       message: message,
-      intervalMinutes: interval as int,
+      intervalMinutes: interval,
       enabled: enabled,
       showMessageInNotification: showMessage,
     );
