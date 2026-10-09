@@ -43,6 +43,7 @@ class HiveDatabase {
       Hive.openBox(HiveBoxes.habitTasks),
       Hive.openBox(HiveBoxes.trainingPrograms),
       Hive.openBox(HiveBoxes.analyticsCache),
+      Hive.openBox(HiveBoxes.personalReminders),
     ]);
   }
 }
