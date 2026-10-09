@@ -92,7 +92,8 @@ class AppIdentityNotifier extends Notifier<AppIdentityState> {
         email: user.email,
         message: permanentSession
             ? 'Cuenta creada y sesión iniciada.'
-            : 'Cuenta creada. Confirma tu correo y luego inicia sesión.',
+            : 'Revisa tu correo para confirmar el registro. '
+                'Si ya tenías una cuenta, inicia sesión o recupera el acceso.',
       );
       return true;
     } on AuthException catch (error) {
@@ -265,12 +266,24 @@ class AppIdentityNotifier extends Notifier<AppIdentityState> {
     if (raw.contains('invalid login') || raw.contains('invalid credentials')) {
       return 'Correo o contraseña incorrectos.';
     }
+    if (raw.contains('not confirmed') || raw.contains('email confirmation')) {
+      return 'Confirma tu correo electrónico antes de iniciar sesión.';
+    }
+    if (raw.contains('rate limit') || raw.contains('too many') ||
+        raw.contains('429')) {
+      return 'Demasiados intentos. Inténtalo de nuevo más tarde.';
+    }
     if (raw.contains('already registered') || raw.contains('already exists')) {
-      return 'Ese correo ya tiene una cuenta.';
+      return 'No fue posible completar el registro. '
+          'Prueba iniciar sesión o recuperar el acceso.';
     }
-    if (raw.contains('password')) {
-      return 'La contraseña no cumple los requisitos de Supabase.';
+    if (raw.contains('weak password') || raw.contains('password')) {
+      return 'Esta contraseña no cumple la política de seguridad '
+          'de la cuenta. Elige otra combinación.';
     }
-    return error.message;
+    if (raw.contains('signup is disabled') || raw.contains('signups not allowed')) {
+      return 'El registro no está disponible en este momento.';
+    }
+    return 'No pudimos completar la autenticación. Vuelve a intentarlo.';
   }
 }

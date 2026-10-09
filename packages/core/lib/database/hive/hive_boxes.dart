@@ -5,6 +5,9 @@ class HiveBoxes {
   static String get history => StorageNamespace.scope('historyBox_v2');
   static String get exercises => StorageNamespace.scope('exercisesBox_v2');
   static String get metadata => StorageNamespace.scope('metadataBox');
+  // Private device-only motivational text: never exported by BackupService.
+  static String get personalReminders =>
+      StorageNamespace.scope('personalRemindersBox_v1');
   static String get activeWorkout =>
       StorageNamespace.scope('activeWorkoutBox_v2');
   static String get personalRecords =>
