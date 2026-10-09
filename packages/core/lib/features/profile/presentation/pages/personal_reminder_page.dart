@@ -63,81 +63,13 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
   }
 
   Future<void> _editMessage({int? index}) async {
-    if (_busy || _messages.length >= PersonalReminderSettings.maxMessages &&
-        index == null) return;
+    if (_busy || (index == null &&
+        _messages.length >= PersonalReminderSettings.maxMessages)) return;
     final original = index == null ? null : _messages[index];
-    final title = TextEditingController(text: original?.title ?? '');
-    final body = TextEditingController(text: original?.message ?? '');
-    final key = GlobalKey<FormState>();
     final edited = await showDialog<PersonalReminderMessage>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(index == null ? 'Nuevo mensaje' : 'Editar mensaje'),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 550),
-          child: SingleChildScrollView(
-            child: Form(
-              key: key,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                TextFormField(
-                  controller: title,
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLength: PersonalReminderMessage.maxTitleLength,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: 'Título',
-                    hintText: 'Por qué quiero seguir adelante',
-                    prefixIcon: Icon(Icons.title_rounded),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) =>
-                      PersonalReminderMessage.validateTitle(v ?? ''),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: body,
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLength: PersonalReminderMessage.maxMessageLength,
-                  minLines: 5,
-                  maxLines: 12,
-                  decoration: const InputDecoration(
-                    labelText: 'Mensaje completo',
-                    hintText: 'Hoy vuelvo a elegir lo que me hace bien...',
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) =>
-                      PersonalReminderMessage.validateMessage(v ?? ''),
-                ),
-              ]),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (key.currentState?.validate() != true) return;
-              Navigator.of(dialogContext).pop(PersonalReminderMessage(
-                title: title.text.trim(),
-                message: body.text.trim(),
-              ));
-            },
-            child: const Text('Añadir a mi lista'),
-          ),
-        ],
-      ),
+      builder: (_) => _PersonalReminderEditorDialog(original: original),
     );
-    // The dialog has already been dismissed; dispose on the next frame so
-    // the closing route has released its text fields.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      title.dispose();
-      body.dispose();
-    });
     if (edited == null || !mounted) return;
     _update(() {
       if (index == null) {
@@ -493,4 +425,96 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
       ))),
     );
   }
+}
+
+
+class _PersonalReminderEditorDialog extends StatefulWidget {
+  final PersonalReminderMessage? original;
+  const _PersonalReminderEditorDialog({this.original});
+
+  @override
+  State<_PersonalReminderEditorDialog> createState() =>
+      _PersonalReminderEditorDialogState();
+}
+
+class _PersonalReminderEditorDialogState
+    extends State<_PersonalReminderEditorDialog> {
+  final _key = GlobalKey<FormState>();
+  late final TextEditingController _title;
+  late final TextEditingController _message;
+
+  @override
+  void initState() {
+    super.initState();
+    _title = TextEditingController(text: widget.original?.title ?? '');
+    _message = TextEditingController(text: widget.original?.message ?? '');
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _message.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.original == null ? 'Nuevo mensaje' : 'Editar mensaje'),
+    content: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 550),
+      child: SingleChildScrollView(
+        child: Form(
+          key: _key,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextFormField(
+              controller: _title,
+              textCapitalization: TextCapitalization.sentences,
+              maxLength: PersonalReminderMessage.maxTitleLength,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                labelText: 'Título',
+                hintText: 'Por qué quiero seguir adelante',
+                prefixIcon: Icon(Icons.title_rounded),
+                border: OutlineInputBorder(),
+              ),
+              validator: (v) => PersonalReminderMessage.validateTitle(v ?? ''),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _message,
+              textCapitalization: TextCapitalization.sentences,
+              maxLength: PersonalReminderMessage.maxMessageLength,
+              minLines: 5,
+              maxLines: 12,
+              decoration: const InputDecoration(
+                labelText: 'Mensaje completo',
+                hintText: 'Hoy vuelvo a elegir lo que me hace bien...',
+                alignLabelWithHint: true,
+                border: OutlineInputBorder(),
+              ),
+              validator: (v) =>
+                  PersonalReminderMessage.validateMessage(v ?? ''),
+            ),
+          ]),
+        ),
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancelar'),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (_key.currentState?.validate() != true) return;
+          Navigator.pop(context, PersonalReminderMessage(
+            title: _title.text.trim(),
+            message: _message.text.trim(),
+          ));
+        },
+        child: Text(widget.original == null ? 'Añadir' : 'Guardar cambios'),
+      ),
+    ],
+  );
 }
