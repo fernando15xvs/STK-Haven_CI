@@ -129,6 +129,20 @@ class DailyVersePage extends ConsumerWidget {
                 );
               },
             ),
+            const SizedBox(height: 18),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.widgets_outlined),
+                title: const Text('Versículo en pantalla de bloqueo'),
+                subtitle: const Text(
+                  'iPhone: mantén pulsada la pantalla de bloqueo, toca '
+                  'Personalizar y añade el widget rectangular STK Haven. '
+                  'Android: añade el widget STK Haven desde Widgets; '
+                  'en la pantalla de bloqueo solo aparece si tu dispositivo '
+                  'permite widgets allí. Se actualiza al abrir la app.',
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             stateAsync.whenData((state) => Center(
               child: state.verse == null

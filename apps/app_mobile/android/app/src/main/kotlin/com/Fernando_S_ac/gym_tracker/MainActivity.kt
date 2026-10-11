@@ -54,6 +54,42 @@ class MainActivity : FlutterActivity(), SensorEventListener {
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
+            "stk_haven/verse_widget",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "publish" -> {
+                    val args = call.arguments as? Map<*, *>
+                    val text = (args?.get("text") as? String)?.trim().orEmpty()
+                    val reference = (args?.get("reference") as? String)?.trim().orEmpty()
+                    val date = (args?.get("date") as? String).orEmpty()
+                    if (text.isEmpty() || reference.isEmpty()) {
+                        result.error("invalid_verse", "A verse and reference are required.", null)
+                    } else {
+                        getSharedPreferences("stk_verse_widget", Context.MODE_PRIVATE)
+                            .edit()
+                            .putBoolean("enabled", true)
+                            .putString("text", text.take(1200))
+                            .putString("reference", reference.take(120))
+                            .putString("date", date)
+                            .apply()
+                        VerseWidgetProvider.refreshAll(this)
+                        result.success(true)
+                    }
+                }
+                "clear" -> {
+                    getSharedPreferences("stk_verse_widget", Context.MODE_PRIVATE)
+                        .edit().putBoolean("enabled", false)
+                        .remove("text").remove("reference").remove("date")
+                        .apply()
+                    VerseWidgetProvider.refreshAll(this)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
             channelName,
         ).setMethodCallHandler { call, result ->
             when (call.method) {
