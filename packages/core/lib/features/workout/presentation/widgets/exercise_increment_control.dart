@@ -74,6 +74,15 @@ class _IncrementDialogState extends ConsumerState<_IncrementDialog> {
   }
 
   void _save() {
+    // Opening and saving without edits must never round-trip a canonical kg
+    // increment through a two-decimal lb preview.
+    final originalDisplay = widget.initialValue.toStringAsFixed(2)
+        .replaceFirst(RegExp(r'0+$'), '')
+        .replaceFirst(RegExp(r'\.$'), '');
+    if (_controller.text.trim().replaceAll(',', '.') == originalDisplay) {
+      Navigator.of(context).pop();
+      return;
+    }
     final typed = double.tryParse(_controller.text.trim().replaceAll(',', '.'));
     final kg = typed == null ? null :
         WeightConverter.toCanonicalKg(typed, widget.unit);

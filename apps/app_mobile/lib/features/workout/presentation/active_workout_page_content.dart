@@ -10,6 +10,7 @@ import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/active_workout_suggestions_provider.dart';
 import 'package:core/features/workout/presentation/widgets/exercise_increment_control.dart';
+import 'package:core/features/workout/presentation/widgets/exercise_rep_range_notice.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
@@ -1269,6 +1270,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         ),
                       ),
                     ),
+                  ExerciseRepRangeNotice(exerciseId: widget.workoutExercise.exerciseId),
                   ExerciseIncrementControl(exerciseId: widget.workoutExercise.exerciseId),
                   if (suggestion != null) ...[
                     const SizedBox(height: 10),
@@ -1510,7 +1512,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
         oldWidget.initialSet.weight != widget.initialSet.weight;
     final repsChanged = oldWidget.initialSet.reps != widget.initialSet.reps;
     final rirChanged = oldWidget.initialSet.rir != widget.initialSet.rir;
-    if ((unitChanged || weightChanged) && !widget.initialSet.completed) {
+    if (unitChanged || (weightChanged && !widget.initialSet.completed)) {
       final newText = _displayWeight(widget.initialSet.weight);
       if (_weightCtrl.text != newText) _weightCtrl.text = newText;
     }
@@ -1534,7 +1536,8 @@ class _SetRowState extends ConsumerState<_SetRow> {
   }
 
   WorkoutSet _setFromFields({bool? completed}) {
-    final displayWeight = double.tryParse(_weightCtrl.text) ?? 0;
+    final displayWeight =
+        double.tryParse(_weightCtrl.text.replaceAll(',', '.')) ?? 0;
     final canonicalWeight = _weightCtrl.text.trim() ==
             _displayWeight(widget.initialSet.weight)
         ? widget.initialSet.weight

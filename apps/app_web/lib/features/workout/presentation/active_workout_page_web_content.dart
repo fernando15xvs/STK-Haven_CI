@@ -13,6 +13,7 @@ import 'package:core/features/profile/presentation/providers/settings_provider.d
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/active_workout_suggestions_provider.dart';
 import 'package:core/features/workout/presentation/widgets/exercise_increment_control.dart';
+import 'package:core/features/workout/presentation/widgets/exercise_rep_range_notice.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../routines/presentation/exercise_picker_page_web.dart';
@@ -1211,6 +1212,7 @@ class _ExerciseEditor extends ConsumerWidget {
             ),
           ),
         ],
+        ExerciseRepRangeNotice(exerciseId: exercise.exerciseId),
         ExerciseIncrementControl(exerciseId: exercise.exerciseId),
         if (suggestion != null) ...[
           const SizedBox(height: 12),

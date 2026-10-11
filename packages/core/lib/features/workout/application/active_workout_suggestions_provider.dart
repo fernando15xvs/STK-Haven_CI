@@ -40,7 +40,7 @@ final activeWorkoutSuggestionsProvider =
   final historyIndex = ref.watch(workoutHistoryIndexProvider);
   final memory = ref.watch(activeWorkoutExerciseMemoryProvider);
   final recovery = ref.watch(recoveryProvider);
-  final settings = ref.read(settingsProvider);
+  final settings = ref.watch(settingsProvider);
   final result = <String, ProgressionSuggestion>{};
 
   for (final target in routine.exercises) {
