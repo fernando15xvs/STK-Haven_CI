@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stk_verse_widget_heading">STK Haven · Versículo</string>
+    <string name="stk_verse_widget_placeholder">Abre STK Haven para preparar tu versículo.</string>
+    <string name="stk_verse_widget_open_hint">Reflexión diaria</string>
+    <string name="stk_verse_widget_description">Versículo bíblico para la pantalla de inicio y, cuando esté disponible, la pantalla de bloqueo.</string>
+</resources>

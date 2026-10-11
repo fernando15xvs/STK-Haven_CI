@@ -3,6 +3,7 @@ import Flutter
 import PDFKit
 import UIKit
 import UserNotifications
+import WidgetKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -32,6 +33,49 @@ import UserNotifications
           return
         }
         result(TimeZone.current.identifier)
+      }
+
+      let verseWidgetChannel = FlutterMethodChannel(
+        name: "stk_haven/verse_widget",
+        binaryMessenger: controller.binaryMessenger
+      )
+      verseWidgetChannel.setMethodCallHandler { call, result in
+        guard let shared = UserDefaults(
+          suiteName: "group.com.FernandoSac.gymTracker"
+        ) else {
+          result(FlutterError(
+            code: "app_group_unavailable",
+            message: "Enable the same App Group for Runner and StkVerseWidget.",
+            details: nil
+          ))
+          return
+        }
+        switch call.method {
+        case "publish":
+          guard let args = call.arguments as? [String: String],
+                let text = args["text"], !text.isEmpty,
+                let reference = args["reference"], !reference.isEmpty else {
+            result(FlutterError(
+              code: "invalid_verse", message: "Missing verse data.", details: nil
+            ))
+            return
+          }
+          shared.set(true, forKey: "stkVerseWidgetEnabled")
+          shared.set(String(text.prefix(1200)), forKey: "stkVerseText")
+          shared.set(String(reference.prefix(120)), forKey: "stkVerseReference")
+          shared.set(args["date"] ?? "", forKey: "stkVerseDate")
+          WidgetCenter.shared.reloadTimelines(ofKind: "StkVerseLockWidget")
+          result(true)
+        case "clear":
+          shared.set(false, forKey: "stkVerseWidgetEnabled")
+          shared.removeObject(forKey: "stkVerseText")
+          shared.removeObject(forKey: "stkVerseReference")
+          shared.removeObject(forKey: "stkVerseDate")
+          WidgetCenter.shared.reloadTimelines(ofKind: "StkVerseLockWidget")
+          result(true)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
       }
 
       let channel = FlutterMethodChannel(

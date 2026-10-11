@@ -1,6 +1,9 @@
 import 'dart:async';
 
 import 'package:core/domain/models/settings_state.dart';
+import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/faith/application/bible_init_provider.dart';
+import 'package:core/features/faith/services/verse_widget_sync.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
@@ -41,11 +44,25 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.invalidate(workoutTimerProvider);
+      if (ref.read(faithModuleEnabledProvider)) {
+        ref.invalidate(dailyVerseProvider);
+      } else {
+        unawaited(_clearVerseWidgetBestEffort());
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(dailyVerseProvider, (_, next) {
+      if (!ref.read(faithModuleEnabledProvider)) return;
+      final verse = next.value?.verse;
+      if (verse == null) return;
+      unawaited(_publishVerseWidgetBestEffort(verse.text, verse.reference));
+    });
+    ref.listen(faithModuleEnabledProvider, (_, enabled) {
+      if (!enabled) unawaited(_clearVerseWidgetBestEffort());
+    });
     final performanceMode = ref.watch(
       settingsProvider.select((settings) => settings.performanceMode),
     );
@@ -85,5 +102,23 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       },
       home: const AppRoot(),
     );
+  }
+}
+
+Future<void> _publishVerseWidgetBestEffort(String text, String reference) async {
+  try {
+    await VerseWidgetSync.publish(
+      text: text, reference: reference, date: DateTime.now(),
+    );
+  } catch (error) {
+    debugPrint('Verse widget sync skipped: $error');
+  }
+}
+
+Future<void> _clearVerseWidgetBestEffort() async {
+  try {
+    await VerseWidgetSync.clear();
+  } catch (error) {
+    debugPrint('Verse widget clearing skipped: $error');
   }
 }
