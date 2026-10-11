@@ -92,7 +92,7 @@ void main() {
       expect(suggestion.suggestedWeightKg, 82.5);
     });
 
-    test('caps a configured increment at five percent of current load', () {
+    test('does not invent a fractional machine increment above the cap', () {
       final previous = session(
         id: 'previous',
         day: 1,
@@ -110,8 +110,9 @@ void main() {
         increment: 2.5,
       ).single;
 
-      expect(suggestion.type, ProgressionType.increase);
-      expect(suggestion.suggestedWeightKg, 21);
+      expect(suggestion.type, ProgressionType.maintain);
+      expect(suggestion.reason, ProgressionReason.incrementExceedsSafeStep);
+      expect(suggestion.suggestedWeightKg, 20);
     });
 
     test('preserves a five-pound increment when it is within the cap', () {

@@ -24,6 +24,8 @@ enum ProgressionReadiness {
 enum ProgressionReason {
   consistentTopRange,
   confirmTopRange,
+  exceededRepRange,
+  incrementExceedsSafeStep,
   buildRepetitions,
   incompleteWorkSets,
   missingRir,

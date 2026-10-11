@@ -12,6 +12,7 @@ import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/active_workout_suggestions_provider.dart';
+import 'package:core/features/workout/presentation/widgets/exercise_increment_control.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../routines/presentation/exercise_picker_page_web.dart';
@@ -1210,6 +1211,7 @@ class _ExerciseEditor extends ConsumerWidget {
             ),
           ),
         ],
+        ExerciseIncrementControl(exerciseId: exercise.exerciseId),
         if (suggestion != null) ...[
           const SizedBox(height: 12),
           _ProgressionReferenceCardWeb(
@@ -1226,7 +1228,7 @@ class _ExerciseEditor extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.only(bottom: 9),
             child: _SetEditor(
-              key: ValueKey('${exercise.exerciseId}_$setIndex'),
+              key: ValueKey('${exercise.exerciseId}_${exercise.sets.length}_${set.setType.name}_$setIndex'),
               exerciseIndex: exerciseIndex,
               setIndex: setIndex,
               set: set,
@@ -1409,10 +1411,20 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
   @override
   void didUpdateWidget(covariant _SetEditor oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.weightUnit != widget.weightUnit) {
-      _weight.text = _number(
+    if (oldWidget.weightUnit != widget.weightUnit ||
+        oldWidget.set.weight != widget.set.weight) {
+      final value = _number(
         WeightConverter.displayWeight(widget.set.weight, widget.weightUnit),
       );
+      if (_weight.text != value) _weight.text = value;
+    }
+    if (oldWidget.set.reps != widget.set.reps) {
+      final next = widget.set.reps == 0 ? '' : '${widget.set.reps}';
+      if (_reps.text != next) _reps.text = next;
+    }
+    if (oldWidget.set.rir != widget.set.rir) {
+      final next = widget.set.rir == null ? '' : '${widget.set.rir}';
+      if (_rir.text != next) _rir.text = next;
     }
   }
 

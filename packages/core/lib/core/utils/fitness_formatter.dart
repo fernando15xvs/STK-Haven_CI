@@ -50,6 +50,10 @@ class FitnessFormatter {
     return switch (suggestion.reason) {
       ProgressionReason.consistentTopRange =>
         'Dos sesiones comparables alcanzaron el rango alto con margen suficiente.',
+      ProgressionReason.exceededRepRange =>
+        'Superaste el máximo de reps en alguna serie. Consolida las series con técnica y margen antes de subir la carga.',
+      ProgressionReason.incrementExceedsSafeStep =>
+        'El siguiente salto de tu equipo supera el 5% de esta carga. No se sugiere un paso de peso imposible; considera un incremento menor o mantén la carga.',
       ProgressionReason.confirmTopRange =>
         'Alcanzaste el rango alto una vez; confírmalo con ejecución estable antes de cambiar la carga.',
       ProgressionReason.buildRepetitions =>

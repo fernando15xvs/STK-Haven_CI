@@ -66,6 +66,7 @@ final activeWorkoutSuggestionsProvider =
       routineTargets: [target],
       isRirEnabled: settings.isRirEnabled,
       defaultIncrementKg: settings.defaultIncrement,
+      exerciseIncrementsKg: settings.exerciseIncrementsKg,
       recentSessions: _sessionsForExercise(
         historyIndex,
         target.exerciseId,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
+import 'package:core/features/workout/presentation/widgets/recent_workout_details.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/muscle_heatmap_grid.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/volume_chart.dart';
@@ -231,13 +232,16 @@ class _SummaryTab extends ConsumerWidget {
               boxShadow: AppElevation.soft,
             ),
             child: Column(
-              children: history.take(3).toList().asMap().entries.map((entry) {
+              children: history.take(6).toList().asMap().entries.map((entry) {
                 final idx = entry.key;
                 final session = entry.value;
-                final isLast = idx == (history.take(3).length - 1);
+                final isLast = idx == (history.take(6).length - 1);
                 return Column(
                   children: [
                     ListTile(
+                      onTap: () => RecentWorkoutDetails.show(
+                        context, session, settings.weightUnit,
+                      ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       leading: Container(
                         padding: const EdgeInsets.all(10),

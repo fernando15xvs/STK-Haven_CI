@@ -11,6 +11,7 @@ import 'package:core/features/progress/application/body_measurement_provider.dar
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
+import 'package:core/features/workout/presentation/widgets/recent_workout_details.dart';
 
 import '../../../core/theme/app_colors.dart';
 import 'widgets/calendar_heatmap_panel_web.dart';
@@ -218,6 +219,9 @@ class _SummaryTabWeb extends ConsumerWidget {
             child: Column(
               children: history.take(8).map((session) {
                 return ListTile(
+                  onTap: () => RecentWorkoutDetails.show(
+                    context, session, settings.weightUnit,
+                  ),
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
                     backgroundColor:
