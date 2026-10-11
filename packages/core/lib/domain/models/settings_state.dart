@@ -37,6 +37,8 @@ class SettingsState {
   final bool isRirEnabled;
   final bool autoRestEnabled;
   final double defaultIncrement;
+  /// Per-exercise machine/plate step in canonical kilograms.
+  final Map<String, double> exerciseIncrementsKg;
   final WeightUnit weightUnit;
   final bool vibrationEnabled;
   final bool timerSoundEnabled;
@@ -59,6 +61,7 @@ class SettingsState {
     this.isRirEnabled = true,
     this.autoRestEnabled = true,
     this.defaultIncrement = 2.5,
+    this.exerciseIncrementsKg = const {},
     this.weightUnit = WeightUnit.kg,
     this.vibrationEnabled = true,
     this.timerSoundEnabled = true,
@@ -82,6 +85,7 @@ class SettingsState {
     bool? isRirEnabled,
     bool? autoRestEnabled,
     double? defaultIncrement,
+    Map<String, double>? exerciseIncrementsKg,
     WeightUnit? weightUnit,
     bool? vibrationEnabled,
     bool? timerSoundEnabled,
@@ -105,6 +109,9 @@ class SettingsState {
       isRirEnabled: isRirEnabled ?? this.isRirEnabled,
       autoRestEnabled: autoRestEnabled ?? this.autoRestEnabled,
       defaultIncrement: defaultIncrement ?? this.defaultIncrement,
+      exerciseIncrementsKg: Map.unmodifiable(
+        exerciseIncrementsKg ?? this.exerciseIncrementsKg,
+      ),
       weightUnit: weightUnit ?? this.weightUnit,
       vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
       timerSoundEnabled: timerSoundEnabled ?? this.timerSoundEnabled,
@@ -139,6 +146,7 @@ class SettingsState {
       'isRirEnabled': isRirEnabled,
       'autoRestEnabled': autoRestEnabled,
       'defaultIncrement': defaultIncrement,
+      'exerciseIncrementsKg': exerciseIncrementsKg,
       'weightUnit': weightUnit.name,
       'vibrationEnabled': vibrationEnabled,
       'timerSoundEnabled': timerSoundEnabled,
@@ -159,6 +167,26 @@ class SettingsState {
     };
   }
 
+  double incrementForExercise(String exerciseId) {
+    final value = exerciseIncrementsKg[exerciseId];
+    return value != null && value.isFinite && value > 0
+        ? value : defaultIncrement;
+  }
+
+  static Map<String, double> _readExerciseIncrements(Object? raw) {
+    if (raw is! Map || raw.length > 500) return const {};
+    final parsed = <String, double>{};
+    for (final entry in raw.entries) {
+      if (entry.key is! String || entry.value is! num) continue;
+      final value = (entry.value as num).toDouble();
+      if ((entry.key as String).isNotEmpty &&
+          value.isFinite && value > 0 && value <= 100) {
+        parsed[entry.key as String] = value;
+      }
+    }
+    return Map.unmodifiable(parsed);
+  }
+
   factory SettingsState.fromJson(Map<String, dynamic> json) {
     final hour = (json['workoutReminderHour'] as num?)?.toInt() ?? 18;
     final minute = (json['workoutReminderMinute'] as num?)?.toInt() ?? 0;
@@ -168,6 +196,7 @@ class SettingsState {
       isRirEnabled: json['isRirEnabled'] as bool? ?? true,
       autoRestEnabled: json['autoRestEnabled'] as bool? ?? true,
       defaultIncrement: (json['defaultIncrement'] as num?)?.toDouble() ?? 2.5,
+      exerciseIncrementsKg: _readExerciseIncrements(json['exerciseIncrementsKg']),
       weightUnit: WeightUnit.values.firstWhere(
         (e) => e.name == json['weightUnit'],
         orElse: () => WeightUnit.kg,

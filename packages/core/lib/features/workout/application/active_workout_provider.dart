@@ -728,9 +728,11 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     if (state.session == null) return;
 
     final exercises = List<WorkoutExercise>.from(state.session!.exercises);
+    if (exerciseIndex < 0 || exerciseIndex >= exercises.length) return;
     final sets = List<WorkoutSet>.from(exercises[exerciseIndex].sets);
-    if (sets.length <= 1) return;
+    if (sets.length <= 1 || setIndex < 0 || setIndex >= sets.length) return;
     _captureUndo();
+    // Remove the selected object only. Never copy weights/reps to neighbors.
     sets.removeAt(setIndex);
     exercises[exerciseIndex] = _withSets(exercises[exerciseIndex], sets);
 

@@ -31,6 +31,7 @@ class ProgressionEngine {
     required List<RoutineExercise> routineTargets,
     required bool isRirEnabled,
     required double defaultIncrementKg,
+    Map<String, double> exerciseIncrementsKg = const {},
     Iterable<WorkoutSession> recentSessions = const [],
     ProgressionReadiness readiness = ProgressionReadiness.unknown,
     String? sourceRoutineName,
@@ -157,7 +158,9 @@ class ProgressionEngine {
         suggestions.add(
           result(
             type: ProgressionType.maintain,
-            reason: ProgressionReason.buildRepetitions,
+            reason: current.exceededTopRange
+                ? ProgressionReason.exceededRepRange
+                : ProgressionReason.buildRepetitions,
             suggestedWeightKg: current.averageWeightKg,
           ),
         );
@@ -211,14 +214,19 @@ class ProgressionEngine {
         suggestions.add(
           result(
             type: ProgressionType.maintain,
-            reason: ProgressionReason.confirmTopRange,
+            reason: current.exceededTopRange
+                ? ProgressionReason.exceededRepRange
+                : ProgressionReason.confirmTopRange,
             suggestedWeightKg: current.averageWeightKg,
           ),
         );
         continue;
       }
 
-      if (current.averageWeightKg <= 0 || defaultIncrementKg <= 0) {
+      final requestedIncrement =
+          exerciseIncrementsKg[exercise.exerciseId] ?? defaultIncrementKg;
+      if (current.averageWeightKg <= 0 ||
+          !requestedIncrement.isFinite || requestedIncrement <= 0) {
         suggestions.add(
           result(
             type: ProgressionType.insufficientData,
@@ -230,14 +238,20 @@ class ProgressionEngine {
       }
 
       final relativeCap = current.averageWeightKg * maximumRelativeIncrease;
-      final safeIncrement = math.min(defaultIncrementKg, relativeCap);
-      suggestions.add(
-        result(
-          type: ProgressionType.increase,
-          reason: ProgressionReason.consistentTopRange,
-          suggestedWeightKg: current.averageWeightKg + safeIncrement,
-        ),
-      );
+      if (requestedIncrement > relativeCap + 1e-6) {
+        suggestions.add(result(
+          type: ProgressionType.maintain,
+          reason: ProgressionReason.incrementExceedsSafeStep,
+          suggestedWeightKg: current.averageWeightKg,
+        ));
+        continue;
+      }
+      suggestions.add(result(
+        type: ProgressionType.increase,
+        reason: ProgressionReason.consistentTopRange,
+        // Never suggest fractional increments a machine cannot provide.
+        suggestedWeightKg: current.averageWeightKg + requestedIncrement,
+      ));
     }
 
     return suggestions;
@@ -285,6 +299,9 @@ class ProgressionEngine {
     final hasRequiredSets = completed.length >= target.targetSets;
     final reachedTopRange = hasRequiredSets &&
         completed.every((set) => set.performanceReps >= target.targetRepsMax);
+    final exceededTopRange = completed.any(
+      (set) => set.performanceReps > target.targetRepsMax,
+    );
     final hasCompleteRir = !isRirEnabled ||
         completedAll.every((set) => set.performanceRir != null);
     final hasEffortMargin = !isRirEnabled ||
@@ -311,6 +328,7 @@ class ProgressionEngine {
       averageWeightKg: averageWeight,
       hasRequiredSets: hasRequiredSets,
       reachedTopRange: reachedTopRange,
+      exceededTopRange: exceededTopRange,
       hasCompleteRir: hasCompleteRir,
       hasEffortMargin: hasEffortMargin,
       estimated1RmKg: estimated1RmKg,
@@ -328,6 +346,7 @@ class _ExerciseEvidence {
   final double averageWeightKg;
   final bool hasRequiredSets;
   final bool reachedTopRange;
+  final bool exceededTopRange;
   final bool hasCompleteRir;
   final bool hasEffortMargin;
   final double? estimated1RmKg;
@@ -336,6 +355,7 @@ class _ExerciseEvidence {
     required this.averageWeightKg,
     required this.hasRequiredSets,
     required this.reachedTopRange,
+    required this.exceededTopRange,
     required this.hasCompleteRir,
     required this.hasEffortMargin,
     required this.estimated1RmKg,

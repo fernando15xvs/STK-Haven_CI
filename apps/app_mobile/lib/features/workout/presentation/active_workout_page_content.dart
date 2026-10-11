@@ -9,6 +9,8 @@ import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/active_workout_suggestions_provider.dart';
+import 'package:core/features/workout/presentation/widgets/exercise_increment_control.dart';
+import 'package:core/features/workout/presentation/widgets/exercise_rep_range_notice.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
@@ -1268,6 +1270,8 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         ),
                       ),
                     ),
+                  ExerciseRepRangeNotice(exerciseId: widget.workoutExercise.exerciseId),
+                  ExerciseIncrementControl(exerciseId: widget.workoutExercise.exerciseId),
                   if (suggestion != null) ...[
                     const SizedBox(height: 10),
                     _ProgressionReferenceCard(
@@ -1327,7 +1331,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         : null;
                     return _SetRow(
                       key: ValueKey(
-                        '${widget.workoutExercise.exerciseId}_$setIndex',
+                        '${widget.workoutExercise.exerciseId}_${widget.workoutExercise.sets.length}_${set.setType.name}_$setIndex',
                       ),
                       exIndex: widget.exIndex,
                       setIndex: setIndex,
@@ -1461,8 +1465,9 @@ class _SetRowState extends ConsumerState<_SetRow> {
   late TextEditingController _rirCtrl;
   Timer? _debounce;
 
-  String _fmt(double value) =>
-      value % 1 == 0 ? '${value.toInt()}' : '$value';
+  String _fmt(double value) => value.toStringAsFixed(2)
+      .replaceFirst(RegExp(r'0+$'), '')
+      .replaceFirst(RegExp(r'\.$'), '');
 
   String _displayWeight(double canonicalKg) {
     if (canonicalKg == 0) return '';
@@ -1505,9 +1510,19 @@ class _SetRowState extends ConsumerState<_SetRow> {
     final unitChanged = oldWidget.weightUnit != widget.weightUnit;
     final weightChanged =
         oldWidget.initialSet.weight != widget.initialSet.weight;
-    if ((unitChanged || weightChanged) && !widget.initialSet.completed) {
+    final repsChanged = oldWidget.initialSet.reps != widget.initialSet.reps;
+    final rirChanged = oldWidget.initialSet.rir != widget.initialSet.rir;
+    if (unitChanged || (weightChanged && !widget.initialSet.completed)) {
       final newText = _displayWeight(widget.initialSet.weight);
       if (_weightCtrl.text != newText) _weightCtrl.text = newText;
+    }
+    if (repsChanged && !widget.initialSet.completed) {
+      final next = widget.initialSet.reps == 0 ? '' : '${widget.initialSet.reps}';
+      if (_repsCtrl.text != next) _repsCtrl.text = next;
+    }
+    if (rirChanged && !widget.initialSet.completed) {
+      final next = widget.initialSet.rir == null ? '' : '${widget.initialSet.rir}';
+      if (_rirCtrl.text != next) _rirCtrl.text = next;
     }
   }
 
@@ -1521,9 +1536,12 @@ class _SetRowState extends ConsumerState<_SetRow> {
   }
 
   WorkoutSet _setFromFields({bool? completed}) {
-    final displayWeight = double.tryParse(_weightCtrl.text) ?? 0;
-    final canonicalWeight =
-        WeightConverter.toCanonicalKg(displayWeight, widget.weightUnit);
+    final displayWeight =
+        double.tryParse(_weightCtrl.text.replaceAll(',', '.')) ?? 0;
+    final canonicalWeight = _weightCtrl.text.trim() ==
+            _displayWeight(widget.initialSet.weight)
+        ? widget.initialSet.weight
+        : WeightConverter.toCanonicalKg(displayWeight, widget.weightUnit);
     final reps = int.tryParse(_repsCtrl.text) ?? 0;
     final rir = int.tryParse(_rirCtrl.text);
     return widget.initialSet.copyWith(

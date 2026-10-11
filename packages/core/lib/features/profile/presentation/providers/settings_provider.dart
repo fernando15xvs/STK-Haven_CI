@@ -66,6 +66,23 @@ class SettingsNotifier extends Notifier<SettingsState> {
     updateSettings(state.copyWith(defaultIncrement: incrementKg));
   }
 
+  void setExerciseIncrement(
+    String exerciseId,
+    double? incrementInActiveUnit,
+    WeightUnit activeUnit,
+  ) {
+    if (exerciseId.isEmpty) return;
+    final values = Map<String, double>.from(state.exerciseIncrementsKg);
+    if (incrementInActiveUnit == null) {
+      values.remove(exerciseId);
+    } else {
+      final value = WeightConverter.toCanonicalKg(incrementInActiveUnit, activeUnit);
+      if (!value.isFinite || value <= 0 || value > 100) return;
+      values[exerciseId] = value;
+    }
+    updateSettings(state.copyWith(exerciseIncrementsKg: values));
+  }
+
   void setUnilateralSideRestSeconds(int seconds) {
     final safeSeconds = seconds.clamp(0, 600).toInt();
     updateSettings(state.copyWith(unilateralSideRestSeconds: safeSeconds));

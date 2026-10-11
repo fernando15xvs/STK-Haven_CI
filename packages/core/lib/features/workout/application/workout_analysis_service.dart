@@ -54,6 +54,7 @@ class WorkoutAnalysisService {
           routineTargets: routine.exercises,
           isRirEnabled: isRirEnabled,
           defaultIncrementKg: defaultIncrement,
+          exerciseIncrementsKg: settings.exerciseIncrementsKg,
           recentSessions: history,
           readiness: _readinessForSession(recovery, session.startedAt),
         );
