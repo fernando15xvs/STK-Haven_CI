@@ -47,6 +47,7 @@ class SettingsState {
   final bool showDailyVerse;
   final bool dailyVerseNotifications;
   final bool workoutRemindersEnabled;
+  final bool unfinishedWorkoutRemindersEnabled;
   final int workoutReminderHour;
   final int workoutReminderMinute;
   final bool cloudSyncEnabled;
@@ -70,6 +71,7 @@ class SettingsState {
     this.showDailyVerse = true,
     this.dailyVerseNotifications = true,
     this.workoutRemindersEnabled = false,
+    this.unfinishedWorkoutRemindersEnabled = false,
     this.workoutReminderHour = 18,
     this.workoutReminderMinute = 0,
     this.cloudSyncEnabled = false,
@@ -95,6 +97,7 @@ class SettingsState {
     bool? showDailyVerse,
     bool? dailyVerseNotifications,
     bool? workoutRemindersEnabled,
+    bool? unfinishedWorkoutRemindersEnabled,
     int? workoutReminderHour,
     int? workoutReminderMinute,
     bool? cloudSyncEnabled,
@@ -124,6 +127,8 @@ class SettingsState {
           dailyVerseNotifications ?? this.dailyVerseNotifications,
       workoutRemindersEnabled:
           workoutRemindersEnabled ?? this.workoutRemindersEnabled,
+      unfinishedWorkoutRemindersEnabled:
+          unfinishedWorkoutRemindersEnabled ?? this.unfinishedWorkoutRemindersEnabled,
       workoutReminderHour: workoutReminderHour ?? this.workoutReminderHour,
       workoutReminderMinute:
           workoutReminderMinute ?? this.workoutReminderMinute,
@@ -155,6 +160,7 @@ class SettingsState {
       'showDailyVerse': showDailyVerse,
       'dailyVerseNotifications': dailyVerseNotifications,
       'workoutRemindersEnabled': workoutRemindersEnabled,
+      'unfinishedWorkoutRemindersEnabled': unfinishedWorkoutRemindersEnabled,
       'workoutReminderHour': workoutReminderHour,
       'workoutReminderMinute': workoutReminderMinute,
       'cloudSyncEnabled': cloudSyncEnabled,
@@ -214,6 +220,8 @@ class SettingsState {
           json['dailyVerseNotifications'] as bool? ?? true,
       workoutRemindersEnabled:
           json['workoutRemindersEnabled'] as bool? ?? false,
+      unfinishedWorkoutRemindersEnabled:
+          json['unfinishedWorkoutRemindersEnabled'] as bool? ?? false,
       workoutReminderHour: hour.clamp(0, 23).toInt(),
       workoutReminderMinute: minute.clamp(0, 59).toInt(),
       cloudSyncEnabled: json['cloudSyncEnabled'] as bool? ?? false,

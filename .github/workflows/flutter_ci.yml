@@ -211,8 +211,8 @@ jobs:
           [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "com.FernandoSac.gymTracker" ]
           [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$EXT/Info.plist")" = "com.FernandoSac.gymTracker.StkVerseWidget" ]
           [ "$(/usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' "$EXT/Info.plist")" = "com.apple.widgetkit-extension" ]
-          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")" = "2" ]
-          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$EXT/Info.plist")" = "2" ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")" = "3" ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$EXT/Info.plist")" = "3" ]
           [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$EXT/Info.plist")" = "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")" ]
           unzip -Z1 "$IPA" | grep -F 'Payload/Runner.app/PlugIns/StkVerseWidget.appex/Info.plist'
           (cd build/ios_personal_test && shasum -a 256 -c STK-Haven-unsigned.ipa.sha256)

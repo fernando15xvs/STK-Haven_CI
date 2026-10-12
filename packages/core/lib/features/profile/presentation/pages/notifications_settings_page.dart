@@ -1,4 +1,6 @@
 import 'package:core/core/services/hydration_reminder_service.dart';
+import 'package:core/core/services/workout_notification_service.dart';
+import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/features/profile/presentation/pages/personal_reminder_page.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
@@ -54,6 +56,43 @@ class NotificationsSettingsPage extends ConsumerWidget {
           _Section(
             title: 'Entrenamiento',
             children: [
+              SwitchListTile.adaptive(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Avisar si olvido finalizar'),
+                subtitle: const Text(
+                  'Después de 3 horas sin cambios y una vez más al día siguiente. '
+                  'Nunca finaliza ni descarta la rutina automáticamente.',
+                ),
+                value: !kIsWeb && settings.unfinishedWorkoutRemindersEnabled,
+                onChanged: kIsWeb ? null : (enabled) async {
+                  if (enabled) {
+                    final granted = await WorkoutNotificationService
+                        .requestNotificationPermission();
+                    if (!granted) {
+                      if (context.mounted) _showPermissionMessage(context);
+                      return;
+                    }
+                  }
+                  settingsNotifier.setUnfinishedWorkoutReminders(enabled);
+                  if (!enabled) {
+                    await WorkoutNotificationService
+                        .cancelUnfinishedWorkoutReminders();
+                  } else {
+                    final session = ref.read(activeWorkoutProvider).session;
+                    if (session != null) {
+                      await WorkoutNotificationService
+                          .scheduleUnfinishedWorkoutReminder(
+                        lastActivityAt: ref
+                                .read(activeWorkoutRepositoryProvider)
+                                .lastActivityAt ??
+                            session.startedAt,
+                        workoutName: session.routineNameSnapshot,
+                      );
+                    }
+                  }
+                },
+              ),
+              const Divider(height: 1),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Recordatorio diario'),

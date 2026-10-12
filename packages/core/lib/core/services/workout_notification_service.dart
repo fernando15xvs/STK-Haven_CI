@@ -1,4 +1,5 @@
 import 'package:core/database/hive/hive_boxes.dart';
+import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
 import 'package:core/features/profile/data/settings_repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -11,6 +12,9 @@ class WorkoutNotificationService {
       FlutterLocalNotificationsPlugin();
   static const int _restTimerNotificationId = 999;
   static const int _workoutReminderNotificationId = 1001;
+  static const int _unfinishedWorkoutFirstId = 1041;
+  static const int _unfinishedWorkoutFollowUpId = 1042;
+  static Future<void> _unfinishedQueue = Future<void>.value();
   static Future<void>? _initialization;
 
   /// Idempotent/lazy initialization.
@@ -183,6 +187,66 @@ class WorkoutNotificationService {
       matchDateTimeComponents: DateTimeComponents.time,
     );
     return true;
+  }
+
+  static Future<void> _serializeUnfinished(Future<void> Function() action) {
+    final operation = _unfinishedQueue.then((_) => action());
+    _unfinishedQueue = operation.then<void>(
+      (_) {}, onError: (Object _, StackTrace _) {},
+    );
+    return operation;
+  }
+
+  /// Scheduled locally at last recorded edit +3h / +24h.
+  /// Permission is requested only when the user enables this in settings.
+  static Future<void> scheduleUnfinishedWorkoutReminder({
+    required DateTime lastActivityAt,
+    required String workoutName,
+  }) {
+    if (kIsWeb) return Future<void>.value();
+    return _serializeUnfinished(() async {
+      await initialize();
+      await _notificationsPlugin.cancel(id: _unfinishedWorkoutFirstId);
+      await _notificationsPlugin.cancel(id: _unfinishedWorkoutFollowUpId);
+      final dates = UnfinishedWorkoutReminderPolicy.upcoming(
+        lastActivityAt: lastActivityAt,
+        now: DateTime.now(),
+      );
+      const details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          'unfinished_workout_channel', 'Entrenamientos pendientes',
+          channelDescription: 'Avisos de sesiones sin finalizar',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentSound: true,
+        ),
+      );
+      final name = workoutName.trim().isEmpty
+          ? 'Tu entrenamiento' : workoutName.trim();
+      for (var i = 0; i < dates.length; i++) {
+        await _notificationsPlugin.zonedSchedule(
+          id: i == 0 ? _unfinishedWorkoutFirstId : _unfinishedWorkoutFollowUpId,
+          title: i == 0
+              ? 'Entrenamiento pendiente' : '¿Finalizaste tu entrenamiento?',
+          body: '$name sigue sin finalizar. Abre STK Haven para revisarlo.',
+          scheduledDate: tz.TZDateTime.from(dates[i], tz.local),
+          notificationDetails: details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      }
+    });
+  }
+
+  static Future<void> cancelUnfinishedWorkoutReminders() {
+    if (kIsWeb) return Future<void>.value();
+    return _serializeUnfinished(() async {
+      await initialize();
+      await _notificationsPlugin.cancel(id: _unfinishedWorkoutFirstId);
+      await _notificationsPlugin.cancel(id: _unfinishedWorkoutFollowUpId);
+    });
   }
 
   static Future<void> cancelDailyWorkoutReminder() async {

@@ -14,6 +14,7 @@ import 'package:core/features/routines/data/routine_repository.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/workout_comparator.dart';
+import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
@@ -71,6 +72,7 @@ class DashboardPage extends ConsumerWidget {
               _ActiveWorkoutHero(
                 name: activeWorkout.routineDisplayName,
                 startedAt: activeWorkout.session!.startedAt,
+                lastActivityAt: ref.read(activeWorkoutRepositoryProvider).lastActivityAt,
               )
             else
               _TodayRoutineCard(
@@ -216,13 +218,19 @@ class _DailyMessageCard extends ConsumerWidget {
 class _ActiveWorkoutHero extends StatelessWidget {
   final String name;
   final DateTime startedAt;
+  final DateTime? lastActivityAt;
 
-  const _ActiveWorkoutHero({required this.name, required this.startedAt});
+  const _ActiveWorkoutHero({
+    required this.name, required this.startedAt, this.lastActivityAt,
+  });
 
   @override
   Widget build(BuildContext context) {
     final elapsed = DateTime.now().difference(startedAt);
     final minutes = elapsed.inMinutes;
+    final stale = UnfinishedWorkoutReminderPolicy.isStale(
+      lastActivityAt ?? startedAt, DateTime.now(),
+    );
 
     return PremiumCard(
       onTap: () => Navigator.push(
@@ -251,9 +259,13 @@ class _ActiveWorkoutHero extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ENTRENAMIENTO EN CURSO', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
+                    Text(stale ? 'ENTRENAMIENTO PENDIENTE' : 'ENTRENAMIENTO EN CURSO', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
                     const SizedBox(height: 3),
                     Text(name, style: AppTypography.headlineLarge),
+                    if (stale) const Padding(
+                      padding: EdgeInsets.only(top: 6),
+                      child: Text('Lleva varias horas sin cambios. Toca para revisar y finalizar o continuar.'),
+                    ),
                   ],
                 ),
               ),

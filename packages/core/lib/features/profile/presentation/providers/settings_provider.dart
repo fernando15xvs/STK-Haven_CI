@@ -121,6 +121,10 @@ class SettingsNotifier extends Notifier<SettingsState> {
     updateSettings(state.copyWith(cloudSyncEnabled: enabled));
   }
 
+  void setUnfinishedWorkoutReminders(bool enabled) {
+    updateSettings(state.copyWith(unfinishedWorkoutRemindersEnabled: enabled));
+  }
+
   void setReduceMotion(bool enabled) {
     updateSettings(state.copyWith(reduceMotion: enabled));
   }
