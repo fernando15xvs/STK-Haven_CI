@@ -16,12 +16,14 @@ class SplashScreen extends ConsumerStatefulWidget {
 class _SplashScreenState extends ConsumerState<SplashScreen> {
   double _opacity = 0.0;
   double _yOffset = 18.0;
+  Timer? _introTimer;
+  Timer? _navigationTimer;
 
   @override
   void initState() {
     super.initState();
 
-    Future.delayed(const Duration(milliseconds: 120), () {
+    _introTimer = Timer(const Duration(milliseconds: 120), () {
       if (!mounted) return;
       setState(() {
         _opacity = 1.0;
@@ -29,12 +31,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       });
     });
 
-    Timer(const Duration(milliseconds: 1200), () {
+    _navigationTimer = Timer(const Duration(milliseconds: 1200), () {
       if (mounted) _navegarSiguientePantalla();
     });
   }
 
-  Future<void> _navegarSiguientePantalla() async {
+  @override
+  void dispose() {
+    _introTimer?.cancel();
+    _navigationTimer?.cancel();
+    super.dispose();
+  }
+
+  void _navegarSiguientePantalla() {
     if (!mounted) return;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
