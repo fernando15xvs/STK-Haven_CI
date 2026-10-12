@@ -809,7 +809,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     final now = DateTime.now();
     final duration = actualDurationMinutes == null
         ? now.difference(state.session!.startedAt).inSeconds
-        : Duration(minutes: actualDurationMinutes.clamp(1, 720)).inSeconds;
+        : Duration(minutes: actualDurationMinutes.clamp(1, 720).toInt()).inSeconds;
     final recordedFinish = actualDurationMinutes == null
         ? now
         : state.session!.startedAt.add(Duration(seconds: duration));
