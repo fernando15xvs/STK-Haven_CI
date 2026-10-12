@@ -181,12 +181,12 @@ jobs:
       - name: Install CocoaPods
         working-directory: apps/app_mobile/ios
         run: pod install
-      - name: Build iOS release without signing
-        working-directory: apps/app_mobile
-        run: flutter build ios --release --no-codesign --target lib/main_ios.dart
       - name: Build iOS profile without signing
         working-directory: apps/app_mobile
         run: flutter build ios --profile --no-codesign --target lib/main_ios.dart
+      - name: Build iOS release without signing
+        working-directory: apps/app_mobile
+        run: flutter build ios --release --no-codesign --target lib/main_ios.dart
       - name: Package unsigned iOS IPA
         working-directory: apps/app_mobile
         run: |
