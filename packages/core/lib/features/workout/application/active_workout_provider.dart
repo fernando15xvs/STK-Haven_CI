@@ -119,7 +119,8 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         }
       }
 
-      if (ref.read(settingsProvider).unfinishedWorkoutRemindersEnabled) {
+      if (Hive.isBoxOpen(HiveBoxes.metadata) &&
+          ref.read(settingsProvider).unfinishedWorkoutRemindersEnabled) {
         unawaited(_rescheduleUnfinishedReminder(draft));
       }
       return ActiveWorkoutState(
@@ -1011,8 +1012,11 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
   }
 
   Future<void> _rescheduleUnfinishedReminder(WorkoutSession session) async {
-    if (!ref.read(settingsProvider).unfinishedWorkoutRemindersEnabled) return;
     try {
+      if (!Hive.isBoxOpen(HiveBoxes.metadata) ||
+          !ref.read(settingsProvider).unfinishedWorkoutRemindersEnabled) {
+        return;
+      }
       await WorkoutNotificationService.scheduleUnfinishedWorkoutReminder(
         lastActivityAt: ref.read(activeWorkoutRepositoryProvider).lastActivityAt
             ?? session.startedAt,
