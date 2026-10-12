@@ -40,6 +40,17 @@ import WidgetKit
         binaryMessenger: controller.binaryMessenger
       )
       verseWidgetChannel.setMethodCallHandler { call, result in
+        if call.method == "diagnostics" {
+          let ext = Bundle.main.builtInPlugInsURL?
+            .appendingPathComponent("StkVerseWidget.appex")
+          let bundled = ext.map { FileManager.default.fileExists(atPath: $0.path) }
+            ?? false
+          let group = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: "group.com.FernandoSac.gymTracker"
+          ) != nil
+          result(["extensionBundled": bundled, "appGroupAvailable": group])
+          return
+        }
         guard let shared = UserDefaults(
           suiteName: "group.com.FernandoSac.gymTracker"
         ) else {

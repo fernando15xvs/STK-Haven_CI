@@ -30,6 +30,19 @@ class VerseWidgetSync {
     });
   }
 
+  /// Reports the installed signed iOS bundle, not just the unsigned IPA in CI.
+  static Future<Map<String, bool>?> diagnostics() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
+    try {
+      final response = await _channel.invokeMapMethod<String, bool>(
+        'diagnostics',
+      );
+      return response;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<void> clear() async {
     if (kIsWeb || !isSupportedPlatform) return;
     await _channel.invokeMethod<bool>('clear');

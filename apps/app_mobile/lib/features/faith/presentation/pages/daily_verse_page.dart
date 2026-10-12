@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/faith/services/verse_widget_sync.dart';
 import 'package:core/features/faith/application/favorites_provider.dart';
 import 'package:core/features/faith/application/reflection_journal_provider.dart';
 import 'reflection_history_page.dart';
@@ -134,6 +135,35 @@ class DailyVersePage extends ConsumerWidget {
               child: ListTile(
                 leading: const Icon(Icons.widgets_outlined),
                 title: const Text('Versículo en pantalla de bloqueo'),
+                trailing: const Icon(Icons.info_outline),
+                onTap: () async {
+                  final diagnostics = await VerseWidgetSync.diagnostics();
+                  if (!context.mounted) return;
+                  final message = diagnostics == null
+                      ? 'No se pudo consultar la instalación nativa del widget.'
+                      : diagnostics['extensionBundled'] != true
+                          ? 'El widget no está instalado en la aplicación firmada. '
+                            'En Sideloadly desactiva Remove App Extensions. '
+                            'No elimines STK Haven para corregirlo.'
+                          : diagnostics['appGroupAvailable'] != true
+                              ? 'El widget está incluido, pero la firma no '
+                                'permite el App Group compartido. Revisa '
+                                'los permisos y perfiles de firma.'
+                              : 'Extensión y App Group detectados. Si el '
+                                'widget no aparece en iOS, reinicia el '
+                                'iPhone y revisa los registros de Sideloadly.';
+                  await showDialog<void>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Diagnóstico del widget'),
+                      content: Text(message),
+                      actions: [TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Entendido'),
+                      )],
+                    ),
+                  );
+                },
                 subtitle: const Text(
                   'iPhone: mantén pulsada la pantalla de bloqueo, toca '
                   'Personalizar y añade el widget rectangular STK Haven. '

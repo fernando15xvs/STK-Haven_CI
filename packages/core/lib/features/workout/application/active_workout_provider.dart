@@ -119,6 +119,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         }
       }
 
+      if (ref.read(settingsProvider).unfinishedWorkoutRemindersEnabled) {
+        unawaited(_rescheduleUnfinishedReminder(draft));
+      }
       return ActiveWorkoutState(
         session: draft,
         globalTimerSeconds: elapsed,
@@ -141,7 +144,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       notes: draft.notes,
       currentRestEndsAt: null,
     );
-    ref.read(activeWorkoutRepositoryProvider).saveDraft(updated);
+    ref.read(activeWorkoutRepositoryProvider).saveDraft(
+      updated, preserveLastActivity: true,
+    );
   }
 
   /// Starts a routine while preserving routine-specific set structure/rest.
@@ -797,19 +802,24 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     _persistDraft();
   }
 
-  Future<FinishWorkoutResult?> finishWorkout() async {
+  Future<FinishWorkoutResult?> finishWorkout({int? actualDurationMinutes}) async {
     if (state.session == null) return null;
     _cancelTimers();
 
-    final duration =
-        DateTime.now().difference(state.session!.startedAt).inSeconds;
+    final now = DateTime.now();
+    final duration = actualDurationMinutes == null
+        ? now.difference(state.session!.startedAt).inSeconds
+        : Duration(minutes: actualDurationMinutes.clamp(1, 720)).inSeconds;
+    final recordedFinish = actualDurationMinutes == null
+        ? now
+        : state.session!.startedAt.add(Duration(seconds: duration));
 
     final finalSession = WorkoutSession(
       id: state.session!.id,
       routineId: state.session!.routineId,
       routineNameSnapshot: state.session!.routineNameSnapshot,
       startedAt: state.session!.startedAt,
-      finishedAt: DateTime.now(),
+      finishedAt: recordedFinish,
       durationSeconds: duration,
       exercises: state.session!.exercises,
       notes: state.session!.notes,
@@ -862,6 +872,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         await ref.read(activeWorkoutRepositoryProvider).clearDraft();
         _undoSession = null;
         state = const ActiveWorkoutState();
+        unawaited(_cancelUnfinishedReminder());
       } else {
         // Keep an incomplete workout resumable even after the user leaves the
         // summary screen. Home/Routines will keep showing the active-workout
@@ -872,6 +883,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
           session: finalSession,
           globalTimerSeconds: duration,
         );
+        unawaited(_rescheduleUnfinishedReminder(finalSession));
       }
       ref.invalidate(nextProgramSessionProvider);
 
@@ -919,6 +931,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       session: resumed,
       globalTimerSeconds: resumed.durationSeconds,
     );
+    unawaited(_rescheduleUnfinishedReminder(resumed));
   }
 
   Future<void> cancelWorkout() async {
@@ -926,6 +939,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     _undoSession = null;
     await ref.read(activeWorkoutRepositoryProvider).clearDraft();
     state = const ActiveWorkoutState();
+    unawaited(_cancelUnfinishedReminder());
   }
 
   void _startRestTimer(int initialSeconds, DateTime endsAt) {
@@ -996,9 +1010,33 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     );
   }
 
+  Future<void> _rescheduleUnfinishedReminder(WorkoutSession session) async {
+    if (!ref.read(settingsProvider).unfinishedWorkoutRemindersEnabled) return;
+    try {
+      await WorkoutNotificationService.scheduleUnfinishedWorkoutReminder(
+        lastActivityAt: ref.read(activeWorkoutRepositoryProvider).lastActivityAt
+            ?? session.startedAt,
+        workoutName: session.routineNameSnapshot,
+      );
+    } catch (_) {
+      // Notifications must never prevent a workout from being saved.
+    }
+  }
+
+  Future<void> _cancelUnfinishedReminder() async {
+    try {
+      await WorkoutNotificationService.cancelUnfinishedWorkoutReminders();
+    } catch (_) {
+      // Draft removal remains authoritative.
+    }
+  }
+
   Future<void> _persistDraft() async {
-    if (state.session != null) {
-      await ref.read(activeWorkoutRepositoryProvider).saveDraft(state.session!);
+    final session = state.session;
+    if (session == null) return;
+    await ref.read(activeWorkoutRepositoryProvider).saveDraft(session);
+    if (state.session?.id == session.id) {
+      unawaited(_rescheduleUnfinishedReminder(session));
     }
   }
 }

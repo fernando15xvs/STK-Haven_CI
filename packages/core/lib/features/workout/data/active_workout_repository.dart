@@ -17,9 +17,25 @@ class ActiveWorkoutRepository {
   static const String _key = 'draft';
   Future<void> _operationQueue = Future<void>.value();
 
-  Future<void> saveDraft(WorkoutSession session) {
-    final payload = _encode(session);
-    return _enqueue(() => _box.put(_key, payload));
+  Future<void> saveDraft(WorkoutSession session, {bool preserveLastActivity = false}) {
+    return _enqueue(() {
+      final activity = preserveLastActivity
+          ? (lastActivityAt ?? session.startedAt)
+          : DateTime.now();
+      final payload = _encode(session)
+        ..['lastActivityAt'] = activity.toIso8601String();
+      return _box.put(_key, payload);
+    });
+  }
+
+  /// An older active draft has no lastActivityAt: use its start date.
+  DateTime? get lastActivityAt {
+    final raw = _box.get(_key);
+    if (raw is! Map) return null;
+    final stored = raw['lastActivityAt'];
+    if (stored is String) return DateTime.tryParse(stored);
+    final started = raw['startedAt'];
+    return started is String ? DateTime.tryParse(started) : null;
   }
 
   Future<void> clearDraft() {

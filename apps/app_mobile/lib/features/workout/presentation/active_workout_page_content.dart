@@ -8,6 +8,7 @@ import 'package:gym_tracker/core/theme/components/primary_button.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
+import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
 import 'package:core/features/workout/application/active_workout_suggestions_provider.dart';
 import 'package:core/features/workout/presentation/widgets/exercise_increment_control.dart';
 import 'package:core/features/workout/presentation/widgets/exercise_rep_range_notice.dart';
@@ -355,6 +356,58 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       if (continueFinish != true) return;
     }
 
+    int? actualDurationMinutes;
+    final lastActivity = ref.read(activeWorkoutRepositoryProvider).lastActivityAt
+        ?? session.startedAt;
+    if (UnfinishedWorkoutReminderPolicy.isStale(
+        lastActivity, DateTime.now())) {
+      final controller = TextEditingController();
+      final minutes = await showDialog<int>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Entrenamiento pendiente'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Este entrenamiento quedó abierto durante varias horas. '
+                'Escribe la duración real para evitar guardar horas o días de más. '
+                'Las series registradas se conservarán.',
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Duración real (minutos)',
+                  hintText: 'Ej. 75',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Seguir entrenando'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final parsed = int.tryParse(controller.text.trim());
+                if (parsed != null && parsed >= 1 && parsed <= 720) {
+                  Navigator.pop(dialogContext, parsed);
+                }
+              },
+              child: const Text('Finalizar con esta duración'),
+            ),
+          ],
+        ),
+      );
+      controller.dispose();
+      if (!context.mounted || minutes == null) return;
+      actualDurationMinutes = minutes;
+    }
+
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _isFinishing = true);
     // Paint the loading state and finish the native keyboard transition before
@@ -362,7 +415,9 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     await WidgetsBinding.instance.endOfFrame;
     if (!context.mounted) return;
     final result =
-        await ref.read(activeWorkoutProvider.notifier).finishWorkout();
+        await ref.read(activeWorkoutProvider.notifier).finishWorkout(
+          actualDurationMinutes: actualDurationMinutes,
+        );
     if (!context.mounted) return;
     setState(() => _isFinishing = false);
 
