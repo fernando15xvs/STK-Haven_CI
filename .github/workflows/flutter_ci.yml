@@ -196,6 +196,24 @@ jobs:
           cd build/ios_personal_test
           /usr/bin/zip -qry STK-Haven-unsigned.ipa Payload
           shasum -a 256 STK-Haven-unsigned.ipa > STK-Haven-unsigned.ipa.sha256
+      - name: Verify unsigned IPA structure and WidgetKit extension
+        working-directory: apps/app_mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          IPA="build/ios_personal_test/STK-Haven-unsigned.ipa"
+          APP="build/ios_personal_test/Payload/Runner.app"
+          EXT="$APP/PlugIns/StkVerseWidget.appex"
+          test -s "$IPA"
+          unzip -tqq "$IPA"
+          test -f "$APP/Info.plist"
+          test -f "$EXT/Info.plist"
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "com.FernandoSac.gymTracker" ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$EXT/Info.plist")" = "com.FernandoSac.gymTracker.StkVerseWidget" ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' "$EXT/Info.plist")" = "com.apple.widgetkit-extension" ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")" = "2" ]
+          unzip -Z1 "$IPA" | grep -F 'Payload/Runner.app/PlugIns/StkVerseWidget.appex/Info.plist'
+          (cd build/ios_personal_test && shasum -a 256 -c STK-Haven-unsigned.ipa.sha256)
       - name: Upload unsigned iOS personal-test artifact
         uses: actions/upload-artifact@v4
         with:
