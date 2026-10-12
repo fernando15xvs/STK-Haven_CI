@@ -1039,7 +1039,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     final session = state.session;
     if (session == null) return;
     await ref.read(activeWorkoutRepositoryProvider).saveDraft(session);
-    if (state.session?.id == session.id) {
+    // The provider may have been disposed while Hive was writing (e.g. when
+    // leaving a test, switching accounts, or rebuilding the app root).
+    if (ref.mounted && state.session?.id == session.id) {
       unawaited(_rescheduleUnfinishedReminder(session));
     }
   }
