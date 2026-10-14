@@ -28,51 +28,55 @@ class DailyVerseState {
 class DailyVerseNotifier extends AsyncNotifier<DailyVerseState> {
   @override
   Future<DailyVerseState> build() async {
-    // Watch init state — rebuild automatically when DB becomes ready
-    final initState = ref.watch(bibleInitProvider);
-    if (!initState.isReady) {
-      return DailyVerseState(isLoading: initState.status == BibleDbStatus.loading);
-    }
-
+    // Read SharedPreferences FIRST, regardless of whether SQLite is ready.
+    // This makes an existing verse visible immediately after the splash.
+    final init = ref.watch(bibleInitProvider);
     final prefs = await SharedPreferences.getInstance();
-    final savedText = prefs.getString('saved_verse');
-    final savedRef  = prefs.getString('saved_reference');
-    final savedMood = prefs.getString('current_mood') ?? 'General';
-    final savedDateStr = prefs.getString('daily_verse_date');
+    final text = prefs.getString('saved_verse');
+    final reference = prefs.getString('saved_reference');
+    final mood = prefs.getString('current_mood') ?? 'General';
     final today = DateTime.now();
     final todayStr = '${today.year}-${today.month}-${today.day}';
+    final fresh = prefs.getString('daily_verse_date') == todayStr;
 
-    // If we have a verse cached AND it is from today, use it directly.
-    final isFresh = savedDateStr == todayStr && savedText != null && savedRef != null;
-
-    Verse? initialVerse;
-    if (isFresh) {
+    Verse? cached;
+    if (text != null && text.trim().isNotEmpty &&
+        reference != null && reference.trim().isNotEmpty) {
       try {
-        final parts = savedRef.split(' ');
-        final verseParts = parts.last.split(':');
-        initialVerse = Verse(
-          book: parts.sublist(0, parts.length - 1).join(' '),
-          chapter: int.tryParse(verseParts[0]) ?? 1,
-          verse: int.tryParse(verseParts.length > 1 ? verseParts[1] : '1') ?? 1,
-          text: savedText,
-        );
+        final split = reference.lastIndexOf(' ');
+        if (split > 0) {
+          final location = reference.substring(split + 1).split(':');
+          cached = Verse(
+            book: reference.substring(0, split),
+            chapter: int.parse(location[0]),
+            verse: int.parse(location[1]),
+            text: text,
+          );
+        }
       } catch (_) {
-        // malformed cache — fall through to fetch
+        // Corrupt cached reference: fetch a fresh verse if Bible is ready.
       }
     }
-
-    if (initialVerse == null) {
-      // Either first launch, or a new day — fetch a fresh verse.
-      final repo = ref.read(bibleRepositoryProvider);
-      initialVerse = await repo.getRandomVerse(mood: savedMood);
-      if (initialVerse != null) {
-        await prefs.setString('saved_verse', initialVerse.text);
-        await prefs.setString('saved_reference', initialVerse.reference);
-        await prefs.setString('daily_verse_date', todayStr);
-      }
+    if (fresh && cached != null) {
+      return DailyVerseState(verse: cached, mood: mood, isLoading: false);
+    }
+    if (!init.isReady) {
+      // Yesterday's verse is preferable to a blank dashboard while updating.
+      return DailyVerseState(
+        verse: cached, mood: mood, isLoading: cached == null,
+      );
     }
 
-    return DailyVerseState(verse: initialVerse, mood: savedMood, isLoading: false);
+    final current = await ref.read(bibleRepositoryProvider)
+        .getRandomVerse(mood: mood);
+    if (current != null) {
+      await prefs.setString('saved_verse', current.text);
+      await prefs.setString('saved_reference', current.reference);
+      await prefs.setString('daily_verse_date', todayStr);
+    }
+    return DailyVerseState(
+      verse: current ?? cached, mood: mood, isLoading: false,
+    );
   }
 
   Future<void> changeMood(String newMood) async {

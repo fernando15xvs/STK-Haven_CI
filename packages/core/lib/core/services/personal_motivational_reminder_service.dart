@@ -67,6 +67,20 @@ class PersonalMotivationalReminderService {
     ),
   );
 
+  /// Report how many native notifications are actually registered.
+  /// Useful after Sideloadly reinstalls or when iOS has exhausted pending slots.
+  static Future<int> pendingSlots() async {
+    if (kIsWeb) return 0;
+    await initialize();
+    final pending = await _plugin.pendingNotificationRequests();
+    return pending.where((item) =>
+        item.id >= firstDailySlotId &&
+        item.id < firstDailySlotId + maxDailySlots).length;
+  }
+
+  static int expectedSlots(PersonalReminderSettings settings) =>
+      settings.enabled ? (24 * 60) ~/ settings.intervalMinutes : 0;
+
   static Future<void> cancel() async {
     if (kIsWeb) return;
     await initialize();

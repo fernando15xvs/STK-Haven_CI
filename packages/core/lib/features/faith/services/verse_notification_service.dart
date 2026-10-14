@@ -1,4 +1,5 @@
 import 'package:core/core/services/local_notification_timezone.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -74,11 +75,20 @@ class VerseNotificationService {
       scheduled = scheduled.add(const Duration(days: 1));
     }
 
+    final prefs = await SharedPreferences.getInstance();
+    final savedText = prefs.getString('saved_verse')?.trim();
+    final savedReference = prefs.getString('saved_reference')?.trim();
+    final snippet = savedText == null || savedText.isEmpty
+        ? null
+        : String.fromCharCodes(savedText.runes.take(140));
+    final body = snippet == null
+        ? 'Tu versículo del día está listo. Abre STK Haven para leerlo completo.'
+        : '${snippet}${savedText!.runes.length > 140 ? '…' : ''}'
+            '${savedReference == null || savedReference.isEmpty ? '' : ' · $savedReference'}';
     await _notificationsPlugin.zonedSchedule(
       id: _dailyReminderId,
       title: 'Fortaleza de hoy · STK Haven',
-      body:
-          'Tu versículo del día está listo. Abre STK Haven para leerlo completo.',
+      body: body,
       scheduledDate: scheduled,
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -99,6 +109,13 @@ class VerseNotificationService {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
+  }
+
+  static Future<int> pendingDailyReminderCount() async {
+    if (kIsWeb) return 0;
+    await initialize();
+    final pending = await _notificationsPlugin.pendingNotificationRequests();
+    return pending.where((item) => item.id == _dailyReminderId).length;
   }
 
   static Future<void> cancelDailyReminder() async {

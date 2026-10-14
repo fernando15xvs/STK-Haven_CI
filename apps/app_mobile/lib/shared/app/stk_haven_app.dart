@@ -4,6 +4,7 @@ import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/features/faith/services/verse_widget_sync.dart';
+import 'package:core/features/faith/services/verse_notification_service.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
@@ -59,6 +60,9 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       final verse = next.value?.verse;
       if (verse == null) return;
       unawaited(_publishVerseWidgetBestEffort(verse.text, verse.reference));
+      if (ref.read(settingsProvider).dailyVerseNotifications) {
+        unawaited(_rescheduleVerseReminderBestEffort());
+      }
     });
     ref.listen(faithModuleEnabledProvider, (_, enabled) {
       if (!enabled) unawaited(_clearVerseWidgetBestEffort());
@@ -121,5 +125,13 @@ Future<void> _clearVerseWidgetBestEffort() async {
     await VerseWidgetSync.clear();
   } catch (error) {
     debugPrint('Verse widget clearing skipped: $error');
+  }
+}
+
+Future<void> _rescheduleVerseReminderBestEffort() async {
+  try {
+    await VerseNotificationService.scheduleDailyReminder();
+  } catch (error) {
+    debugPrint('Daily verse notification sync skipped: $error');
   }
 }
