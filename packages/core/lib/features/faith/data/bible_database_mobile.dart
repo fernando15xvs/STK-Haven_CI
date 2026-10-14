@@ -32,7 +32,9 @@ class BibleDatabase {
       )
     ''');
     await db.execute('CREATE INDEX idx_libro ON versiculos(libro)');
-    await db.execute('CREATE INDEX idx_libro_capitulo ON versiculos(libro, capitulo)');
+    await db.execute(
+      'CREATE INDEX idx_libro_capitulo ON versiculos(libro, capitulo)',
+    );
   }
 
   Future<bool> initializeDatabaseFromInternet(
@@ -49,9 +51,7 @@ class BibleDatabase {
       final rows = await BiblePublicDomainSource.loadAll(
         onStatusChange: onStatusChange,
       );
-      onStatusChange(
-        'Guardando ${BiblePublicDomainSource.translationName}…',
-      );
+      onStatusChange('Guardando ${BiblePublicDomainSource.translationName}…');
 
       var batch = db.batch();
       var batchCount = 0;
@@ -114,9 +114,18 @@ class BibleDatabase {
     return result.map((e) => e['texto'] as String).toList();
   }
 
-  Future<Map<String, Object?>?> getRandomVerseRaw(
-    List<String> keywords,
-  ) async {
+  Future<List<Map<String, Object?>>> getRandomVersesRaw(int count) async {
+    if (count < 1 || count > 48) throw ArgumentError.value(count);
+    final db = await instance.database;
+    return db.rawQuery(
+      'SELECT libro, capitulo, versiculo, texto FROM versiculos '
+      "WHERE trim(texto) <> '' GROUP BY libro, capitulo, versiculo "
+      'ORDER BY RANDOM() LIMIT ?',
+      [count],
+    );
+  }
+
+  Future<Map<String, Object?>?> getRandomVerseRaw(List<String> keywords) async {
     final db = await instance.database;
     List<Map<String, Object?>> result;
 
@@ -125,10 +134,13 @@ class BibleDatabase {
         'SELECT * FROM versiculos ORDER BY RANDOM() LIMIT 1',
       );
     } else {
-      final whereClause =
-          List.filled(keywords.length, 'LOWER(texto) LIKE ?').join(' OR ');
-      final arguments =
-          keywords.map((keyword) => '%${keyword.toLowerCase()}%').toList();
+      final whereClause = List.filled(
+        keywords.length,
+        'LOWER(texto) LIKE ?',
+      ).join(' OR ');
+      final arguments = keywords
+          .map((keyword) => '%${keyword.toLowerCase()}%')
+          .toList();
       result = await db.rawQuery(
         'SELECT * FROM versiculos WHERE $whereClause ORDER BY RANDOM() LIMIT 1',
         arguments,

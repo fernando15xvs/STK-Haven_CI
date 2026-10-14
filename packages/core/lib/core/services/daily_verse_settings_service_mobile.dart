@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../features/faith/services/verse_background_service.dart';
+import '../../features/faith/data/verse_schedule_repository.dart';
 import '../../features/faith/services/verse_notification_service.dart';
 
 Future<bool> configureDailyVerseNotifications(bool enable) async {
@@ -12,12 +13,10 @@ Future<bool> configureDailyVerseNotifications(bool enable) async {
   }
 
   final prefs = await SharedPreferences.getInstance();
-  await prefs.setBool('verse_notifications_enabled', effectiveValue);
 
   if (effectiveValue) {
-    await VerseNotificationService.scheduleDailyReminder(
-      hour: 8,
-      minute: 0,
+    await VerseNotificationService.schedule(
+      await VerseScheduleRepository.read(),
     );
     // iOS reminders are scheduled by UNUserNotificationCenter; Workmanager
     // does not guarantee a background job at 08:00 and may throw.
@@ -29,6 +28,7 @@ Future<bool> configureDailyVerseNotifications(bool enable) async {
       }
     }
   } else {
+    await prefs.setBool('verse_notifications_enabled', false);
     await VerseNotificationService.cancelDailyReminder();
     if (defaultTargetPlatform != TargetPlatform.iOS && !kIsWeb) {
       try {
@@ -39,5 +39,6 @@ Future<bool> configureDailyVerseNotifications(bool enable) async {
     }
   }
 
+  await prefs.setBool('verse_notifications_enabled', effectiveValue);
   return effectiveValue;
 }

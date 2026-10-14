@@ -13,8 +13,6 @@ import 'package:flutter/foundation.dart';
 /// Keep Apple-specific startup isolated from Android so iOS can evolve its
 /// notification/background policy independently.
 Future<void> initializeIosPlatformServices() async {
-  await VerseNotificationService.initialize();
-  await WorkoutNotificationService.initialize();
   // Workmanager is not a reliable notification scheduler on iOS.
   // The OS-native repeating local notification remains the source of truth.
 
@@ -30,10 +28,7 @@ Future<void> initializeIosPlatformServices() async {
 
   try {
     if (settings.dailyVerseNotifications) {
-      await VerseNotificationService.scheduleDailyReminder(
-        hour: 8,
-        minute: 0,
-      );
+      await VerseNotificationService.scheduleDailyReminder();
     } else {
       await VerseNotificationService.cancelDailyReminder();
     }

@@ -7,14 +7,13 @@ import 'package:core/features/faith/services/verse_notification_service.dart';
 import 'package:core/features/profile/data/settings_repository.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 /// Android-only startup services.
 ///
 /// Keep Android plugin registration/scheduling here so the iOS entrypoint never
 /// imports this layer.
 Future<void> initializeAndroidPlatformServices() async {
-  await VerseNotificationService.initialize();
-  await WorkoutNotificationService.initialize();
   try {
     await VerseBackgroundService.initialize();
   } catch (_) {
@@ -31,19 +30,24 @@ Future<void> initializeAndroidPlatformServices() async {
     settings.dailyVerseNotifications,
   );
 
-  if (settings.dailyVerseNotifications) {
-    await VerseNotificationService.scheduleDailyReminder(
-      hour: 8,
-      minute: 0,
-    );
-    try {
-      await VerseBackgroundService.scheduleDailyVerse(8, 0);
-    } catch (_) { /* Keep native daily reminders active. */ }
-  } else {
-    await VerseNotificationService.cancelDailyReminder();
-    try {
-      await VerseBackgroundService.cancelDailyVerse();
-    } catch (_) { /* Best-effort cleanup. */ }
+  try {
+    if (settings.dailyVerseNotifications) {
+      await VerseNotificationService.scheduleDailyReminder();
+      try {
+        await VerseBackgroundService.scheduleDailyVerse(8, 0);
+      } catch (_) {
+        /* Keep native daily reminders active. */
+      }
+    } else {
+      await VerseNotificationService.cancelDailyReminder();
+      try {
+        await VerseBackgroundService.cancelDailyVerse();
+      } catch (_) {
+        /* Best-effort cleanup. */
+      }
+    }
+  } catch (error) {
+    debugPrint('Verse reminder restoration failed: $error');
   }
 
   // Personal messages are private Hive data and must be re-registered after

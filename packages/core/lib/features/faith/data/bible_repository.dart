@@ -1,7 +1,6 @@
 import 'package:core/domain/models/verse.dart';
 import 'package:core/features/faith/data/bible_database.dart';
 
-
 class BibleRepository {
   final BibleDatabase database;
 
@@ -27,6 +26,20 @@ class BibleRepository {
     }).toList();
   }
 
+  Future<List<Verse>> getNotificationVerses(int count) async {
+    final rows = await database.getRandomVersesRaw(count);
+    return rows
+        .map(
+          (row) => Verse(
+            book: row['libro'] as String,
+            chapter: row['capitulo'] as int,
+            verse: row['versiculo'] as int,
+            text: row['texto'] as String,
+          ),
+        )
+        .toList();
+  }
+
   List<String> _getKeywords(String mood) {
     switch (mood) {
       case "Triste":
@@ -47,8 +60,7 @@ class BibleRepository {
   }
 
   Future<Verse?> getRandomVerse({String mood = 'General'}) async {
-    final keywords =
-        mood == 'General' ? const <String>[] : _getKeywords(mood);
+    final keywords = mood == 'General' ? const <String>[] : _getKeywords(mood);
     final row = await database.getRandomVerseRaw(keywords);
 
     if (row == null) return null;

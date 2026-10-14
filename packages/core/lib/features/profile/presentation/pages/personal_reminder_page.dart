@@ -136,7 +136,7 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
               candidate.intervalMinutes.toString() + ' minutos.'
           : 'Mensajes guardados correctamente. Notificaciones desactivadas: '
               'no recibirás avisos hasta que las actives y guardes.');
-    } catch (_) {
+    } catch (error) {
       // Never leave an outdated sensitive lock-screen preview scheduled.
       try {
         await PersonalMotivationalReminderService.cancel();
@@ -145,8 +145,8 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
         // Show an error rather than pretending cancellation succeeded.
       }
       if (mounted) setState(() { _enabled = false; _dirty = true; });
-      _feedback('No pudimos actualizar las notificaciones. '
-          'Revisa los permisos del dispositivo.', error: true);
+      _feedback(error is StateError ? error.message.toString()
+          : 'No pudimos actualizar las notificaciones. Revisa los permisos del dispositivo.', error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
