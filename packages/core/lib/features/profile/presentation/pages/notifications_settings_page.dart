@@ -336,7 +336,11 @@ class NotificationsSettingsPage extends ConsumerWidget {
                           _showPermissionMessage(context);
                           return;
                         }
-                        await VerseNotificationService.scheduleDailyReminder();
+                        // A preview must not silently opt the user into
+                        // daily notifications when the switch is OFF.
+                        if (ref.read(settingsProvider).dailyVerseNotifications) {
+                          await VerseNotificationService.scheduleDailyReminder();
+                        }
                         final count = await VerseNotificationService
                             .pendingDailyReminderCount();
                         await VerseNotificationService.showNotification(
@@ -346,11 +350,17 @@ class NotificationsSettingsPage extends ConsumerWidget {
                         );
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(count == 1
-                              ? 'Prueba enviada. Aviso diario programado para '
-                                  'las 08:00.'
-                              : 'Prueba enviada, pero no se pudo confirmar '
-                                  'el aviso diario. Revisa los permisos iOS.')),
+                          SnackBar(content: Text(
+                            !ref.read(settingsProvider).dailyVerseNotifications
+                                ? 'Prueba enviada. Activa «Versículo diario» '
+                                    'para recibir avisos cada mañana.'
+                                : count == 1
+                                    ? 'Prueba enviada. Hay 1 aviso diario '
+                                        'programado para las 08:00.'
+                                    : 'Prueba enviada, pero no se encontró '
+                                        'el aviso diario en iOS. Revisa el estado '
+                                        'de las notificaciones.',
+                          )),
                         );
                       } catch (_) {
                         if (context.mounted) {
