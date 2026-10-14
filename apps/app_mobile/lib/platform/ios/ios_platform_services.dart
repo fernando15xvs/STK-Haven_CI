@@ -2,7 +2,6 @@ import 'package:core/core/services/workout_notification_service.dart';
 import 'package:core/core/services/personal_motivational_reminder_service.dart';
 import 'package:core/features/profile/data/personal_reminder_repository.dart';
 import 'package:core/database/hive/hive_boxes.dart';
-import 'package:core/features/faith/services/verse_background_service.dart';
 import 'package:core/features/faith/services/verse_notification_service.dart';
 import 'package:core/features/profile/data/settings_repository.dart';
 import 'package:hive_flutter/hive_flutter.dart';
