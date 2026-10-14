@@ -1,5 +1,6 @@
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/core/services/workout_notification_service.dart';
+import 'package:core/features/faith/services/verse_notification_service.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/features/profile/presentation/pages/personal_reminder_page.dart';
@@ -318,6 +319,51 @@ class NotificationsSettingsPage extends ConsumerWidget {
                           }
                         },
                 ),
+                if (!kIsWeb)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.notifications_active_outlined),
+                    title: const Text('Probar aviso de versículo'),
+                    subtitle: const Text(
+                      'Envía una prueba y comprueba la programación de las 08:00.',
+                    ),
+                    onTap: () async {
+                      try {
+                        final granted = await VerseNotificationService
+                            .requestPermissions();
+                        if (!context.mounted) return;
+                        if (!granted) {
+                          _showPermissionMessage(context);
+                          return;
+                        }
+                        await VerseNotificationService.scheduleDailyReminder();
+                        final count = await VerseNotificationService
+                            .pendingDailyReminderCount();
+                        await VerseNotificationService.showNotification(
+                          title: 'STK Haven · Notificación de prueba',
+                          body: 'Si recibes este aviso, STK Haven puede '
+                              'mostrarte recordatorios bíblicos.',
+                        );
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(count == 1
+                              ? 'Prueba enviada. Aviso diario programado para '
+                                  'las 08:00.'
+                              : 'Prueba enviada, pero no se pudo confirmar '
+                                  'el aviso diario. Revisa los permisos iOS.')),
+                        );
+                      } catch (_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text(
+                              'No fue posible programar la prueba. '
+                              'Revisa Ajustes → Notificaciones → STK Haven.',
+                            )),
+                          );
+                        }
+                      }
+                    },
+                  ),
               ],
             ),
           ],
