@@ -132,9 +132,10 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
       await _repository.write(candidate);
       if (mounted) setState(() => _dirty = false);
       _feedback(candidate.enabled
-          ? 'Rotación activada: 1 aviso cada ' +
+          ? 'Notificaciones activadas. Se enviará un mensaje cada ' +
               candidate.intervalMinutes.toString() + ' minutos.'
-          : 'Mensajes guardados. Avisos desactivados.');
+          : 'Mensajes guardados correctamente. Notificaciones desactivadas: '
+              'no recibirás avisos hasta que las actives y guardes.');
     } catch (_) {
       // Never leave an outdated sensitive lock-screen preview scheduled.
       try {
@@ -174,7 +175,8 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
       final expected = PersonalMotivationalReminderService.expectedSlots(settings);
       final actual = await PersonalMotivationalReminderService.pendingSlots();
       _feedback(expected == 0
-          ? 'Los recordatorios están desactivados. Activa y guarda la rotación.'
+          ? 'No hay mensajes programados. Activa «Recibir notificaciones '
+              'de mis mensajes» y pulsa el botón de guardar.'
           : actual == expected
               ? 'Avisos confirmados en el dispositivo: $actual de $expected.'
               : 'Solo hay $actual de $expected avisos programados. '
@@ -273,6 +275,44 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Icon(_enabled
+                          ? Icons.notifications_active_outlined
+                          : Icons.notifications_off_outlined),
+                      title: const Text('Recibir notificaciones de mis mensajes'),
+                      subtitle: Text(
+                        _messages.isEmpty
+                            ? 'Primero añade un mensaje para poder activar los avisos.'
+                            : _enabled
+                                ? 'Recibirás un mensaje cada $_interval minutos después de guardar.'
+                                : 'Desactivado: tus mensajes están guardados, pero no se enviarán avisos.',
+                      ),
+                      value: _enabled && !kIsWeb,
+                      onChanged: _busy || kIsWeb || _messages.isEmpty
+                          ? null
+                          : (value) => _update(() => _enabled = value),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4, right: 4),
+                      child: Text(
+                        'Importante: después de activar esta opción, pulsa '
+                        '«Guardar y activar notificaciones» al final de la página. '
+                        'El interruptor «Mostrar título y texto» solo decide '
+                        'qué se ve en la pantalla bloqueada.',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 18),
             Row(children: [
               Expanded(child: Text(
@@ -357,42 +397,12 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
             const SizedBox(height: 14),
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Activar mensajes rotativos'),
-              subtitle: const Text('Desactivados por defecto. '
-                  'Puedes pausarlos cuando quieras.'),
-              value: _enabled && !kIsWeb,
-              onChanged: _busy || kIsWeb || _messages.isEmpty ? null
-                : (value) => _update(() => _enabled = value),
-            ),
-            if (!_enabled && _messages.isNotEmpty)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.notifications_off_outlined),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Avisos desactivados. Para recibir mensajes, activa '
-                          '«Activar mensajes rotativos» y pulsa '
-                          '«Guardar y activar rotación». '
-                          'La opción de mostrar título y texto solo controla '
-                          'la privacidad de las notificaciones.',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              title: const Text('Mostrar el contenido en la notificación'),
+              subtitle: const Text(
+                'Privacidad únicamente: no activa ni desactiva los avisos. '
+                'Si lo habilitas, el título y un fragmento del mensaje '
+                'podrán aparecer en la pantalla bloqueada.',
               ),
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Mostrar título y texto en la notificación'),
-              subtitle: const Text('Por privacidad está desactivado. '
-                  'Si lo activas, los demás podrían leer tu título '
-                  'y un fragmento en la pantalla bloqueada.'),
               value: _showMessage,
               onChanged: _busy ? null
                 : (value) => _update(() => _showMessage = value),
@@ -442,8 +452,9 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
             FilledButton.icon(
               onPressed: _busy || kIsWeb ? null : _save,
               icon: const Icon(Icons.save_outlined),
-              label: Text(_enabled ? 'Guardar y activar rotación'
-                  : 'Guardar mensajes'),
+              label: Text(_enabled
+                  ? 'Guardar y activar notificaciones'
+                  : 'Guardar sin enviar notificaciones'),
               style: FilledButton.styleFrom(
                 minimumSize: const Size.fromHeight(52)),
             ),
