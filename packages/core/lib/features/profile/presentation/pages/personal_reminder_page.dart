@@ -364,6 +364,29 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
               onChanged: _busy || kIsWeb || _messages.isEmpty ? null
                 : (value) => _update(() => _enabled = value),
             ),
+            if (!_enabled && _messages.isNotEmpty)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.notifications_off_outlined),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Avisos desactivados. Para recibir mensajes, activa '
+                          '«Activar mensajes rotativos» y pulsa '
+                          '«Guardar y activar rotación». '
+                          'La opción de mostrar título y texto solo controla '
+                          'la privacidad de las notificaciones.',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
               title: const Text('Mostrar título y texto en la notificación'),

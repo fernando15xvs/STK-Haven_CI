@@ -6,6 +6,7 @@ import 'package:core/features/faith/services/verse_notification_service.dart';
 import 'package:core/features/profile/data/settings_repository.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 /// iOS-only startup services.
 ///
@@ -27,15 +28,19 @@ Future<void> initializeIosPlatformServices() async {
     settings.dailyVerseNotifications,
   );
 
-  if (settings.dailyVerseNotifications) {
-    await VerseNotificationService.scheduleDailyReminder(
-      hour: 8,
-      minute: 0,
-    );
-
-  } else {
-    await VerseNotificationService.cancelDailyReminder();
-
+  try {
+    if (settings.dailyVerseNotifications) {
+      await VerseNotificationService.scheduleDailyReminder(
+        hour: 8,
+        minute: 0,
+      );
+    } else {
+      await VerseNotificationService.cancelDailyReminder();
+    }
+  } catch (error) {
+    // A missing Bible reminder must never disable the user's personal
+    // reminder rotation or the workout notifications.
+    debugPrint('Daily verse reminder scheduling failed: $error');
   }
 
   // Personal messages are private Hive data and must be re-registered after
@@ -48,7 +53,8 @@ Future<void> initializeIosPlatformServices() async {
       await PersonalMotivationalReminderService.synchronize(personal);
     }
   } catch (error) {
-    // Reportable in settings; never erase the user's private messages.
+    debugPrint('Personal reminder restoration failed: $error');
+    // Never erase the user's private messages on a scheduling failure.
   }
 
   if (settings.workoutRemindersEnabled) {

@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../features/faith/services/verse_background_service.dart';
 import '../../features/faith/services/verse_notification_service.dart';
@@ -18,10 +19,24 @@ Future<bool> configureDailyVerseNotifications(bool enable) async {
       hour: 8,
       minute: 0,
     );
-    await VerseBackgroundService.scheduleDailyVerse(8, 0);
+    // iOS reminders are scheduled by UNUserNotificationCenter; Workmanager
+    // does not guarantee a background job at 08:00 and may throw.
+    if (defaultTargetPlatform != TargetPlatform.iOS && !kIsWeb) {
+      try {
+        await VerseBackgroundService.scheduleDailyVerse(8, 0);
+      } catch (_) {
+        // Native local reminder was already scheduled successfully.
+      }
+    }
   } else {
     await VerseNotificationService.cancelDailyReminder();
-    await VerseBackgroundService.cancelDailyVerse();
+    if (defaultTargetPlatform != TargetPlatform.iOS && !kIsWeb) {
+      try {
+        await VerseBackgroundService.cancelDailyVerse();
+      } catch (_) {
+        // Native local reminder was already cancelled successfully.
+      }
+    }
   }
 
   return effectiveValue;
