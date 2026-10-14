@@ -41,6 +41,8 @@ class BibleInitNotifier extends Notifier<BibleInitState> {
   /// Call this after HiveDatabase.init(). When the DB is ready it invalidates
   /// dependent providers so the UI refreshes automatically.
   Future<void> initialize() async {
+    if (state.status == BibleDbStatus.loading ||
+        state.status == BibleDbStatus.ready) return;
     final faithEnabled = ref.read(faithModuleEnabledProvider);
     if (!FaithFeaturePolicy.shouldLoadBible(faithEnabled: faithEnabled)) {
       state = const BibleInitState(status: BibleDbStatus.idle);

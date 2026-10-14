@@ -1,4 +1,6 @@
 import 'package:core/core/services/workout_notification_service.dart';
+import 'package:core/core/services/personal_motivational_reminder_service.dart';
+import 'package:core/features/profile/data/personal_reminder_repository.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/features/faith/services/verse_background_service.dart';
 import 'package:core/features/faith/services/verse_notification_service.dart';
@@ -13,7 +15,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future<void> initializeIosPlatformServices() async {
   await VerseNotificationService.initialize();
   await WorkoutNotificationService.initialize();
-  await VerseBackgroundService.initialize();
+  // Workmanager is not a reliable notification scheduler on iOS.
+  // The OS-native repeating local notification remains the source of truth.
 
   final settings = SettingsRepository(
     Hive.box(HiveBoxes.metadata),
@@ -30,10 +33,23 @@ Future<void> initializeIosPlatformServices() async {
       hour: 8,
       minute: 0,
     );
-    await VerseBackgroundService.scheduleDailyVerse(8, 0);
+
   } else {
     await VerseNotificationService.cancelDailyReminder();
-    await VerseBackgroundService.cancelDailyVerse();
+
+  }
+
+  // Personal messages are private Hive data and must be re-registered after
+  // app updates or a device restart. One failing service must not block others.
+  try {
+    final personal = PersonalReminderRepository(
+      Hive.box(HiveBoxes.personalReminders),
+    ).read();
+    if (personal.enabled) {
+      await PersonalMotivationalReminderService.synchronize(personal);
+    }
+  } catch (error) {
+    // Reportable in settings; never erase the user's private messages.
   }
 
   if (settings.workoutRemindersEnabled) {

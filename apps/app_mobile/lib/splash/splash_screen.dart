@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:core/features/faith/application/bible_init_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,6 +21,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   double _yOffset = 18.0;
   Timer? _introTimer;
   Timer? _navigationTimer;
+  bool _bibleInitializationScheduled = false;
 
   @override
   void initState() {
@@ -63,6 +67,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final faithEnabled =
+        ref.watch(userExperienceProfileProvider).value?.faithEnabled == true;
+    if (faithEnabled && !_bibleInitializationScheduled) {
+      _bibleInitializationScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            ref.read(userExperienceProfileProvider).value?.faithEnabled == true) {
+          unawaited(ref.read(bibleInitProvider.notifier).initialize());
+        }
+      });
+    }
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     final introDuration =
         reduceMotion ? Duration.zero : const Duration(milliseconds: 450);

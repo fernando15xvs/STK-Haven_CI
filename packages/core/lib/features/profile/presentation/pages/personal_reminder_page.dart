@@ -166,6 +166,29 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
     }
   }
 
+  Future<void> _checkScheduledNotifications() async {
+    if (kIsWeb || _busy) return;
+    setState(() => _busy = true);
+    try {
+      final settings = _repository.read();
+      final expected = PersonalMotivationalReminderService.expectedSlots(settings);
+      final actual = await PersonalMotivationalReminderService.pendingSlots();
+      _feedback(expected == 0
+          ? 'Los recordatorios están desactivados. Activa y guarda la rotación.'
+          : actual == expected
+              ? 'Avisos confirmados en el dispositivo: $actual de $expected.'
+              : 'Solo hay $actual de $expected avisos programados. '
+                  'Revisa las notificaciones de STK Haven en Ajustes del iPhone '
+                  'y vuelve a guardar la rotación.',
+          error: expected > 0 && actual != expected);
+    } catch (_) {
+      _feedback('No fue posible consultar los avisos de iOS/Android.',
+          error: true);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _preview(PersonalReminderMessage item) async {
     if (_busy || kIsWeb) return;
     setState(() => _busy = true);
@@ -403,6 +426,12 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
             ),
             const SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 4, children: [
+              OutlinedButton.icon(
+                onPressed: _busy || kIsWeb
+                    ? null : _checkScheduledNotifications,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: const Text('Verificar avisos'),
+              ),
               OutlinedButton.icon(
                 onPressed: _busy || kIsWeb ? null : _pause,
                 icon: const Icon(Icons.pause_circle_outline),

@@ -5,6 +5,7 @@ import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/domain/models/active_program_state.dart';
 import 'package:core/domain/models/personal_record.dart';
 import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
@@ -14,6 +15,8 @@ import 'package:core/features/routines/data/routine_repository.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/workout_comparator.dart';
+import 'package:core/features/workout/application/todays_workout_status.dart';
+import 'package:core/features/workout/presentation/widgets/recent_workout_details.dart';
 import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
@@ -45,6 +48,9 @@ class DashboardPage extends ConsumerWidget {
     final nextProgramSession = ref.watch(nextProgramSessionProvider);
 
     final lastWorkout = history.isNotEmpty ? history.first : null;
+    final completedToday = TodaysWorkoutStatus.latestCompletedToday(
+      history, DateTime.now(),
+    );
     final allPRs = prRepo.getAllPRs()..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
     final recentPR = allPRs.isNotEmpty ? allPRs.first : null;
 
@@ -73,6 +79,11 @@ class DashboardPage extends ConsumerWidget {
                 name: activeWorkout.routineDisplayName,
                 startedAt: activeWorkout.session!.startedAt,
                 lastActivityAt: ref.read(activeWorkoutRepositoryProvider).lastActivityAt,
+              )
+            else if (completedToday != null)
+              _CompletedTodayCard(
+                session: completedToday,
+                weightUnit: settings.weightUnit,
               )
             else
               _TodayRoutineCard(
@@ -276,6 +287,122 @@ class _ActiveWorkoutHero extends StatelessWidget {
           Text(
             minutes <= 0 ? 'Recién comenzado · toca para continuar' : '$minutes min en curso · toca para continuar',
             style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompletedTodayCard extends ConsumerWidget {
+  final WorkoutSession session;
+  final WeightUnit weightUnit;
+
+  const _CompletedTodayCard({
+    required this.session,
+    required this.weightUnit,
+  });
+
+  Future<void> _editNotes(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController(text: session.notes);
+    try {
+      final notes = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Editar nota del entrenamiento'),
+          content: TextField(
+            controller: controller,
+            maxLines: 4,
+            maxLength: 1000,
+            decoration: const InputDecoration(
+              hintText: '¿Cómo te fue hoy?',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(
+                dialogContext, controller.text.trim(),
+              ),
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      );
+      if (notes == null) return;
+      // Preserve original session ID, exercises, working sets, duration and
+      // progress history. Never re-award completed workouts when editing notes.
+      final edited = WorkoutSession(
+        id: session.id,
+        routineId: session.routineId,
+        routineNameSnapshot: session.routineNameSnapshot,
+        startedAt: session.startedAt,
+        finishedAt: session.finishedAt,
+        exercises: session.exercises,
+        durationSeconds: session.durationSeconds,
+        notes: notes,
+        currentRestEndsAt: session.currentRestEndsAt,
+      );
+      await ref.read(workoutRepositoryProvider).saveWorkoutSession(edited);
+      ref.read(workoutHistoryProvider.notifier).refresh();
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PremiumCard(
+      backgroundColor: AppColors.primaryFaded,
+      borderColor: AppColors.success.withValues(alpha: 0.55),
+      onTap: () => RecentWorkoutDetails.show(
+        context, session, weightUnit,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.check_circle, color: AppColors.success),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('FINALIZADO HOY', style: AppTypography.labelMedium
+                        .copyWith(color: AppColors.success)),
+                    Text(session.routineNameSnapshot.isEmpty
+                        ? 'Entrenamiento libre'
+                        : session.routineNameSnapshot,
+                      style: AppTypography.headlineLarge),
+                    Text('Completado · ${session.durationSeconds ~/ 60} min',
+                      style: AppTypography.bodySmall),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppColors.success),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            children: [
+              OutlinedButton.icon(
+                icon: const Icon(Icons.history),
+                label: const Text('Ver entrenamiento'),
+                onPressed: () => RecentWorkoutDetails.show(
+                  context, session, weightUnit,
+                ),
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.edit_note),
+                label: const Text('Editar nota'),
+                onPressed: () => _editNotes(context, ref),
+              ),
+            ],
           ),
         ],
       ),

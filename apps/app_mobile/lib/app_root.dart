@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -16,54 +14,23 @@ class AppRoot extends ConsumerStatefulWidget {
 }
 
 class _AppRootState extends ConsumerState<AppRoot> {
-  Timer? _bibleInitTimer;
-  bool _bibleInitSchedulePending = false;
-  bool _bibleInitStarted = false;
+  bool _bibleInitScheduled = false;
 
   void _syncBibleInitialization(bool faithEnabled) {
-    if (!faithEnabled) {
-      _bibleInitTimer?.cancel();
-      _bibleInitTimer = null;
-      return;
-    }
-
-    if (_bibleInitStarted ||
-        _bibleInitTimer != null ||
-        _bibleInitSchedulePending) {
-      return;
-    }
-
-    _bibleInitSchedulePending = true;
+    if (!faithEnabled || _bibleInitScheduled) return;
+    _bibleInitScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _bibleInitSchedulePending = false;
-      if (!mounted || _bibleInitStarted || _bibleInitTimer != null) return;
-
-      final stillEnabled =
-          ref.read(userExperienceProfileProvider).value?.faithEnabled == true;
-      if (!stillEnabled) return;
-
-      // The Bible database can require network + SQLite work on a fresh install.
-      // Keep it away from the first-interaction window and never start it when
-      // the user has not opted into Faith.
-      _bibleInitTimer = Timer(const Duration(seconds: 6), () {
-        _bibleInitTimer = null;
-        if (!mounted) return;
-
-        final enabled =
-            ref.read(userExperienceProfileProvider).value?.faithEnabled == true;
-        if (!enabled) return;
-
-        _bibleInitStarted = true;
-        unawaited(ref.read(bibleInitProvider.notifier).initialize());
-      });
+      _bibleInitScheduled = false;
+      if (!mounted ||
+          ref.read(userExperienceProfileProvider).value?.faithEnabled != true) {
+        return;
+      }
+      // Start without an artificial 6-second delay. The cached verse remains
+      // visible even if loading the full Bible SQLite database takes longer.
+      ref.read(bibleInitProvider.notifier).initialize();
     });
   }
 
-  @override
-  void dispose() {
-    _bibleInitTimer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
