@@ -9,6 +9,9 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/faith/application/bible_reader_provider.dart';
+import 'package:core/features/faith/presentation/widgets/contextual_passage_details.dart';
+import '../../faith/presentation/bible_reader_page_web.dart';
 import 'package:core/features/home/application/hydration_provider.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
@@ -521,7 +524,7 @@ class _GreetingHeader extends StatelessWidget {
   }
 }
 
-class _DailyMessageCard extends StatelessWidget {
+class _DailyMessageCard extends ConsumerWidget {
   final AsyncValue<DailyVerseState> verseAsync;
   final BibleInitState bibleInit;
   final VoidCallback onRetry;
@@ -530,7 +533,7 @@ class _DailyMessageCard extends StatelessWidget {
   const _DailyMessageCard({required this.verseAsync, required this.bibleInit, required this.onRetry, required this.onOpenReflection});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return _Panel(
       accent: true,
       child: Column(
@@ -560,6 +563,13 @@ class _DailyMessageCard extends StatelessWidget {
                         Text('“${verse.text}”', style: AppTypography.bodyLarge.copyWith(fontStyle: FontStyle.italic, height: 1.5, fontSize: 17)),
                         const SizedBox(height: 7),
                         Text(verse.reference, style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
+                        ContextualPassageDetails(verse: verse, compact: true, onReadChapter: () async {
+                          await ref.read(bibleReaderProvider.future);
+                          await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
+                          await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
+                          if (!context.mounted) return;
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleReaderPageWeb()));
+                        }),
                       ],
                     ),
                   ),

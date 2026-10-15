@@ -15,7 +15,7 @@ import 'package:gym_tracker/features/workout/presentation/active_workout_page.da
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_comparison_summary.dart';
-import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/faith/presentation/widgets/workout_closing_reflection_card.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 
 class WorkoutSummaryPage extends ConsumerStatefulWidget {
@@ -63,24 +63,6 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
       }
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final faithEnabled =
-          ref.read(userExperienceProfileProvider).value?.faithEnabled == true;
-      if (faithEnabled && ref.read(settingsProvider).showDailyVerse) {
-        _showDevocionalModal(context);
-      }
-    });
-  }
-
-  void _showDevocionalModal(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return _DevocionalModal();
-      },
-    );
   }
 
   @override
@@ -98,6 +80,9 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
     final session = widget.analysisResult.session;
     final unit = settings.weightUnit;
     final summary = WorkoutSummarySnapshot.fromSession(session);
+    final profile = ref.watch(userExperienceProfileProvider).value;
+    final showClosingReflection = profile?.faithEnabled == true &&
+        profile?.showWorkoutReflections == true;
 
     return Scaffold(
       body: Stack(
@@ -128,6 +113,13 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
                   ),
                 ),
               ),
+              if (showClosingReflection) ...[
+                const SizedBox(height: AppSpacing.md),
+                WorkoutClosingReflectionCard(
+                  session: session,
+                  summary: summary,
+                ),
+              ],
               if (!summary.isComplete) ...[
                 const SizedBox(height: AppSpacing.md),
                 FilledButton.icon(
@@ -418,77 +410,6 @@ class _Metric extends StatelessWidget {
         const SizedBox(height: 4),
         Text(label, style: AppTypography.labelSmall),
       ],
-    );
-  }
-}
-
-class _DevocionalModal extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final stateAsync = ref.watch(randomVerseProvider);
-    
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceHigh,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: AppSpacing.lg),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceBorder,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const Icon(Icons.church, color: AppColors.primary, size: 48),
-            const SizedBox(height: AppSpacing.md),
-            Text('¡Buen Trabajo!', style: AppTypography.headlineLarge.copyWith(color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Un mensaje para tu espíritu',
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            
-            PremiumCard(
-              child: stateAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => const Text('Error al cargar'),
-                data: (verse) {
-                  if (verse == null) return const Text('Sin contenido');
-                  return Column(
-                    children: [
-                      Text(
-                        '“${verse.text}”',
-                        style: AppTypography.bodyLarge.copyWith(fontStyle: FontStyle.italic, height: 1.5),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        verse.reference,
-                        style: AppTypography.labelLarge.copyWith(color: AppColors.primary),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            
-            const SizedBox(height: AppSpacing.xxl),
-            PrimaryButton(
-              label: 'CERRAR',
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

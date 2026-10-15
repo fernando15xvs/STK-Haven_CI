@@ -1,4 +1,6 @@
 import 'package:core/core/constants/preset_programs.dart';
+import 'package:core/features/profile/presentation/pages/personal_profile_page.dart';
+import 'package:core/features/profile/presentation/widgets/personal_profile_summary.dart';
 import 'package:core/features/coach/presentation/pages/coach_connections_page.dart';
 import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:core/features/profile/presentation/pages/notifications_settings_page.dart';
@@ -37,16 +39,15 @@ class ProfilePage extends ConsumerWidget {
         padding: AppSpacing.pagePadding,
         children: [
           const SizedBox(height: AppSpacing.md),
-          const CircleAvatar(
-            radius: 50,
-            backgroundColor: AppColors.surfaceHigh,
-            child: Icon(Icons.person, size: 50, color: AppColors.textSecondary),
+          PersonalProfileSummary(
+            onEdit: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PersonalProfilePage()),
+            ),
           ),
-          const SizedBox(height: AppSpacing.xl),
-          const Center(child: Text('Atleta Principal', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary))),
-          
           const SizedBox(height: AppSpacing.xxl),
-
+          const SectionHeading(title: 'CONFIGURACIÓN'),
+          const SizedBox(height: AppSpacing.md),
           const SectionHeading(title: 'PERSONALIZACIÓN'),
           const SizedBox(height: AppSpacing.sm),
           PremiumCard(

@@ -8,6 +8,9 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/faith/application/bible_reader_provider.dart';
+import 'package:core/features/faith/presentation/widgets/contextual_passage_details.dart';
+import 'package:gym_tracker/features/faith/presentation/pages/bible_reader_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
@@ -214,6 +217,13 @@ class _DailyMessageCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(verse.reference, style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary)),
+                    ContextualPassageDetails(verse: verse, compact: true, onReadChapter: () async {
+                      await ref.read(bibleReaderProvider.future);
+                      await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
+                      await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
+                      if (!context.mounted) return;
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleReaderPage()));
+                    }),
                   ],
                 ),
               ),

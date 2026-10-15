@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/features/faith/data/bible_database.dart';
 import 'package:core/features/faith/data/bible_repository.dart';
+import 'package:core/features/faith/data/contextual_passage_catalog.dart';
 import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/domain/models/verse.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,20 +38,25 @@ class DailyVerseNotifier extends AsyncNotifier<DailyVerseState> {
     final mood = prefs.getString('current_mood') ?? 'General';
     final today = DateTime.now();
     final todayStr = '${today.year}-${today.month}-${today.day}';
-    final fresh = prefs.getString('daily_verse_date') == todayStr;
+    final fresh = prefs.getString('daily_verse_date') == todayStr &&
+        prefs.getInt('daily_passage_version') == 2;
 
     Verse? cached;
-    if (text != null && text.trim().isNotEmpty &&
+    if (fresh && text != null && text.trim().isNotEmpty &&
         reference != null && reference.trim().isNotEmpty) {
       try {
         final split = reference.lastIndexOf(' ');
         if (split > 0) {
           final location = reference.substring(split + 1).split(':');
+          final range = location[1].split('-');
           cached = Verse(
             book: reference.substring(0, split),
             chapter: int.parse(location[0]),
-            verse: int.parse(location[1]),
+            verse: int.parse(range[0]),
+            endVerse: range.length > 1 ? int.parse(range[1]) : null,
             text: text,
+            explanation: prefs.getString('daily_passage_explanation'),
+            reflectionQuestion: prefs.getString('daily_passage_question'),
           );
         }
       } catch (_) {
@@ -67,11 +73,14 @@ class DailyVerseNotifier extends AsyncNotifier<DailyVerseState> {
       );
     }
 
-    final current = await ref.read(bibleRepositoryProvider)
-        .getRandomVerse(mood: mood);
+    final current = await ContextualPassageCatalog.daily(
+        ref.read(bibleRepositoryProvider), today);
     if (current != null) {
       await prefs.setString('saved_verse', current.text);
       await prefs.setString('saved_reference', current.reference);
+      await prefs.setString('daily_passage_explanation', current.explanation ?? '');
+      await prefs.setString('daily_passage_question', current.reflectionQuestion ?? '');
+      await prefs.setInt('daily_passage_version', 2);
       await prefs.setString('daily_verse_date', todayStr);
     }
     return DailyVerseState(
@@ -79,26 +88,14 @@ class DailyVerseNotifier extends AsyncNotifier<DailyVerseState> {
     );
   }
 
+  /// Mood is a journaling preference; it must not replace today's passage.
   Future<void> changeMood(String newMood) async {
-    state = const AsyncValue.loading();
-    final repo = ref.read(bibleRepositoryProvider);
-    final newVerse = await repo.getRandomVerse(mood: newMood);
-    final today = DateTime.now();
-    final todayStr = '${today.year}-${today.month}-${today.day}';
-
-    if (newVerse != null) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('saved_verse', newVerse.text);
-      await prefs.setString('saved_reference', newVerse.reference);
-      await prefs.setString('current_mood', newMood);
-      await prefs.setString('daily_verse_date', todayStr);
-
-      state = AsyncValue.data(DailyVerseState(verse: newVerse, mood: newMood, isLoading: false));
-    } else {
-      final s = state.value ?? DailyVerseState(isLoading: false);
-      state = AsyncValue.data(s.copyWith(isLoading: false));
-    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('current_mood', newMood);
+    final previous = state.value ?? DailyVerseState(isLoading: false);
+    state = AsyncValue.data(previous.copyWith(mood: newMood));
   }
+
 }
 
 final dailyVerseProvider = AsyncNotifierProvider<DailyVerseNotifier, DailyVerseState>(DailyVerseNotifier.new);

@@ -42,6 +42,9 @@ enum FaithContentPreference {
 class UserExperienceProfile {
   static const int currentOnboardingVersion = 2;
 
+  final String displayName;
+  final String? avatarEmoji;
+  final bool showWorkoutReflections;
   final Set<UserCapability> capabilities;
   final TrainingGoal? trainingGoal;
   final TrainingExperience? trainingExperience;
@@ -56,6 +59,9 @@ class UserExperienceProfile {
   final int onboardingVersion;
 
   const UserExperienceProfile({
+    this.displayName = '',
+    this.avatarEmoji,
+    this.showWorkoutReflections = true,
     this.capabilities = const <UserCapability>{UserCapability.athlete},
     this.trainingGoal,
     this.trainingExperience,
@@ -70,6 +76,8 @@ class UserExperienceProfile {
     this.onboardingVersion = 0,
   });
 
+  String get preferredName => displayName.trim().isEmpty ? 'Tu perfil' : displayName.trim();
+
   bool get faithEnabled => faithPreference == FaithContentPreference.enabled;
 
   bool get hasDecidedFaithPreference =>
@@ -80,6 +88,10 @@ class UserExperienceProfile {
   bool get isAthlete => capabilities.contains(UserCapability.athlete);
 
   UserExperienceProfile copyWith({
+    String? displayName,
+    String? avatarEmoji,
+    bool clearAvatar = false,
+    bool? showWorkoutReflections,
     Set<UserCapability>? capabilities,
     TrainingGoal? trainingGoal,
     bool clearTrainingGoal = false,
@@ -98,6 +110,9 @@ class UserExperienceProfile {
     int? onboardingVersion,
   }) {
     return UserExperienceProfile(
+      displayName: displayName ?? this.displayName,
+      avatarEmoji: clearAvatar ? null : (avatarEmoji ?? this.avatarEmoji),
+      showWorkoutReflections: showWorkoutReflections ?? this.showWorkoutReflections,
       capabilities: capabilities ?? this.capabilities,
       trainingGoal:
           clearTrainingGoal ? null : (trainingGoal ?? this.trainingGoal),
@@ -123,6 +138,9 @@ class UserExperienceProfile {
 
   Map<String, dynamic> toJson() {
     return <String, dynamic>{
+      'displayName': displayName,
+      'avatarEmoji': avatarEmoji,
+      'showWorkoutReflections': showWorkoutReflections,
       'capabilities': capabilities.map((value) => value.name).toList()..sort(),
       'trainingGoal': trainingGoal?.name,
       'trainingExperience': trainingExperience?.name,
@@ -177,6 +195,9 @@ class UserExperienceProfile {
         (json['onboardingVersion'] as num?)?.toInt() ?? 0;
 
     return UserExperienceProfile(
+      displayName: (json['displayName'] as String? ?? '').trim(),
+      avatarEmoji: json['avatarEmoji'] as String?,
+      showWorkoutReflections: json['showWorkoutReflections'] as bool? ?? true,
       capabilities: parsedCapabilities.isEmpty
           ? const <UserCapability>{UserCapability.athlete}
           : parsedCapabilities,
