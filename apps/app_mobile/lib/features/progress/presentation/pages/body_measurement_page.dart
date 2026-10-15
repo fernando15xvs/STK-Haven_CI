@@ -1,3 +1,4 @@
+import 'measurement_progress_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -15,11 +16,15 @@ class BodyMeasurementPage extends ConsumerStatefulWidget {
   const BodyMeasurementPage({super.key});
 
   @override
-  ConsumerState<BodyMeasurementPage> createState() => _BodyMeasurementPageState();
+  ConsumerState<BodyMeasurementPage> createState() =>
+      _BodyMeasurementPageState();
 }
 
 class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
-  void _showAddMeasurementModal(BuildContext context, [BodyMeasurement? existing]) {
+  void _showAddMeasurementModal(
+    BuildContext context, [
+    BodyMeasurement? existing,
+  ]) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -37,46 +42,38 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: measurements.isEmpty
-          ? Center(
-              child: Padding(
-                padding: AppSpacing.pagePadding,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.accessibility_new, size: 64, color: AppColors.textSecondary),
-                    const SizedBox(height: AppSpacing.md),
-                    Text(
-                      'No hay medidas registradas',
-                      style: AppTypography.headlineMedium.copyWith(color: AppColors.textPrimary),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Registra tu peso y medidas corporales para ver tu evolución en el tiempo.',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-                    PrimaryButton(
-                      label: 'Registrar Medida',
+      body: ListView.separated(
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: 180,
+        ),
+        itemCount: measurements.length + 1,
+        separatorBuilder: (context, index) =>
+            const SizedBox(height: AppSpacing.md),
+        itemBuilder: (context, index) {
+          if (index == 0)
+            return Column(
+              children: [
+                MeasurementProgressPanel(measurements: measurements),
+                if (measurements.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: PrimaryButton(
+                      label: 'Registrar primeras medidas',
                       onPressed: () => _showAddMeasurementModal(context),
                     ),
-                  ],
-                ),
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
-              itemCount: measurements.length,
-              separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
-              itemBuilder: (context, index) {
-                final measurement = measurements[index];
-                return _MeasurementCard(
-                  measurement: measurement,
-                  onTap: () => _showAddMeasurementModal(context, measurement),
-                );
-              },
-            ),
+                  ),
+              ],
+            );
+          final measurement = measurements[index - 1];
+          return _MeasurementCard(
+            measurement: measurement,
+            onTap: () => _showAddMeasurementModal(context, measurement),
+          );
+        },
+      ),
       floatingActionButton: measurements.isNotEmpty
           ? Padding(
               padding: const EdgeInsets.only(bottom: 80.0),
@@ -95,10 +92,7 @@ class _MeasurementCard extends ConsumerWidget {
   final BodyMeasurement measurement;
   final VoidCallback onTap;
 
-  const _MeasurementCard({
-    required this.measurement,
-    required this.onTap,
-  });
+  const _MeasurementCard({required this.measurement, required this.onTap});
 
   Widget _buildPill(String label, String value, {bool highlight = false}) {
     return Container(
@@ -106,14 +100,28 @@ class _MeasurementCard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: highlight ? AppColors.primaryFaded : AppColors.surface,
         borderRadius: AppRadius.sm_,
-        border: Border.all(color: highlight ? AppColors.primary.withValues(alpha: 0.3) : AppColors.surfaceBorder),
+        border: Border.all(
+          color: highlight
+              ? AppColors.primary.withValues(alpha: 0.3)
+              : AppColors.surfaceBorder,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: AppTypography.labelSmall.copyWith(color: highlight ? AppColors.primary : AppColors.textSecondary)),
+          Text(
+            label,
+            style: AppTypography.labelSmall.copyWith(
+              color: highlight ? AppColors.primary : AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(value, style: AppTypography.monoMedium.copyWith(color: highlight ? AppColors.primary : AppColors.textPrimary)),
+          Text(
+            value,
+            style: AppTypography.monoMedium.copyWith(
+              color: highlight ? AppColors.primary : AppColors.textPrimary,
+            ),
+          ),
         ],
       ),
     );
@@ -141,18 +149,66 @@ class _MeasurementCard extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.straighten, size: 16, color: AppColors.primary),
+                    const Icon(
+                      Icons.straighten,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
                     const SizedBox(width: 8),
                     Text(
-                      DateFormat('dd MMM yyyy, HH:mm', 'es').format(measurement.date),
-                      style: AppTypography.labelMedium.copyWith(color: AppColors.primary),
+                      DateFormat(
+                        'dd MMM yyyy, HH:mm',
+                        'es',
+                      ).format(measurement.date),
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.primary,
+                      ),
                     ),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.error, size: 20),
-                  onPressed: () {
-                    ref.read(bodyMeasurementProvider.notifier).deleteMeasurement(measurement.id);
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: AppColors.error,
+                    size: 20,
+                  ),
+                  onPressed: () async {
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('¿Eliminar este registro?'),
+                        content: const Text(
+                          'La evolución y el recordatorio se recalcularán con las medidas restantes.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancelar'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Eliminar'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirmed != true) return;
+                    try {
+                      final warning = await ref
+                          .read(bodyMeasurementProvider.notifier)
+                          .deleteMeasurement(measurement.id);
+                      if (context.mounted && warning != null)
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text(warning)));
+                    } catch (_) {
+                      if (context.mounted)
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('No se pudo eliminar el registro.'),
+                          ),
+                        );
+                    }
                   },
                   constraints: const BoxConstraints(),
                   padding: EdgeInsets.zero,
@@ -165,23 +221,53 @@ class _MeasurementCard extends ConsumerWidget {
               runSpacing: 8,
               children: [
                 if (measurement.weightKg != null)
-                  _buildPill('Peso', FitnessFormatter.formatWeight(measurement.weightKg!, unit), highlight: true),
+                  _buildPill(
+                    'Peso',
+                    FitnessFormatter.formatWeight(measurement.weightKg!, unit),
+                    highlight: true,
+                  ),
                 if (measurement.bodyFatPercentage != null)
-                  _buildPill('Grasa', '${measurement.bodyFatPercentage!.toStringAsFixed(1)}%'),
+                  _buildPill(
+                    'Grasa',
+                    '${measurement.bodyFatPercentage!.toStringAsFixed(1)}%',
+                  ),
                 if (measurement.shouldersCm != null)
-                  _buildPill('Hombros', '${measurement.shouldersCm!.toStringAsFixed(1)} cm'),
+                  _buildPill(
+                    'Hombros',
+                    '${measurement.shouldersCm!.toStringAsFixed(1)} cm',
+                  ),
                 if (measurement.chestCm != null)
-                  _buildPill('Pecho', '${measurement.chestCm!.toStringAsFixed(1)} cm'),
+                  _buildPill(
+                    'Pecho',
+                    '${measurement.chestCm!.toStringAsFixed(1)} cm',
+                  ),
                 if (measurement.waistCm != null)
-                  _buildPill('Cintura', '${measurement.waistCm!.toStringAsFixed(1)} cm'),
+                  _buildPill(
+                    'Cintura',
+                    '${measurement.waistCm!.toStringAsFixed(1)} cm',
+                  ),
                 if (measurement.hipsCm != null)
-                  _buildPill('Caderas', '${measurement.hipsCm!.toStringAsFixed(1)} cm'),
-                if (measurement.leftArmCm != null || measurement.rightArmCm != null)
-                  _buildPill('Brazos (I/D)', '${measurement.leftArmCm?.toStringAsFixed(1) ?? '-'} / ${measurement.rightArmCm?.toStringAsFixed(1) ?? '-'} cm'),
-                if (measurement.leftLegCm != null || measurement.rightLegCm != null)
-                  _buildPill('Piernas (I/D)', '${measurement.leftLegCm?.toStringAsFixed(1) ?? '-'} / ${measurement.rightLegCm?.toStringAsFixed(1) ?? '-'} cm'),
+                  _buildPill(
+                    'Caderas',
+                    '${measurement.hipsCm!.toStringAsFixed(1)} cm',
+                  ),
+                if (measurement.leftArmCm != null ||
+                    measurement.rightArmCm != null)
+                  _buildPill(
+                    'Brazos (I/D)',
+                    '${measurement.leftArmCm?.toStringAsFixed(1) ?? '-'} / ${measurement.rightArmCm?.toStringAsFixed(1) ?? '-'} cm',
+                  ),
+                if (measurement.leftLegCm != null ||
+                    measurement.rightLegCm != null)
+                  _buildPill(
+                    'Piernas (I/D)',
+                    '${measurement.leftLegCm?.toStringAsFixed(1) ?? '-'} / ${measurement.rightLegCm?.toStringAsFixed(1) ?? '-'} cm',
+                  ),
                 if (measurement.calvesCm != null)
-                  _buildPill('Gemelos', '${measurement.calvesCm!.toStringAsFixed(1)} cm'),
+                  _buildPill(
+                    'Gemelos',
+                    '${measurement.calvesCm!.toStringAsFixed(1)} cm',
+                  ),
               ],
             ),
           ],
@@ -197,12 +283,13 @@ class _AddMeasurementModal extends ConsumerStatefulWidget {
   const _AddMeasurementModal({this.existingMeasurement});
 
   @override
-  ConsumerState<_AddMeasurementModal> createState() => _AddMeasurementModalState();
+  ConsumerState<_AddMeasurementModal> createState() =>
+      _AddMeasurementModalState();
 }
 
 class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
   final _formKey = GlobalKey<FormState>();
-  
+
   late TextEditingController _weightCtrl;
   late TextEditingController _fatCtrl;
   late TextEditingController _shouldersCtrl;
@@ -219,24 +306,46 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
   void initState() {
     super.initState();
     final m = widget.existingMeasurement;
-    
+
     // Convert weight to display unit
     final unit = ref.read(settingsProvider).weightUnit;
-    final displayWeight = m?.weightKg != null 
-        ? WeightConverter.displayWeight(m!.weightKg!, unit) 
+    final displayWeight = m?.weightKg != null
+        ? WeightConverter.displayWeight(m!.weightKg!, unit)
         : null;
 
-    _weightCtrl = TextEditingController(text: displayWeight != null ? _fmt(displayWeight) : '');
-    _fatCtrl = TextEditingController(text: m?.bodyFatPercentage != null ? _fmt(m!.bodyFatPercentage!) : '');
-    _shouldersCtrl = TextEditingController(text: m?.shouldersCm != null ? _fmt(m!.shouldersCm!) : '');
-    _chestCtrl = TextEditingController(text: m?.chestCm != null ? _fmt(m!.chestCm!) : '');
-    _waistCtrl = TextEditingController(text: m?.waistCm != null ? _fmt(m!.waistCm!) : '');
-    _hipsCtrl = TextEditingController(text: m?.hipsCm != null ? _fmt(m!.hipsCm!) : '');
-    _leftArmCtrl = TextEditingController(text: m?.leftArmCm != null ? _fmt(m!.leftArmCm!) : '');
-    _rightArmCtrl = TextEditingController(text: m?.rightArmCm != null ? _fmt(m!.rightArmCm!) : '');
-    _leftLegCtrl = TextEditingController(text: m?.leftLegCm != null ? _fmt(m!.leftLegCm!) : '');
-    _rightLegCtrl = TextEditingController(text: m?.rightLegCm != null ? _fmt(m!.rightLegCm!) : '');
-    _calvesCtrl = TextEditingController(text: m?.calvesCm != null ? _fmt(m!.calvesCm!) : '');
+    _weightCtrl = TextEditingController(
+      text: displayWeight != null ? _fmt(displayWeight) : '',
+    );
+    _fatCtrl = TextEditingController(
+      text: m?.bodyFatPercentage != null ? _fmt(m!.bodyFatPercentage!) : '',
+    );
+    _shouldersCtrl = TextEditingController(
+      text: m?.shouldersCm != null ? _fmt(m!.shouldersCm!) : '',
+    );
+    _chestCtrl = TextEditingController(
+      text: m?.chestCm != null ? _fmt(m!.chestCm!) : '',
+    );
+    _waistCtrl = TextEditingController(
+      text: m?.waistCm != null ? _fmt(m!.waistCm!) : '',
+    );
+    _hipsCtrl = TextEditingController(
+      text: m?.hipsCm != null ? _fmt(m!.hipsCm!) : '',
+    );
+    _leftArmCtrl = TextEditingController(
+      text: m?.leftArmCm != null ? _fmt(m!.leftArmCm!) : '',
+    );
+    _rightArmCtrl = TextEditingController(
+      text: m?.rightArmCm != null ? _fmt(m!.rightArmCm!) : '',
+    );
+    _leftLegCtrl = TextEditingController(
+      text: m?.leftLegCm != null ? _fmt(m!.leftLegCm!) : '',
+    );
+    _rightLegCtrl = TextEditingController(
+      text: m?.rightLegCm != null ? _fmt(m!.rightLegCm!) : '',
+    );
+    _calvesCtrl = TextEditingController(
+      text: m?.calvesCm != null ? _fmt(m!.calvesCm!) : '',
+    );
   }
 
   String _fmt(double v) => v % 1 == 0 ? '${v.toInt()}' : '$v';
@@ -257,48 +366,106 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
     super.dispose();
   }
 
-  void _save() {
+  bool _saving = false;
+  double? _parse(String value) =>
+      double.tryParse(value.trim().replaceAll(',', '.'));
+
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final controllers = [
+      _weightCtrl,
+      _fatCtrl,
+      _shouldersCtrl,
+      _chestCtrl,
+      _waistCtrl,
+      _hipsCtrl,
+      _leftArmCtrl,
+      _rightArmCtrl,
+      _leftLegCtrl,
+      _rightLegCtrl,
+      _calvesCtrl,
+    ];
+    if (controllers.every((c) => c.text.trim().isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Introduce al menos una medida.')),
+      );
+      return;
+    }
     final unit = ref.read(settingsProvider).weightUnit;
-    
-    final displayWeight = double.tryParse(_weightCtrl.text);
-    final canonicalWeight = displayWeight != null 
-        ? WeightConverter.toCanonicalKg(displayWeight, unit) 
+    final displayWeight = _parse(_weightCtrl.text);
+    final canonicalWeight = displayWeight != null
+        ? WeightConverter.toCanonicalKg(displayWeight, unit)
         : null;
 
     final newMeasurement = BodyMeasurement(
       id: widget.existingMeasurement?.id ?? const Uuid().v4(),
       date: widget.existingMeasurement?.date ?? DateTime.now(),
       weightKg: canonicalWeight,
-      bodyFatPercentage: double.tryParse(_fatCtrl.text),
-      shouldersCm: double.tryParse(_shouldersCtrl.text),
-      chestCm: double.tryParse(_chestCtrl.text),
-      waistCm: double.tryParse(_waistCtrl.text),
-      hipsCm: double.tryParse(_hipsCtrl.text),
-      leftArmCm: double.tryParse(_leftArmCtrl.text),
-      rightArmCm: double.tryParse(_rightArmCtrl.text),
-      leftLegCm: double.tryParse(_leftLegCtrl.text),
-      rightLegCm: double.tryParse(_rightLegCtrl.text),
-      calvesCm: double.tryParse(_calvesCtrl.text),
+      bodyFatPercentage: _parse(_fatCtrl.text),
+      shouldersCm: _parse(_shouldersCtrl.text),
+      chestCm: _parse(_chestCtrl.text),
+      waistCm: _parse(_waistCtrl.text),
+      hipsCm: _parse(_hipsCtrl.text),
+      leftArmCm: _parse(_leftArmCtrl.text),
+      rightArmCm: _parse(_rightArmCtrl.text),
+      leftLegCm: _parse(_leftLegCtrl.text),
+      rightLegCm: _parse(_rightLegCtrl.text),
+      calvesCm: _parse(_calvesCtrl.text),
     );
 
-    ref.read(bodyMeasurementProvider.notifier).saveMeasurement(newMeasurement);
-    Navigator.of(context).pop();
+    setState(() => _saving = true);
+    try {
+      final warning = await ref
+          .read(bodyMeasurementProvider.notifier)
+          .saveMeasurement(newMeasurement);
+      if (!mounted) return;
+      if (warning != null)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(warning)));
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No se pudo guardar. Inténtalo de nuevo.'),
+          ),
+        );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
-  Widget _buildField(String label, TextEditingController controller, String suffix) {
+  Widget _buildField(
+    String label,
+    TextEditingController controller,
+    String suffix,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: TextFormField(
         controller: controller,
+        validator: (text) {
+          if (text == null || text.trim().isEmpty) return null;
+          final value = _parse(text);
+          if (value == null || !value.isFinite || value <= 0)
+            return 'Introduce un número mayor que cero';
+          if (suffix == '%' && value > 100)
+            return 'El porcentaje no puede superar 100';
+          return null;
+        },
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         style: AppTypography.monoMedium.copyWith(color: AppColors.textPrimary),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+          labelStyle: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
           suffixText: suffix,
-          suffixStyle: AppTypography.monoMedium.copyWith(color: AppColors.textSecondary),
+          suffixStyle: AppTypography.monoMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
           filled: true,
           fillColor: AppColors.surface,
           border: OutlineInputBorder(
@@ -344,45 +511,64 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
-                    widget.existingMeasurement == null ? 'Nueva Medida' : 'Editar Medida',
-                    style: AppTypography.headlineMedium.copyWith(color: AppColors.textPrimary),
+                    widget.existingMeasurement == null
+                        ? 'Nueva Medida'
+                        : 'Editar Medida',
+                    style: AppTypography.headlineMedium.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
-                  
+
                   _buildField('Peso', _weightCtrl, unit.label),
                   _buildField('Grasa Corporal', _fatCtrl, '%'),
-                  
+
                   const Divider(height: 32, color: AppColors.surfaceBorder),
-                  Text('Medidas (cm)', style: AppTypography.labelLarge.copyWith(color: AppColors.primary)),
+                  Text(
+                    'Medidas (cm)',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
                   const SizedBox(height: AppSpacing.md),
-                  
+
                   _buildField('Hombros', _shouldersCtrl, 'cm'),
                   _buildField('Pecho', _chestCtrl, 'cm'),
                   _buildField('Cintura', _waistCtrl, 'cm'),
                   _buildField('Caderas o Glúteos', _hipsCtrl, 'cm'),
-                  
+
                   Row(
                     children: [
-                      Expanded(child: _buildField('Brazo Izq', _leftArmCtrl, 'cm')),
+                      Expanded(
+                        child: _buildField('Brazo Izq', _leftArmCtrl, 'cm'),
+                      ),
                       const SizedBox(width: AppSpacing.md),
-                      Expanded(child: _buildField('Brazo Der', _rightArmCtrl, 'cm')),
+                      Expanded(
+                        child: _buildField('Brazo Der', _rightArmCtrl, 'cm'),
+                      ),
                     ],
                   ),
-                  
+
                   Row(
                     children: [
-                      Expanded(child: _buildField('Pierna Izq', _leftLegCtrl, 'cm')),
+                      Expanded(
+                        child: _buildField('Pierna Izq', _leftLegCtrl, 'cm'),
+                      ),
                       const SizedBox(width: AppSpacing.md),
-                      Expanded(child: _buildField('Pierna Der', _rightLegCtrl, 'cm')),
+                      Expanded(
+                        child: _buildField('Pierna Der', _rightLegCtrl, 'cm'),
+                      ),
                     ],
                   ),
-                  
+
                   _buildField('Gemelos', _calvesCtrl, 'cm'),
 
                   const SizedBox(height: AppSpacing.xl),
                   PrimaryButton(
-                    label: 'Guardar',
-                    onPressed: _save,
+                    label: _saving ? 'Guardando…' : 'Guardar',
+                    onPressed: () {
+                      if (!_saving) _save();
+                    },
                   ),
                   const SizedBox(height: AppSpacing.md),
                 ],

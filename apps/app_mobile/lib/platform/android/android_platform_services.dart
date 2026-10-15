@@ -1,3 +1,6 @@
+import 'package:core/features/progress/services/measurement_reminder_service.dart';
+import 'package:core/features/progress/data/body_measurement_repository.dart';
+import 'package:core/database/hive/models/hive_body_measurement.dart';
 import 'package:core/core/services/workout_notification_service.dart';
 import 'package:core/core/services/personal_motivational_reminder_service.dart';
 import 'package:core/features/profile/data/personal_reminder_repository.dart';
@@ -61,6 +64,16 @@ Future<void> initializeAndroidPlatformServices() async {
     }
   } catch (error) {
     // Reportable in settings; never erase the user's private messages.
+  }
+
+  try {
+    await MeasurementReminderService.synchronize(
+      BodyMeasurementRepository(
+        Hive.box<HiveBodyMeasurement>(HiveBoxes.bodyMeasurements),
+      ).getAllMeasurements(),
+    );
+  } catch (error) {
+    debugPrint('Measurement reminder restoration failed: $error');
   }
 
   if (settings.workoutRemindersEnabled) {

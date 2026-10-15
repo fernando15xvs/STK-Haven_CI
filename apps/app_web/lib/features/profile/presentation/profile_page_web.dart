@@ -63,7 +63,9 @@ class ProfilePageWeb extends ConsumerWidget {
                 const SizedBox(height: 6),
                 Text(
                   '${routines.length} rutinas · ${history.length} entrenamientos · ${measurements.length} registros corporales',
-                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 _ProfileHeader(settings: settings),
@@ -118,10 +120,13 @@ class ProfilePageWeb extends ConsumerWidget {
                   child: _ActionTile(
                     icon: Icons.dashboard_outlined,
                     title: 'Cartera profesional',
-                    subtitle: 'Seguimiento y resumen de tus clientes vinculados.',
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => const CoachProDashboardPage(),
-                    )),
+                    subtitle:
+                        'Seguimiento y resumen de tus clientes vinculados.',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CoachProDashboardPage(),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -130,9 +135,13 @@ class ProfilePageWeb extends ConsumerWidget {
                   child: _ProgramSection(
                     settings: settings,
                     activeWorkout: active,
-                    onPreview: settings.activeProgram == null ? null : () => _previewActiveProgram(context, settings),
+                    onPreview: settings.activeProgram == null
+                        ? null
+                        : () => _previewActiveProgram(context, settings),
                     onChoose: () => _chooseProgram(context, ref),
-                    onRemove: settings.activeProgram == null ? null : () => _removeProgram(context, ref),
+                    onRemove: settings.activeProgram == null
+                        ? null
+                        : () => _removeProgram(context, ref),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -142,7 +151,11 @@ class ProfilePageWeb extends ConsumerWidget {
                     icon: Icons.emoji_events_outlined,
                     title: 'Nivel y logros',
                     subtitle: 'Revisa tu XP, nivel y medallas desbloqueadas.',
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AchievementsPageWeb())),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AchievementsPageWeb(),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -153,7 +166,9 @@ class ProfilePageWeb extends ConsumerWidget {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('RIR habilitado'),
-                        subtitle: const Text('Registrar repeticiones en reserva en cada serie.'),
+                        subtitle: const Text(
+                          'Registrar repeticiones en reserva en cada serie.',
+                        ),
                         value: settings.isRirEnabled,
                         onChanged: notifier.setRirEnabled,
                       ),
@@ -161,9 +176,42 @@ class ProfilePageWeb extends ConsumerWidget {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Descanso automático'),
-                        subtitle: const Text('Iniciar el temporizador de descanso al completar una serie.'),
+                        subtitle: const Text(
+                          'Iniciar el temporizador de descanso al completar una serie.',
+                        ),
                         value: settings.autoRestEnabled,
                         onChanged: notifier.setAutoRestEnabled,
+                      ),
+                      ListTile(
+                        title: const Text('Tiempo de descanso según'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            DropdownButton<RestTimingMode>(
+                              isExpanded: true,
+                              value: settings.restTimingMode,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: RestTimingMode.completedSet,
+                                  child: Text('La serie completada'),
+                                ),
+                                DropdownMenuItem(
+                                  value: RestTimingMode.nextSet,
+                                  child: Text('La siguiente serie'),
+                                ),
+                              ],
+                              onChanged: settings.autoRestEnabled
+                                  ? (value) {
+                                      if (value != null)
+                                        notifier.setRestTimingMode(value);
+                                    }
+                                  : null,
+                            ),
+                            const Text(
+                              'Siguiente serie: usa su descanso, incluso al cambiar de ejercicio. Sigue el orden de la sesión. Las superseries mantienen el descanso por ronda; entre lados se usa su tiempo propio.',
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -210,7 +258,12 @@ class ProfilePageWeb extends ConsumerWidget {
                         trailing: DropdownButton<WeightUnit>(
                           value: settings.weightUnit,
                           items: WeightUnit.values
-                              .map((unit) => DropdownMenuItem(value: unit, child: Text(unit.label.toUpperCase())))
+                              .map(
+                                (unit) => DropdownMenuItem(
+                                  value: unit,
+                                  child: Text(unit.label.toUpperCase()),
+                                ),
+                              )
                               .toList(growable: false),
                           onChanged: (unit) {
                             if (unit != null) notifier.setWeightUnit(unit);
@@ -218,7 +271,10 @@ class ProfilePageWeb extends ConsumerWidget {
                         ),
                       ),
                       const Divider(height: 1),
-                      _IncrementSelector(settings: settings, notifier: notifier),
+                      _IncrementSelector(
+                        settings: settings,
+                        notifier: notifier,
+                      ),
                     ],
                   ),
                 ),
@@ -230,7 +286,8 @@ class ProfilePageWeb extends ConsumerWidget {
                       _ActionTile(
                         icon: Icons.upload_file,
                         title: 'Exportar backup',
-                        subtitle: 'Descargar una copia JSON de todos tus datos.',
+                        subtitle:
+                            'Descargar una copia JSON de todos tus datos.',
                         onTap: () => _exportBackup(context),
                       ),
                       const Divider(height: 1),
@@ -240,21 +297,32 @@ class ProfilePageWeb extends ConsumerWidget {
                         subtitle: active.isActive
                             ? 'Finaliza o descarta tu entrenamiento activo antes de restaurar.'
                             : 'Restaurar rutinas, entrenamientos, ejercicios, PRs y ajustes.',
-                        onTap: active.isActive ? null : () => _importBackup(context, ref),
+                        onTap: active.isActive
+                            ? null
+                            : () => _importBackup(context, ref),
                       ),
                       const Divider(height: 1),
                       _ActionTile(
                         icon: Icons.table_chart_outlined,
                         title: 'Exportar entrenamientos a CSV',
-                        subtitle: 'Descargar el historial en un archivo compatible con Excel.',
+                        subtitle:
+                            'Descargar el historial en un archivo compatible con Excel.',
                         onTap: history.isEmpty
                             ? null
                             : () async {
                                 try {
-                                  await DataExportService().exportWorkoutsToCSV(history);
+                                  await DataExportService().exportWorkoutsToCSV(
+                                    history,
+                                  );
                                 } catch (error) {
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo exportar: $error')));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'No se pudo exportar: $error',
+                                        ),
+                                      ),
+                                    );
                                   }
                                 }
                               },
@@ -269,21 +337,48 @@ class ProfilePageWeb extends ConsumerWidget {
                     builder: (context, constraints) {
                       final compact = constraints.maxWidth < 600;
                       final cards = [
-                        _SmallStat(label: 'Rutinas', value: '${routines.length}'),
-                        _SmallStat(label: 'Entrenos', value: '${history.length}'),
-                        _SmallStat(label: 'Ejercicios', value: '${ref.watch(exerciseListProvider).length}'),
-                        _SmallStat(label: 'PRs', value: '${ref.watch(personalRecordRepositoryProvider).getAllPRs().length}'),
+                        _SmallStat(
+                          label: 'Rutinas',
+                          value: '${routines.length}',
+                        ),
+                        _SmallStat(
+                          label: 'Entrenos',
+                          value: '${history.length}',
+                        ),
+                        _SmallStat(
+                          label: 'Ejercicios',
+                          value: '${ref.watch(exerciseListProvider).length}',
+                        ),
+                        _SmallStat(
+                          label: 'PRs',
+                          value:
+                              '${ref.watch(personalRecordRepositoryProvider).getAllPRs().length}',
+                        ),
                       ];
                       if (compact) {
                         return Wrap(
                           spacing: 10,
                           runSpacing: 10,
-                          children: cards.map((card) => SizedBox(width: (constraints.maxWidth - 10) / 2, child: card)).toList(growable: false),
+                          children: cards
+                              .map(
+                                (card) => SizedBox(
+                                  width: (constraints.maxWidth - 10) / 2,
+                                  child: card,
+                                ),
+                              )
+                              .toList(growable: false),
                         );
                       }
                       return Row(
                         children: cards
-                            .map((card) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 10), child: card)))
+                            .map(
+                              (card) => Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 10),
+                                  child: card,
+                                ),
+                              ),
+                            )
                             .toList(growable: false),
                       );
                     },
@@ -304,12 +399,19 @@ class ProfilePageWeb extends ConsumerWidget {
     return null;
   }
 
-  Future<void> _previewActiveProgram(BuildContext context, SettingsState settings) async {
+  Future<void> _previewActiveProgram(
+    BuildContext context,
+    SettingsState settings,
+  ) async {
     final active = settings.activeProgram;
     if (active == null) return;
     final program = _findProgram(active.presetProgramId);
     if (program == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se encontró la definición del programa actual.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se encontró la definición del programa actual.'),
+        ),
+      );
       return;
     }
     await _showProgramPreview(context, program);
@@ -318,7 +420,11 @@ class ProfilePageWeb extends ConsumerWidget {
   Future<void> _chooseProgram(BuildContext context, WidgetRef ref) async {
     if (ref.read(activeWorkoutProvider).isActive) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Finaliza o descarta el entrenamiento en curso antes de cambiar de programa.')),
+        const SnackBar(
+          content: Text(
+            'Finaliza o descarta el entrenamiento en curso antes de cambiar de programa.',
+          ),
+        ),
       );
       return;
     }
@@ -329,18 +435,23 @@ class ProfilePageWeb extends ConsumerWidget {
     );
     if (selected == null || !context.mounted) return;
 
-    final activate = await _showProgramPreview(context, selected, allowActivate: true);
+    final activate = await _showProgramPreview(
+      context,
+      selected,
+      allowActivate: true,
+    );
     if (activate != true || !context.mounted) return;
 
     final current = ref.read(settingsProvider).activeProgram;
-    final preferredDays =
-        ref.read(userExperienceProfileProvider).value?.trainingDaysPerWeek;
+    final preferredDays = ref
+        .read(userExperienceProfileProvider)
+        .value
+        ?.trainingDaysPerWeek;
     try {
       if (current == null) {
-        await ref.read(programServiceProvider).installProgram(
-              selected,
-              trainingDaysPerWeek: preferredDays,
-            );
+        await ref
+            .read(programServiceProvider)
+            .installProgram(selected, trainingDaysPerWeek: preferredDays);
       } else {
         final keepOld = await showDialog<bool>(
           context: context,
@@ -350,25 +461,40 @@ class ProfilePageWeb extends ConsumerWidget {
               'Tus entrenamientos realizados se conservarán. ¿Quieres conservar también las rutinas generadas por el programa actual?',
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-              OutlinedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Conservar rutinas')),
-              FilledButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Reemplazar rutinas')),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancelar'),
+              ),
+              OutlinedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Conservar rutinas'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Reemplazar rutinas'),
+              ),
             ],
           ),
         );
         if (keepOld == null) return;
-        await ref.read(programServiceProvider).replaceProgram(
+        await ref
+            .read(programServiceProvider)
+            .replaceProgram(
               selected,
               keepOld,
               trainingDaysPerWeek: preferredDays,
             );
       }
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Programa ${selected.name} activado.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Programa ${selected.name} activado.')),
+        );
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo activar el programa: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo activar el programa: $error')),
+        );
       }
     }
   }
@@ -376,7 +502,11 @@ class ProfilePageWeb extends ConsumerWidget {
   Future<void> _removeProgram(BuildContext context, WidgetRef ref) async {
     if (ref.read(activeWorkoutProvider).isActive) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Finaliza o descarta el entrenamiento en curso antes de quitar el programa.')),
+        const SnackBar(
+          content: Text(
+            'Finaliza o descarta el entrenamiento en curso antes de quitar el programa.',
+          ),
+        ),
       );
       return;
     }
@@ -385,24 +515,55 @@ class ProfilePageWeb extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Entrenar sin programa'),
-        content: const Text('Puedes quitar el programa actual y seguir usando rutinas creadas por ti. ¿Qué hacemos con las rutinas generadas por el programa?'),
+        content: const Text(
+          'Puedes quitar el programa actual y seguir usando rutinas creadas por ti. ¿Qué hacemos con las rutinas generadas por el programa?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          OutlinedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Conservar rutinas')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Eliminar rutinas del programa')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Conservar rutinas'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Eliminar rutinas del programa'),
+          ),
         ],
       ),
     );
     if (keepRoutines == null) return;
 
-    await ref.read(programServiceProvider).removeActiveProgram(keepGeneratedRoutines: keepRoutines);
+    await ref
+        .read(programServiceProvider)
+        .removeActiveProgram(keepGeneratedRoutines: keepRoutines);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Programa desactivado. Tus entrenamientos anteriores se mantienen.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Programa desactivado. Tus entrenamientos anteriores se mantienen.',
+          ),
+        ),
+      );
     }
   }
 
-  Future<bool?> _showProgramPreview(BuildContext context, PresetProgram program, {bool allowActivate = false}) {
-    const dayNames = {1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 7: 'Dom'};
+  Future<bool?> _showProgramPreview(
+    BuildContext context,
+    PresetProgram program, {
+    bool allowActivate = false,
+  }) {
+    const dayNames = {
+      1: 'Lun',
+      2: 'Mar',
+      3: 'Mié',
+      4: 'Jue',
+      5: 'Vie',
+      6: 'Sáb',
+      7: 'Dom',
+    };
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -424,7 +585,13 @@ class ProfilePageWeb extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text(program.description, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary, height: 1.5)),
+                Text(
+                  program.description,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
                 const SizedBox(height: 18),
                 Text('RUTINAS', style: AppTypography.labelLarge),
                 const SizedBox(height: 8),
@@ -433,7 +600,11 @@ class ProfilePageWeb extends ConsumerWidget {
                     width: double.infinity,
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: AppColors.surface, borderRadius: AppRadius.md_, border: Border.all(color: AppColors.border)),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppRadius.md_,
+                      border: Border.all(color: AppColors.border),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -441,7 +612,9 @@ class ProfilePageWeb extends ConsumerWidget {
                         const SizedBox(height: 3),
                         Text(
                           '${routine.scheduledDays.map((day) => dayNames[day] ?? '$day').join(', ')} · ${routine.exercises.length} ejercicios',
-                          style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -452,8 +625,15 @@ class ProfilePageWeb extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cerrar')),
-          if (allowActivate) FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Usar este programa')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cerrar'),
+          ),
+          if (allowActivate)
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Usar este programa'),
+            ),
         ],
       ),
     );
@@ -465,7 +645,9 @@ class ProfilePageWeb extends ConsumerWidget {
       await _backupFiles.exportFile(json);
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al exportar: $error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al exportar: $error')));
       }
     }
   }
@@ -477,7 +659,11 @@ class ProfilePageWeb extends ConsumerWidget {
     final validation = _backupService.validateBackup(json);
     if (!validation.isValid || validation.parsedData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(validation.errorMessage ?? 'El archivo de backup no es válido.')),
+        SnackBar(
+          content: Text(
+            validation.errorMessage ?? 'El archivo de backup no es válido.',
+          ),
+        ),
       );
       return;
     }
@@ -494,8 +680,14 @@ class ProfilePageWeb extends ConsumerWidget {
           'El archivo contiene $routines rutinas, $workouts entrenamientos y $exercises ejercicios.\n\nLa restauración reemplazará los datos locales actuales.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restaurar')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Restaurar'),
+          ),
         ],
       ),
     );
@@ -516,11 +708,15 @@ class ProfilePageWeb extends ConsumerWidget {
       ref.invalidate(personalRecordRepositoryProvider);
       ref.invalidate(bodyMeasurementProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backup restaurado correctamente.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Backup restaurado correctamente.')),
+        );
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error al restaurar: $error')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al restaurar: $error')));
       }
     }
   }
@@ -548,27 +744,43 @@ class _ProgramSection extends StatelessWidget {
       return _ActionTile(
         icon: Icons.calendar_month_outlined,
         title: 'Elegir programa',
-        subtitle: 'Instala un plan predefinido o continúa creando tus propias rutinas.',
+        subtitle:
+            'Instala un plan predefinido o continúa creando tus propias rutinas.',
         onTap: activeWorkout.isActive ? null : onChoose,
       );
     }
 
-    final week = ((DateTime.now().difference(program.startedAt).inDays / 7).floor() + 1).clamp(1, program.durationWeeks);
+    final week =
+        ((DateTime.now().difference(program.startedAt).inDays / 7).floor() + 1)
+            .clamp(1, program.durationWeeks);
     return Column(
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.calendar_month_outlined, color: AppColors.primary),
-          title: Text(program.programNameSnapshot, style: AppTypography.headlineSmall),
+          leading: const Icon(
+            Icons.calendar_month_outlined,
+            color: AppColors.primary,
+          ),
+          title: Text(
+            program.programNameSnapshot,
+            style: AppTypography.headlineSmall,
+          ),
           subtitle: Text('Semana $week de ${program.durationWeeks}'),
         ),
         const Divider(height: 1),
-        _ActionTile(icon: Icons.visibility_outlined, title: 'Ver programa', subtitle: 'Consulta duración, días y rutinas incluidas.', onTap: onPreview),
+        _ActionTile(
+          icon: Icons.visibility_outlined,
+          title: 'Ver programa',
+          subtitle: 'Consulta duración, días y rutinas incluidas.',
+          onTap: onPreview,
+        ),
         const Divider(height: 1),
         _ActionTile(
           icon: Icons.autorenew,
           title: 'Cambiar programa',
-          subtitle: activeWorkout.isActive ? 'Hay un entrenamiento en curso.' : 'Selecciona otro programa y decide qué hacer con las rutinas actuales.',
+          subtitle: activeWorkout.isActive
+              ? 'Hay un entrenamiento en curso.'
+              : 'Selecciona otro programa y decide qué hacer con las rutinas actuales.',
           onTap: activeWorkout.isActive ? null : onChoose,
         ),
         const Divider(height: 1),
@@ -607,23 +819,38 @@ class _ProgramPickerDialog extends StatelessWidget {
                 onTap: () => Navigator.pop(context, program),
                 child: Container(
                   padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(borderRadius: AppRadius.md_, border: Border.all(color: AppColors.border)),
+                  decoration: BoxDecoration(
+                    borderRadius: AppRadius.md_,
+                    border: Border.all(color: AppColors.border),
+                  ),
                   child: Row(
                     children: [
                       Container(
                         width: 46,
                         height: 46,
-                        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: AppRadius.sm_),
-                        child: const Icon(Icons.fitness_center, color: AppColors.primary),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          borderRadius: AppRadius.sm_,
+                        ),
+                        child: const Icon(
+                          Icons.fitness_center,
+                          color: AppColors.primary,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(program.name, style: AppTypography.headlineSmall),
+                            Text(
+                              program.name,
+                              style: AppTypography.headlineSmall,
+                            ),
                             const SizedBox(height: 3),
-                            Text('${program.level} · ${program.daysPerWeek} días/semana · ${program.durationWeeks} semanas', style: AppTypography.bodySmall),
+                            Text(
+                              '${program.level} · ${program.daysPerWeek} días/semana · ${program.durationWeeks} semanas',
+                              style: AppTypography.bodySmall,
+                            ),
                           ],
                         ),
                       ),
@@ -636,7 +863,12 @@ class _ProgramPickerDialog extends StatelessWidget {
           },
         ),
       ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar'))],
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+      ],
     );
   }
 }
@@ -670,8 +902,12 @@ class _ProfileHeader extends StatelessWidget {
                 Text('Atleta Principal', style: AppTypography.headlineLarge),
                 const SizedBox(height: 4),
                 Text(
-                  settings.activeProgram == null ? 'Entrenamiento personalizado' : settings.activeProgram!.programNameSnapshot,
-                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                  settings.activeProgram == null
+                      ? 'Entrenamiento personalizado'
+                      : settings.activeProgram!.programNameSnapshot,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -691,11 +927,17 @@ class _IncrementSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unit = settings.weightUnit;
-    final options = unit == WeightUnit.kg ? <double>[1.25, 2.5, 5] : <double>[2.5, 5, 10];
-    final current = WeightConverter.displayWeight(settings.defaultIncrement, unit);
+    final options = unit == WeightUnit.kg
+        ? <double>[1.25, 2.5, 5]
+        : <double>[2.5, 5, 10];
+    final current = WeightConverter.displayWeight(
+      settings.defaultIncrement,
+      unit,
+    );
     var selected = options.first;
     for (final option in options) {
-      if ((option - current).abs() < (selected - current).abs()) selected = option;
+      if ((option - current).abs() < (selected - current).abs())
+        selected = option;
     }
 
     return ListTile(
@@ -705,7 +947,14 @@ class _IncrementSelector extends StatelessWidget {
       trailing: DropdownButton<double>(
         value: selected,
         items: options
-            .map((value) => DropdownMenuItem(value: value, child: Text('${value % 1 == 0 ? value.toInt() : value} ${unit.label}')))
+            .map(
+              (value) => DropdownMenuItem(
+                value: value,
+                child: Text(
+                  '${value % 1 == 0 ? value.toInt() : value} ${unit.label}',
+                ),
+              ),
+            )
             .toList(growable: false),
         onChanged: (value) {
           if (value != null) notifier.setDefaultIncrement(value, unit);
@@ -726,12 +975,22 @@ class _Section extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title.toUpperCase(), style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary, letterSpacing: 1.1)),
+        Text(
+          title.toUpperCase(),
+          style: AppTypography.labelMedium.copyWith(
+            color: AppColors.textSecondary,
+            letterSpacing: 1.1,
+          ),
+        ),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(color: AppColors.surface, borderRadius: AppRadius.lg_, border: Border.all(color: AppColors.border)),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppRadius.lg_,
+            border: Border.all(color: AppColors.border),
+          ),
           child: child,
         ),
       ],
@@ -745,14 +1004,22 @@ class _ActionTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback? onTap;
 
-  const _ActionTile({required this.icon, required this.title, required this.subtitle, required this.onTap});
+  const _ActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       enabled: onTap != null,
-      leading: Icon(icon, color: onTap == null ? AppColors.textDisabled : AppColors.primary),
+      leading: Icon(
+        icon,
+        color: onTap == null ? AppColors.textDisabled : AppColors.primary,
+      ),
       title: Text(title),
       subtitle: Text(subtitle),
       trailing: const Icon(Icons.chevron_right),
@@ -771,12 +1038,20 @@ class _SmallStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColors.surfaceHigh, borderRadius: AppRadius.md_),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceHigh,
+        borderRadius: AppRadius.md_,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(value, style: AppTypography.headlineLarge),
-          Text(label, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+          Text(
+            label,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
         ],
       ),
     );
