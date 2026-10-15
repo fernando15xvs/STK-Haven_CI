@@ -2,7 +2,7 @@
 
 This repository is a history-free CI mirror of the private STK Haven source.
 
-Source commit: 7007901bb699e4d51feef5d7945d9ddb07692834
+Source commit: 4fdf236501802a771b22f9c97d0cc7ed75ae8f71
 Source branch: feat/verse-notification-schedule
 
 The private Git history, local signing material, environment files, credentials,

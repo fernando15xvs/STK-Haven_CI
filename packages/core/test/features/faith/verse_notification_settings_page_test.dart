@@ -28,7 +28,6 @@ void main() {
   const timezone = MethodChannel('stk_haven/timezone');
   setUp(() {
     IOSFlutterLocalNotificationsPlugin.registerWith();
-    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     SharedPreferences.setMockInitialValues({});
     messenger.setMockMethodCallHandler(timezone, (_) async => 'America/Lima');
     messenger.setMockMethodCallHandler(notifications, (call) async {
@@ -40,7 +39,6 @@ void main() {
     });
   });
   tearDown(() {
-    debugDefaultTargetPlatformOverride = null;
     messenger.setMockMethodCallHandler(notifications, null);
     messenger.setMockMethodCallHandler(timezone, null);
   });
@@ -77,5 +75,6 @@ void main() {
         false,
       );
     },
+    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
 }

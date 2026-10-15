@@ -83,13 +83,19 @@ void main() {
         'Texto dos de prueba',
       ]);
       expect(scheduled.map((s) => s['timeZoneName']).toSet(), {'America/Lima'});
-      expect(scheduled.first['scheduledDate'].toString(), contains('08:00:00'));
-      expect(scheduled.last['scheduledDate'].toString(), contains('20:00:00'));
+      expect(
+        scheduled.first['scheduledDateTime'].toString(),
+        contains('08:00:00'),
+      );
+      expect(
+        scheduled.last['scheduledDateTime'].toString(),
+        contains('20:00:00'),
+      );
       expect(pending.keys.toSet(), {999, 1310, 1311});
       expect(await VerseNotificationService.pendingDailyReminderCount(), 2);
       final now = tz.TZDateTime.now(tz.local);
       for (final slot in scheduled) {
-        final local = DateTime.parse(slot['scheduledDate'] as String);
+        final local = DateTime.parse(slot['scheduledDateTime'] as String);
         expect(
           tz.TZDateTime(
             tz.local,
