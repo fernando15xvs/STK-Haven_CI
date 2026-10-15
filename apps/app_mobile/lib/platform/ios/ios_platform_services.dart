@@ -1,3 +1,6 @@
+import 'package:core/features/progress/services/measurement_reminder_service.dart';
+import 'package:core/features/progress/data/body_measurement_repository.dart';
+import 'package:core/database/hive/models/hive_body_measurement.dart';
 import 'package:core/core/services/workout_notification_service.dart';
 import 'package:core/core/services/personal_motivational_reminder_service.dart';
 import 'package:core/features/profile/data/personal_reminder_repository.dart';
@@ -13,8 +16,6 @@ import 'package:flutter/foundation.dart';
 /// Keep Apple-specific startup isolated from Android so iOS can evolve its
 /// notification/background policy independently.
 Future<void> initializeIosPlatformServices() async {
-  await VerseNotificationService.initialize();
-  await WorkoutNotificationService.initialize();
   // Workmanager is not a reliable notification scheduler on iOS.
   // The OS-native repeating local notification remains the source of truth.
 
@@ -30,10 +31,7 @@ Future<void> initializeIosPlatformServices() async {
 
   try {
     if (settings.dailyVerseNotifications) {
-      await VerseNotificationService.scheduleDailyReminder(
-        hour: 8,
-        minute: 0,
-      );
+      await VerseNotificationService.scheduleDailyReminder();
     } else {
       await VerseNotificationService.cancelDailyReminder();
     }
@@ -55,6 +53,16 @@ Future<void> initializeIosPlatformServices() async {
   } catch (error) {
     debugPrint('Personal reminder restoration failed: $error');
     // Never erase the user's private messages on a scheduling failure.
+  }
+
+  try {
+    await MeasurementReminderService.synchronize(
+      BodyMeasurementRepository(
+        Hive.box<HiveBodyMeasurement>(HiveBoxes.bodyMeasurements),
+      ).getAllMeasurements(),
+    );
+  } catch (error) {
+    debugPrint('Measurement reminder restoration failed: $error');
   }
 
   if (settings.workoutRemindersEnabled) {

@@ -14,19 +14,19 @@ Future<void> showRecoveryHistoryDialogWeb(
   await showDialog<void>(
     context: context,
     builder: (dialogContext) => AlertDialog(
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       title: Row(
         children: [
           Container(
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: AppColors.primaryFaded,
+              color: AppColors.of(context).primaryFaded,
               borderRadius: AppRadius.md_,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.insights_outlined,
-              color: AppColors.primary,
+              color: AppColors.of(context).primary,
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -38,7 +38,7 @@ Future<void> showRecoveryHistoryDialogWeb(
                 Text(
                   'Últimos ${history.completedDays} check-ins',
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
               ],
@@ -47,10 +47,7 @@ Future<void> showRecoveryHistoryDialogWeb(
         ],
       ),
       content: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 880,
-          maxHeight: 700,
-        ),
+        constraints: const BoxConstraints(maxWidth: 880, maxHeight: 700),
         child: history.isEmpty
             ? const _EmptyHistory()
             : SingleChildScrollView(
@@ -63,10 +60,7 @@ Future<void> showRecoveryHistoryDialogWeb(
                     const SizedBox(height: AppSpacing.md),
                     _PerformanceCorrelationCard(insight: performance),
                     const SizedBox(height: AppSpacing.xl),
-                    Text(
-                      'Detalle diario',
-                      style: AppTypography.headlineMedium,
-                    ),
+                    Text('Detalle diario', style: AppTypography.headlineMedium),
                     const SizedBox(height: AppSpacing.sm),
                     LayoutBuilder(
                       builder: (context, constraints) {
@@ -103,7 +97,6 @@ Future<void> showRecoveryHistoryDialogWeb(
   );
 }
 
-
 class _PerformanceCorrelationCard extends StatelessWidget {
   final RecoveryPerformanceInsight insight;
 
@@ -111,14 +104,14 @@ class _PerformanceCorrelationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _associationColor(insight.association);
+    final color = _associationColor(context, insight.association);
     final minimum = RecoveryPerformanceInsight.minimumComparableSessions;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
@@ -149,7 +142,7 @@ class _PerformanceCorrelationCard extends StatelessWidget {
                     Text(
                       'Compara el volumen completado con la sesión anterior de la misma rutina.',
                       style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                   ],
@@ -162,7 +155,7 @@ class _PerformanceCorrelationCard extends StatelessWidget {
             Text(
               'El análisis aparecerá al existir al menos $minimum sesiones comparables con check-in el mismo día.',
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -170,7 +163,7 @@ class _PerformanceCorrelationCard extends StatelessWidget {
               value: insight.comparableSessions / minimum,
               minHeight: 7,
               borderRadius: BorderRadius.circular(99),
-              backgroundColor: AppColors.surfaceBorder,
+              backgroundColor: AppColors.of(context).surfaceBorder,
               color: color,
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -195,7 +188,7 @@ class _PerformanceCorrelationCard extends StatelessWidget {
                       Text(
                         _associationSummary(insight.association),
                         style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
+                          color: AppColors.of(context).textSecondary,
                           height: 1.4,
                         ),
                       ),
@@ -209,20 +202,19 @@ class _PerformanceCorrelationCard extends StatelessWidget {
                   children: [
                     _CorrelationMetric(
                       label: 'COEFICIENTE',
-                      value: 'r ${(insight.coefficient ?? 0).toStringAsFixed(2)}',
+                      value:
+                          'r ${(insight.coefficient ?? 0).toStringAsFixed(2)}',
                       color: color,
                     ),
                     _CorrelationMetric(
                       label: 'CAMBIO MEDIO',
-                      value: _signedPercent(
-                        insight.averageVolumeChangePercent,
-                      ),
-                      color: AppColors.info,
+                      value: _signedPercent(insight.averageVolumeChangePercent),
+                      color: AppColors.of(context).info,
                     ),
                     _CorrelationMetric(
                       label: 'COMPARACIONES',
                       value: '${insight.comparableSessions}',
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ],
                 ),
@@ -232,53 +224,63 @@ class _PerformanceCorrelationCard extends StatelessWidget {
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.xs,
-              children: insight.points.take(5).map((point) {
-                return Container(
-                  width: 250,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceHigh,
-                    borderRadius: AppRadius.sm_,
-                    border: Border.all(color: AppColors.surfaceBorder),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${_compactDate(point.date)} · ${point.routineName}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.bodySmall,
+              children: insight.points
+                  .take(5)
+                  .map((point) {
+                    return Container(
+                      width: 250,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.of(context).surfaceHigh,
+                        borderRadius: AppRadius.sm_,
+                        border: Border.all(
+                          color: AppColors.of(context).surfaceBorder,
                         ),
                       ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        '${point.recoveryScore}/100',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: _statusColor(point.recoveryStatus),
-                        ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${_compactDate(point.date)} · ${point.routineName}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.bodySmall,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text(
+                            '${point.recoveryScore}/100',
+                            style: AppTypography.labelSmall.copyWith(
+                              color: _statusColor(
+                                context,
+                                point.recoveryStatus,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text(
+                            _signedPercent(point.volumeChangePercent),
+                            style: AppTypography.labelSmall.copyWith(
+                              color: color,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Text(
-                        _signedPercent(point.volumeChangePercent),
-                        style: AppTypography.labelSmall.copyWith(color: color),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(growable: false),
+                    );
+                  })
+                  .toList(growable: false),
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
-          Divider(color: AppColors.surfaceBorder),
+          Divider(color: AppColors.of(context).surfaceBorder),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'Asociación histórica; no demuestra causa ni recomienda aumentar carga o entrenar con molestias.',
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
             ),
           ),
         ],
@@ -331,7 +333,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _MetricCard(
             label: 'PROMEDIO',
             value: '${history.averageScore}',
-            color: _scoreColor(history.averageScore),
+            color: _scoreColor(context, history.averageScore),
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -339,7 +341,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _MetricCard(
             label: 'MEJOR PUNTAJE',
             value: '${history.bestScore}',
-            color: _scoreColor(history.bestScore),
+            color: _scoreColor(context, history.bestScore),
           ),
         ),
         const SizedBox(width: AppSpacing.sm),
@@ -347,7 +349,7 @@ class _SummaryStrip extends StatelessWidget {
           child: _MetricCard(
             label: 'DÍAS REGISTRADOS',
             value: '${history.completedDays}',
-            color: AppColors.info,
+            color: AppColors.of(context).info,
           ),
         ),
       ],
@@ -371,7 +373,7 @@ class _MetricCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.md_,
         border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
@@ -380,10 +382,7 @@ class _MetricCard extends StatelessWidget {
         children: [
           Text(label, style: AppTypography.labelSmall),
           const SizedBox(height: 3),
-          Text(
-            value,
-            style: AppTypography.monoLarge.copyWith(color: color),
-          ),
+          Text(value, style: AppTypography.monoLarge.copyWith(color: color)),
         ],
       ),
     );
@@ -394,10 +393,7 @@ class _ScoreChart extends StatelessWidget {
   final RecoveryHistorySnapshot history;
   final int maxPoints;
 
-  const _ScoreChart({
-    required this.history,
-    required this.maxPoints,
-  });
+  const _ScoreChart({required this.history, required this.maxPoints});
 
   @override
   Widget build(BuildContext context) {
@@ -410,9 +406,9 @@ class _ScoreChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.surfaceBorder),
+        border: Border.all(color: AppColors.of(context).surfaceBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -433,52 +429,54 @@ class _ScoreChart extends StatelessWidget {
             height: 180,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: points.map((entry) {
-                final color = _statusColor(entry.status);
-                final barHeight = 30 + (entry.score * 1.08);
-                return Expanded(
-                  child: Tooltip(
-                    message:
-                        '${_dateLabel(entry.date)} · ${entry.score}/100',
-                    child: Semantics(
-                      label:
-                          '${_dateLabel(entry.date)}, recuperación ${entry.score} de 100',
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${entry.score}',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: color,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            AnimatedContainer(
-                              duration: AppMotion.standard,
-                              curve: AppMotion.curve,
-                              width: double.infinity,
-                              height: barHeight,
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.78),
-                                borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(AppRadius.xs),
+              children: points
+                  .map((entry) {
+                    final color = _statusColor(context, entry.status);
+                    final barHeight = 30 + (entry.score * 1.08);
+                    return Expanded(
+                      child: Tooltip(
+                        message:
+                            '${_dateLabel(entry.date)} · ${entry.score}/100',
+                        child: Semantics(
+                          label:
+                              '${_dateLabel(entry.date)}, recuperación ${entry.score} de 100',
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${entry.score}',
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: color,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(height: 5),
+                                AnimatedContainer(
+                                  duration: AppMotion.standard,
+                                  curve: AppMotion.curve,
+                                  width: double.infinity,
+                                  height: barHeight,
+                                  decoration: BoxDecoration(
+                                    color: color.withValues(alpha: 0.78),
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(AppRadius.xs),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _compactDate(entry.date),
+                                  style: AppTypography.labelSmall,
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _compactDate(entry.date),
-                              style: AppTypography.labelSmall,
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                );
-              }).toList(growable: false),
+                    );
+                  })
+                  .toList(growable: false),
             ),
           ),
         ],
@@ -497,26 +495,28 @@ class _StatusLegend extends StatelessWidget {
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.xs,
-      children: RecoveryStatus.values.map((status) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _statusColor(status),
-              ),
-            ),
-            const SizedBox(width: 5),
-            Text(
-              '${_shortStatus(status)} ${history.countFor(status)}',
-              style: AppTypography.bodySmall,
-            ),
-          ],
-        );
-      }).toList(growable: false),
+      children: RecoveryStatus.values
+          .map((status) {
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _statusColor(context, status),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '${_shortStatus(status)} ${history.countFor(status)}',
+                  style: AppTypography.bodySmall,
+                ),
+              ],
+            );
+          })
+          .toList(growable: false),
     );
   }
 }
@@ -528,11 +528,11 @@ class _HistoryEntryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _statusColor(entry.status);
+    final color = _statusColor(context, entry.status);
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.md_,
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
@@ -547,9 +547,7 @@ class _HistoryEntryCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: color.withValues(alpha: 0.12),
-                  border: Border.all(
-                    color: color.withValues(alpha: 0.45),
-                  ),
+                  border: Border.all(color: color.withValues(alpha: 0.45)),
                 ),
                 child: Text(
                   '${entry.score}',
@@ -597,24 +595,18 @@ class _MetricBadge extends StatelessWidget {
   final String label;
   final int value;
 
-  const _MetricBadge({
-    required this.label,
-    required this.value,
-  });
+  const _MetricBadge({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.sm_,
-        border: Border.all(color: AppColors.surfaceBorder),
+        border: Border.all(color: AppColors.of(context).surfaceBorder),
       ),
-      child: Text(
-        '$label $value',
-        style: AppTypography.labelSmall,
-      ),
+      child: Text('$label $value', style: AppTypography.labelSmall),
     );
   }
 }
@@ -631,22 +623,19 @@ class _EmptyHistory extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.insights_outlined,
               size: 48,
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
             ),
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Aún no hay historial',
-              style: AppTypography.headlineMedium,
-            ),
+            Text('Aún no hay historial', style: AppTypography.headlineMedium),
             const SizedBox(height: 4),
             Text(
               'Completa tu primer check-in para comenzar a ver la evolución.',
               textAlign: TextAlign.center,
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
           ],
@@ -656,17 +645,17 @@ class _EmptyHistory extends StatelessWidget {
   }
 }
 
-Color _scoreColor(int score) {
-  if (score >= 75) return AppColors.success;
-  if (score >= 55) return AppColors.warning;
-  return AppColors.error;
+Color _scoreColor(BuildContext context, int score) {
+  if (score >= 75) return AppColors.of(context).success;
+  if (score >= 55) return AppColors.of(context).warning;
+  return AppColors.of(context).error;
 }
 
-Color _statusColor(RecoveryStatus status) {
+Color _statusColor(BuildContext context, RecoveryStatus status) {
   return switch (status) {
-    RecoveryStatus.ready => AppColors.success,
-    RecoveryStatus.moderate => AppColors.warning,
-    RecoveryStatus.low => AppColors.error,
+    RecoveryStatus.ready => AppColors.of(context).success,
+    RecoveryStatus.moderate => AppColors.of(context).warning,
+    RecoveryStatus.low => AppColors.of(context).error,
   };
 }
 
@@ -705,13 +694,17 @@ String _dateLabel(DateTime date) {
   return '${date.day} ${months[date.month - 1]}';
 }
 
-
-Color _associationColor(RecoveryPerformanceAssociation association) {
+Color _associationColor(
+  BuildContext context,
+  RecoveryPerformanceAssociation association,
+) {
   return switch (association) {
-    RecoveryPerformanceAssociation.insufficient => AppColors.textSecondary,
-    RecoveryPerformanceAssociation.positive => AppColors.success,
-    RecoveryPerformanceAssociation.neutral => AppColors.info,
-    RecoveryPerformanceAssociation.inverse => AppColors.warning,
+    RecoveryPerformanceAssociation.insufficient => AppColors.of(
+      context,
+    ).textSecondary,
+    RecoveryPerformanceAssociation.positive => AppColors.of(context).success,
+    RecoveryPerformanceAssociation.neutral => AppColors.of(context).info,
+    RecoveryPerformanceAssociation.inverse => AppColors.of(context).warning,
   };
 }
 

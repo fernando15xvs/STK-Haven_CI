@@ -14,21 +14,30 @@ class VolumeChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 200,
         child: Center(
-          child: Text('Sin datos en este periodo',
-              style: TextStyle(color: AppColors.textSecondary)),
+          child: Text(
+            'Sin datos en este periodo',
+            style: TextStyle(color: AppColors.of(context).textSecondary),
+          ),
         ),
       );
     }
 
     // Convert all canonical kg volumes to the active display unit for the chart
     final displayData = data
-        .map((e) => _DisplayPoint(e.date, WeightConverter.displayWeight(e.volume, weightUnit)))
+        .map(
+          (e) => _DisplayPoint(
+            e.date,
+            WeightConverter.displayWeight(e.volume, weightUnit),
+          ),
+        )
         .toList();
 
-    final maxY = displayData.map((e) => e.volume).reduce((a, b) => a > b ? a : b);
+    final maxY = displayData
+        .map((e) => e.volume)
+        .reduce((a, b) => a > b ? a : b);
 
     return SizedBox(
       height: 200,
@@ -37,14 +46,22 @@ class VolumeChart extends StatelessWidget {
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
-            getDrawingHorizontalLine: (value) =>
-                FlLine(color: AppColors.surfaceHigh, strokeWidth: 1),
+            getDrawingHorizontalLine: (value) => FlLine(
+              color: AppColors.of(context).surfaceHigh,
+              strokeWidth: 1,
+            ),
           ),
           titlesData: FlTitlesData(
             show: true,
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -54,7 +71,10 @@ class VolumeChart extends StatelessWidget {
                     final date = displayData[value.toInt()].date;
                     return Text(
                       '${date.day}/${date.month}',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+                      style: TextStyle(
+                        color: AppColors.of(context).textSecondary,
+                        fontSize: 10,
+                      ),
                     );
                   }
                   return const SizedBox.shrink();
@@ -75,13 +95,13 @@ class VolumeChart extends StatelessWidget {
                   .map((e) => FlSpot(e.key.toDouble(), e.value.volume))
                   .toList(),
               isCurved: true,
-              color: AppColors.primary,
+              color: AppColors.of(context).primary,
               barWidth: 3,
               isStrokeCapRound: true,
               dotData: const FlDotData(show: true),
               belowBarData: BarAreaData(
                 show: true,
-                color: AppColors.primary.withValues(alpha: 0.2),
+                color: AppColors.of(context).primary.withValues(alpha: 0.2),
               ),
             ),
           ],

@@ -9,7 +9,8 @@ class RoutineTemplatesPage extends ConsumerStatefulWidget {
   const RoutineTemplatesPage({super.key});
 
   @override
-  ConsumerState<RoutineTemplatesPage> createState() => _RoutineTemplatesPageState();
+  ConsumerState<RoutineTemplatesPage> createState() =>
+      _RoutineTemplatesPageState();
 }
 
 class _RoutineTemplatesPageState extends ConsumerState<RoutineTemplatesPage> {
@@ -21,7 +22,9 @@ class _RoutineTemplatesPageState extends ConsumerState<RoutineTemplatesPage> {
     final templates = ref.watch(routineTemplateServiceProvider).templates;
     final visible = _level == 'Todos'
         ? templates
-        : templates.where((template) => template.level == _level).toList(growable: false);
+        : templates
+              .where((template) => template.level == _level)
+              .toList(growable: false);
 
     return Scaffold(
       appBar: AppBar(
@@ -37,22 +40,32 @@ class _RoutineTemplatesPageState extends ConsumerState<RoutineTemplatesPage> {
         ),
         children: [
           PremiumCard(
-            backgroundColor: AppColors.primary.withValues(alpha: 0.10),
-            borderColor: AppColors.primary.withValues(alpha: 0.28),
+            backgroundColor: AppColors.of(
+              context,
+            ).primary.withValues(alpha: 0.10),
+            borderColor: AppColors.of(context).primary.withValues(alpha: 0.28),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.auto_awesome_outlined, color: AppColors.primary),
+                Icon(
+                  Icons.auto_awesome_outlined,
+                  color: AppColors.of(context).primary,
+                ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Empieza con una base', style: AppTypography.headlineMedium),
+                      Text(
+                        'Empieza con una base',
+                        style: AppTypography.headlineMedium,
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         'Crea una rutina lista para personalizar. Después puedes cambiar ejercicios, días, series, superseries y notas.',
-                        style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.of(context).textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -98,10 +111,14 @@ class _RoutineTemplatesPageState extends ConsumerState<RoutineTemplatesPage> {
     if (_creating) return;
     setState(() => _creating = true);
     try {
-      final routine = await ref.read(routineTemplateServiceProvider).createFromTemplate(template);
+      final routine = await ref
+          .read(routineTemplateServiceProvider)
+          .createFromTemplate(template);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Se creó “${routine.name}”. Ya puedes personalizarla.')),
+        SnackBar(
+          content: Text('Se creó “${routine.name}”. Ya puedes personalizarla.'),
+        ),
       );
       Navigator.of(context).pop(routine);
     } finally {
@@ -130,16 +147,23 @@ class _TemplateCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(template.name, style: AppTypography.headlineLarge)),
+              Expanded(
+                child: Text(template.name, style: AppTypography.headlineLarge),
+              ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.12),
+                  color: AppColors.of(context).primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(99),
                 ),
                 child: Text(
                   template.level,
-                  style: AppTypography.labelSmall.copyWith(color: AppColors.primary),
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.of(context).primary,
+                  ),
                 ),
               ),
             ],
@@ -147,21 +171,32 @@ class _TemplateCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             template.sourceProgramName,
-            style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.of(context).textSecondary,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             template.description,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.of(context).textSecondary,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              Icon(Icons.fitness_center, size: 16, color: AppColors.textSecondary),
+              Icon(
+                Icons.fitness_center,
+                size: 16,
+                color: AppColors.of(context).textSecondary,
+              ),
               const SizedBox(width: 6),
-              Text('${template.exerciseCount} ejercicios', style: AppTypography.bodySmall),
+              Text(
+                '${template.exerciseCount} ejercicios',
+                style: AppTypography.bodySmall,
+              ),
               const Spacer(),
               ...List.generate(7, (index) {
                 final active = template.suggestedDays.contains(index + 1);
@@ -172,9 +207,15 @@ class _TemplateCard extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: active ? AppColors.primary.withValues(alpha: 0.16) : AppColors.surfaceHigh,
+                    color: active
+                        ? AppColors.of(context).primary.withValues(alpha: 0.16)
+                        : AppColors.of(context).surfaceHigh,
                     border: Border.all(
-                      color: active ? AppColors.primary.withValues(alpha: 0.45) : AppColors.surfaceBorder,
+                      color: active
+                          ? AppColors.of(
+                              context,
+                            ).primary.withValues(alpha: 0.45)
+                          : AppColors.of(context).surfaceBorder,
                     ),
                   ),
                   child: Text(
@@ -182,7 +223,9 @@ class _TemplateCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
-                      color: active ? AppColors.primary : AppColors.textDisabled,
+                      color: active
+                          ? AppColors.of(context).primary
+                          : AppColors.of(context).textDisabled,
                     ),
                   ),
                 );

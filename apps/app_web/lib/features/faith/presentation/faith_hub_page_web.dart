@@ -13,9 +13,9 @@ class FaithHubPageWeb extends StatelessWidget {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         appBar: AppBar(
-          backgroundColor: AppColors.surface,
+          backgroundColor: AppColors.of(context).surface,
           elevation: 0,
           title: Text('Fe', style: AppTypography.headlineMedium),
           centerTitle: true,

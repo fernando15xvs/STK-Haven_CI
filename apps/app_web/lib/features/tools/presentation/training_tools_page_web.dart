@@ -16,7 +16,8 @@ class TrainingToolsPageWeb extends ConsumerStatefulWidget {
   const TrainingToolsPageWeb({super.key, this.initialExercise});
 
   @override
-  ConsumerState<TrainingToolsPageWeb> createState() => _TrainingToolsPageWebState();
+  ConsumerState<TrainingToolsPageWeb> createState() =>
+      _TrainingToolsPageWebState();
 }
 
 class _TrainingToolsPageWebState extends ConsumerState<TrainingToolsPageWeb> {
@@ -81,8 +82,11 @@ class _TrainingToolsPageWebState extends ConsumerState<TrainingToolsPageWeb> {
     for (final exercise in exercises) {
       if (exercise.id == _exerciseId) selected = exercise;
     }
-    final advice = selected == null ? null : ExerciseToolAdvisor.forExercise(selected);
-    final typedWeight = double.tryParse(_weightController.text.replaceAll(',', '.')) ?? 0;
+    final advice = selected == null
+        ? null
+        : ExerciseToolAdvisor.forExercise(selected);
+    final typedWeight =
+        double.tryParse(_weightController.text.replaceAll(',', '.')) ?? 0;
     final reps = int.tryParse(_repsController.text) ?? 0;
     final oneRmKg = OneRmCalculator.estimate(
       weight: WeightConverter.toCanonicalKg(typedWeight, settings.weightUnit),
@@ -105,18 +109,48 @@ class _TrainingToolsPageWebState extends ConsumerState<TrainingToolsPageWeb> {
                     children: [
                       DropdownButtonFormField<String?>(
                         initialValue: _exerciseId,
-                        decoration: const InputDecoration(labelText: 'Ejercicio'),
+                        decoration: const InputDecoration(
+                          labelText: 'Ejercicio',
+                        ),
                         items: [
-                          const DropdownMenuItem<String?>(value: null, child: Text('Sin ejercicio específico')),
-                          ...exercises.map((exercise) => DropdownMenuItem<String?>(value: exercise.id, child: Text(exercise.name, overflow: TextOverflow.ellipsis))),
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Sin ejercicio específico'),
+                          ),
+                          ...exercises.map(
+                            (exercise) => DropdownMenuItem<String?>(
+                              value: exercise.id,
+                              child: Text(
+                                exercise.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
                         ],
-                        onChanged: (value) => setState(() => _exerciseId = value),
+                        onChanged: (value) =>
+                            setState(() => _exerciseId = value),
                       ),
                       if (advice != null) ...[
                         const SizedBox(height: 12),
-                        Text(advice.reason, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                        Text(
+                          advice.reason,
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.of(context).textSecondary,
+                          ),
+                        ),
                         const SizedBox(height: 10),
-                        Wrap(spacing: 8, runSpacing: 8, children: advice.primary.map((kind) => Chip(avatar: Icon(_iconFor(kind), size: 18), label: Text(_labelFor(kind)))).toList()),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: advice.primary
+                              .map(
+                                (kind) => Chip(
+                                  avatar: Icon(_iconFor(kind), size: 18),
+                                  label: Text(_labelFor(kind)),
+                                ),
+                              )
+                              .toList(),
+                        ),
                       ],
                     ],
                   ),
@@ -125,16 +159,63 @@ class _TrainingToolsPageWebState extends ConsumerState<TrainingToolsPageWeb> {
                   title: 'Calculadora 1RM',
                   child: Column(
                     children: [
-                      Row(children: [
-                        Expanded(child: TextField(controller: _weightController, decoration: InputDecoration(labelText: 'Peso (${settings.weightUnit.name})'), onChanged: (_) => setState(() {}))),
-                        const SizedBox(width: 10),
-                        Expanded(child: TextField(controller: _repsController, decoration: const InputDecoration(labelText: 'Repeticiones'), onChanged: (_) => setState(() {}))),
-                      ]),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _weightController,
+                              decoration: InputDecoration(
+                                labelText: 'Peso (${settings.weightUnit.name})',
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _repsController,
+                              decoration: const InputDecoration(
+                                labelText: 'Repeticiones',
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 16),
-                      Align(alignment: Alignment.centerLeft, child: Text(oneRmKg > 0 ? '1RM estimado: ${WeightConverter.formatWeight(oneRmKg, settings.weightUnit)}' : 'Ingresa valores válidos', style: AppTypography.headlineMedium.copyWith(color: AppColors.primary))),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          oneRmKg > 0
+                              ? '1RM estimado: ${WeightConverter.formatWeight(oneRmKg, settings.weightUnit)}'
+                              : 'Ingresa valores válidos',
+                          style: AppTypography.headlineMedium.copyWith(
+                            color: AppColors.of(context).primary,
+                          ),
+                        ),
+                      ),
                       if (table.isNotEmpty) ...[
                         const SizedBox(height: 12),
-                        ...table.entries.take(6).map((entry) => Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Row(children: [Expanded(child: Text('${entry.key}%')), Text(WeightConverter.formatWeight(entry.value, settings.weightUnit))]))),
+                        ...table.entries
+                            .take(6)
+                            .map(
+                              (entry) => Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 3,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(child: Text('${entry.key}%')),
+                                    Text(
+                                      WeightConverter.formatWeight(
+                                        entry.value,
+                                        settings.weightUnit,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                       ],
                     ],
                   ),
@@ -143,29 +224,70 @@ class _TrainingToolsPageWebState extends ConsumerState<TrainingToolsPageWeb> {
                   title: 'Temporizador independiente',
                   child: Column(
                     children: [
-                      Text(_formatSeconds(_remaining), style: AppTypography.displayMedium),
+                      Text(
+                        _formatSeconds(_remaining),
+                        style: AppTypography.displayMedium,
+                      ),
                       const SizedBox(height: 12),
-                      Wrap(spacing: 8, children: [60, 90, 120, 180].map((seconds) => ChoiceChip(label: Text('${seconds}s'), selected: _timerSeconds == seconds, onSelected: (_) => _reset(seconds))).toList()),
+                      Wrap(
+                        spacing: 8,
+                        children: [60, 90, 120, 180]
+                            .map(
+                              (seconds) => ChoiceChip(
+                                label: Text('${seconds}s'),
+                                selected: _timerSeconds == seconds,
+                                onSelected: (_) => _reset(seconds),
+                              ),
+                            )
+                            .toList(),
+                      ),
                       const SizedBox(height: 14),
-                      Row(children: [
-                        Expanded(child: FilledButton.icon(onPressed: _toggleTimer, icon: Icon(_running ? Icons.pause : Icons.play_arrow), label: Text(_running ? 'Pausar' : 'Iniciar'))),
-                        const SizedBox(width: 10),
-                        OutlinedButton(onPressed: () => _reset(), child: const Text('Reiniciar')),
-                      ]),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: FilledButton.icon(
+                              onPressed: _toggleTimer,
+                              icon: Icon(
+                                _running ? Icons.pause : Icons.play_arrow,
+                              ),
+                              label: Text(_running ? 'Pausar' : 'Iniciar'),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          OutlinedButton(
+                            onPressed: () => _reset(),
+                            child: const Text('Reiniciar'),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
               ];
               if (constraints.maxWidth < 760) {
-                return ListView(padding: const EdgeInsets.all(16), children: cards.expand((card) => [card, const SizedBox(height: 16)]).toList());
+                return ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: cards
+                      .expand((card) => [card, const SizedBox(height: 16)])
+                      .toList(),
+                );
               }
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
-                child: Column(children: [
-                  cards[0],
-                  const SizedBox(height: 18),
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: cards[1]), const SizedBox(width: 18), Expanded(child: cards[2])]),
-                ]),
+                child: Column(
+                  children: [
+                    cards[0],
+                    const SizedBox(height: 18),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(child: cards[1]),
+                        const SizedBox(width: 18),
+                        Expanded(child: cards[2]),
+                      ],
+                    ),
+                  ],
+                ),
               );
             },
           ),
@@ -174,9 +296,18 @@ class _TrainingToolsPageWebState extends ConsumerState<TrainingToolsPageWeb> {
     );
   }
 
-  static String _formatSeconds(int total) => '${(total ~/ 60).toString().padLeft(2, '0')}:${(total % 60).toString().padLeft(2, '0')}';
-  static String _labelFor(TrainingToolKind kind) => switch (kind) {TrainingToolKind.oneRm => '1RM', TrainingToolKind.timer => 'Temporizador', TrainingToolKind.plates => 'Discos'};
-  static IconData _iconFor(TrainingToolKind kind) => switch (kind) {TrainingToolKind.oneRm => Icons.calculate_outlined, TrainingToolKind.timer => Icons.timer_outlined, TrainingToolKind.plates => Icons.fitness_center};
+  static String _formatSeconds(int total) =>
+      '${(total ~/ 60).toString().padLeft(2, '0')}:${(total % 60).toString().padLeft(2, '0')}';
+  static String _labelFor(TrainingToolKind kind) => switch (kind) {
+    TrainingToolKind.oneRm => '1RM',
+    TrainingToolKind.timer => 'Temporizador',
+    TrainingToolKind.plates => 'Discos',
+  };
+  static IconData _iconFor(TrainingToolKind kind) => switch (kind) {
+    TrainingToolKind.oneRm => Icons.calculate_outlined,
+    TrainingToolKind.timer => Icons.timer_outlined,
+    TrainingToolKind.plates => Icons.fitness_center,
+  };
 }
 
 class _Panel extends StatelessWidget {
@@ -187,8 +318,19 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(color: AppColors.surface, borderRadius: AppRadius.lg_, border: Border.all(color: AppColors.border)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: AppTypography.headlineLarge), const SizedBox(height: 14), child]),
-      );
+    padding: const EdgeInsets.all(18),
+    decoration: BoxDecoration(
+      color: AppColors.of(context).surface,
+      borderRadius: AppRadius.lg_,
+      border: Border.all(color: AppColors.of(context).border),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: AppTypography.headlineLarge),
+        const SizedBox(height: 14),
+        child,
+      ],
+    ),
+  );
 }

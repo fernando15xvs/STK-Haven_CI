@@ -26,9 +26,8 @@ class PrimaryButton extends ConsumerWidget {
       final session = ref.read(activeWorkoutProvider).session;
       if (session != null) {
         final completedAnySet = session.exercises.any(
-          (exercise) => exercise.sets.any(
-            (set) => set.completed && set.reps > 0,
-          ),
+          (exercise) =>
+              exercise.sets.any((set) => set.completed && set.reps > 0),
         );
         final incompleteExercises = session.exercises.where((exercise) {
           return exercise.sets.isEmpty ||
@@ -40,7 +39,7 @@ class PrimaryButton extends ConsumerWidget {
             context: context,
             barrierDismissible: false,
             builder: (dialogContext) => AlertDialog(
-              backgroundColor: AppColors.surfaceHigh,
+              backgroundColor: AppColors.of(context).surfaceHigh,
               title: Text(
                 'Aún faltan ejercicios',
                 style: AppTypography.headlineMedium,
@@ -54,16 +53,16 @@ class PrimaryButton extends ConsumerWidget {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: const Text(
+                  child: Text(
                     'Seguir entrenando',
-                    style: TextStyle(color: AppColors.textPrimary),
+                    style: TextStyle(color: AppColors.of(context).textPrimary),
                   ),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(true),
-                  child: const Text(
+                  child: Text(
                     'Finalizar de todos modos',
-                    style: TextStyle(color: AppColors.warning),
+                    style: TextStyle(color: AppColors.of(context).warning),
                   ),
                 ),
               ],
@@ -87,22 +86,24 @@ class PrimaryButton extends ConsumerWidget {
             ? null
             : () => _handlePress(context, ref),
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.surfaceBorder,
-          disabledForegroundColor: AppColors.textDisabled,
+          backgroundColor: AppColors.of(context).primary,
+          foregroundColor: AppColors.of(context).onPrimary,
+          disabledBackgroundColor: AppColors.of(context).surfaceBorder,
+          disabledForegroundColor: AppColors.of(context).textDisabled,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           elevation: 0,
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.of(context).onPrimary,
+                  ),
                 ),
               )
             : Row(
@@ -116,8 +117,8 @@ class PrimaryButton extends ConsumerWidget {
                     label.toUpperCase(),
                     style: AppTypography.labelLarge.copyWith(
                       color: onPressed == null
-                          ? AppColors.textDisabled
-                          : Colors.white,
+                          ? AppColors.of(context).textDisabled
+                          : AppColors.of(context).onPrimary,
                     ),
                   ),
                 ],

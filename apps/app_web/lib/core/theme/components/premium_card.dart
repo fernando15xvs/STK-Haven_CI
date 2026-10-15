@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_colors.dart';
@@ -24,70 +23,62 @@ class PremiumCard extends StatefulWidget {
 }
 
 class _PremiumCardState extends State<PremiumCard> {
-  bool _isHovered = false;
+  bool _isPressed = false;
 
   void _handleTapDown(TapDownDetails details) {
     if (widget.onTap != null) {
       HapticFeedback.lightImpact();
-      setState(() => _isHovered = true);
+      setState(() => _isPressed = true);
     }
   }
 
   void _handleTapUp(TapUpDetails details) {
     if (widget.onTap != null) {
-      setState(() => _isHovered = false);
+      setState(() => _isPressed = false);
       widget.onTap!();
     }
   }
 
   void _handleTapCancel() {
     if (widget.onTap != null) {
-      setState(() => _isHovered = false);
+      setState(() => _isPressed = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = widget.backgroundColor ?? AppColors.surface.withValues(alpha: 0.6);
-    final bColor = widget.borderColor ?? AppColors.surfaceBorder.withValues(alpha: 0.3);
+    final bgColor = widget.backgroundColor ?? AppColors.of(context).surface;
+    final bColor = widget.borderColor ?? AppColors.of(context).surfaceBorder;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
-    Widget content = AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
+    final content = AnimatedContainer(
+      duration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 120),
       curve: Curves.easeOut,
-      transform: Matrix4.diagonal3Values(_isHovered ? 0.98 : 1.0, _isHovered ? 0.98 : 1.0, 1.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: widget.padding,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: bColor),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: widget.child,
-          ),
-        ),
+      transform: Matrix4.diagonal3Values(
+        _isPressed ? 0.985 : 1.0,
+        _isPressed ? 0.985 : 1.0,
+        1.0,
       ),
+      padding: widget.padding,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: bColor),
+        boxShadow: AppColors.of(context).shadows,
+      ),
+      child: widget.child,
     );
 
-    if (widget.onTap != null) {
-      return GestureDetector(
-        onTapDown: _handleTapDown,
-        onTapUp: _handleTapUp,
-        onTapCancel: _handleTapCancel,
-        child: content,
-      );
-    }
+    if (widget.onTap == null) return content;
 
-    return content;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: _handleTapDown,
+      onTapUp: _handleTapUp,
+      onTapCancel: _handleTapCancel,
+      child: content,
+    );
   }
 }

@@ -31,14 +31,17 @@ class ProgressPage extends ConsumerWidget {
           centerTitle: false,
           elevation: 0,
           bottom: TabBar(
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.textSecondary,
+            labelColor: AppColors.of(context).primary,
+            unselectedLabelColor: AppColors.of(context).textSecondary,
             labelStyle: AppTypography.labelLarge,
             unselectedLabelStyle: AppTypography.labelLarge,
             dividerColor: Colors.transparent,
             indicatorSize: TabBarIndicatorSize.label,
-            indicator: const UnderlineTabIndicator(
-              borderSide: BorderSide(color: AppColors.primary, width: 3),
+            indicator: UnderlineTabIndicator(
+              borderSide: BorderSide(
+                color: AppColors.of(context).primary,
+                width: 3,
+              ),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(3),
                 topRight: Radius.circular(3),
@@ -87,9 +90,9 @@ class _SummaryTab extends ConsumerWidget {
       children: [
         Container(
           decoration: BoxDecoration(
-            color: AppColors.surfaceHigh,
+            color: AppColors.of(context).surfaceHigh,
             borderRadius: AppRadius.lg_,
-            border: Border.all(color: AppColors.surfaceBorder),
+            border: Border.all(color: AppColors.of(context).surfaceBorder),
           ),
           padding: const EdgeInsets.all(4),
           child: SegmentedButton<TimeFilter>(
@@ -101,21 +104,23 @@ class _SummaryTab extends ConsumerWidget {
             ],
             selected: {filter},
             onSelectionChanged: (Set<TimeFilter> newSelection) {
-              ref.read(timeFilterProvider.notifier).setFilter(newSelection.first);
+              ref
+                  .read(timeFilterProvider.notifier)
+                  .setFilter(newSelection.first);
             },
             showSelectedIcon: false,
             style: ButtonStyle(
               backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
                 if (states.contains(WidgetState.selected)) {
-                  return AppColors.primary.withValues(alpha: 0.15);
+                  return AppColors.of(context).primary.withValues(alpha: 0.15);
                 }
                 return Colors.transparent;
               }),
               foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
                 if (states.contains(WidgetState.selected)) {
-                  return AppColors.primary;
+                  return AppColors.of(context).primary;
                 }
-                return AppColors.textSecondary;
+                return AppColors.of(context).textSecondary;
               }),
               side: const WidgetStatePropertyAll(BorderSide.none),
               shape: WidgetStatePropertyAll(
@@ -125,7 +130,10 @@ class _SummaryTab extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
-        Text('VOLUMEN TOTAL', style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2)),
+        Text(
+          'VOLUMEN TOTAL',
+          style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2),
+        ),
         const SizedBox(height: 8),
         Row(
           crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -133,14 +141,19 @@ class _SummaryTab extends ConsumerWidget {
           children: [
             Text(
               NumberFormat.decimalPattern().format(
-                WeightConverter.displayWeight(metrics.totalVolume, settings.weightUnit).toInt(),
+                WeightConverter.displayWeight(
+                  metrics.totalVolume,
+                  settings.weightUnit,
+                ).toInt(),
               ),
               style: AppTypography.displayMedium.copyWith(letterSpacing: -1),
             ),
             const SizedBox(width: 6),
             Text(
               settings.weightUnit.label.toUpperCase(),
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
             ),
             const Spacer(),
             if (metrics.volumePercentChange != null)
@@ -151,10 +164,10 @@ class _SummaryTab extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.of(context).surface,
             borderRadius: AppRadius.lg_,
-            border: Border.all(color: AppColors.surfaceBorder),
-            boxShadow: AppElevation.soft,
+            border: Border.all(color: AppColors.of(context).surfaceBorder),
+            boxShadow: AppElevation.soft(context),
           ),
           child: VolumeChart(
             data: metrics.volumeChartData,
@@ -180,7 +193,11 @@ class _SummaryTab extends ConsumerWidget {
               child: MetricTile(
                 label: 'Entrenamientos',
                 value: '${metrics.workoutCount}',
-                icon: const Icon(Icons.fitness_center, size: 16, color: AppColors.primary),
+                icon: Icon(
+                  Icons.fitness_center,
+                  size: 16,
+                  color: AppColors.of(context).primary,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -188,7 +205,11 @@ class _SummaryTab extends ConsumerWidget {
               child: MetricTile(
                 label: 'Series',
                 value: '${metrics.totalSets}',
-                icon: const Icon(Icons.layers, size: 16, color: Colors.purpleAccent),
+                icon: const Icon(
+                  Icons.layers,
+                  size: 16,
+                  color: Colors.purpleAccent,
+                ),
               ),
             ),
           ],
@@ -200,7 +221,11 @@ class _SummaryTab extends ConsumerWidget {
               child: MetricTile(
                 label: 'Tiempo',
                 value: _formatDuration(metrics.totalDurationSeconds),
-                icon: const Icon(Icons.timer, size: 16, color: Colors.orangeAccent),
+                icon: const Icon(
+                  Icons.timer,
+                  size: 16,
+                  color: Colors.orangeAccent,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -208,28 +233,38 @@ class _SummaryTab extends ConsumerWidget {
               child: MetricTile(
                 label: 'Récords',
                 value: '${metrics.prCount} PRs',
-                icon: const Icon(Icons.emoji_events, size: 16, color: AppColors.gold),
+                icon: Icon(
+                  Icons.emoji_events,
+                  size: 16,
+                  color: AppColors.of(context).gold,
+                ),
               ),
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.xxl),
-        Text('ENTRENAMIENTOS RECIENTES', style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2)),
+        Text(
+          'ENTRENAMIENTOS RECIENTES',
+          style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2),
+        ),
         const SizedBox(height: AppSpacing.md),
         if (history.isEmpty)
-          const Center(
+          Center(
             child: Padding(
               padding: EdgeInsets.all(16.0),
-              child: Text('No hay entrenamientos recientes', style: TextStyle(color: AppColors.textSecondary)),
+              child: Text(
+                'No hay entrenamientos recientes',
+                style: TextStyle(color: AppColors.of(context).textSecondary),
+              ),
             ),
           )
         else
           Container(
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.of(context).surface,
               borderRadius: AppRadius.lg_,
-              border: Border.all(color: AppColors.surfaceBorder),
-              boxShadow: AppElevation.soft,
+              border: Border.all(color: AppColors.of(context).surfaceBorder),
+              boxShadow: AppElevation.soft(context),
             ),
             child: Column(
               children: history.take(6).toList().asMap().entries.map((entry) {
@@ -240,28 +275,48 @@ class _SummaryTab extends ConsumerWidget {
                   children: [
                     ListTile(
                       onTap: () => RecentWorkoutDetails.show(
-                        context, session, settings.weightUnit,
+                        context,
+                        session,
+                        settings.weightUnit,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
                       leading: Container(
                         padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(color: AppColors.primaryFaded, borderRadius: AppRadius.sm_),
-                        child: const Icon(Icons.fitness_center, color: AppColors.primary, size: 20),
+                        decoration: BoxDecoration(
+                          color: AppColors.of(context).primaryFaded,
+                          borderRadius: AppRadius.sm_,
+                        ),
+                        child: Icon(
+                          Icons.fitness_center,
+                          color: AppColors.of(context).primary,
+                          size: 20,
+                        ),
                       ),
                       title: Text(
-                        session.routineNameSnapshot.isEmpty ? 'Entrenamiento libre' : session.routineNameSnapshot,
+                        session.routineNameSnapshot.isEmpty
+                            ? 'Entrenamiento libre'
+                            : session.routineNameSnapshot,
                         style: AppTypography.headlineSmall,
                       ),
                       subtitle: Text(
-                        DateFormat('dd MMM yyyy', 'es').format(session.startedAt),
+                        DateFormat(
+                          'dd MMM yyyy',
+                          'es',
+                        ).format(session.startedAt),
                         style: AppTypography.bodySmall,
                       ),
                       trailing: Text(
                         '${session.durationSeconds ~/ 60} min',
-                        style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary),
+                        style: AppTypography.labelMedium.copyWith(
+                          color: AppColors.of(context).textSecondary,
+                        ),
                       ),
                     ),
-                    if (!isLast) const Divider(height: 1, indent: 64, endIndent: 16),
+                    if (!isLast)
+                      const Divider(height: 1, indent: 64, endIndent: 16),
                   ],
                 );
               }).toList(),
@@ -291,10 +346,10 @@ class _ConsistencyCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.surfaceBorder),
-        boxShadow: AppElevation.soft,
+        border: Border.all(color: AppColors.of(context).surfaceBorder),
+        boxShadow: AppElevation.soft(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,16 +359,31 @@ class _ConsistencyCard extends StatelessWidget {
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(color: AppColors.primaryFaded, borderRadius: AppRadius.sm_),
-                child: const Icon(Icons.calendar_month_outlined, color: AppColors.primary, size: 20),
+                decoration: BoxDecoration(
+                  color: AppColors.of(context).primaryFaded,
+                  borderRadius: AppRadius.sm_,
+                ),
+                child: Icon(
+                  Icons.calendar_month_outlined,
+                  color: AppColors.of(context).primary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('CONSISTENCIA', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
-                    Text('Ritmo de entrenamiento · ${filter.label}', style: AppTypography.bodySmall),
+                    Text(
+                      'CONSISTENCIA',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.of(context).primary,
+                      ),
+                    ),
+                    Text(
+                      'Ritmo de entrenamiento · ${filter.label}',
+                      style: AppTypography.bodySmall,
+                    ),
                   ],
                 ),
               ),
@@ -324,11 +394,26 @@ class _ConsistencyCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           Row(
             children: [
-              Expanded(child: _InsightMetric(label: 'DÍAS ACTIVOS', value: '${metrics.activeDays}')),
+              Expanded(
+                child: _InsightMetric(
+                  label: 'DÍAS ACTIVOS',
+                  value: '${metrics.activeDays}',
+                ),
+              ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: _InsightMetric(label: 'ENTRENOS / SEM', value: metrics.workoutsPerWeek.toStringAsFixed(1))),
+              Expanded(
+                child: _InsightMetric(
+                  label: 'ENTRENOS / SEM',
+                  value: metrics.workoutsPerWeek.toStringAsFixed(1),
+                ),
+              ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: _InsightMetric(label: 'DURACIÓN MEDIA', value: '${metrics.averageSessionMinutes.round()}m')),
+              Expanded(
+                child: _InsightMetric(
+                  label: 'DURACIÓN MEDIA',
+                  value: '${metrics.averageSessionMinutes.round()}m',
+                ),
+              ),
             ],
           ),
         ],
@@ -347,13 +432,21 @@ class _InsightMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-      decoration: BoxDecoration(color: AppColors.surfaceHigh, borderRadius: AppRadius.sm_),
+      decoration: BoxDecoration(
+        color: AppColors.of(context).surfaceHigh,
+        borderRadius: AppRadius.sm_,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(value, style: AppTypography.headlineMedium),
           const SizedBox(height: 3),
-          Text(label, style: AppTypography.labelSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(
+            label,
+            style: AppTypography.labelSmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
@@ -368,7 +461,9 @@ class _TrendBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final positive = value >= 0;
-    final color = positive ? AppColors.success : AppColors.error;
+    final color = positive
+        ? AppColors.of(context).success
+        : AppColors.of(context).error;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -378,7 +473,11 @@ class _TrendBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(positive ? Icons.trending_up : Icons.trending_down, color: color, size: 14),
+          Icon(
+            positive ? Icons.trending_up : Icons.trending_down,
+            color: color,
+            size: 14,
+          ),
           const SizedBox(width: 4),
           Text(
             '${value > 0 ? '+' : ''}${value.toStringAsFixed(1)}%',
@@ -399,37 +498,42 @@ class _ExercisesTab extends ConsumerWidget {
     final history = ref.watch(workoutHistoryProvider);
     final settings = ref.watch(settingsProvider);
 
-    final dashboards = exercises
-        .map(
-          (exercise) => MapEntry(
-            exercise,
-            ExerciseProgressCalculator.calculateTrend(history, exercise.id),
-          ),
-        )
-        .where((entry) => entry.value.hasRecordedWork)
-        .toList()
-      ..sort((a, b) {
-        final aDate = a.value.lastPerformedAt;
-        final bDate = b.value.lastPerformedAt;
-        if (aDate == null && bDate == null) return 0;
-        if (aDate == null) return 1;
-        if (bDate == null) return -1;
-        return bDate.compareTo(aDate);
-      });
+    final dashboards =
+        exercises
+            .map(
+              (exercise) => MapEntry(
+                exercise,
+                ExerciseProgressCalculator.calculateTrend(history, exercise.id),
+              ),
+            )
+            .where((entry) => entry.value.hasRecordedWork)
+            .toList()
+          ..sort((a, b) {
+            final aDate = a.value.lastPerformedAt;
+            final bDate = b.value.lastPerformedAt;
+            if (aDate == null && bDate == null) return 0;
+            if (aDate == null) return 1;
+            if (bDate == null) return -1;
+            return bDate.compareTo(aDate);
+          });
 
     if (dashboards.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.query_stats, size: 64, color: AppColors.textSecondary),
+              Icon(
+                Icons.query_stats,
+                size: 64,
+                color: AppColors.of(context).textSecondary,
+              ),
               SizedBox(height: 16),
               Text(
                 'Aún no hay progreso por ejercicio',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: AppColors.of(context).textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -438,7 +542,7 @@ class _ExercisesTab extends ConsumerWidget {
               Text(
                 'Completa series efectivas para construir tu dashboard.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(color: AppColors.of(context).textSecondary),
               ),
             ],
           ),
@@ -454,7 +558,8 @@ class _ExercisesTab extends ConsumerWidget {
         96,
       ),
       itemCount: dashboards.length + 1,
-      separatorBuilder: (context, index) => const SizedBox(height: AppSpacing.md),
+      separatorBuilder: (context, index) =>
+          const SizedBox(height: AppSpacing.md),
       itemBuilder: (context, index) {
         if (index == 0) {
           return Column(
@@ -463,7 +568,7 @@ class _ExercisesTab extends ConsumerWidget {
               Text(
                 'DASHBOARD POR EJERCICIO',
                 style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.primary,
+                  color: AppColors.of(context).primary,
                   letterSpacing: 1.2,
                 ),
               ),
@@ -481,7 +586,10 @@ class _ExercisesTab extends ConsumerWidget {
         final dashboard = entry.value;
         final lastDate = dashboard.lastPerformedAt == null
             ? 'Sin fecha'
-            : DateFormat('dd MMM yyyy', 'es').format(dashboard.lastPerformedAt!);
+            : DateFormat(
+                'dd MMM yyyy',
+                'es',
+              ).format(dashboard.lastPerformedAt!);
         final e1RM = dashboard.current1RM <= 0
             ? '—'
             : FitnessFormatter.formatWeight(
@@ -514,10 +622,10 @@ class _ExercisesTab extends ConsumerWidget {
             child: Ink(
               padding: const EdgeInsets.all(AppSpacing.md),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: AppColors.of(context).surface,
                 borderRadius: AppRadius.lg_,
-                border: Border.all(color: AppColors.surfaceBorder),
-                boxShadow: AppElevation.soft,
+                border: Border.all(color: AppColors.of(context).surfaceBorder),
+                boxShadow: AppElevation.soft(context),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,12 +637,12 @@ class _ExercisesTab extends ConsumerWidget {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: AppColors.primaryFaded,
+                          color: AppColors.of(context).primaryFaded,
                           borderRadius: AppRadius.sm_,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.monitor_heart_outlined,
-                          color: AppColors.primary,
+                          color: AppColors.of(context).primary,
                           size: 21,
                         ),
                       ),
@@ -561,10 +669,7 @@ class _ExercisesTab extends ConsumerWidget {
                       if (dashboard.percentChange30Days != null)
                         _TrendBadge(value: dashboard.percentChange30Days!)
                       else
-                        Text(
-                          'Sin base 30D',
-                          style: AppTypography.labelSmall,
-                        ),
+                        Text('Sin base 30D', style: AppTypography.labelSmall),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -611,14 +716,14 @@ class _ExercisesTab extends ConsumerWidget {
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceHigh,
+                      color: AppColors.of(context).surfaceHigh,
                       borderRadius: AppRadius.sm_,
                     ),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.stacked_line_chart,
-                          color: AppColors.primary,
+                          color: AppColors.of(context).primary,
                           size: 17,
                         ),
                         const SizedBox(width: 8),
@@ -643,9 +748,9 @@ class _ExercisesTab extends ConsumerWidget {
                           style: AppTypography.bodySmall,
                         ),
                       ),
-                      const Icon(
+                      Icon(
                         Icons.chevron_right,
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                         size: 20,
                       ),
                     ],
@@ -671,7 +776,7 @@ class _ExerciseMetric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.sm_,
       ),
       child: Column(

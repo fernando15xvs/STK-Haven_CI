@@ -1,9 +1,8 @@
 # Public CI snapshot
 
-This repository is a history-free CI mirror of the private STK Haven source.
+Source: fernando15xvs/STK-Haven
+Source branch: feat/verse-notification-schedule
+Source commit: 725b512de947851e483df8b614b2703724d4a076
 
-Source commit: d44489379b7e0d82021b3384fe1dd7ecf6954c4f
-Source branch: main
-
-The private Git history, local signing material, environment files, credentials,
-backups and other excluded local files are intentionally not mirrored.
+Sanitized mirror for validation only. Development originates in the private source repository.
+No private history, privileged credentials, signing material or local backups.

@@ -27,14 +27,13 @@ class AppSectionHeader extends StatelessWidget {
                 if (subtitle != null) ...[
                   Text(
                     subtitle!.toUpperCase(),
-                    style: AppTypography.labelSmall.copyWith(color: AppColors.primary),
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.of(context).primary,
+                    ),
                   ),
                   const SizedBox(height: 4),
                 ],
-                Text(
-                  title,
-                  style: AppTypography.headlineMedium,
-                ),
+                Text(title, style: AppTypography.headlineMedium),
               ],
             ),
           ),

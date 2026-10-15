@@ -38,9 +38,9 @@ class SupersetManagerDialogWeb {
           }
 
           return AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.link, color: AppColors.primary),
+                Icon(Icons.link, color: AppColors.of(context).primary),
                 SizedBox(width: 10),
                 Text('Superseries'),
               ],
@@ -54,7 +54,7 @@ class SupersetManagerDialogWeb {
                   Text(
                     'Entrena A → B y descansa al cerrar la ronda. El descanso usa el mayor tiempo configurado entre los dos ejercicios.',
                     style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                   const SizedBox(height: 18),
@@ -63,9 +63,9 @@ class SupersetManagerDialogWeb {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceHigh,
+                        color: AppColors.of(context).surfaceHigh,
                         borderRadius: AppRadius.md_,
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: AppColors.of(context).border),
                       ),
                       child: const Text(
                         'Todavía no has creado superseries en esta sesión.',
@@ -82,24 +82,27 @@ class SupersetManagerDialogWeb {
                           final names = indexes
                               .map(
                                 (index) => current
-                                    .exercises[index].exerciseNameSnapshot,
+                                    .exercises[index]
+                                    .exerciseNameSnapshot,
                               )
                               .join('  +  ');
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: AppColors.primaryFaded,
+                              color: AppColors.of(context).primaryFaded,
                               borderRadius: AppRadius.md_,
                               border: Border.all(
-                                color: AppColors.primary.withValues(alpha: 0.25),
+                                color: AppColors.of(
+                                  context,
+                                ).primary.withValues(alpha: 0.25),
                               ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.link,
-                                  color: AppColors.primary,
+                                  color: AppColors.of(context).primary,
                                 ),
                                 const SizedBox(width: 10),
                                 Expanded(
@@ -113,9 +116,9 @@ class SupersetManagerDialogWeb {
                                   onPressed: () => ref
                                       .read(activeWorkoutProvider.notifier)
                                       .removeSuperset(indexes.first),
-                                  icon: const Icon(
+                                  icon: Icon(
                                     Icons.link_off,
-                                    color: AppColors.error,
+                                    color: AppColors.of(context).error,
                                   ),
                                 ),
                               ],
@@ -196,18 +199,19 @@ class SupersetManagerDialogWeb {
                   key: ValueKey('second-$firstIndex-$secondIndex'),
                   initialValue: secondIndex,
                   decoration: const InputDecoration(labelText: 'Ejercicio B'),
-                  items: List.generate(session.exercises.length, (index) => index)
-                      .where((index) => index != firstIndex)
-                      .map(
-                        (index) => DropdownMenuItem(
-                          value: index,
-                          child: Text(
-                            session.exercises[index].exerciseNameSnapshot,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  items:
+                      List.generate(session.exercises.length, (index) => index)
+                          .where((index) => index != firstIndex)
+                          .map(
+                            (index) => DropdownMenuItem(
+                              value: index,
+                              child: Text(
+                                session.exercises[index].exerciseNameSnapshot,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setDialogState(() => secondIndex = value);

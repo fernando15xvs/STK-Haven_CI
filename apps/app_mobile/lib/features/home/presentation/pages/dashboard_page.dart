@@ -49,13 +49,15 @@ class DashboardPage extends ConsumerWidget {
 
     final lastWorkout = history.isNotEmpty ? history.first : null;
     final completedToday = TodaysWorkoutStatus.latestCompletedToday(
-      history, DateTime.now(),
+      history,
+      DateTime.now(),
     );
-    final allPRs = prRepo.getAllPRs()..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
+    final allPRs = prRepo.getAllPRs()
+      ..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
     final recentPR = allPRs.isNotEmpty ? allPRs.first : null;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       body: SafeArea(
         bottom: false,
         child: ListView(
@@ -72,13 +74,20 @@ class DashboardPage extends ConsumerWidget {
               const _DailyMessageCard(),
             ],
             const SizedBox(height: AppSpacing.lg),
-            Text('TU DÍA', style: AppTypography.labelLarge.copyWith(color: AppColors.textSecondary)),
+            Text(
+              'TU DÍA',
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
             if (activeWorkout.isActive)
               _ActiveWorkoutHero(
                 name: activeWorkout.routineDisplayName,
                 startedAt: activeWorkout.session!.startedAt,
-                lastActivityAt: ref.read(activeWorkoutRepositoryProvider).lastActivityAt,
+                lastActivityAt: ref
+                    .read(activeWorkoutRepositoryProvider)
+                    .lastActivityAt,
               )
             else if (completedToday != null)
               _CompletedTodayCard(
@@ -101,7 +110,12 @@ class DashboardPage extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: AppSpacing.xxl),
-            Text('BIENESTAR', style: AppTypography.labelLarge.copyWith(color: AppColors.textSecondary)),
+            Text(
+              'BIENESTAR',
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
             const HydrationWidget(),
             const SizedBox(height: AppSpacing.md),
@@ -110,7 +124,12 @@ class DashboardPage extends ConsumerWidget {
             _WeeklyTracker(history: history),
             if (lastWorkout != null || recentPR != null) ...[
               const SizedBox(height: AppSpacing.xxl),
-              Text('RECIENTE', style: AppTypography.labelLarge.copyWith(color: AppColors.textSecondary)),
+              Text(
+                'RECIENTE',
+                style: AppTypography.labelLarge.copyWith(
+                  color: AppColors.of(context).textSecondary,
+                ),
+              ),
               const SizedBox(height: AppSpacing.sm),
               _RecentGrid(
                 lastWorkout: lastWorkout,
@@ -134,8 +153,8 @@ class _GreetingHeader extends StatelessWidget {
     final greeting = now.hour < 12
         ? 'Buenos días'
         : now.hour < 18
-            ? 'Buenas tardes'
-            : 'Buenas noches';
+        ? 'Buenas tardes'
+        : 'Buenas noches';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,7 +167,9 @@ class _GreetingHeader extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 DateFormat('EEEE, d MMMM', 'es').format(now).toUpperCase(),
-                style: AppTypography.labelMedium.copyWith(color: AppColors.primary),
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.of(context).primary,
+                ),
               ),
             ],
           ),
@@ -157,11 +178,11 @@ class _GreetingHeader extends StatelessWidget {
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.of(context).surface,
             borderRadius: AppRadius.md_,
-            border: Border.all(color: AppColors.surfaceBorder),
+            border: Border.all(color: AppColors.of(context).surfaceBorder),
           ),
-          child: const Icon(Icons.bolt, color: AppColors.primary),
+          child: Icon(Icons.bolt, color: AppColors.of(context).primary),
         ),
       ],
     );
@@ -187,8 +208,8 @@ class _DailyMessageCard extends ConsumerWidget {
             context,
             MaterialPageRoute(builder: (_) => const DailyVersePage()),
           ),
-          backgroundColor: AppColors.primaryFaded,
-          borderColor: AppColors.primary.withValues(alpha: 0.28),
+          backgroundColor: AppColors.of(context).primaryFaded,
+          borderColor: AppColors.of(context).primary.withValues(alpha: 0.28),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -196,28 +217,48 @@ class _DailyMessageCard extends ConsumerWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.14),
+                  color: AppColors.of(context).primary.withValues(alpha: 0.14),
                   borderRadius: AppRadius.sm_,
                 ),
-                child: const Icon(Icons.wb_sunny_outlined, color: AppColors.primary, size: 20),
+                child: Icon(
+                  Icons.wb_sunny_outlined,
+                  color: AppColors.of(context).primary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('MENSAJE DE HOY', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
+                    Text(
+                      'MENSAJE DE HOY',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.of(context).primary,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       '“${verse.text}”',
-                      style: AppTypography.bodyLarge.copyWith(fontStyle: FontStyle.italic, height: 1.45),
+                      style: AppTypography.bodyLarge.copyWith(
+                        fontStyle: FontStyle.italic,
+                        height: 1.45,
+                      ),
                     ),
                     const SizedBox(height: 6),
-                    Text(verse.reference, style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary)),
+                    Text(
+                      verse.reference,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.of(context).textSecondary,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              Icon(
+                Icons.chevron_right,
+                color: AppColors.of(context).textSecondary,
+              ),
             ],
           ),
         );
@@ -232,7 +273,9 @@ class _ActiveWorkoutHero extends StatelessWidget {
   final DateTime? lastActivityAt;
 
   const _ActiveWorkoutHero({
-    required this.name, required this.startedAt, this.lastActivityAt,
+    required this.name,
+    required this.startedAt,
+    this.lastActivityAt,
   });
 
   @override
@@ -240,7 +283,8 @@ class _ActiveWorkoutHero extends StatelessWidget {
     final elapsed = DateTime.now().difference(startedAt);
     final minutes = elapsed.inMinutes;
     final stale = UnfinishedWorkoutReminderPolicy.isStale(
-      lastActivityAt ?? startedAt, DateTime.now(),
+      lastActivityAt ?? startedAt,
+      DateTime.now(),
     );
 
     return PremiumCard(
@@ -248,8 +292,8 @@ class _ActiveWorkoutHero extends StatelessWidget {
         context,
         MaterialPageRoute(builder: (_) => const ActiveWorkoutPage()),
       ),
-      backgroundColor: AppColors.primaryFaded,
-      borderColor: AppColors.primary.withValues(alpha: 0.4),
+      backgroundColor: AppColors.of(context).primaryFaded,
+      borderColor: AppColors.of(context).primary.withValues(alpha: 0.4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -259,34 +303,55 @@ class _ActiveWorkoutHero extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: AppColors.of(context).primary,
                   borderRadius: AppRadius.md_,
-                  boxShadow: AppElevation.accent,
+                  boxShadow: AppElevation.accent(context),
                 ),
-                child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
+                child: Icon(
+                  Icons.play_arrow_rounded,
+                  color: AppColors.of(context).onPrimary,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(stale ? 'ENTRENAMIENTO PENDIENTE' : 'ENTRENAMIENTO EN CURSO', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
+                    Text(
+                      stale
+                          ? 'ENTRENAMIENTO PENDIENTE'
+                          : 'ENTRENAMIENTO EN CURSO',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.of(context).primary,
+                      ),
+                    ),
                     const SizedBox(height: 3),
                     Text(name, style: AppTypography.headlineLarge),
-                    if (stale) const Padding(
-                      padding: EdgeInsets.only(top: 6),
-                      child: Text('Lleva varias horas sin cambios. Toca para revisar y finalizar o continuar.'),
-                    ),
+                    if (stale)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Lleva varias horas sin cambios. Toca para revisar y finalizar o continuar.',
+                        ),
+                      ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              Icon(
+                Icons.chevron_right,
+                color: AppColors.of(context).textSecondary,
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            minutes <= 0 ? 'Recién comenzado · toca para continuar' : '$minutes min en curso · toca para continuar',
-            style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+            minutes <= 0
+                ? 'Recién comenzado · toca para continuar'
+                : '$minutes min en curso · toca para continuar',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.of(context).textSecondary,
+            ),
           ),
         ],
       ),
@@ -298,10 +363,7 @@ class _CompletedTodayCard extends ConsumerWidget {
   final WorkoutSession session;
   final WeightUnit weightUnit;
 
-  const _CompletedTodayCard({
-    required this.session,
-    required this.weightUnit,
-  });
+  const _CompletedTodayCard({required this.session, required this.weightUnit});
 
   Future<void> _editNotes(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController(text: session.notes);
@@ -314,9 +376,7 @@ class _CompletedTodayCard extends ConsumerWidget {
             controller: controller,
             maxLines: 4,
             maxLength: 1000,
-            decoration: const InputDecoration(
-              hintText: '¿Cómo te fue hoy?',
-            ),
+            decoration: const InputDecoration(hintText: '¿Cómo te fue hoy?'),
           ),
           actions: [
             TextButton(
@@ -324,9 +384,8 @@ class _CompletedTodayCard extends ConsumerWidget {
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(
-                dialogContext, controller.text.trim(),
-              ),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, controller.text.trim()),
               child: const Text('Guardar'),
             ),
           ],
@@ -356,34 +415,40 @@ class _CompletedTodayCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return PremiumCard(
-      backgroundColor: AppColors.primaryFaded,
-      borderColor: AppColors.success.withValues(alpha: 0.55),
-      onTap: () => RecentWorkoutDetails.show(
-        context, session, weightUnit,
-      ),
+      backgroundColor: AppColors.of(context).primaryFaded,
+      borderColor: AppColors.of(context).success.withValues(alpha: 0.55),
+      onTap: () => RecentWorkoutDetails.show(context, session, weightUnit),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.check_circle, color: AppColors.success),
+              Icon(Icons.check_circle, color: AppColors.of(context).success),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('FINALIZADO HOY', style: AppTypography.labelMedium
-                        .copyWith(color: AppColors.success)),
-                    Text(session.routineNameSnapshot.isEmpty
-                        ? 'Entrenamiento libre'
-                        : session.routineNameSnapshot,
-                      style: AppTypography.headlineLarge),
-                    Text('Completado · ${session.durationSeconds ~/ 60} min',
-                      style: AppTypography.bodySmall),
+                    Text(
+                      'FINALIZADO HOY',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.of(context).success,
+                      ),
+                    ),
+                    Text(
+                      session.routineNameSnapshot.isEmpty
+                          ? 'Entrenamiento libre'
+                          : session.routineNameSnapshot,
+                      style: AppTypography.headlineLarge,
+                    ),
+                    Text(
+                      'Completado · ${session.durationSeconds ~/ 60} min',
+                      style: AppTypography.bodySmall,
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.success),
+              Icon(Icons.chevron_right, color: AppColors.of(context).success),
             ],
           ),
           const SizedBox(height: 12),
@@ -393,9 +458,8 @@ class _CompletedTodayCard extends ConsumerWidget {
               OutlinedButton.icon(
                 icon: const Icon(Icons.history),
                 label: const Text('Ver entrenamiento'),
-                onPressed: () => RecentWorkoutDetails.show(
-                  context, session, weightUnit,
-                ),
+                onPressed: () =>
+                    RecentWorkoutDetails.show(context, session, weightUnit),
               ),
               TextButton.icon(
                 icon: const Icon(Icons.edit_note),
@@ -465,8 +529,14 @@ class _TodayRoutineCard extends ConsumerWidget {
             Container(
               width: 46,
               height: 46,
-              decoration: BoxDecoration(color: AppColors.surfaceHigh, borderRadius: AppRadius.md_),
-              child: const Icon(Icons.self_improvement_outlined, color: AppColors.textSecondary),
+              decoration: BoxDecoration(
+                color: AppColors.of(context).surfaceHigh,
+                borderRadius: AppRadius.md_,
+              ),
+              child: Icon(
+                Icons.self_improvement_outlined,
+                color: AppColors.of(context).textSecondary,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -475,7 +545,10 @@ class _TodayRoutineCard extends ConsumerWidget {
                 children: [
                   Text('Día de descanso', style: AppTypography.headlineMedium),
                   const SizedBox(height: 3),
-                  Text(restSubtitle ?? 'No tienes una rutina programada para hoy.', style: AppTypography.bodySmall),
+                  Text(
+                    restSubtitle ?? 'No tienes una rutina programada para hoy.',
+                    style: AppTypography.bodySmall,
+                  ),
                 ],
               ),
             ),
@@ -489,8 +562,8 @@ class _TodayRoutineCard extends ConsumerWidget {
 
     return PremiumCard(
       onTap: () async => WorkoutLauncher.launch(context, ref, routine),
-      backgroundColor: AppColors.primaryFaded,
-      borderColor: AppColors.primary.withValues(alpha: 0.35),
+      backgroundColor: AppColors.of(context).primaryFaded,
+      borderColor: AppColors.of(context).primary.withValues(alpha: 0.35),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -500,24 +573,38 @@ class _TodayRoutineCard extends ConsumerWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: AppColors.of(context).primary,
                   borderRadius: AppRadius.md_,
-                  boxShadow: AppElevation.accent,
+                  boxShadow: AppElevation.accent(context),
                 ),
-                child: const Icon(Icons.fitness_center, color: Colors.white, size: 22),
+                child: Icon(
+                  Icons.fitness_center,
+                  color: AppColors.of(context).onPrimary,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(programLabel == null ? 'ENTRENAR AHORA' : 'SIGUIENTE SESIÓN · $programLabel', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
+                    Text(
+                      programLabel == null
+                          ? 'ENTRENAR AHORA'
+                          : 'SIGUIENTE SESIÓN · $programLabel',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.of(context).primary,
+                      ),
+                    ),
                     const SizedBox(height: 3),
                     Text(routine.name, style: AppTypography.headlineLarge),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_rounded, color: AppColors.primary),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: AppColors.of(context).primary,
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -525,7 +612,10 @@ class _TodayRoutineCard extends ConsumerWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.xs,
             children: [
-              _MetaPill(icon: Icons.format_list_numbered, text: '${routine.exercises.length} ejercicios'),
+              _MetaPill(
+                icon: Icons.format_list_numbered,
+                text: '${routine.exercises.length} ejercicios',
+              ),
               _MetaPill(icon: Icons.schedule, text: '~$estimatedMinutes min'),
             ],
           ),
@@ -539,18 +629,27 @@ class _ActiveProgramCard extends StatelessWidget {
   final ActiveProgramState activeProgram;
   final List<WorkoutSession> history;
 
-  const _ActiveProgramCard({required this.activeProgram, required this.history});
+  const _ActiveProgramCard({
+    required this.activeProgram,
+    required this.history,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final daysSinceStart = DateTime.now().difference(activeProgram.startedAt).inDays;
+    final daysSinceStart = DateTime.now()
+        .difference(activeProgram.startedAt)
+        .inDays;
     final rawWeek = (daysSinceStart / 7).floor() + 1;
-    final week = rawWeek > activeProgram.durationWeeks ? activeProgram.durationWeeks : rawWeek;
+    final week = rawWeek > activeProgram.durationWeeks
+        ? activeProgram.durationWeeks
+        : rawWeek;
     final completed = history.where((session) {
       return session.startedAt.isAfter(activeProgram.startedAt) &&
           activeProgram.generatedRoutineIds.contains(session.routineId);
     }).length;
-    final progress = activeProgram.durationWeeks <= 0 ? 0.0 : week / activeProgram.durationWeeks;
+    final progress = activeProgram.durationWeeks <= 0
+        ? 0.0
+        : week / activeProgram.durationWeeks;
 
     return PremiumCard(
       child: Column(
@@ -558,10 +657,23 @@ class _ActiveProgramCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.calendar_month_outlined, color: AppColors.primary),
+              Icon(
+                Icons.calendar_month_outlined,
+                color: AppColors.of(context).primary,
+              ),
               const SizedBox(width: AppSpacing.sm),
-              Expanded(child: Text(activeProgram.programNameSnapshot, style: AppTypography.headlineMedium)),
-              Text('Semana $week/${activeProgram.durationWeeks}', style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
+              Expanded(
+                child: Text(
+                  activeProgram.programNameSnapshot,
+                  style: AppTypography.headlineMedium,
+                ),
+              ),
+              Text(
+                'Semana $week/${activeProgram.durationWeeks}',
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.of(context).primary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -569,10 +681,13 @@ class _ActiveProgramCard extends StatelessWidget {
             value: progress,
             minHeight: 7,
             borderRadius: BorderRadius.circular(99),
-            backgroundColor: AppColors.surfaceHigh,
+            backgroundColor: AppColors.of(context).surfaceHigh,
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text('$completed entrenamientos completados', style: AppTypography.bodySmall),
+          Text(
+            '$completed entrenamientos completados',
+            style: AppTypography.bodySmall,
+          ),
         ],
       ),
     );
@@ -588,9 +703,14 @@ class _WeeklyTracker extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final now = DateTime.now();
-    final startOfWeek = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: now.weekday - 1));
-    final sessions = history.where((session) => !session.startedAt.isBefore(startOfWeek)).toList();
+    final startOfWeek = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).subtract(Duration(days: now.weekday - 1));
+    final sessions = history
+        .where((session) => !session.startedAt.isBefore(startOfWeek))
+        .toList();
 
     var totalSets = 0;
     var totalVolume = 0.0;
@@ -608,7 +728,12 @@ class _WeeklyTracker extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('ESTA SEMANA', style: AppTypography.labelLarge.copyWith(color: AppColors.textSecondary)),
+        Text(
+          'ESTA SEMANA',
+          style: AppTypography.labelLarge.copyWith(
+            color: AppColors.of(context).textSecondary,
+          ),
+        ),
         const SizedBox(height: AppSpacing.sm),
         PremiumCard(
           child: Column(
@@ -629,20 +754,32 @@ class _WeeklyTracker extends ConsumerWidget {
                         height: 31,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: trained ? AppColors.primary : Colors.transparent,
+                          color: trained
+                              ? AppColors.of(context).primary
+                              : Colors.transparent,
                           border: Border.all(
                             color: trained
-                                ? AppColors.primary
+                                ? AppColors.of(context).primary
                                 : today
-                                    ? AppColors.primary.withValues(alpha: 0.65)
-                                    : AppColors.surfaceBorder,
+                                ? AppColors.of(
+                                    context,
+                                  ).primary.withValues(alpha: 0.65)
+                                : AppColors.of(context).surfaceBorder,
                           ),
                         ),
                         child: trained
-                            ? const Icon(Icons.check, size: 15, color: Colors.white)
+                            ? Icon(
+                                Icons.check,
+                                size: 15,
+                                color: AppColors.of(context).onPrimary,
+                              )
                             : today
-                                ? const Icon(Icons.circle, size: 7, color: AppColors.primary)
-                                : null,
+                            ? Icon(
+                                Icons.circle,
+                                size: 7,
+                                color: AppColors.of(context).primary,
+                              )
+                            : null,
                       ),
                     ],
                   );
@@ -651,20 +788,35 @@ class _WeeklyTracker extends ConsumerWidget {
               const SizedBox(height: AppSpacing.lg),
               Row(
                 children: [
-                  Expanded(child: MetricTile(label: 'ENTRENOS', value: '${sessions.length}')),
+                  Expanded(
+                    child: MetricTile(
+                      label: 'ENTRENOS',
+                      value: '${sessions.length}',
+                    ),
+                  ),
                   const SizedBox(width: AppSpacing.sm),
-                  Expanded(child: MetricTile(label: 'SERIES', value: '$totalSets')),
+                  Expanded(
+                    child: MetricTile(label: 'SERIES', value: '$totalSets'),
+                  ),
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: [
-                  Expanded(child: MetricTile(label: 'TIEMPO', value: '${totalTime ~/ 60}m')),
+                  Expanded(
+                    child: MetricTile(
+                      label: 'TIEMPO',
+                      value: '${totalTime ~/ 60}m',
+                    ),
+                  ),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: MetricTile(
                       label: 'VOLUMEN',
-                      value: FitnessFormatter.formatVolume(totalVolume, settings.weightUnit),
+                      value: FitnessFormatter.formatVolume(
+                        totalVolume,
+                        settings.weightUnit,
+                      ),
                     ),
                   ),
                 ],
@@ -682,12 +834,17 @@ class _RecentGrid extends StatelessWidget {
   final List<WorkoutSession> history;
   final PersonalRecordEvent? recentPR;
 
-  const _RecentGrid({required this.lastWorkout, required this.history, required this.recentPR});
+  const _RecentGrid({
+    required this.lastWorkout,
+    required this.history,
+    required this.recentPR,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cards = <Widget>[
-      if (lastWorkout != null) _LastWorkoutCard(lastWorkout: lastWorkout!, history: history),
+      if (lastWorkout != null)
+        _LastWorkoutCard(lastWorkout: lastWorkout!, history: history),
       if (recentPR != null) _RecentPRCard(pr: recentPR!),
     ];
 
@@ -714,7 +871,8 @@ class _LastWorkoutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     WorkoutSession? previous;
     for (final session in history) {
-      if (session.routineId == lastWorkout.routineId && session.id != lastWorkout.id) {
+      if (session.routineId == lastWorkout.routineId &&
+          session.id != lastWorkout.id) {
         previous = session;
         break;
       }
@@ -728,12 +886,19 @@ class _LastWorkoutCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.history, color: AppColors.primary),
+          Icon(Icons.history, color: AppColors.of(context).primary),
           const SizedBox(height: AppSpacing.sm),
-          Text('Último entrenamiento', style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary)),
+          Text(
+            'Último entrenamiento',
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.of(context).textSecondary,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
-            lastWorkout.routineNameSnapshot.isEmpty ? 'Entrenamiento libre' : lastWorkout.routineNameSnapshot,
+            lastWorkout.routineNameSnapshot.isEmpty
+                ? 'Entrenamiento libre'
+                : lastWorkout.routineNameSnapshot,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.headlineSmall,
@@ -743,11 +908,16 @@ class _LastWorkoutCard extends StatelessWidget {
             Text(
               '${comparison.volumeDifferencePercent > 0 ? '+' : ''}${comparison.volumeDifferencePercent.toStringAsFixed(1)}% volumen',
               style: AppTypography.bodySmall.copyWith(
-                color: comparison.volumeDifferencePercent > 0 ? AppColors.success : AppColors.warning,
+                color: comparison.volumeDifferencePercent > 0
+                    ? AppColors.of(context).success
+                    : AppColors.of(context).warning,
               ),
             )
           else
-            Text(DateFormat('dd MMM', 'es').format(lastWorkout.startedAt), style: AppTypography.bodySmall),
+            Text(
+              DateFormat('dd MMM', 'es').format(lastWorkout.startedAt),
+              style: AppTypography.bodySmall,
+            ),
         ],
       ),
     );
@@ -766,15 +936,31 @@ class _RecentPRCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.emoji_events_outlined, color: AppColors.gold),
+          Icon(Icons.emoji_events_outlined, color: AppColors.of(context).gold),
           const SizedBox(height: AppSpacing.sm),
-          Text('PR reciente', style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary)),
+          Text(
+            'PR reciente',
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.of(context).textSecondary,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(pr.exerciseNameSnapshot, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppTypography.headlineSmall),
+          Text(
+            pr.exerciseNameSnapshot,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.headlineSmall,
+          ),
           const SizedBox(height: 5),
           Text(
-            FitnessFormatter.formatPRValue(pr.newValue, pr.type, settings.weightUnit),
-            style: AppTypography.bodySmall.copyWith(color: AppColors.gold),
+            FitnessFormatter.formatPRValue(
+              pr.newValue,
+              pr.type,
+              settings.weightUnit,
+            ),
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.of(context).gold,
+            ),
           ),
         ],
       ),
@@ -793,16 +979,21 @@ class _MetaPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh.withValues(alpha: 0.75),
+        color: AppColors.of(context).surfaceHigh.withValues(alpha: 0.75),
         borderRadius: BorderRadius.circular(AppRadius.full),
-        border: Border.all(color: AppColors.surfaceBorder),
+        border: Border.all(color: AppColors.of(context).surfaceBorder),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: AppColors.textSecondary),
+          Icon(icon, size: 14, color: AppColors.of(context).textSecondary),
           const SizedBox(width: 6),
-          Text(text, style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary)),
+          Text(
+            text,
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.of(context).textSecondary,
+            ),
+          ),
         ],
       ),
     );
