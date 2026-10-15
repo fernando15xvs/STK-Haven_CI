@@ -43,6 +43,16 @@ void main() {
     expect(restored.avatarEmoji, '🌱');
     expect(restored.showWorkoutReflections, isFalse);
     expect(restored.copyWith(clearAvatar: true).avatarEmoji, isNull);
+
+    final withPhoto = restored.copyWith(
+      avatarPhotoBase64: 'AQID',
+      clearAvatar: true,
+    );
+    final photoRoundTrip = UserExperienceProfile.fromJson(withPhoto.toJson());
+    expect(photoRoundTrip.avatarPhotoBase64, 'AQID');
+    expect(photoRoundTrip.avatarEmoji, isNull);
+    expect(photoRoundTrip.copyWith(clearAvatarPhoto: true).avatarPhotoBase64, isNull);
+    expect(UserExperienceProfile.fromJson(const {}).avatarPhotoBase64, isNull);
   });
 
   test('original single-verse favorite identifiers remain compatible', () {
