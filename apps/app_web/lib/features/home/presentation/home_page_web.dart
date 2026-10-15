@@ -595,20 +595,6 @@ class _DailyMessageCard extends ConsumerWidget {
   });
 
   @override
-class _DailyMessageCard extends ConsumerWidget {
-  final AsyncValue<DailyVerseState> verseAsync;
-  final BibleInitState bibleInit;
-  final VoidCallback onRetry;
-  final VoidCallback onOpenReflection;
-
-  const _DailyMessageCard({
-    required this.verseAsync,
-    required this.bibleInit,
-    required this.onRetry,
-    required this.onOpenReflection,
-  });
-
-  @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _Panel(
       accent: true,

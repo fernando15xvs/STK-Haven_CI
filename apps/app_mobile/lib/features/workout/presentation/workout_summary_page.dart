@@ -62,7 +62,7 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
         HapticFeedback.heavyImpact();
       }
     }
-
+  }
 
   @override
   void dispose() {
