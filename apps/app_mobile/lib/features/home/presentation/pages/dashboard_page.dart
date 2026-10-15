@@ -8,6 +8,7 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/features/faith/application/bible_reader_provider.dart';
 import 'package:core/features/faith/presentation/widgets/contextual_passage_details.dart';
 import 'package:gym_tracker/features/faith/presentation/pages/bible_reader_page.dart';
@@ -177,13 +178,45 @@ class _DailyMessageCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stateAsync = ref.watch(dailyVerseProvider);
+    final bibleInit = ref.watch(bibleInitProvider);
+    final failed = bibleInit.status == BibleDbStatus.error;
+
+    Widget loadingCard() => PremiumCard(
+      backgroundColor: AppColors.primaryFaded,
+      borderColor: AppColors.primary.withValues(alpha: 0.28),
+      onTap: failed
+          ? () => ref.read(bibleInitProvider.notifier).initialize()
+          : null,
+      child: Row(
+        children: [
+          Icon(
+            failed ? Icons.refresh_outlined : Icons.menu_book_outlined,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              failed
+                  ? 'No se pudo preparar el pasaje. Toca para reintentar.'
+                  : 'Preparando el pasaje de hoy…',
+              style: AppTypography.bodyMedium,
+            ),
+          ),
+          if (!failed) const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ],
+      ),
+    );
 
     return stateAsync.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
+      loading: loadingCard,
+      error: (_, _) => loadingCard(),
       data: (state) {
         final verse = state.verse;
-        if (state.isLoading || verse == null) return const SizedBox.shrink();
+        if (state.isLoading || verse == null) return loadingCard();
 
         return PremiumCard(
           onTap: () => Navigator.push(
