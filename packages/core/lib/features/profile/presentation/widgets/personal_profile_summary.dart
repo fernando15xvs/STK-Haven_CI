@@ -1,5 +1,6 @@
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/presentation/widgets/profile_avatar.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 import 'package:flutter/material.dart';
@@ -28,12 +29,7 @@ class PersonalProfileSummary extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              CircleAvatar(
-                radius: 36,
-                child: profile?.avatarEmoji == null
-                    ? const Icon(Icons.person_outline, size: 36)
-                    : Text(profile!.avatarEmoji!, style: const TextStyle(fontSize: 34)),
-              ),
+              ProfileAvatar(profile: profile),
               const SizedBox(width: 16),
               Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
