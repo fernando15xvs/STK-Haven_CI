@@ -1,3 +1,4 @@
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/faith/presentation/verse_notification_settings_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
@@ -26,6 +27,7 @@ void main() {
   );
   const timezone = MethodChannel('stk_haven/timezone');
   setUp(() {
+    IOSFlutterLocalNotificationsPlugin.registerWith();
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
     SharedPreferences.setMockInitialValues({});
     messenger.setMockMethodCallHandler(timezone, (_) async => 'America/Lima');

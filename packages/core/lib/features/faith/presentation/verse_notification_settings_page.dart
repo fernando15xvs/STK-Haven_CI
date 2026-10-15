@@ -203,6 +203,7 @@ class _VerseSettingsState extends ConsumerState<VerseNotificationSettingsPage>
                     : (value) => setState(() => _enabled = value),
               ),
               DropdownButtonFormField<VerseScheduleMode>(
+                isExpanded: true,
                 initialValue: _mode,
                 decoration: const InputDecoration(
                   labelText: 'Cuándo recibirlos',
@@ -224,6 +225,7 @@ class _VerseSettingsState extends ConsumerState<VerseNotificationSettingsPage>
               const SizedBox(height: 16),
               if (_mode == VerseScheduleMode.interval) ...[
                 DropdownButtonFormField<int>(
+                  isExpanded: true,
                   initialValue: _interval,
                   decoration: const InputDecoration(labelText: 'Frecuencia'),
                   items: VerseNotificationSchedule.intervals
