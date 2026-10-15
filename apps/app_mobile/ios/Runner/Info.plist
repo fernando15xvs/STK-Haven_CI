@@ -27,7 +27,7 @@
 		<key>NSCameraUsageDescription</key>
 		<string>STK Haven usa la cámara cuando eliges analizar una comida con Food Vision.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
-		<string>STK Haven accede a una foto solo cuando eliges analizarla con Food Vision.</string>
+		<string>STK Haven accede solo a las fotos que eliges para tu perfil o para analizar una comida con Food Vision.</string>
 		<key>NSMotionUsageDescription</key>
 		<string>STK Haven usa los datos de movimiento solo cuando eliges sincronizar tus pasos diarios.</string>
 		<key>UIBackgroundModes</key>
