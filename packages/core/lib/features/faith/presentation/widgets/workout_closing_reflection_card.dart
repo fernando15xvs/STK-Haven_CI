@@ -50,6 +50,18 @@ class _WorkoutClosingReflectionCardState
   bool _questionVisible = false;
 
   @override
+  void didUpdateWidget(covariant WorkoutClosingReflectionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // The summary page can reuse this State for another session. Never show
+    // a passage selected for a previous workout, even temporarily.
+    if (oldWidget.session.id != widget.session.id ||
+        oldWidget.summary.isComplete != widget.summary.isComplete) {
+      _verseFuture = null;
+      _questionVisible = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final init = ref.watch(bibleInitProvider);
     if (!init.isReady) return const SizedBox.shrink();
