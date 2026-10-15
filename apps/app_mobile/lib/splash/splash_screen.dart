@@ -113,7 +113,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                       'STK Haven',
                       style: AppTypography.displaySmall.copyWith(
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: AppColors.of(context).textPrimary,
                         letterSpacing: 1.5,
                       ),
                     ),
@@ -121,7 +121,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     Text(
                       'Tu compañero de entrenamiento',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: Colors.grey[400],
+                        color: AppColors.of(context).textSecondary,
                         letterSpacing: 2.0,
                       ),
                     ),
@@ -151,14 +151,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                   Text(
                     'Versión 1.0.0',
                     style: AppTypography.bodySmall.copyWith(
-                      color: Colors.grey[400],
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                   const SizedBox(height: 5),
                   Text(
                     'SLF 2026',
                     style: AppTypography.labelLarge.copyWith(
-                      color: Colors.grey[400],
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                 ],
