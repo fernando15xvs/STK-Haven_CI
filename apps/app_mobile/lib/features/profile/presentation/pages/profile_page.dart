@@ -1,6 +1,7 @@
-import 'package:core/core/constants/preset_programs.dart';
+import 'package:core/features/profile/presentation/pages/appearance_settings_page.dart';
 import 'package:core/features/profile/presentation/pages/personal_profile_page.dart';
 import 'package:core/features/profile/presentation/widgets/personal_profile_summary.dart';
+import 'package:core/core/constants/preset_programs.dart';
 import 'package:core/features/coach/presentation/pages/coach_connections_page.dart';
 import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:core/features/profile/presentation/pages/notifications_settings_page.dart';
@@ -53,7 +54,29 @@ class ProfilePage extends ConsumerWidget {
           PremiumCard(
             padding: EdgeInsets.zero,
             child: ListTile(
-              leading: const Icon(Icons.tune_rounded, color: AppColors.primary),
+              leading: Icon(
+                Icons.palette_outlined,
+                color: AppColors.of(context).primary,
+              ),
+              title: Text('Aspecto', style: AppTypography.headlineMedium),
+              subtitle: const Text('Modo de pantalla, colores y acabado'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AppearanceSettingsPage(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          PremiumCard(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              leading: Icon(
+                Icons.tune_rounded,
+                color: AppColors.of(context).primary,
+              ),
               title: Text(
                 'Tu experiencia',
                 style: AppTypography.headlineMedium,
@@ -62,9 +85,9 @@ class ProfilePage extends ConsumerWidget {
                 'Objetivo, días, duración, entorno y Fe',
                 style: AppTypography.bodySmall,
               ),
-              trailing: const Icon(
+              trailing: Icon(
                 Icons.chevron_right,
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
               onTap: () => Navigator.push(
                 context,
@@ -78,28 +101,23 @@ class ProfilePage extends ConsumerWidget {
           PremiumCard(
             padding: EdgeInsets.zero,
             child: ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.sports_outlined,
-                color: AppColors.primary,
+                color: AppColors.of(context).primary,
               ),
-              title: Text(
-                'Mi Coach',
-                style: AppTypography.headlineMedium,
-              ),
+              title: Text('Mi Coach', style: AppTypography.headlineMedium),
               subtitle: Text(
                 'Entrenador vinculado, invitaciones y permisos que compartes',
                 style: AppTypography.bodySmall,
               ),
-              trailing: const Icon(
+              trailing: Icon(
                 Icons.chevron_right,
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const CoachConnectionsPage(
-                    clientOnly: true,
-                  ),
+                  builder: (_) => const CoachConnectionsPage(clientOnly: true),
                 ),
               ),
             ),
@@ -113,9 +131,9 @@ class ProfilePage extends ConsumerWidget {
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.fitness_center_outlined,
-                    color: AppColors.primary,
+                    color: AppColors.of(context).primary,
                   ),
                   title: Text(
                     'Entrenamiento y unidades',
@@ -125,9 +143,9 @@ class ProfilePage extends ConsumerWidget {
                     'RIR, descansos, feedback, unilateral, peso e incrementos',
                     style: AppTypography.bodySmall,
                   ),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.chevron_right,
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                   onTap: () => Navigator.push(
                     context,
@@ -136,11 +154,11 @@ class ProfilePage extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const Divider(height: 1, color: AppColors.surfaceBorder),
+                Divider(height: 1, color: AppColors.of(context).surfaceBorder),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.notifications_outlined,
-                    color: AppColors.primary,
+                    color: AppColors.of(context).primary,
                   ),
                   title: Text(
                     'Notificaciones',
@@ -150,9 +168,9 @@ class ProfilePage extends ConsumerWidget {
                     'Entrenamiento, agua, pasos y fortaleza diaria',
                     style: AppTypography.bodySmall,
                   ),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.chevron_right,
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                   onTap: () => Navigator.push(
                     context,
@@ -161,11 +179,11 @@ class ProfilePage extends ConsumerWidget {
                     ),
                   ),
                 ),
-                const Divider(height: 1, color: AppColors.surfaceBorder),
+                Divider(height: 1, color: AppColors.of(context).surfaceBorder),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.cloud_sync_outlined,
-                    color: AppColors.primary,
+                    color: AppColors.of(context).primary,
                   ),
                   title: Text(
                     'Datos y sincronización',
@@ -175,22 +193,20 @@ class ProfilePage extends ConsumerWidget {
                     'Nube, copias locales, restauración y CSV',
                     style: AppTypography.bodySmall,
                   ),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.chevron_right,
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const BackupStatusPage(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const BackupStatusPage()),
                   ),
                 ),
-                const Divider(height: 1, color: AppColors.surfaceBorder),
+                Divider(height: 1, color: AppColors.of(context).surfaceBorder),
                 ListTile(
-                  leading: const Icon(
+                  leading: Icon(
                     Icons.devices_outlined,
-                    color: AppColors.primary,
+                    color: AppColors.of(context).primary,
                   ),
                   title: Text(
                     'App y dispositivo',
@@ -200,9 +216,9 @@ class ProfilePage extends ConsumerWidget {
                     'Rendimiento, accesibilidad, sensores y licencias',
                     style: AppTypography.bodySmall,
                   ),
-                  trailing: const Icon(
+                  trailing: Icon(
                     Icons.chevron_right,
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                   onTap: () => Navigator.push(
                     context,
@@ -225,35 +241,69 @@ class ProfilePage extends ConsumerWidget {
               child: Column(
                 children: [
                   ListTile(
-                    title: Text(settings.activeProgram!.programNameSnapshot, style: AppTypography.headlineMedium),
+                    title: Text(
+                      settings.activeProgram!.programNameSnapshot,
+                      style: AppTypography.headlineMedium,
+                    ),
                     subtitle: Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text('Semana ${ (DateTime.now().difference(settings.activeProgram!.startedAt).inDays / 7).floor() + 1 } de ${settings.activeProgram!.durationWeeks}', style: AppTypography.bodySmall),
+                      child: Text(
+                        'Semana ${(DateTime.now().difference(settings.activeProgram!.startedAt).inDays / 7).floor() + 1} de ${settings.activeProgram!.durationWeeks}',
+                        style: AppTypography.bodySmall,
+                      ),
                     ),
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceBorder),
+                  Divider(
+                    height: 1,
+                    color: AppColors.of(context).surfaceBorder,
+                  ),
                   ListTile(
-                    title: const Text('Ver programa', style: TextStyle(color: AppColors.primary)),
-                    trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                    title: Text(
+                      'Ver programa',
+                      style: TextStyle(color: AppColors.of(context).primary),
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: AppColors.of(context).textSecondary,
+                    ),
                     onTap: () {
-                      final p = presetPrograms.firstWhere((p) => p.id == settings.activeProgram!.presetProgramId, orElse: () => presetPrograms.first);
+                      final p = presetPrograms.firstWhere(
+                        (p) => p.id == settings.activeProgram!.presetProgramId,
+                        orElse: () => presetPrograms.first,
+                      );
                       showModalBottomSheet(
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
-                        builder: (ctx) => ProgramPreviewModal(program: p, mode: ProgramPreviewMode.preview),
+                        builder: (ctx) => ProgramPreviewModal(
+                          program: p,
+                          mode: ProgramPreviewMode.preview,
+                        ),
                       );
                     },
                   ),
-                  const Divider(height: 1, color: AppColors.surfaceBorder),
+                  Divider(
+                    height: 1,
+                    color: AppColors.of(context).surfaceBorder,
+                  ),
                   ListTile(
-                    title: const Text('Cambiar programa', style: TextStyle(color: AppColors.primary)),
-                    trailing: const Icon(Icons.autorenew, color: AppColors.textSecondary),
+                    title: Text(
+                      'Cambiar programa',
+                      style: TextStyle(color: AppColors.of(context).primary),
+                    ),
+                    trailing: Icon(
+                      Icons.autorenew,
+                      color: AppColors.of(context).textSecondary,
+                    ),
                     onTap: () {
                       final activeWorkout = ref.read(activeWorkoutProvider);
                       if (activeWorkout.isActive) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Tienes un entrenamiento en curso. Finalízalo o descártalo antes de cambiar tu programa.')),
+                          const SnackBar(
+                            content: Text(
+                              'Tienes un entrenamiento en curso. Finalízalo o descártalo antes de cambiar tu programa.',
+                            ),
+                          ),
                         );
                         return;
                       }
@@ -265,24 +315,36 @@ class ProfilePage extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
           ],
-          
+
           const SectionHeading(title: 'GAMIFICACIÓN'),
           const SizedBox(height: AppSpacing.sm),
           PremiumCard(
             padding: EdgeInsets.zero,
             child: ListTile(
               leading: const Icon(Icons.emoji_events, color: Colors.amber),
-              title: Text('Nivel y Logros', style: AppTypography.headlineMedium),
-              subtitle: Text('Revisa tu progreso y medallas', style: AppTypography.bodySmall),
-              trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              title: Text(
+                'Nivel y Logros',
+                style: AppTypography.headlineMedium,
+              ),
+              subtitle: Text(
+                'Revisa tu progreso y medallas',
+                style: AppTypography.bodySmall,
+              ),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: AppColors.of(context).textSecondary,
+              ),
               onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const AchievementsPage()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AchievementsPage()),
+                );
               },
             ),
           ),
-          
+
           const SizedBox(height: AppSpacing.xl),
-          
+
           if (faithEnabled) ...[
             const SectionHeading(title: 'FORTALEZA'),
             const SizedBox(height: AppSpacing.sm),
@@ -290,34 +352,62 @@ class ProfilePage extends ConsumerWidget {
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                SwitchListTile(
-                  title: Text('Mostrar tarjeta en Inicio', style: AppTypography.headlineMedium),
-                  subtitle: Text('Fortaleza de hoy en tu dashboard', style: AppTypography.bodySmall),
-                  value: settings.showDailyVerse,
-                  onChanged: (val) => notifier.setShowDailyVerse(val),
-                  activeThumbColor: AppColors.primary,
-                ),
-                const Divider(height: 1, color: AppColors.surfaceBorder),
-                ListTile(
-                  title: Text('Versículos Favoritos', style: AppTypography.headlineMedium),
-                  subtitle: Text('Revisa tus reflexiones guardadas', style: AppTypography.bodySmall),
-                  trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesPage()));
-                  },
-                ),
+                  SwitchListTile(
+                    title: Text(
+                      'Mostrar tarjeta en Inicio',
+                      style: AppTypography.headlineMedium,
+                    ),
+                    subtitle: Text(
+                      'Fortaleza de hoy en tu dashboard',
+                      style: AppTypography.bodySmall,
+                    ),
+                    value: settings.showDailyVerse,
+                    onChanged: (val) => notifier.setShowDailyVerse(val),
+                    activeThumbColor: AppColors.of(context).primary,
+                  ),
+                  Divider(
+                    height: 1,
+                    color: AppColors.of(context).surfaceBorder,
+                  ),
+                  ListTile(
+                    title: Text(
+                      'Versículos Favoritos',
+                      style: AppTypography.headlineMedium,
+                    ),
+                    subtitle: Text(
+                      'Revisa tus reflexiones guardadas',
+                      style: AppTypography.bodySmall,
+                    ),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: AppColors.of(context).textSecondary,
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const FavoritesPage(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
           ],
-          
+
           const SizedBox(height: AppSpacing.xxxl),
           Center(
             child: Text(
               'STK Haven v1.0.0 (RC)\nConstruido para ti',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.5), fontSize: 12),
+              style: TextStyle(
+                color: AppColors.of(
+                  context,
+                ).textSecondary.withValues(alpha: 0.5),
+                fontSize: 12,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.xxl),
@@ -330,11 +420,20 @@ class ProfilePage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
-        title: const Text('Cambiar programa', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
-        content: const Text(
+        backgroundColor: AppColors.of(context).surfaceHigh,
+        title: Text(
+          'Cambiar programa',
+          style: TextStyle(
+            color: AppColors.of(context).textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
           'Tus entrenamientos realizados NO se eliminarán.\n\n¿Qué hacemos con las rutinas del programa actual?',
-          style: TextStyle(color: AppColors.textSecondary, height: 1.5),
+          style: TextStyle(
+            color: AppColors.of(context).textSecondary,
+            height: 1.5,
+          ),
         ),
         actions: [
           TextButton(
@@ -342,25 +441,40 @@ class ProfilePage extends ConsumerWidget {
               Navigator.pop(ctx);
               _showProgramSelection(context, ref, keepOld: true);
             },
-            child: const Text('CONSERVAR', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text(
+              'CONSERVAR',
+              style: TextStyle(color: AppColors.of(context).textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               _showProgramSelection(context, ref, keepOld: false);
             },
-            child: const Text('REEMPLAZAR', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+            child: Text(
+              'REEMPLAZAR',
+              style: TextStyle(
+                color: AppColors.of(context).primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _showProgramSelection(BuildContext context, WidgetRef ref, {required bool keepOld}) {
+  void _showProgramSelection(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool keepOld,
+  }) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.background,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: AppColors.of(context).background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
@@ -368,37 +482,81 @@ class ProfilePage extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                child: Text('Selecciona un programa', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                child: Text(
+                  'Selecciona un programa',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.of(context).textPrimary,
+                  ),
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
-              ...presetPrograms.map((p) => ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
-                title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                subtitle: Text('${p.daysPerWeek} días • ${p.level}', style: const TextStyle(color: AppColors.primary)),
-                trailing: const Icon(Icons.chevron_right, color: AppColors.textSecondary),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await ref.read(programServiceProvider).replaceProgram(
-              p,
-              keepOld,
-              trainingDaysPerWeek:
-                  ref.read(userExperienceProfileProvider).value?.trainingDaysPerWeek,
-            );
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Programa ${p.name} activado')));
-                  }
-                },
-              )),
-              const Divider(color: AppColors.surfaceBorder),
+              ...presetPrograms.map(
+                (p) => ListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.sm,
+                  ),
+                  title: Text(
+                    p.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.of(context).textPrimary,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${p.daysPerWeek} días • ${p.level}',
+                    style: TextStyle(color: AppColors.of(context).primary),
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: AppColors.of(context).textSecondary,
+                  ),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    await ref
+                        .read(programServiceProvider)
+                        .replaceProgram(
+                          p,
+                          keepOld,
+                          trainingDaysPerWeek: ref
+                              .read(userExperienceProfileProvider)
+                              .value
+                              ?.trainingDaysPerWeek,
+                        );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Programa ${p.name} activado')),
+                      );
+                    }
+                  },
+                ),
+              ),
+              Divider(color: AppColors.of(context).surfaceBorder),
               ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.sm),
-                title: const Text('Crear desde cero', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                subtitle: const Text('No instalar ninguna rutina nueva', style: TextStyle(color: AppColors.textSecondary)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.sm,
+                ),
+                title: Text(
+                  'Crear desde cero',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.of(context).textPrimary,
+                  ),
+                ),
+                subtitle: Text(
+                  'No instalar ninguna rutina nueva',
+                  style: TextStyle(color: AppColors.of(context).textSecondary),
+                ),
                 onTap: () async {
                   Navigator.pop(ctx);
-                  await ref.read(programServiceProvider).removeActiveProgram(keepGeneratedRoutines: keepOld);
+                  await ref
+                      .read(programServiceProvider)
+                      .removeActiveProgram(keepGeneratedRoutines: keepOld);
                 },
               ),
             ],

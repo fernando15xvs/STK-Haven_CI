@@ -81,11 +81,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
     if (newIndex > oldIndex) newIndex -= 1;
     setState(() {
       _replaceExercises(
-        RoutineOrderCoordinator.move(
-          _selectedExercises,
-          oldIndex,
-          newIndex,
-        ),
+        RoutineOrderCoordinator.move(_selectedExercises, oldIndex, newIndex),
       );
     });
   }
@@ -95,29 +91,27 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
     final personal = ref
         .read(exercisePersonalSettingsProvider.notifier)
         .settingsFor(exercise.id);
-    final notesController = TextEditingController(text: personal.technicalNotes);
+    final notesController = TextEditingController(
+      text: personal.technicalNotes,
+    );
     int sets = current?.targetSets ?? 3;
     int repsMin = current?.targetRepsMin ?? 8;
     int repsMax = current?.targetRepsMax ?? 12;
     int rest = current?.restSeconds ?? 90;
     int warmupSets = current?.warmupSets ?? personal.warmupSets;
     int approachSets = current?.approachSets ?? personal.approachSets;
-    int warmupRest = current?.warmupRestSeconds ??
-        current?.restSeconds ??
-        60;
-    int approachRest = current?.approachRestSeconds ??
-        current?.restSeconds ??
-        90;
+    int warmupRest = current?.warmupRestSeconds ?? current?.restSeconds ?? 60;
+    int approachRest =
+        current?.approachRestSeconds ?? current?.restSeconds ?? 90;
     final settings = ref.read(settingsProvider);
-    bool preparationUnilateral =
-        current?.preparationUnilateral ?? false;
-    int sideRestSeconds = current?.unilateralSideRestSeconds ??
+    bool preparationUnilateral = current?.preparationUnilateral ?? false;
+    int sideRestSeconds =
+        current?.unilateralSideRestSeconds ??
         settings.unilateralSideRestSeconds;
     PreferredWorkoutSide preferredStartSide =
         current?.preferredUnilateralStartSide ??
-            settings.preferredUnilateralStartSide;
-    RoutineExercisePhase phase =
-        current?.phase ?? RoutineExercisePhase.main;
+        settings.preferredUnilateralStartSide;
+    RoutineExercisePhase phase = current?.phase ?? RoutineExercisePhase.main;
     bool unilateral = current?.unilateral ?? false;
     UnilateralTarget unilateralTarget =
         current?.unilateralTarget ?? UnilateralTarget.other;
@@ -126,7 +120,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -148,7 +142,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                     width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.textDisabled,
+                      color: AppColors.of(context).textDisabled,
                       borderRadius: BorderRadius.circular(99),
                     ),
                   ),
@@ -189,8 +183,8 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                   title: phase == RoutineExercisePhase.main
                       ? 'Series efectivas'
                       : phase == RoutineExercisePhase.mobility
-                          ? 'Movilidad'
-                          : 'Estiramiento',
+                      ? 'Movilidad'
+                      : 'Estiramiento',
                   child: Column(
                     children: [
                       _CounterRow(
@@ -313,7 +307,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Registrar izquierda y derecha'),
                         value: unilateral,
-                        activeTrackColor: AppColors.primary,
+                        activeTrackColor: AppColors.of(context).primary,
                         onChanged: (value) =>
                             setBottomState(() => unilateral = value),
                       ),
@@ -333,9 +327,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                               .toList(),
                           onChanged: (value) {
                             if (value != null) {
-                              setBottomState(
-                                () => unilateralTarget = value,
-                              );
+                              setBottomState(() => unilateralTarget = value);
                             }
                           },
                         ),
@@ -343,9 +335,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                           const SizedBox(height: 8),
                           SwitchListTile.adaptive(
                             contentPadding: EdgeInsets.zero,
-                            title: const Text(
-                              'Preparación también unilateral',
-                            ),
+                            title: const Text('Preparación también unilateral'),
                             subtitle: const Text(
                               'Desactívalo si calentamiento y aproximación '
                               'los haces bilateral.',
@@ -376,9 +366,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                               .toList(growable: false),
                           onChanged: (value) {
                             if (value != null) {
-                              setBottomState(
-                                () => sideRestSeconds = value,
-                              );
+                              setBottomState(() => sideRestSeconds = value);
                             }
                           },
                         ),
@@ -398,9 +386,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                               .toList(growable: false),
                           onChanged: (value) {
                             if (value != null) {
-                              setBottomState(
-                                () => preferredStartSide = value,
-                              );
+                              setBottomState(() => preferredStartSide = value);
                             }
                           },
                         ),
@@ -430,29 +416,31 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                         targetRepsMin: repsMin,
                         targetRepsMax: repsMax,
                         restSeconds: rest,
-                        warmupSets:
-                            phase == RoutineExercisePhase.main ? warmupSets : 0,
-                        approachSets:
-                            phase == RoutineExercisePhase.main ? approachSets : 0,
-                        warmupRestSeconds:
-                            phase == RoutineExercisePhase.main
-                                ? warmupRest
-                                : null,
-                        approachRestSeconds:
-                            phase == RoutineExercisePhase.main
-                                ? approachRest
-                                : null,
+                        warmupSets: phase == RoutineExercisePhase.main
+                            ? warmupSets
+                            : 0,
+                        approachSets: phase == RoutineExercisePhase.main
+                            ? approachSets
+                            : 0,
+                        warmupRestSeconds: phase == RoutineExercisePhase.main
+                            ? warmupRest
+                            : null,
+                        approachRestSeconds: phase == RoutineExercisePhase.main
+                            ? approachRest
+                            : null,
                         phase: phase,
                         unilateral: unilateral,
                         unilateralTarget: unilateralTarget,
                         preparationUnilateral:
                             unilateral && phase == RoutineExercisePhase.main
-                                ? preparationUnilateral
-                                : true,
-                        unilateralSideRestSeconds:
-                            unilateral ? sideRestSeconds : null,
-                        preferredUnilateralStartSide:
-                            unilateral ? preferredStartSide : null,
+                            ? preparationUnilateral
+                            : true,
+                        unilateralSideRestSeconds: unilateral
+                            ? sideRestSeconds
+                            : null,
+                        preferredUnilateralStartSide: unilateral
+                            ? preferredStartSide
+                            : null,
                         supersetGroupId: current?.supersetGroupId,
                       );
                       setState(() {
@@ -482,7 +470,9 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
     if (_selectedExercises.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Añade al menos dos ejercicios para crear una superserie.'),
+          content: Text(
+            'Añade al menos dos ejercicios para crear una superserie.',
+          ),
         ),
       );
       return;
@@ -494,7 +484,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -512,7 +502,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                     width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.textDisabled,
+                      color: AppColors.of(context).textDisabled,
                       borderRadius: BorderRadius.circular(99),
                     ),
                   ),
@@ -524,10 +514,13 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: AppColors.primaryFaded,
+                        color: AppColors.of(context).primaryFaded,
                         borderRadius: AppRadius.sm_,
                       ),
-                      child: const Icon(Icons.link, color: AppColors.primary),
+                      child: Icon(
+                        Icons.link,
+                        color: AppColors.of(context).primary,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -560,15 +553,20 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                       margin: const EdgeInsets.only(bottom: 10),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryFaded,
+                        color: AppColors.of(context).primaryFaded,
                         borderRadius: AppRadius.md_,
                         border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.25),
+                          color: AppColors.of(
+                            context,
+                          ).primary.withValues(alpha: 0.25),
                         ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.link, color: AppColors.primary),
+                          Icon(
+                            Icons.link,
+                            color: AppColors.of(context).primary,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(names, style: AppTypography.bodyMedium),
@@ -586,9 +584,9 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                               });
                               setSheetState(() {});
                             },
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.link_off,
-                              color: AppColors.error,
+                              color: AppColors.of(context).error,
                             ),
                           ),
                         ],
@@ -626,21 +624,22 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                   key: ValueKey('routine-superset-$firstIndex-$secondIndex'),
                   initialValue: secondIndex,
                   decoration: const InputDecoration(labelText: 'Ejercicio B'),
-                  items: List.generate(
-                    _selectedExercises.length,
-                    (itemIndex) => itemIndex,
-                  )
-                      .where((itemIndex) => itemIndex != firstIndex)
-                      .map(
-                        (itemIndex) => DropdownMenuItem(
-                          value: itemIndex,
-                          child: Text(
-                            _exerciseName(itemIndex),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
+                  items:
+                      List.generate(
+                            _selectedExercises.length,
+                            (itemIndex) => itemIndex,
+                          )
+                          .where((itemIndex) => itemIndex != firstIndex)
+                          .map(
+                            (itemIndex) => DropdownMenuItem(
+                              value: itemIndex,
+                              child: Text(
+                                _exerciseName(itemIndex),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(),
                   onChanged: (value) {
                     if (value != null) {
                       setSheetState(() => secondIndex = value);
@@ -732,8 +731,9 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
   @override
   Widget build(BuildContext context) {
     final allExercises = ref.watch(exerciseListProvider);
-    final supersetCount =
-        RoutineSupersetCoordinator.groups(_selectedExercises).length;
+    final supersetCount = RoutineSupersetCoordinator.groups(
+      _selectedExercises,
+    ).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -749,7 +749,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
             child: Text(
               'Guardar',
               style: AppTypography.labelLarge.copyWith(
-                color: AppColors.primary,
+                color: AppColors.of(context).primary,
               ),
             ),
           ),
@@ -769,7 +769,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
               decoration: InputDecoration(
                 hintText: 'Nombre de la rutina...',
                 hintStyle: AppTypography.headlineLarge.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
                 border: InputBorder.none,
               ),
@@ -781,7 +781,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
           Text(
             'Elige días solo si usarás esta rutina por separado. Dentro de un Plan de entrenamiento, el calendario del plan tiene prioridad.',
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
           const SizedBox(height: 12),
@@ -801,9 +801,13 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                   height: 42,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: selected ? AppColors.primary : AppColors.surfaceHigh,
+                    color: selected
+                        ? AppColors.of(context).primary
+                        : AppColors.of(context).surfaceHigh,
                     border: Border.all(
-                      color: selected ? AppColors.primary : AppColors.border,
+                      color: selected
+                          ? AppColors.of(context).primary
+                          : AppColors.of(context).border,
                     ),
                   ),
                   child: Center(
@@ -811,8 +815,8 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                       _dayLabels[index],
                       style: TextStyle(
                         color: selected
-                            ? Colors.white
-                            : AppColors.textSecondary,
+                            ? AppColors.of(context).onPrimary
+                            : AppColors.of(context).textSecondary,
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
@@ -833,8 +837,8 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                     Icons.link,
                     size: 16,
                     color: supersetCount > 0
-                        ? AppColors.primary
-                        : AppColors.textSecondary,
+                        ? AppColors.of(context).primary
+                        : AppColors.of(context).textSecondary,
                   ),
                   label: Text(
                     supersetCount > 0
@@ -842,18 +846,22 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                         : 'Superseries',
                     style: AppTypography.labelLarge.copyWith(
                       color: supersetCount > 0
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
+                          ? AppColors.of(context).primary
+                          : AppColors.of(context).textSecondary,
                     ),
                   ),
                 ),
               TextButton.icon(
                 onPressed: _addExercise,
-                icon: const Icon(Icons.add, size: 16, color: AppColors.primary),
+                icon: Icon(
+                  Icons.add,
+                  size: 16,
+                  color: AppColors.of(context).primary,
+                ),
                 label: Text(
                   'Añadir',
                   style: AppTypography.labelLarge.copyWith(
-                    color: AppColors.primary,
+                    color: AppColors.of(context).primary,
                   ),
                 ),
               ),
@@ -864,16 +872,16 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
               padding: const EdgeInsets.only(bottom: AppSpacing.md),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.drag_indicator,
                     size: 16,
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     'Arrastra el asa para cambiar el orden',
                     style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                 ],
@@ -887,7 +895,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                 child: Text(
                   'Añade ejercicios a tu rutina',
                   style: AppTypography.bodyLarge.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
               ),
@@ -937,15 +945,17 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: item.isInSuperset
-                                ? AppColors.primaryFaded
-                                : AppColors.surfaceHigh,
+                                ? AppColors.of(context).primaryFaded
+                                : AppColors.of(context).surfaceHigh,
                             borderRadius: AppRadius.sm_,
                           ),
                           child: Icon(
-                            item.isInSuperset ? Icons.link : Icons.drag_indicator,
+                            item.isInSuperset
+                                ? Icons.link
+                                : Icons.drag_indicator,
                             color: item.isInSuperset
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
+                                ? AppColors.of(context).primary
+                                : AppColors.of(context).textSecondary,
                           ),
                         ),
                       ),
@@ -965,14 +975,14 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.tune,
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                           IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.delete_outline,
-                              color: AppColors.error,
+                              color: AppColors.of(context).error,
                             ),
                             onPressed: () => _removeExercise(index),
                           ),
@@ -997,9 +1007,9 @@ class _EmptySupersetState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.md_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Text(
         'No hay superseries configuradas.',
@@ -1025,9 +1035,9 @@ class _ConfigSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1070,8 +1080,8 @@ class _CounterRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: TextStyle(
+              color: AppColors.of(context).textPrimary,
               fontSize: 15,
             ),
           ),
@@ -1089,8 +1099,8 @@ class _CounterRow extends StatelessWidget {
               child: Text(
                 '$value',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: AppColors.of(context).textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),

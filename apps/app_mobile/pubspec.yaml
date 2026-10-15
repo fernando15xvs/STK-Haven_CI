@@ -2,7 +2,7 @@ name: gym_tracker
 description: "STK Haven - entrenamiento, progreso y bienestar personal."
 publish_to: 'none'
 
-version: 1.0.0+4
+version: 1.0.0+7
 
 environment:
   sdk: ^3.10.8

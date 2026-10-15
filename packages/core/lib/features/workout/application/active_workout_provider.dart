@@ -14,7 +14,7 @@ import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/application/workout_history_index.dart';
 import 'package:core/features/workout/application/workout_analysis_service.dart';
-import 'package:core/features/workout/application/superset_coordinator.dart';
+import 'package:core/features/workout/application/workout_rest_policy.dart';
 import 'package:core/features/workout/application/unilateral_set_coordinator.dart';
 import 'package:core/features/workout/application/exercise_memory_actions.dart';
 import 'package:core/features/workout/application/exercise_performance_memory.dart';
@@ -34,7 +34,9 @@ class WorkoutFinished extends FinishWorkoutResult {
 
 class EmptyWorkout extends FinishWorkoutResult {}
 
-final activeWorkoutRepositoryProvider = Provider<ActiveWorkoutRepository>((ref) {
+final activeWorkoutRepositoryProvider = Provider<ActiveWorkoutRepository>((
+  ref,
+) {
   final box = Hive.box(HiveBoxes.activeWorkout);
   return ActiveWorkoutRepository(box);
 });
@@ -90,8 +92,8 @@ final workoutTimerProvider = StreamProvider.autoDispose<int>((ref) {
 
 final activeWorkoutProvider =
     NotifierProvider<ActiveWorkoutNotifier, ActiveWorkoutState>(
-  ActiveWorkoutNotifier.new,
-);
+      ActiveWorkoutNotifier.new,
+    );
 
 class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
   Timer? _restTimer;
@@ -107,8 +109,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       int remainingRest = 0;
       bool resting = false;
       if (draft.currentRestEndsAt != null) {
-        remainingRest =
-            draft.currentRestEndsAt!.difference(DateTime.now()).inSeconds;
+        remainingRest = draft.currentRestEndsAt!
+            .difference(DateTime.now())
+            .inSeconds;
         if (remainingRest > 0) {
           resting = true;
           Future.microtask(
@@ -145,9 +148,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       notes: draft.notes,
       currentRestEndsAt: null,
     );
-    ref.read(activeWorkoutRepositoryProvider).saveDraft(
-      updated, preserveLastActivity: true,
-    );
+    ref
+        .read(activeWorkoutRepositoryProvider)
+        .saveDraft(updated, preserveLastActivity: true);
   }
 
   /// Starts a routine while preserving routine-specific set structure/rest.
@@ -162,81 +165,82 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     final settings = ref.read(settingsProvider);
     final defaultSideRest = settings.unilateralSideRestSeconds;
 
-    var exercises = routine.exercises.map((re) {
-      final ex = allExercises.firstWhere(
-        (e) => e.id == re.exerciseId,
-        orElse: () => Exercise(
-          id: re.exerciseId,
-          name: 'Ejercicio eliminado',
-          muscleGroup: '',
-        ),
-      );
+    var exercises = routine.exercises
+        .map((re) {
+          final ex = allExercises.firstWhere(
+            (e) => e.id == re.exerciseId,
+            orElse: () => Exercise(
+              id: re.exerciseId,
+              name: 'Ejercicio eliminado',
+              muscleGroup: '',
+            ),
+          );
 
-      final isMainExercise = re.phase == RoutineExercisePhase.main;
-      final phaseSetType = switch (re.phase) {
-        RoutineExercisePhase.mobility => WorkoutSetType.mobility,
-        RoutineExercisePhase.main => WorkoutSetType.working,
-        RoutineExercisePhase.stretching => WorkoutSetType.stretching,
-      };
+          final isMainExercise = re.phase == RoutineExercisePhase.main;
+          final phaseSetType = switch (re.phase) {
+            RoutineExercisePhase.mobility => WorkoutSetType.mobility,
+            RoutineExercisePhase.main => WorkoutSetType.working,
+            RoutineExercisePhase.stretching => WorkoutSetType.stretching,
+          };
 
-      final sideRest =
-          re.unilateralSideRestSeconds ?? defaultSideRest;
-      final preferredStartSide =
-          re.preferredUnilateralStartSide ??
+          final sideRest = re.unilateralSideRestSeconds ?? defaultSideRest;
+          final preferredStartSide =
+              re.preferredUnilateralStartSide ??
               settings.preferredUnilateralStartSide;
-      final warmupRest = re.warmupRestSeconds ?? re.restSeconds;
-      final approachRest = re.approachRestSeconds ?? re.restSeconds;
+          final warmupRest = re.warmupRestSeconds ?? re.restSeconds;
+          final approachRest = re.approachRestSeconds ?? re.restSeconds;
 
-      final sets = <WorkoutSet>[
-        if (isMainExercise)
-          ...List.generate(
-            re.warmupSets,
-            (_) => WorkoutSet(
-              weight: 0,
-              reps: 0,
-              completed: false,
-              setType: WorkoutSetType.warmup,
-              restSeconds: warmupRest,
-              sideRestSeconds: sideRest,
+          final sets = <WorkoutSet>[
+            if (isMainExercise)
+              ...List.generate(
+                re.warmupSets,
+                (_) => WorkoutSet(
+                  weight: 0,
+                  reps: 0,
+                  completed: false,
+                  setType: WorkoutSetType.warmup,
+                  restSeconds: warmupRest,
+                  sideRestSeconds: sideRest,
+                ),
+              ),
+            if (isMainExercise)
+              ...List.generate(
+                re.approachSets,
+                (_) => WorkoutSet(
+                  weight: 0,
+                  reps: 0,
+                  completed: false,
+                  setType: WorkoutSetType.approach,
+                  restSeconds: approachRest,
+                  sideRestSeconds: sideRest,
+                ),
+              ),
+            ...List.generate(
+              re.targetSets,
+              (_) => WorkoutSet(
+                weight: 0,
+                reps: 0,
+                completed: false,
+                setType: phaseSetType,
+                restSeconds: re.restSeconds,
+                sideRestSeconds: sideRest,
+              ),
             ),
-          ),
-        if (isMainExercise)
-          ...List.generate(
-            re.approachSets,
-            (_) => WorkoutSet(
-              weight: 0,
-              reps: 0,
-              completed: false,
-              setType: WorkoutSetType.approach,
-              restSeconds: approachRest,
-              sideRestSeconds: sideRest,
-            ),
-          ),
-        ...List.generate(
-          re.targetSets,
-          (_) => WorkoutSet(
-            weight: 0,
-            reps: 0,
-            completed: false,
-            setType: phaseSetType,
-            restSeconds: re.restSeconds,
-            sideRestSeconds: sideRest,
-          ),
-        ),
-      ];
+          ];
 
-      return WorkoutExercise(
-        exerciseId: re.exerciseId,
-        exerciseNameSnapshot: ex.name,
-        muscleGroupSnapshot: ex.muscleGroup,
-        unilateral: re.unilateral,
-        unilateralTarget: re.unilateralTarget,
-        preparationUnilateral: re.preparationUnilateral,
-        preferredUnilateralStartSide: preferredStartSide,
-        supersetGroupId: re.supersetGroupId,
-        sets: sets,
-      );
-    }).toList(growable: false);
+          return WorkoutExercise(
+            exerciseId: re.exerciseId,
+            exerciseNameSnapshot: ex.name,
+            muscleGroupSnapshot: ex.muscleGroup,
+            unilateral: re.unilateral,
+            unilateralTarget: re.unilateralTarget,
+            preparationUnilateral: re.preparationUnilateral,
+            preferredUnilateralStartSide: preferredStartSide,
+            supersetGroupId: re.supersetGroupId,
+            sets: sets,
+          );
+        })
+        .toList(growable: false);
 
     var session = WorkoutSession(
       id: const Uuid().v4(),
@@ -254,24 +258,26 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       final index = ref.read(workoutHistoryIndexProvider);
       final previous =
           ExercisePerformanceMemory.syntheticPreviousSessionForCurrentInIndex(
-        index,
-        session,
-      );
-      if (previous != null) {
-        exercises = session.exercises.map((currentExercise) {
-          WorkoutExercise? aligned;
-          for (final candidate in previous.exercises) {
-            if (candidate.exerciseId == currentExercise.exerciseId) {
-              aligned = candidate;
-              break;
-            }
-          }
-          if (aligned == null) return currentExercise;
-          return ExerciseMemoryActions.applyPreviousExercise(
-            current: currentExercise,
-            previousAligned: aligned,
+            index,
+            session,
           );
-        }).toList(growable: false);
+      if (previous != null) {
+        exercises = session.exercises
+            .map((currentExercise) {
+              WorkoutExercise? aligned;
+              for (final candidate in previous.exercises) {
+                if (candidate.exerciseId == currentExercise.exerciseId) {
+                  aligned = candidate;
+                  break;
+                }
+              }
+              if (aligned == null) return currentExercise;
+              return ExerciseMemoryActions.applyPreviousExercise(
+                current: currentExercise,
+                previousAligned: aligned,
+              );
+            })
+            .toList(growable: false);
         session = WorkoutSession(
           id: session.id,
           routineId: session.routineId,
@@ -354,14 +360,24 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     );
     _persistDraft();
 
-    if (!wasCompleted && updatedSet.completed && updatedSet.restSeconds > 0) {
-      final decision = SupersetCoordinator.restDecision(
+    if (!wasCompleted && updatedSet.completed) {
+      final decision = WorkoutRestPolicy.decide(
+        mode: ref.read(settingsProvider).restTimingMode,
         exercises: exercises,
         exerciseIndex: exerciseIndex,
         setIndex: setIndex,
       );
       if (decision.shouldStartRest && decision.restSeconds > 0) {
         _maybeStartRest(decision.restSeconds, exercises);
+      } else if (ref.read(settingsProvider).autoRestEnabled) {
+        _restTimer?.cancel();
+        unawaited(WorkoutNotificationService.cancelRestTimerNotification());
+        state = state.copyWith(
+          isResting: false,
+          restTimerSeconds: 0,
+          session: _rebuildSession(exercises, null),
+        );
+        _persistDraft();
       }
     }
   }
@@ -473,11 +489,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     if (state.session == null || seconds < 0) return;
     final exercise = state.session!.exercises[exerciseIndex];
     final set = exercise.sets[setIndex];
-    updateSet(
-      exerciseIndex,
-      setIndex,
-      set.copyWith(sideRestSeconds: seconds),
-    );
+    updateSet(exerciseIndex, setIndex, set.copyWith(sideRestSeconds: seconds));
   }
 
   void configureExerciseUnilateral(
@@ -634,13 +646,15 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     if (firstGroup != null) groupsToClear.add(firstGroup);
     if (secondGroup != null) groupsToClear.add(secondGroup);
 
-    final exercises = source.map((exercise) {
-      if (exercise.supersetGroupId != null &&
-          groupsToClear.contains(exercise.supersetGroupId)) {
-        return exercise.copyWith(clearSupersetGroup: true);
-      }
-      return exercise;
-    }).toList(growable: false);
+    final exercises = source
+        .map((exercise) {
+          if (exercise.supersetGroupId != null &&
+              groupsToClear.contains(exercise.supersetGroupId)) {
+            return exercise.copyWith(clearSupersetGroup: true);
+          }
+          return exercise;
+        })
+        .toList(growable: false);
 
     final groupId = const Uuid().v4();
     exercises[firstIndex] = exercises[firstIndex].copyWith(
@@ -706,9 +720,10 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         break;
       }
     }
-    final inheritedRest = sameType?.restSeconds ??
-        (sets.isNotEmpty ? sets.last.restSeconds : 90);
-    final inheritedSideRest = sameType?.sideRestSeconds ??
+    final inheritedRest =
+        sameType?.restSeconds ?? (sets.isNotEmpty ? sets.last.restSeconds : 90);
+    final inheritedSideRest =
+        sameType?.sideRestSeconds ??
         (sets.isNotEmpty
             ? sets.last.sideRestSeconds
             : ref.read(settingsProvider).unilateralSideRestSeconds);
@@ -803,14 +818,18 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     _persistDraft();
   }
 
-  Future<FinishWorkoutResult?> finishWorkout({int? actualDurationMinutes}) async {
+  Future<FinishWorkoutResult?> finishWorkout({
+    int? actualDurationMinutes,
+  }) async {
     if (state.session == null) return null;
     _cancelTimers();
 
     final now = DateTime.now();
     final duration = actualDurationMinutes == null
         ? now.difference(state.session!.startedAt).inSeconds
-        : Duration(minutes: actualDurationMinutes.clamp(1, 720).toInt()).inSeconds;
+        : Duration(
+            minutes: actualDurationMinutes.clamp(1, 720).toInt(),
+          ).inSeconds;
     final recordedFinish = actualDurationMinutes == null
         ? now
         : state.session!.startedAt.add(Duration(seconds: duration));
@@ -845,14 +864,16 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         .expand((exercise) => exercise.sets)
         .where((set) => set.setType == WorkoutSetType.working)
         .toList(growable: false);
-    final sessionIsComplete = effectiveSets.isNotEmpty &&
-        effectiveSets.every((set) => set.completed);
+    final sessionIsComplete =
+        effectiveSets.isNotEmpty && effectiveSets.every((set) => set.completed);
 
     try {
       // The same session id is reused when an incomplete workout is resumed,
       // so the final save replaces the partial snapshot instead of duplicating
       // it in history.
-      await ref.read(workoutRepositoryProvider).saveWorkoutSession(finalSession);
+      await ref
+          .read(workoutRepositoryProvider)
+          .saveWorkoutSession(finalSession);
       ref.read(workoutHistoryProvider.notifier).refresh();
 
       if (sessionIsComplete) {
@@ -865,8 +886,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
             .addWorkoutSession(finalSession);
       }
 
-      final analysisResult =
-          await ref.read(workoutAnalysisServiceProvider).analyze(finalSession);
+      final analysisResult = await ref
+          .read(workoutAnalysisServiceProvider)
+          .analyze(finalSession);
 
       if (sessionIsComplete) {
         await ref.read(trainingProgramListProvider.notifier).reconcileActive();
@@ -898,12 +920,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     try {
       final notifier = ref.read(coachProgressProvider.notifier);
       final history = ref.read(workoutHistoryProvider);
-      unawaited(
-        notifier.syncOwnProgress(
-          history,
-          silent: true,
-        ),
-      );
+      unawaited(notifier.syncOwnProgress(history, silent: true));
     } catch (_) {
       // Remote sharing is optional. A cloud/bootstrap failure must never turn
       // a successfully saved local workout into a failed completion.
@@ -945,10 +962,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
 
   void _startRestTimer(int initialSeconds, DateTime endsAt) {
     _restTimer?.cancel();
-    state = state.copyWith(
-      isResting: true,
-      restTimerSeconds: initialSeconds,
-    );
+    state = state.copyWith(isResting: true, restTimerSeconds: initialSeconds);
     WorkoutNotificationService.scheduleRestTimerNotification(endsAt);
 
     _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -1004,7 +1018,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       routineNameSnapshot: state.session!.routineNameSnapshot,
       startedAt: state.session!.startedAt,
       finishedAt: state.session!.finishedAt,
-      durationSeconds: DateTime.now().difference(state.session!.startedAt).inSeconds,
+      durationSeconds: DateTime.now()
+          .difference(state.session!.startedAt)
+          .inSeconds,
       exercises: exercises,
       notes: state.session!.notes,
       currentRestEndsAt: restEndsAt,
@@ -1018,8 +1034,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         return;
       }
       await WorkoutNotificationService.scheduleUnfinishedWorkoutReminder(
-        lastActivityAt: ref.read(activeWorkoutRepositoryProvider).lastActivityAt
-            ?? session.startedAt,
+        lastActivityAt:
+            ref.read(activeWorkoutRepositoryProvider).lastActivityAt ??
+            session.startedAt,
         workoutName: session.routineNameSnapshot,
       );
     } catch (_) {

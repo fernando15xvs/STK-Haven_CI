@@ -38,10 +38,10 @@ class CalendarHeatmapCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.surfaceBorder),
-        boxShadow: AppElevation.soft,
+        border: Border.all(color: AppColors.of(context).surfaceBorder),
+        boxShadow: AppElevation.soft(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,12 +52,12 @@ class CalendarHeatmapCard extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.primaryFaded,
+                  color: AppColors.of(context).primaryFaded,
                   borderRadius: AppRadius.sm_,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.calendar_view_month_outlined,
-                  color: AppColors.primary,
+                  color: AppColors.of(context).primary,
                   size: 20,
                 ),
               ),
@@ -69,7 +69,7 @@ class CalendarHeatmapCard extends StatelessWidget {
                     Text(
                       'CALENDARIO DE ACTIVIDAD',
                       style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.primary,
+                        color: AppColors.of(context).primary,
                       ),
                     ),
                     Text(
@@ -112,7 +112,7 @@ class CalendarHeatmapCard extends StatelessWidget {
                             child: Text(
                               label,
                               style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.textDisabled,
+                                color: AppColors.of(context).textDisabled,
                               ),
                             ),
                           ),
@@ -131,7 +131,7 @@ class CalendarHeatmapCard extends StatelessWidget {
                           .map(
                             (week) => Column(
                               children: week
-                                  .map(_buildDayCell)
+                                  .map((day) => _buildDayCell(context, day))
                                   .toList(growable: false),
                             ),
                           )
@@ -158,7 +158,7 @@ class CalendarHeatmapCard extends StatelessWidget {
           Text(
             'Cada cuadro marca un día con al menos una sesión guardada. No puntúa descanso, carga ni calidad.',
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
               height: 1.35,
             ),
           ),
@@ -167,7 +167,7 @@ class CalendarHeatmapCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDayCell(CalendarHeatmapDay day) {
+  Widget _buildDayCell(BuildContext context, CalendarHeatmapDay day) {
     if (!day.isInPeriod) {
       return const SizedBox(width: 18, height: 18);
     }
@@ -187,13 +187,13 @@ class CalendarHeatmapCard extends StatelessWidget {
           margin: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             color: day.isActive
-                ? AppColors.primary.withValues(alpha: 0.82)
-                : AppColors.surfaceHigh,
+                ? AppColors.of(context).primary.withValues(alpha: 0.82)
+                : AppColors.of(context).surfaceHigh,
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
               color: day.isActive
-                  ? AppColors.primary
-                  : AppColors.surfaceBorder,
+                  ? AppColors.of(context).primary
+                  : AppColors.of(context).surfaceBorder,
             ),
           ),
         ),
@@ -221,7 +221,7 @@ class _SummaryValue extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surfaceHigh,
+          color: AppColors.of(context).surfaceHigh,
           borderRadius: AppRadius.sm_,
         ),
         child: Column(
@@ -249,11 +249,13 @@ class _LegendDot extends StatelessWidget {
       height: 12,
       decoration: BoxDecoration(
         color: active
-            ? AppColors.primary.withValues(alpha: 0.82)
-            : AppColors.surfaceHigh,
+            ? AppColors.of(context).primary.withValues(alpha: 0.82)
+            : AppColors.of(context).surfaceHigh,
         borderRadius: BorderRadius.circular(3),
         border: Border.all(
-          color: active ? AppColors.primary : AppColors.surfaceBorder,
+          color: active
+              ? AppColors.of(context).primary
+              : AppColors.of(context).surfaceBorder,
         ),
       ),
     );

@@ -80,9 +80,7 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
             .setSteps(steps, deviceSynced: true);
 
         final preferences = ref.read(stepGoalPreferencesProvider);
-        await _syncGoalReminders(
-          force: steps >= preferences.targetSteps,
-        );
+        await _syncGoalReminders(force: steps >= preferences.targetSteps);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -110,10 +108,7 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
     );
     _lastReminderSyncAt = now;
 
-    if (requestPermission &&
-        preferences.reminderEnabled &&
-        !ok &&
-        mounted) {
+    if (requestPermission && preferences.reminderEnabled && !ok && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -168,8 +163,7 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
                     divisions: 98,
                     label: '$targetSteps',
                     onChanged: (value) => setSheetState(
-                      () => targetSteps =
-                          (value / 500).round() * 500,
+                      () => targetSteps = (value / 500).round() * 500,
                     ),
                   ),
                   Wrap(
@@ -179,9 +173,8 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
                         ChoiceChip(
                           label: Text('$preset'),
                           selected: targetSteps == preset,
-                          onSelected: (_) => setSheetState(
-                            () => targetSteps = preset,
-                          ),
+                          onSelected: (_) =>
+                              setSheetState(() => targetSteps = preset),
                         ),
                     ],
                   ),
@@ -208,15 +201,11 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
                       items: const [
                         DropdownMenuItem(
                           value: StepReminderCadence.balanced,
-                          child: Text(
-                            'Inteligente · 17:30 y 20:30',
-                          ),
+                          child: Text('Inteligente · 17:30 y 20:30'),
                         ),
                         DropdownMenuItem(
                           value: StepReminderCadence.gentle,
-                          child: Text(
-                            'Suave · 20:00',
-                          ),
+                          child: Text('Suave · 20:00'),
                         ),
                       ],
                       onChanged: (value) {
@@ -255,10 +244,7 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
     await notifier.setTargetSteps(targetSteps);
     await notifier.setReminderCadence(cadence);
     await notifier.setReminderEnabled(reminderEnabled);
-    await _syncGoalReminders(
-      requestPermission: reminderEnabled,
-      force: true,
-    );
+    await _syncGoalReminders(requestPermission: reminderEnabled, force: true);
 
     if (mounted) setState(() {});
   }
@@ -266,8 +252,7 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
   String _deviceStatusText(bool deviceSynced) {
     if (_busy) return 'Actualizando automáticamente…';
 
-    if (deviceSynced &&
-        _accessStatus == DailyStepsAccessStatus.authorized) {
+    if (deviceSynced && _accessStatus == DailyStepsAccessStatus.authorized) {
       return 'Se actualiza automáticamente desde el dispositivo.';
     }
 
@@ -312,22 +297,19 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryFaded,
+                    color: AppColors.of(context).primaryFaded,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.directions_walk_rounded,
-                    color: AppColors.primary,
+                    color: AppColors.of(context).primary,
                   ),
                 ),
                 const SizedBox(width: 14),
                 const Expanded(
                   child: Text(
                     'Pasos de hoy',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                 ),
                 IconButton(
@@ -340,10 +322,7 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
             const SizedBox(height: 8),
             Text(
               '${state.steps} / $target pasos',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-              ),
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 10),
             ClipRRect(
@@ -351,8 +330,8 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 12,
-                backgroundColor: AppColors.surfaceBorder,
-                color: AppColors.primary,
+                backgroundColor: AppColors.of(context).surfaceBorder,
+                color: AppColors.of(context).primary,
               ),
             ),
             const SizedBox(height: 10),
@@ -360,28 +339,27 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
               remaining == 0
                   ? 'Meta completada por hoy.'
                   : 'Te faltan $remaining pasos para tu meta.',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: AppColors.of(context).textSecondary,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               _deviceStatusText(state.deviceSynced),
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: AppColors.of(context).textSecondary,
                 fontSize: 12,
               ),
             ),
             if (preferences.reminderEnabled) ...[
               const SizedBox(height: 4),
               Text(
-                preferences.reminderCadence ==
-                        StepReminderCadence.balanced
+                preferences.reminderCadence == StepReminderCadence.balanced
                     ? 'Recordatorios inteligentes: 17:30 y 20:30.'
                     : 'Recordatorio suave: 20:00.',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  color: AppColors.of(context).textSecondary,
                   fontSize: 12,
                 ),
               ),

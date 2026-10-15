@@ -28,14 +28,16 @@ class _ReflectionHistoryPageState extends ConsumerState<ReflectionHistoryPage> {
     final entries = ref.watch(reflectionJournalProvider);
     final moods = entries.map((entry) => entry.mood).toSet().toList()..sort();
     final query = _search.text.trim().toLowerCase();
-    final filtered = entries.where((entry) {
-      if (_mood != null && entry.mood != _mood) return false;
-      if (query.isEmpty) return true;
-      return entry.verseText.toLowerCase().contains(query) ||
-          entry.verseReference.toLowerCase().contains(query) ||
-          entry.note.toLowerCase().contains(query) ||
-          entry.mood.toLowerCase().contains(query);
-    }).toList(growable: false);
+    final filtered = entries
+        .where((entry) {
+          if (_mood != null && entry.mood != _mood) return false;
+          if (query.isEmpty) return true;
+          return entry.verseText.toLowerCase().contains(query) ||
+              entry.verseReference.toLowerCase().contains(query) ||
+              entry.note.toLowerCase().contains(query) ||
+              entry.mood.toLowerCase().contains(query);
+        })
+        .toList(growable: false);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mis reflexiones')),
@@ -100,7 +102,7 @@ class _ReflectionHistoryPageState extends ConsumerState<ReflectionHistoryPage> {
                               'No hay reflexiones que coincidan con estos filtros.',
                               textAlign: TextAlign.center,
                               style: AppTypography.bodyMedium.copyWith(
-                                color: AppColors.textSecondary,
+                                color: AppColors.of(context).textSecondary,
                               ),
                             ),
                           ),
@@ -131,10 +133,10 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.auto_stories_outlined,
               size: 52,
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
             const SizedBox(height: 14),
             Text(
@@ -200,9 +202,7 @@ class _ReflectionCard extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar reflexión'),
-        content: const Text(
-          'Se eliminará también la nota personal asociada.',
-        ),
+        content: const Text('Se eliminará también la nota personal asociada.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -225,9 +225,9 @@ class _ReflectionCard extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.surfaceBorder),
+        border: Border.all(color: AppColors.of(context).surfaceBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,16 +235,15 @@ class _ReflectionCard extends ConsumerWidget {
           Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryFaded,
+                  color: AppColors.of(context).primaryFaded,
                   borderRadius: AppRadius.sm_,
                 ),
                 child: Text(
                   entry.mood,
                   style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.primary,
+                    color: AppColors.of(context).primary,
                   ),
                 ),
               ),
@@ -273,7 +272,9 @@ class _ReflectionCard extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             entry.verseReference,
-            style: AppTypography.labelMedium.copyWith(color: AppColors.primary),
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.of(context).primary,
+            ),
           ),
           if (entry.note.isNotEmpty) ...[
             const SizedBox(height: 14),
@@ -281,7 +282,7 @@ class _ReflectionCard extends ConsumerWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.background,
+                color: AppColors.of(context).background,
                 borderRadius: AppRadius.md_,
               ),
               child: Text(entry.note, style: AppTypography.bodyMedium),

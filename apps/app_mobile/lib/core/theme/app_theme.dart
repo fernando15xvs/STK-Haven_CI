@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
+import 'package:core/core/theme/appearance_theme.dart';
+import 'package:core/domain/models/appearance_settings.dart';
 
 class AppScrollBehavior extends ScrollBehavior {
   const AppScrollBehavior();
@@ -7,8 +8,9 @@ class AppScrollBehavior extends ScrollBehavior {
   @override
   ScrollPhysics getScrollPhysics(BuildContext context) {
     return switch (getPlatform(context)) {
-      TargetPlatform.iOS || TargetPlatform.macOS =>
-        const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      TargetPlatform.iOS || TargetPlatform.macOS => const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       _ => const ClampingScrollPhysics(),
     };
   }
@@ -24,56 +26,6 @@ class AppScrollBehavior extends ScrollBehavior {
 }
 
 class AppTheme {
-  static ThemeData get darkTheme {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.dark,
-      scaffoldBackgroundColor: AppColors.background,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.primary,
-        surface: AppColors.surface,
-      ),
-      cardTheme: CardThemeData(
-        color: AppColors.surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: const BorderSide(color: AppColors.surfaceBorder),
-        ),
-      ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: false,
-        foregroundColor: AppColors.textPrimary,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.primaryFaded,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.primary,
-            );
-          }
-          return const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
-          );
-        }),
-      ),
-      dividerTheme: const DividerThemeData(
-        color: AppColors.surfaceBorder,
-        thickness: 1,
-        space: 0,
-      ),
-      textTheme: const TextTheme(
-        bodyMedium: TextStyle(color: AppColors.textPrimary),
-        bodySmall: TextStyle(color: AppColors.textSecondary),
-      ),
-    );
-  }
+  static ThemeData get darkTheme =>
+      AppearanceTheme.build(const AppearanceSettings(), Brightness.dark);
 }

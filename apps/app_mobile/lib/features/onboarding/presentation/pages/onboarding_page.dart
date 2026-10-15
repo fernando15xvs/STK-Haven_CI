@@ -78,7 +78,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           .updateProfile(profile);
 
       final settings = ref.read(settingsProvider);
-      ref.read(settingsProvider.notifier).updateSettings(
+      ref
+          .read(settingsProvider.notifier)
+          .updateSettings(
             settings.copyWith(
               weightUnit: profile.weightUnit,
               showDailyVerse: profile.faithEnabled,
@@ -86,10 +88,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             ),
           );
 
-      final recommended =
-          OnboardingRecommendationService.recommend(profile);
+      final recommended = OnboardingRecommendationService.recommend(profile);
       if (installRecommended && recommended != null) {
-        await ref.read(programServiceProvider).installProgram(
+        await ref
+            .read(programServiceProvider)
+            .installProgram(
               recommended,
               trainingDaysPerWeek: profile.trainingDaysPerWeek,
             );
@@ -104,7 +107,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       body: SafeArea(
         child: Column(
           children: [
@@ -120,7 +123,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   children: [
                     IconButton(
                       tooltip: 'Atrás',
-                      onPressed: _saving ? null : () => _goTo(_currentIndex - 1),
+                      onPressed: _saving
+                          ? null
+                          : () => _goTo(_currentIndex - 1),
                       icon: const Icon(Icons.arrow_back_rounded),
                     ),
                     Expanded(
@@ -142,15 +147,14 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (index) =>
-                    setState(() => _currentIndex = index),
+                onPageChanged: (index) => setState(() => _currentIndex = index),
                 children: [
-                  _welcomeStep(),
+                  _welcomeStep(context),
                   _goalStep(),
                   _scheduleStep(),
                   _preferencesStep(),
                   _faithStep(),
-                  _summaryStep(),
+                  _summaryStep(context),
                 ],
               ),
             ),
@@ -160,7 +164,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     );
   }
 
-  Widget _stepShell({
+  Widget _stepShell(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required List<Widget> children,
@@ -182,7 +187,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           Text(
             subtitle,
             style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -208,7 +213,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     );
   }
 
-  Widget _welcomeStep() {
+  Widget _welcomeStep(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
@@ -218,33 +223,33 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             width: 96,
             height: 96,
             decoration: BoxDecoration(
-              color: AppColors.primaryFaded,
+              color: AppColors.of(context).primaryFaded,
               borderRadius: BorderRadius.circular(28),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.tune_rounded,
               size: 48,
-              color: AppColors.primary,
+              color: AppColors.of(context).primary,
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
-          const Text(
+          Text(
             'Haz que STK Haven\nse adapte a ti',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 30,
               height: 1.15,
               fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
+              color: AppColors.of(context).textPrimary,
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          const Text(
+          Text(
             'Son unas pocas preguntas. Podrás cambiar todo después desde tu perfil.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 16,
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
           const Spacer(),
@@ -259,6 +264,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Widget _goalStep() {
     return _stepShell(
+      context,
       title: 'Tu entrenamiento',
       subtitle: 'Primero, cuéntanos qué buscas y tu nivel actual.',
       actionLabel: 'Siguiente',
@@ -328,6 +334,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Widget _scheduleStep() {
     return _stepShell(
+      context,
       title: 'Tiempo y entorno',
       subtitle: 'Esto ayuda a que las recomendaciones sean realistas.',
       actionLabel: 'Siguiente',
@@ -399,6 +406,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Widget _preferencesStep() {
     return _stepShell(
+      context,
       title: 'Tus preferencias',
       subtitle: 'Puedes modificarlas cuando quieras.',
       actionLabel: 'Siguiente',
@@ -452,6 +460,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Widget _faithStep() {
     return _stepShell(
+      context,
       title: 'Fe, solo si tú quieres',
       subtitle: '¿Quieres incluir contenido de fe cristiana en STK Haven?',
       actionLabel: 'Ver resumen',
@@ -482,10 +491,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     );
   }
 
-  Widget _summaryStep() {
+  Widget _summaryStep(BuildContext context) {
     final profile = _buildProfile();
-    final recommended =
-        OnboardingRecommendationService.recommend(profile);
+    final recommended = OnboardingRecommendationService.recommend(profile);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -502,7 +510,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           Text(
             'Estas son tus preferencias iniciales.',
             style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -510,35 +518,43 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  _summaryRow('Objetivo', _goalLabel(_goal)),
-                  _summaryRow('Experiencia', _experienceLabel(_experience)),
+                  _summaryRow(context, 'Objetivo', _goalLabel(_goal)),
                   _summaryRow(
+                    context,
+                    'Experiencia',
+                    _experienceLabel(_experience),
+                  ),
+                  _summaryRow(
+                    context,
                     'Frecuencia',
                     _daysPerWeek == null
                         ? 'Por decidir'
                         : '$_daysPerWeek días/semana',
                   ),
-                  _summaryRow('Duración', _durationLabel(_duration)),
-                  _summaryRow('Entorno', _environmentLabel(_environment)),
-                  _summaryRow('Peso', _weightUnit.label),
+                  _summaryRow(context, 'Duración', _durationLabel(_duration)),
                   _summaryRow(
-                    'Fe',
-                    switch (_faith) {
-                      FaithContentPreference.enabled => 'Incluida',
-                      FaithContentPreference.disabled => 'Oculta',
-                      FaithContentPreference.undecided => 'Decidir después',
-                    },
+                    context,
+                    'Entorno',
+                    _environmentLabel(_environment),
                   ),
+                  _summaryRow(context, 'Peso', _weightUnit.label),
+                  _summaryRow(context, 'Fe', switch (_faith) {
+                    FaithContentPreference.enabled => 'Incluida',
+                    FaithContentPreference.disabled => 'Oculta',
+                    FaithContentPreference.undecided => 'Decidir después',
+                  }),
                   if (recommended != null) ...[
                     const SizedBox(height: AppSpacing.md),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryFaded,
+                        color: AppColors.of(context).primaryFaded,
                         borderRadius: AppRadius.lg_,
                         border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.35),
+                          color: AppColors.of(
+                            context,
+                          ).primary.withValues(alpha: 0.35),
                         ),
                       ),
                       child: Column(
@@ -547,7 +563,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                           Text(
                             'PROGRAMA RECOMENDADO',
                             style: AppTypography.labelMedium.copyWith(
-                              color: AppColors.primary,
+                              color: AppColors.of(context).primary,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -594,8 +610,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           SizedBox(
             width: double.infinity,
             child: TextButton(
-              onPressed:
-                  _saving ? null : () => _finish(installRecommended: false),
+              onPressed: _saving
+                  ? null
+                  : () => _finish(installRecommended: false),
               child: Text(
                 recommended == null
                     ? 'Entrar a STK Haven'
@@ -608,10 +625,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     );
   }
 
-  Widget _durationChip(
-    SessionDurationPreference value,
-    String label,
-  ) {
+  Widget _durationChip(SessionDurationPreference value, String label) {
     return ChoiceChip(
       label: Text(label),
       selected: _duration == value,
@@ -630,7 +644,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
-        color: active ? AppColors.primaryFaded : AppColors.surface,
+        color: active
+            ? AppColors.of(context).primaryFaded
+            : AppColors.of(context).surface,
         borderRadius: AppRadius.md_,
         child: InkWell(
           borderRadius: AppRadius.md_,
@@ -642,8 +658,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               borderRadius: AppRadius.md_,
               border: Border.all(
                 color: active
-                    ? AppColors.primary
-                    : AppColors.surfaceBorder,
+                    ? AppColors.of(context).primary
+                    : AppColors.of(context).surfaceBorder,
               ),
             ),
             child: Row(
@@ -654,8 +670,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                       ? Icons.radio_button_checked
                       : Icons.radio_button_unchecked,
                   color: active
-                      ? AppColors.primary
-                      : AppColors.textSecondary,
+                      ? AppColors.of(context).primary
+                      : AppColors.of(context).textSecondary,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -668,7 +684,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                         Text(
                           subtitle,
                           style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                         ),
                       ],
@@ -683,7 +699,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     );
   }
 
-  Widget _summaryRow(String label, String value) {
+  Widget _summaryRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -692,7 +708,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             child: Text(
               label,
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
           ),
@@ -703,34 +719,34 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   String _goalLabel(TrainingGoal? value) => switch (value) {
-        TrainingGoal.hypertrophy => 'Masa muscular',
-        TrainingGoal.strength => 'Fuerza',
-        TrainingGoal.activeLifestyle => 'Mantenerme activo',
-        TrainingGoal.conditioning => 'Condición física',
-        TrainingGoal.selfDirected => 'Rutinas propias',
-        null => 'Por decidir',
-      };
+    TrainingGoal.hypertrophy => 'Masa muscular',
+    TrainingGoal.strength => 'Fuerza',
+    TrainingGoal.activeLifestyle => 'Mantenerme activo',
+    TrainingGoal.conditioning => 'Condición física',
+    TrainingGoal.selfDirected => 'Rutinas propias',
+    null => 'Por decidir',
+  };
 
   String _experienceLabel(TrainingExperience? value) => switch (value) {
-        TrainingExperience.beginner => 'Principiante',
-        TrainingExperience.intermediate => 'Intermedio',
-        TrainingExperience.advanced => 'Avanzado',
-        null => 'Por decidir',
-      };
+    TrainingExperience.beginner => 'Principiante',
+    TrainingExperience.intermediate => 'Intermedio',
+    TrainingExperience.advanced => 'Avanzado',
+    null => 'Por decidir',
+  };
 
   String _durationLabel(SessionDurationPreference value) => switch (value) {
-        SessionDurationPreference.minutes30 => '30 min',
-        SessionDurationPreference.minutes45 => '45 min',
-        SessionDurationPreference.minutes60 => '60 min',
-        SessionDurationPreference.minutes75Plus => '75+ min',
-        SessionDurationPreference.variable => 'Variable',
-      };
+    SessionDurationPreference.minutes30 => '30 min',
+    SessionDurationPreference.minutes45 => '45 min',
+    SessionDurationPreference.minutes60 => '60 min',
+    SessionDurationPreference.minutes75Plus => '75+ min',
+    SessionDurationPreference.variable => 'Variable',
+  };
 
   String _environmentLabel(TrainingEnvironment? value) => switch (value) {
-        TrainingEnvironment.fullGym => 'Gimnasio',
-        TrainingEnvironment.homeWeights => 'Casa con pesas',
-        TrainingEnvironment.minimalEquipment => 'Equipamiento mínimo',
-        TrainingEnvironment.mixed => 'Mixto',
-        null => 'Por decidir',
-      };
+    TrainingEnvironment.fullGym => 'Gimnasio',
+    TrainingEnvironment.homeWeights => 'Casa con pesas',
+    TrainingEnvironment.minimalEquipment => 'Equipamiento mínimo',
+    TrainingEnvironment.mixed => 'Mixto',
+    null => 'Por decidir',
+  };
 }

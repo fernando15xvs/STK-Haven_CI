@@ -8,7 +8,11 @@ import 'package:core/features/programs/presentation/providers/training_program_p
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 
 class WorkoutLauncher {
-  static Future<void> launch(BuildContext context, WidgetRef ref, Routine routine) async {
+  static Future<void> launch(
+    BuildContext context,
+    WidgetRef ref,
+    Routine routine,
+  ) async {
     final activeState = ref.read(activeWorkoutProvider);
     final notifier = ref.read(activeWorkoutProvider.notifier);
     final exercises = ref.read(exerciseListProvider);
@@ -18,12 +22,17 @@ class WorkoutLauncher {
       final choice = await showDialog<String>(
         context: context,
         builder: (_) => AlertDialog(
-          backgroundColor: AppColors.surfaceHigh,
-          title: const Text('Entrenamiento en curso',
-              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+          backgroundColor: AppColors.of(context).surfaceHigh,
+          title: Text(
+            'Entrenamiento en curso',
+            style: TextStyle(
+              color: AppColors.of(context).textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           content: Text(
             '${activeState.routineDisplayName} ya está en progreso.\n\n¿Qué deseas hacer?',
-            style: const TextStyle(color: AppColors.textSecondary),
+            style: TextStyle(color: AppColors.of(context).textSecondary),
           ),
           actions: [
             TextButton(
@@ -32,8 +41,10 @@ class WorkoutLauncher {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop('discard_start'),
-              child: const Text('Descartar e iniciar nuevo',
-                  style: TextStyle(color: AppColors.warning)),
+              child: Text(
+                'Descartar e iniciar nuevo',
+                style: TextStyle(color: AppColors.of(context).warning),
+              ),
             ),
           ],
         ),
@@ -53,8 +64,7 @@ class WorkoutLauncher {
     }
 
     final programSession = ref.read(nextProgramSessionProvider);
-    if (programSession != null &&
-        programSession.routine.id != routine.id) {
+    if (programSession != null && programSession.routine.id != routine.id) {
       final proceed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(

@@ -19,7 +19,7 @@ class AchievementsPageWeb extends ConsumerWidget {
     final progress = (levelXp / needed).clamp(0.0, 1.0);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(title: const Text('Nivel y logros')),
       body: SafeArea(
         child: Center(
@@ -33,9 +33,13 @@ class AchievementsPageWeb extends ConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.all(22),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: AppColors.of(context).surface,
                         borderRadius: AppRadius.lg_,
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: AppColors.of(
+                            context,
+                          ).primary.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,31 +50,59 @@ class AchievementsPageWeb extends ConsumerWidget {
                                 width: 54,
                                 height: 54,
                                 decoration: BoxDecoration(
-                                  color: AppColors.gold.withValues(alpha: 0.12),
+                                  color: AppColors.of(
+                                    context,
+                                  ).gold.withValues(alpha: 0.12),
                                   borderRadius: AppRadius.md_,
                                 ),
-                                child: const Icon(Icons.emoji_events, color: AppColors.gold, size: 30),
+                                child: Icon(
+                                  Icons.emoji_events,
+                                  color: AppColors.of(context).gold,
+                                  size: 30,
+                                ),
                               ),
                               const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('Nivel ${state.level}', style: AppTypography.displaySmall),
-                                    Text('${state.xp} XP totales', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                                    Text(
+                                      'Nivel ${state.level}',
+                                      style: AppTypography.displaySmall,
+                                    ),
+                                    Text(
+                                      '${state.xp} XP totales',
+                                      style: AppTypography.bodyMedium.copyWith(
+                                        color: AppColors.of(
+                                          context,
+                                        ).textSecondary,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 18),
-                          LinearProgressIndicator(value: progress, minHeight: 10, borderRadius: BorderRadius.circular(20)),
+                          LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 10,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           const SizedBox(height: 7),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text('$levelXp XP', style: AppTypography.labelMedium),
-                              Text('$needed XP para el siguiente nivel', style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary)),
+                              Text(
+                                '$levelXp XP',
+                                style: AppTypography.labelMedium,
+                              ),
+                              Text(
+                                '$needed XP para el siguiente nivel',
+                                style: AppTypography.labelMedium.copyWith(
+                                  color: AppColors.of(context).textSecondary,
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -80,13 +112,19 @@ class AchievementsPageWeb extends ConsumerWidget {
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(18, 14, 18, 10),
-                  sliver: SliverToBoxAdapter(child: Text('Medallas', style: AppTypography.headlineLarge)),
+                  sliver: SliverToBoxAdapter(
+                    child: Text('Medallas', style: AppTypography.headlineLarge),
+                  ),
                 ),
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(18, 0, 18, 40),
                   sliver: SliverLayoutBuilder(
                     builder: (context, constraints) {
-                      final columns = constraints.crossAxisExtent >= 900 ? 3 : constraints.crossAxisExtent >= 580 ? 2 : 1;
+                      final columns = constraints.crossAxisExtent >= 900
+                          ? 3
+                          : constraints.crossAxisExtent >= 580
+                          ? 2
+                          : 1;
                       return SliverGrid(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: columns,
@@ -94,45 +132,70 @@ class AchievementsPageWeb extends ConsumerWidget {
                           mainAxisSpacing: 12,
                           childAspectRatio: columns == 1 ? 2.6 : 1.55,
                         ),
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final achievement = state.achievements[index];
-                            final unlocked = achievement.isUnlocked;
-                            return Container(
-                              padding: const EdgeInsets.all(18),
-                              decoration: BoxDecoration(
-                                color: unlocked ? AppColors.surface : AppColors.surfaceHigh.withValues(alpha: 0.55),
-                                borderRadius: AppRadius.lg_,
-                                border: Border.all(
-                                  color: unlocked ? AppColors.primary.withValues(alpha: 0.35) : AppColors.border,
-                                ),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final achievement = state.achievements[index];
+                          final unlocked = achievement.isUnlocked;
+                          return Container(
+                            padding: const EdgeInsets.all(18),
+                            decoration: BoxDecoration(
+                              color: unlocked
+                                  ? AppColors.of(context).surface
+                                  : AppColors.of(
+                                      context,
+                                    ).surfaceHigh.withValues(alpha: 0.55),
+                              borderRadius: AppRadius.lg_,
+                              border: Border.all(
+                                color: unlocked
+                                    ? AppColors.of(
+                                        context,
+                                      ).primary.withValues(alpha: 0.35)
+                                    : AppColors.of(context).border,
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(unlocked ? Icons.emoji_events : Icons.lock_outline, color: unlocked ? AppColors.gold : AppColors.textDisabled, size: 34),
-                                  const SizedBox(height: 10),
-                                  Text(achievement.title, style: AppTypography.headlineSmall),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  unlocked
+                                      ? Icons.emoji_events
+                                      : Icons.lock_outline,
+                                  color: unlocked
+                                      ? AppColors.of(context).gold
+                                      : AppColors.of(context).textDisabled,
+                                  size: 34,
+                                ),
+                                const SizedBox(height: 10),
+                                Text(
+                                  achievement.title,
+                                  style: AppTypography.headlineSmall,
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  achievement.description,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.of(context).textSecondary,
+                                  ),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (!unlocked && achievement.progress > 0) ...[
+                                  const SizedBox(height: 12),
+                                  LinearProgressIndicator(
+                                    value: achievement.progress,
+                                    minHeight: 6,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
                                   const SizedBox(height: 5),
                                   Text(
-                                    achievement.description,
-                                    style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
+                                    '${(achievement.progress * 100).round()}%',
+                                    style: AppTypography.labelSmall,
                                   ),
-                                  if (!unlocked && achievement.progress > 0) ...[
-                                    const SizedBox(height: 12),
-                                    LinearProgressIndicator(value: achievement.progress, minHeight: 6, borderRadius: BorderRadius.circular(20)),
-                                    const SizedBox(height: 5),
-                                    Text('${(achievement.progress * 100).round()}%', style: AppTypography.labelSmall),
-                                  ],
                                 ],
-                              ),
-                            );
-                          },
-                          childCount: state.achievements.length,
-                        ),
+                              ],
+                            ),
+                          );
+                        }, childCount: state.achievements.length),
                       );
                     },
                   ),

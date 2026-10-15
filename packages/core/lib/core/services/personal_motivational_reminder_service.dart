@@ -39,13 +39,19 @@ class PersonalMotivationalReminderService {
   static Future<bool> requestPermission() async {
     if (kIsWeb) return false;
     await initialize();
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    final ios = _plugin.resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>();
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
     final a = await android?.requestNotificationsPermission();
     final i = await ios?.requestPermissions(
-      alert: true, badge: false, sound: true,
+      alert: true,
+      badge: false,
+      sound: true,
     );
     return a != false && i != false;
   }
@@ -73,9 +79,13 @@ class PersonalMotivationalReminderService {
     if (kIsWeb) return 0;
     await initialize();
     final pending = await _plugin.pendingNotificationRequests();
-    return pending.where((item) =>
-        item.id >= firstDailySlotId &&
-        item.id < firstDailySlotId + maxDailySlots).length;
+    return pending
+        .where(
+          (item) =>
+              item.id >= firstDailySlotId &&
+              item.id < firstDailySlotId + maxDailySlots,
+        )
+        .length;
   }
 
   static int expectedSlots(PersonalReminderSettings settings) =>
@@ -97,9 +107,30 @@ class PersonalMotivationalReminderService {
   /// message counts that do not divide 24 or 48.
   static Future<void> synchronize(PersonalReminderSettings settings) async {
     if (kIsWeb) return;
-    await cancel();
-    if (!settings.enabled) return;
+    if (!settings.enabled) {
+      await cancel();
+      return;
+    }
     if (!settings.isValid) throw ArgumentError('Invalid reminder');
+    await initialize();
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final pending = await _plugin.pendingNotificationRequests();
+      final otherCount = pending
+          .where(
+            (p) =>
+                p.id != legacyNotificationId &&
+                p.id != testNotificationId &&
+                !(p.id >= firstDailySlotId &&
+                    p.id < firstDailySlotId + maxDailySlots),
+          )
+          .length;
+      if (otherCount + expectedSlots(settings) > 60) {
+        throw StateError(
+          'No hay espacio para tantos avisos. Reduce la frecuencia de los mensajes o de los versículos.',
+        );
+      }
+    }
+    await cancel();
     final now = tz.TZDateTime.now(tz.local);
     final interval = settings.intervalMinutes;
     final slotCount = (24 * 60) ~/ interval;
@@ -108,13 +139,21 @@ class PersonalMotivationalReminderService {
     for (var slot = 0; slot < slotCount; slot++) {
       final atMinutes = slot * interval;
       var next = tz.TZDateTime(
-        tz.local, now.year, now.month, now.day,
-        atMinutes ~/ 60, atMinutes % 60,
+        tz.local,
+        now.year,
+        now.month,
+        now.day,
+        atMinutes ~/ 60,
+        atMinutes % 60,
       );
       if (!next.isAfter(now)) {
         next = tz.TZDateTime(
-          tz.local, now.year, now.month, now.day + 1,
-          atMinutes ~/ 60, atMinutes % 60,
+          tz.local,
+          now.year,
+          now.month,
+          now.day + 1,
+          atMinutes ~/ 60,
+          atMinutes % 60,
         );
       }
       final sequence = (slot - firstNextSlot + slotCount) % slotCount;
@@ -132,7 +171,9 @@ class PersonalMotivationalReminderService {
   }
 
   static Future<void> showPreview(
-      PersonalReminderSettings settings, PersonalReminderMessage item) async {
+    PersonalReminderSettings settings,
+    PersonalReminderMessage item,
+  ) async {
     if (kIsWeb) return;
     if (!item.isValid) throw ArgumentError('Invalid message');
     await initialize();

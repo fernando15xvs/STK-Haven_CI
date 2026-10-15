@@ -41,7 +41,9 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
   }
 
   int _currentExerciseIndex(WorkoutSession session) {
-    final index = session.exercises.indexWhere((exercise) => !exercise.completed);
+    final index = session.exercises.indexWhere(
+      (exercise) => !exercise.completed,
+    );
     if (index >= 0) return index;
     return session.exercises.isEmpty ? 0 : session.exercises.length - 1;
   }
@@ -65,7 +67,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.surfaceHigh,
+          backgroundColor: AppColors.of(context).surfaceHigh,
           title: Text('Crear superserie', style: AppTypography.headlineMedium),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -151,7 +153,9 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     if (current.exercises.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Necesitas al menos dos ejercicios para crear una superserie.'),
+          content: Text(
+            'Necesitas al menos dos ejercicios para crear una superserie.',
+          ),
         ),
       );
       return;
@@ -160,7 +164,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       builder: (sheetContext) => SafeArea(
         child: Consumer(
           builder: (context, ref, _) {
@@ -187,17 +191,23 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppColors.primaryFaded,
+                          color: AppColors.of(context).primaryFaded,
                           borderRadius: AppRadius.sm_,
                         ),
-                        child: const Icon(Icons.link, color: AppColors.primary),
+                        child: Icon(
+                          Icons.link,
+                          color: AppColors.of(context).primary,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Superseries', style: AppTypography.headlineLarge),
+                            Text(
+                              'Superseries',
+                              style: AppTypography.headlineLarge,
+                            ),
                             Text(
                               'Entrena A → B y descansa al cerrar la ronda.',
                               style: AppTypography.bodySmall,
@@ -213,9 +223,11 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: AppColors.of(context).surface,
                         borderRadius: AppRadius.md_,
-                        border: Border.all(color: AppColors.surfaceBorder),
+                        border: Border.all(
+                          color: AppColors.of(context).surfaceBorder,
+                        ),
                       ),
                       child: Text(
                         'Todavía no has creado superseries en esta sesión.',
@@ -227,34 +239,44 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                       final indexes = entry.value;
                       if (indexes.isEmpty) return const SizedBox.shrink();
                       final names = indexes
-                          .map((index) =>
-                              session.exercises[index].exerciseNameSnapshot)
+                          .map(
+                            (index) =>
+                                session.exercises[index].exerciseNameSnapshot,
+                          )
                           .join('  +  ');
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryFaded,
+                          color: AppColors.of(context).primaryFaded,
                           borderRadius: AppRadius.md_,
                           border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.25),
+                            color: AppColors.of(
+                              context,
+                            ).primary.withValues(alpha: 0.25),
                           ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.link, color: AppColors.primary),
+                            Icon(
+                              Icons.link,
+                              color: AppColors.of(context).primary,
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
-                              child: Text(names, style: AppTypography.bodyMedium),
+                              child: Text(
+                                names,
+                                style: AppTypography.bodyMedium,
+                              ),
                             ),
                             IconButton(
                               tooltip: 'Quitar superserie',
                               onPressed: () => ref
                                   .read(activeWorkoutProvider.notifier)
                                   .removeSuperset(indexes.first),
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.link_off,
-                                color: AppColors.error,
+                                color: AppColors.of(context).error,
                               ),
                             ),
                           ],
@@ -284,7 +306,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
+        backgroundColor: AppColors.of(context).surfaceHigh,
         title: Text(
           'Entrenamiento en curso',
           style: AppTypography.headlineMedium,
@@ -293,23 +315,23 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop('continue'),
-            child: const Text(
+            child: Text(
               'Continuar',
-              style: TextStyle(color: AppColors.textPrimary),
+              style: TextStyle(color: AppColors.of(context).textPrimary),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop('finish'),
-            child: const Text(
+            child: Text(
               'Finalizar',
-              style: TextStyle(color: AppColors.primary),
+              style: TextStyle(color: AppColors.of(context).primary),
             ),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop('discard'),
-            child: const Text(
+            child: Text(
               'Descartar',
-              style: TextStyle(color: AppColors.error),
+              style: TextStyle(color: AppColors.of(context).error),
             ),
           ),
         ],
@@ -326,15 +348,14 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       final effective = exercise.sets
           .where((set) => set.setType == WorkoutSetType.working)
           .toList(growable: false);
-      return effective.isNotEmpty &&
-          effective.any((set) => !set.completed);
+      return effective.isNotEmpty && effective.any((set) => !set.completed);
     }).length;
 
     if (incompleteExercises > 0) {
       final continueFinish = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: AppColors.surfaceHigh,
+          backgroundColor: AppColors.of(context).surfaceHigh,
           title: const Text('Aún faltan ejercicios'),
           content: Text(
             incompleteExercises == 1
@@ -357,10 +378,10 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     }
 
     int? actualDurationMinutes;
-    final lastActivity = ref.read(activeWorkoutRepositoryProvider).lastActivityAt
-        ?? session.startedAt;
-    if (UnfinishedWorkoutReminderPolicy.isStale(
-        lastActivity, DateTime.now())) {
+    final lastActivity =
+        ref.read(activeWorkoutRepositoryProvider).lastActivityAt ??
+        session.startedAt;
+    if (UnfinishedWorkoutReminderPolicy.isStale(lastActivity, DateTime.now())) {
       final controller = TextEditingController();
       final minutes = await showDialog<int>(
         context: context,
@@ -414,10 +435,9 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     // starting persistence/history analysis on the UI isolate.
     await WidgetsBinding.instance.endOfFrame;
     if (!context.mounted) return;
-    final result =
-        await ref.read(activeWorkoutProvider.notifier).finishWorkout(
-          actualDurationMinutes: actualDurationMinutes,
-        );
+    final result = await ref
+        .read(activeWorkoutProvider.notifier)
+        .finishWorkout(actualDurationMinutes: actualDurationMinutes);
     if (!context.mounted) return;
     setState(() => _isFinishing = false);
 
@@ -452,11 +472,13 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       );
     }
 
-    if (session.exercises.isNotEmpty && _focusIndex >= session.exercises.length) {
+    if (session.exercises.isNotEmpty &&
+        _focusIndex >= session.exercises.length) {
       _focusIndex = session.exercises.length - 1;
     }
-    final hasSupersets =
-        session.exercises.any((exercise) => exercise.supersetGroupId != null);
+    final hasSupersets = session.exercises.any(
+      (exercise) => exercise.supersetGroupId != null,
+    );
 
     return PopScope(
       canPop: false,
@@ -485,12 +507,13 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
               ),
               Consumer(
                 builder: (context, ref, child) {
-                  final timerValue = ref.watch(workoutTimerProvider).value ??
+                  final timerValue =
+                      ref.watch(workoutTimerProvider).value ??
                       activeState.globalTimerSeconds;
                   return Text(
                     _formatTime(timerValue),
                     style: AppTypography.labelLarge.copyWith(
-                      color: AppColors.primary,
+                      color: AppColors.of(context).primary,
                     ),
                   );
                 },
@@ -503,25 +526,31 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                 _focusMode
                     ? Icons.view_agenda_outlined
                     : Icons.center_focus_strong_outlined,
-                color: _focusMode ? AppColors.primary : AppColors.textSecondary,
+                color: _focusMode
+                    ? AppColors.of(context).primary
+                    : AppColors.of(context).textSecondary,
               ),
-              onPressed:
-                  session.exercises.isEmpty ? null : () => _toggleFocus(session),
+              onPressed: session.exercises.isEmpty
+                  ? null
+                  : () => _toggleFocus(session),
               tooltip: _focusMode ? 'Ver todos los ejercicios' : 'Modo enfoque',
             ),
             IconButton(
               icon: Icon(
                 Icons.link,
-                color: hasSupersets ? AppColors.primary : AppColors.textSecondary,
+                color: hasSupersets
+                    ? AppColors.of(context).primary
+                    : AppColors.of(context).textSecondary,
               ),
-              onPressed:
-                  session.exercises.length < 2 ? null : _showSupersetManager,
+              onPressed: session.exercises.length < 2
+                  ? null
+                  : _showSupersetManager,
               tooltip: 'Superseries',
             ),
             IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.calculate_outlined,
-                color: AppColors.primary,
+                color: AppColors.of(context).primary,
               ),
               onPressed: () => BarbellCalculatorModal.show(context),
               tooltip: 'Calculadora de Discos',
@@ -535,16 +564,16 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
               child: activeState.isResting
                   ? Container(
                       key: const ValueKey('rest_banner'),
-                      color: AppColors.primaryFaded,
+                      color: AppColors.of(context).primaryFaded,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 10,
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.timer_outlined,
-                            color: AppColors.warning,
+                            color: AppColors.of(context).warning,
                             size: 20,
                           ),
                           const SizedBox(width: 8),
@@ -552,7 +581,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                             child: Text(
                               'Descanso ${_formatTime(activeState.restTimerSeconds)}',
                               style: AppTypography.headlineSmall.copyWith(
-                                color: AppColors.warning,
+                                color: AppColors.of(context).warning,
                               ),
                             ),
                           ),
@@ -587,43 +616,48 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                             .read(activeWorkoutProvider.notifier)
                             .reorderExercises(oldIndex, newIndex);
                       },
-                      proxyDecorator: (child, index, animation) => Material(
-                        color: Colors.transparent,
-                        child: child,
-                      ),
+                      proxyDecorator: (child, index, animation) =>
+                          Material(color: Colors.transparent, child: child),
                       footer: Padding(
                         padding: const EdgeInsets.only(top: 4, bottom: 8),
                         child: OutlinedButton.icon(
                           onPressed: () async {
                             final Exercise? selected =
                                 await Navigator.push<Exercise>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ExerciseLibraryPage(
-                                  isSelectionMode: true,
-                                ),
-                              ),
-                            );
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ExerciseLibraryPage(
+                                      isSelectionMode: true,
+                                    ),
+                                  ),
+                                );
                             if (selected != null && context.mounted) {
                               ref
                                   .read(activeWorkoutProvider.notifier)
                                   .addExercise(selected);
                             }
                           },
-                          icon: const Icon(Icons.add, color: AppColors.primary),
-                          label: const Text(
+                          icon: Icon(
+                            Icons.add,
+                            color: AppColors.of(context).primary,
+                          ),
+                          label: Text(
                             'AÑADIR EJERCICIO',
-                            style: TextStyle(color: AppColors.primary),
+                            style: TextStyle(
+                              color: AppColors.of(context).primary,
+                            ),
                           ),
                           style: OutlinedButton.styleFrom(
                             side: BorderSide(
-                              color: AppColors.primary.withValues(alpha: 0.35),
+                              color: AppColors.of(
+                                context,
+                              ).primary.withValues(alpha: 0.35),
                             ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 15),
-                            backgroundColor: AppColors.primaryFaded,
+                            backgroundColor: AppColors.of(context).primaryFaded,
                           ),
                         ),
                       ),
@@ -631,7 +665,8 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                         final currentActiveIndex = session.exercises.indexWhere(
                           (e) => !e.completed,
                         );
-                        final isCurrent = exIndex == currentActiveIndex ||
+                        final isCurrent =
+                            exIndex == currentActiveIndex ||
                             (currentActiveIndex == -1 &&
                                 exIndex == session.exercises.length - 1);
 
@@ -665,21 +700,21 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
-        title: const Text(
+        backgroundColor: AppColors.of(context).surfaceHigh,
+        title: Text(
           'Entrenamiento vacío',
-          style: TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: AppColors.of(context).textPrimary),
         ),
-        content: const Text(
+        content: Text(
           'No has completado ninguna serie. ¿Qué deseas hacer?',
-          style: TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: AppColors.of(context).textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
+            child: Text(
               'Continuar',
-              style: TextStyle(color: AppColors.primary),
+              style: TextStyle(color: AppColors.of(context).primary),
             ),
           ),
           TextButton(
@@ -688,9 +723,9 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
               await ref.read(activeWorkoutProvider.notifier).cancelWorkout();
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text(
+            child: Text(
               'Descartar',
-              style: TextStyle(color: AppColors.error),
+              style: TextStyle(color: AppColors.of(context).error),
             ),
           ),
         ],
@@ -721,10 +756,10 @@ class _FocusedWorkoutView extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: AppColors.primaryFaded,
+            color: AppColors.of(context).primaryFaded,
             borderRadius: AppRadius.md_,
             border: Border.all(
-              color: AppColors.primary.withValues(alpha: 0.25),
+              color: AppColors.of(context).primary.withValues(alpha: 0.25),
             ),
           ),
           child: Row(
@@ -740,7 +775,7 @@ class _FocusedWorkoutView extends StatelessWidget {
                     Text(
                       'MODO ENFOQUE',
                       style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.primary,
+                        color: AppColors.of(context).primary,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -806,8 +841,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
   Future<void> _configureUnilateral() async {
     bool unilateral = widget.workoutExercise.unilateral;
     UnilateralTarget target = widget.workoutExercise.unilateralTarget;
-    bool preparationUnilateral =
-        widget.workoutExercise.preparationUnilateral;
+    bool preparationUnilateral = widget.workoutExercise.preparationUnilateral;
     final settings = ref.read(settingsProvider);
     int sideRestSeconds = widget.workoutExercise.sets.isEmpty
         ? settings.unilateralSideRestSeconds
@@ -815,136 +849,136 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
     PreferredWorkoutSide preferredStartSide =
         widget.workoutExercise.preferredUnilateralStartSide;
 
-    final result = await showDialog<
-        (bool, UnilateralTarget, bool, int, PreferredWorkoutSide)>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppColors.surfaceHigh,
-          title: Text(
-            'Registro unilateral',
-            style: AppTypography.headlineMedium,
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Separar izquierda y derecha'),
-                  subtitle: const Text(
-                    'Las series configuradas como unilaterales se completan '
-                    'cuando registras ambos lados.',
-                  ),
-                  value: unilateral,
-                  onChanged: (value) =>
-                      setDialogState(() => unilateral = value),
+    final result =
+        await showDialog<
+          (bool, UnilateralTarget, bool, int, PreferredWorkoutSide)
+        >(
+          context: context,
+          builder: (ctx) => StatefulBuilder(
+            builder: (ctx, setDialogState) => AlertDialog(
+              backgroundColor: AppColors.of(context).surfaceHigh,
+              title: Text(
+                'Registro unilateral',
+                style: AppTypography.headlineMedium,
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Separar izquierda y derecha'),
+                      subtitle: const Text(
+                        'Las series configuradas como unilaterales se completan '
+                        'cuando registras ambos lados.',
+                      ),
+                      value: unilateral,
+                      onChanged: (value) =>
+                          setDialogState(() => unilateral = value),
+                    ),
+                    if (unilateral) ...[
+                      DropdownButtonFormField<UnilateralTarget>(
+                        initialValue: target,
+                        decoration: const InputDecoration(labelText: 'Zona'),
+                        items: UnilateralTarget.values
+                            .map(
+                              (value) => DropdownMenuItem(
+                                value: value,
+                                child: Text(value.label),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() => target = value);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text(
+                          'Calentamiento y aproximación también unilaterales',
+                        ),
+                        subtitle: const Text(
+                          'Déjalo apagado si solo las series efectivas se hacen '
+                          'por lado.',
+                        ),
+                        value: preparationUnilateral,
+                        onChanged: (value) =>
+                            setDialogState(() => preparationUnilateral = value),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<int>(
+                        initialValue: sideRestSeconds,
+                        decoration: const InputDecoration(
+                          labelText: 'Descanso entre lados',
+                        ),
+                        items: const [0, 15, 30, 45, 60, 90, 120, 180]
+                            .map(
+                              (seconds) => DropdownMenuItem(
+                                value: seconds,
+                                child: Text(
+                                  seconds == 0
+                                      ? 'Cambio directo'
+                                      : '$seconds s',
+                                ),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() => sideRestSeconds = value);
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<PreferredWorkoutSide>(
+                        initialValue: preferredStartSide,
+                        decoration: const InputDecoration(
+                          labelText: 'Lado inicial',
+                        ),
+                        items: PreferredWorkoutSide.values
+                            .map(
+                              (side) => DropdownMenuItem(
+                                value: side,
+                                child: Text(side.label),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() => preferredStartSide = value);
+                          }
+                        },
+                      ),
+                    ],
+                  ],
                 ),
-                if (unilateral) ...[
-                  DropdownButtonFormField<UnilateralTarget>(
-                    initialValue: target,
-                    decoration: const InputDecoration(labelText: 'Zona'),
-                    items: UnilateralTarget.values
-                        .map(
-                          (value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(value.label),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() => target = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'Calentamiento y aproximación también unilaterales',
-                    ),
-                    subtitle: const Text(
-                      'Déjalo apagado si solo las series efectivas se hacen '
-                      'por lado.',
-                    ),
-                    value: preparationUnilateral,
-                    onChanged: (value) => setDialogState(
-                      () => preparationUnilateral = value,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<int>(
-                    initialValue: sideRestSeconds,
-                    decoration: const InputDecoration(
-                      labelText: 'Descanso entre lados',
-                    ),
-                    items: const [0, 15, 30, 45, 60, 90, 120, 180]
-                        .map(
-                          (seconds) => DropdownMenuItem(
-                            value: seconds,
-                            child: Text(
-                              seconds == 0
-                                  ? 'Cambio directo'
-                                  : '$seconds s',
-                            ),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() => sideRestSeconds = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<PreferredWorkoutSide>(
-                    initialValue: preferredStartSide,
-                    decoration: const InputDecoration(
-                      labelText: 'Lado inicial',
-                    ),
-                    items: PreferredWorkoutSide.values
-                        .map(
-                          (side) => DropdownMenuItem(
-                            value: side,
-                            child: Text(side.label),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() => preferredStartSide = value);
-                      }
-                    },
-                  ),
-                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, (
+                    unilateral,
+                    target,
+                    preparationUnilateral,
+                    sideRestSeconds,
+                    preferredStartSide,
+                  )),
+                  child: const Text('Guardar'),
+                ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(
-                ctx,
-                (
-                  unilateral,
-                  target,
-                  preparationUnilateral,
-                  sideRestSeconds,
-                  preferredStartSide,
-                ),
-              ),
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
-    );
+        );
     if (result == null || !mounted) return;
-    ref.read(activeWorkoutProvider.notifier).configureExerciseUnilateral(
+    ref
+        .read(activeWorkoutProvider.notifier)
+        .configureExerciseUnilateral(
           widget.exIndex,
           unilateral: result.$1,
           target: result.$2,
@@ -955,11 +989,13 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
   }
 
   Future<void> _editNotes() async {
-    final controller = TextEditingController(text: widget.workoutExercise.notes);
+    final controller = TextEditingController(
+      text: widget.workoutExercise.notes,
+    );
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(
           20,
@@ -985,7 +1021,8 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
               maxLines: 6,
               maxLength: 300,
               decoration: const InputDecoration(
-                hintText: 'Ej.: cuidar técnica, agarre, dolor, ajuste del banco...',
+                hintText:
+                    'Ej.: cuidar técnica, agarre, dolor, ajuste del banco...',
               ),
             ),
             const SizedBox(height: 12),
@@ -1054,7 +1091,8 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
     final suggestion = suggestions[widget.workoutExercise.exerciseId];
     final prevSession = ref.watch(activeWorkoutPreviousSessionProvider);
     final completed = widget.workoutExercise.completed;
-    final expanded = widget.forceExpanded ||
+    final expanded =
+        widget.forceExpanded ||
         (_manuallyExpanded ??
             (widget.isCurrent && !widget.workoutExercise.completed));
 
@@ -1075,10 +1113,8 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
     final unilateralSets = widget.workoutExercise.sets
         .where(widget.workoutExercise.usesUnilateralTracking)
         .toList(growable: false);
-    final leftDone =
-        unilateralSets.where((set) => set.leftCompleted).length;
-    final rightDone =
-        unilateralSets.where((set) => set.rightCompleted).length;
+    final leftDone = unilateralSets.where((set) => set.leftCompleted).length;
+    final rightDone = unilateralSets.where((set) => set.rightCompleted).length;
 
     double totalVolume = 0;
     for (final set in workingSets) {
@@ -1090,16 +1126,18 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       decoration: BoxDecoration(
-        color: expanded ? AppColors.surface : AppColors.surfaceHigh,
+        color: expanded
+            ? AppColors.of(context).surface
+            : AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.lg_,
         border: Border.all(
           color: completed
-              ? AppColors.success.withValues(alpha: 0.3)
+              ? AppColors.of(context).success.withValues(alpha: 0.3)
               : widget.workoutExercise.isInSuperset
-                  ? AppColors.primary.withValues(alpha: 0.5)
-                  : widget.isCurrent
-                      ? AppColors.primary.withValues(alpha: 0.32)
-                      : AppColors.surfaceBorder,
+              ? AppColors.of(context).primary.withValues(alpha: 0.5)
+              : widget.isCurrent
+              ? AppColors.of(context).primary.withValues(alpha: 0.32)
+              : AppColors.of(context).surfaceBorder,
         ),
       ),
       child: Column(
@@ -1119,24 +1157,24 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: completed
-                          ? AppColors.successFaded
+                          ? AppColors.of(context).successFaded
                           : widget.isCurrent
-                              ? AppColors.primaryFaded
-                              : AppColors.background,
+                          ? AppColors.of(context).primaryFaded
+                          : AppColors.of(context).background,
                     ),
                     child: Icon(
                       completed
                           ? Icons.check
                           : widget.workoutExercise.isInSuperset
-                              ? Icons.link
-                              : Icons.fitness_center,
+                          ? Icons.link
+                          : Icons.fitness_center,
                       color: completed
-                          ? AppColors.success
+                          ? AppColors.of(context).success
                           : widget.workoutExercise.isInSuperset
-                              ? AppColors.primary
-                              : widget.isCurrent
-                                  ? AppColors.primary
-                                  : AppColors.textSecondary,
+                          ? AppColors.of(context).primary
+                          : widget.isCurrent
+                          ? AppColors.of(context).primary
+                          : AppColors.of(context).textSecondary,
                       size: 19,
                     ),
                   ),
@@ -1157,8 +1195,8 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                             '${widget.workoutExercise.unilateralTarget.label} · I $leftDone/${unilateralSets.length} · D $rightDone/${unilateralSets.length}${widget.workoutExercise.isInSuperset ? ' · Superserie' : ''}',
                             style: AppTypography.bodySmall.copyWith(
                               color: completed
-                                  ? AppColors.success
-                                  : AppColors.textSecondary,
+                                  ? AppColors.of(context).success
+                                  : AppColors.of(context).textSecondary,
                             ),
                           )
                         else
@@ -1166,8 +1204,8 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                             '${completed ? '$doneWorking series efectivas · $volumeText' : '$doneWorking/${workingSets.length} series efectivas'}${widget.workoutExercise.isInSuperset ? ' · Superserie' : ''}',
                             style: AppTypography.bodySmall.copyWith(
                               color: completed
-                                  ? AppColors.success
-                                  : AppColors.textSecondary,
+                                  ? AppColors.of(context).success
+                                  : AppColors.of(context).textSecondary,
                             ),
                           ),
                       ],
@@ -1176,7 +1214,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                   if (!widget.forceExpanded)
                     Icon(
                       expanded ? Icons.expand_less : Icons.expand_more,
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                 ],
               ),
@@ -1209,16 +1247,16 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         icon: Icon(
                           Icons.edit_note_outlined,
                           color: widget.workoutExercise.notes.trim().isNotEmpty
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
+                              ? AppColors.of(context).primary
+                              : AppColors.of(context).textSecondary,
                         ),
                       ),
                       IconButton(
                         onPressed: _replaceExercise,
                         tooltip: 'Sustituir ejercicio',
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.swap_horiz,
-                          color: AppColors.textSecondary,
+                          color: AppColors.of(context).textSecondary,
                         ),
                       ),
                       IconButton(
@@ -1229,8 +1267,8 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         icon: Icon(
                           Icons.compare_arrows,
                           color: widget.workoutExercise.unilateral
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
+                              ? AppColors.of(context).primary
+                              : AppColors.of(context).textSecondary,
                         ),
                       ),
                     ],
@@ -1243,25 +1281,27 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         vertical: 9,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryFaded,
+                        color: AppColors.of(context).primaryFaded,
                         borderRadius: AppRadius.sm_,
                         border: Border.all(
-                          color: AppColors.primary.withValues(alpha: 0.22),
+                          color: AppColors.of(
+                            context,
+                          ).primary.withValues(alpha: 0.22),
                         ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.link,
                             size: 17,
-                            color: AppColors.primary,
+                            color: AppColors.of(context).primary,
                           ),
                           const SizedBox(width: 7),
                           Expanded(
                             child: Text(
                               'Superserie activa: completa la ronda en ambos ejercicios antes del descanso.',
                               style: AppTypography.bodySmall.copyWith(
-                                color: AppColors.primary,
+                                color: AppColors.of(context).primary,
                               ),
                             ),
                           ),
@@ -1278,24 +1318,26 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         vertical: 9,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceHigh,
+                        color: AppColors.of(context).surfaceHigh,
                         borderRadius: AppRadius.sm_,
-                        border: Border.all(color: AppColors.surfaceBorder),
+                        border: Border.all(
+                          color: AppColors.of(context).surfaceBorder,
+                        ),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.sticky_note_2_outlined,
                             size: 17,
-                            color: AppColors.primary,
+                            color: AppColors.of(context).primary,
                           ),
                           const SizedBox(width: 7),
                           Expanded(
                             child: Text(
                               widget.workoutExercise.notes,
                               style: AppTypography.bodySmall.copyWith(
-                                color: AppColors.textPrimary,
+                                color: AppColors.of(context).textPrimary,
                               ),
                             ),
                           ),
@@ -1312,7 +1354,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         vertical: 9,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primaryFaded,
+                        color: AppColors.of(context).primaryFaded,
                         borderRadius: AppRadius.sm_,
                       ),
                       child: Text(
@@ -1321,12 +1363,16 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         'se registran por lado. '
                         '${widget.workoutExercise.sets.isNotEmpty && widget.workoutExercise.sets.first.sideRestSeconds == 0 ? 'Cambia directamente al otro lado.' : 'Descansa ${widget.workoutExercise.sets.isEmpty ? settings.unilateralSideRestSeconds : widget.workoutExercise.sets.first.sideRestSeconds}s entre lados.'}',
                         style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.primary,
+                          color: AppColors.of(context).primary,
                         ),
                       ),
                     ),
-                  ExerciseRepRangeNotice(exerciseId: widget.workoutExercise.exerciseId),
-                  ExerciseIncrementControl(exerciseId: widget.workoutExercise.exerciseId),
+                  ExerciseRepRangeNotice(
+                    exerciseId: widget.workoutExercise.exerciseId,
+                  ),
+                  ExerciseIncrementControl(
+                    exerciseId: widget.workoutExercise.exerciseId,
+                  ),
                   if (suggestion != null) ...[
                     const SizedBox(height: 10),
                     _ProgressionReferenceCard(
@@ -1378,9 +1424,12 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  ...List.generate(widget.workoutExercise.sets.length, (setIndex) {
+                  ...List.generate(widget.workoutExercise.sets.length, (
+                    setIndex,
+                  ) {
                     final set = widget.workoutExercise.sets[setIndex];
-                    final prevSet = prevExercise != null &&
+                    final prevSet =
+                        prevExercise != null &&
                             setIndex < prevExercise.sets.length
                         ? prevExercise.sets[setIndex]
                         : null;
@@ -1391,15 +1440,16 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                       exIndex: widget.exIndex,
                       setIndex: setIndex,
                       initialSet: set,
-                      isRirEnabled: settings.isRirEnabled &&
+                      isRirEnabled:
+                          settings.isRirEnabled &&
                           set.setType == WorkoutSetType.working,
                       weightUnit: settings.weightUnit,
                       vibrationEnabled: settings.vibrationEnabled,
                       prevSet: prevSet,
-                      unilateral:
-                          widget.workoutExercise.usesUnilateralTracking(set),
-                      unilateralTarget:
-                          widget.workoutExercise.unilateralTarget,
+                      unilateral: widget.workoutExercise.usesUnilateralTracking(
+                        set,
+                      ),
+                      unilateralTarget: widget.workoutExercise.unilateralTarget,
                       preferredStartSide:
                           widget.workoutExercise.preferredUnilateralStartSide,
                     );
@@ -1430,7 +1480,9 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                       ),
                       decoration: BoxDecoration(
                         borderRadius: AppRadius.sm_,
-                        border: Border.all(color: AppColors.surfaceBorder),
+                        border: Border.all(
+                          color: AppColors.of(context).surfaceBorder,
+                        ),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1461,11 +1513,11 @@ class _SetTypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (type) {
-      WorkoutSetType.mobility => AppColors.info,
-      WorkoutSetType.warmup => AppColors.warning,
-      WorkoutSetType.approach => AppColors.gold,
-      WorkoutSetType.working => AppColors.primary,
-      WorkoutSetType.stretching => AppColors.success,
+      WorkoutSetType.mobility => AppColors.of(context).info,
+      WorkoutSetType.warmup => AppColors.of(context).warning,
+      WorkoutSetType.approach => AppColors.of(context).gold,
+      WorkoutSetType.working => AppColors.of(context).primary,
+      WorkoutSetType.stretching => AppColors.of(context).success,
     };
     return Container(
       constraints: const BoxConstraints(minWidth: 26),
@@ -1520,15 +1572,14 @@ class _SetRowState extends ConsumerState<_SetRow> {
   late TextEditingController _rirCtrl;
   Timer? _debounce;
 
-  String _fmt(double value) => value.toStringAsFixed(2)
+  String _fmt(double value) => value
+      .toStringAsFixed(2)
       .replaceFirst(RegExp(r'0+$'), '')
       .replaceFirst(RegExp(r'\.$'), '');
 
   String _displayWeight(double canonicalKg) {
     if (canonicalKg == 0) return '';
-    return _fmt(
-      WeightConverter.displayWeight(canonicalKg, widget.weightUnit),
-    );
+    return _fmt(WeightConverter.displayWeight(canonicalKg, widget.weightUnit));
   }
 
   String _sidePerformanceLabel(WorkoutSide side) {
@@ -1572,11 +1623,15 @@ class _SetRowState extends ConsumerState<_SetRow> {
       if (_weightCtrl.text != newText) _weightCtrl.text = newText;
     }
     if (repsChanged && !widget.initialSet.completed) {
-      final next = widget.initialSet.reps == 0 ? '' : '${widget.initialSet.reps}';
+      final next = widget.initialSet.reps == 0
+          ? ''
+          : '${widget.initialSet.reps}';
       if (_repsCtrl.text != next) _repsCtrl.text = next;
     }
     if (rirChanged && !widget.initialSet.completed) {
-      final next = widget.initialSet.rir == null ? '' : '${widget.initialSet.rir}';
+      final next = widget.initialSet.rir == null
+          ? ''
+          : '${widget.initialSet.rir}';
       if (_rirCtrl.text != next) _rirCtrl.text = next;
     }
   }
@@ -1593,8 +1648,8 @@ class _SetRowState extends ConsumerState<_SetRow> {
   WorkoutSet _setFromFields({bool? completed}) {
     final displayWeight =
         double.tryParse(_weightCtrl.text.replaceAll(',', '.')) ?? 0;
-    final canonicalWeight = _weightCtrl.text.trim() ==
-            _displayWeight(widget.initialSet.weight)
+    final canonicalWeight =
+        _weightCtrl.text.trim() == _displayWeight(widget.initialSet.weight)
         ? widget.initialSet.weight
         : WeightConverter.toCanonicalKg(displayWeight, widget.weightUnit);
     final reps = int.tryParse(_repsCtrl.text) ?? 0;
@@ -1610,11 +1665,9 @@ class _SetRowState extends ConsumerState<_SetRow> {
 
   void _persistFields() {
     if (!widget.initialSet.completed) {
-      ref.read(activeWorkoutProvider.notifier).updateSet(
-            widget.exIndex,
-            widget.setIndex,
-            _setFromFields(),
-          );
+      ref
+          .read(activeWorkoutProvider.notifier)
+          .updateSet(widget.exIndex, widget.setIndex, _setFromFields());
     }
   }
 
@@ -1637,7 +1690,9 @@ class _SetRowState extends ConsumerState<_SetRow> {
     if (!widget.initialSet.completed && widget.vibrationEnabled) {
       HapticFeedback.mediumImpact();
     }
-    ref.read(activeWorkoutProvider.notifier).updateSet(
+    ref
+        .read(activeWorkoutProvider.notifier)
+        .updateSet(
           widget.exIndex,
           widget.setIndex,
           _setFromFields(completed: !widget.initialSet.completed),
@@ -1648,11 +1703,9 @@ class _SetRowState extends ConsumerState<_SetRow> {
     _debounce?.cancel();
     _flushDebounce();
     if (widget.vibrationEnabled) HapticFeedback.selectionClick();
-    ref.read(activeWorkoutProvider.notifier).toggleUnilateralSide(
-          widget.exIndex,
-          widget.setIndex,
-          left: left,
-        );
+    ref
+        .read(activeWorkoutProvider.notifier)
+        .toggleUnilateralSide(widget.exIndex, widget.setIndex, left: left);
   }
 
   @override
@@ -1672,7 +1725,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
         final confirm = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            backgroundColor: AppColors.surfaceHigh,
+            backgroundColor: AppColors.of(context).surfaceHigh,
             title: Text('Eliminar serie', style: AppTypography.headlineMedium),
             content: Text(
               '¿Deseas eliminar esta serie de ${widget.initialSet.setType.label.toLowerCase()}?',
@@ -1685,9 +1738,9 @@ class _SetRowState extends ConsumerState<_SetRow> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text(
+                child: Text(
                   'Eliminar',
-                  style: TextStyle(color: AppColors.error),
+                  style: TextStyle(color: AppColors.of(context).error),
                 ),
               ),
             ],
@@ -1704,7 +1757,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
         margin: const EdgeInsets.only(bottom: 5),
         padding: const EdgeInsets.symmetric(vertical: 6),
         decoration: BoxDecoration(
-          color: done ? AppColors.successFaded : Colors.transparent,
+          color: done ? AppColors.of(context).successFaded : Colors.transparent,
           borderRadius: AppRadius.sm_,
         ),
         child: Column(
@@ -1772,8 +1825,8 @@ class _SetRowState extends ConsumerState<_SetRow> {
                       ? Icon(
                           done ? Icons.done_all : Icons.compare_arrows,
                           color: done
-                              ? AppColors.success
-                              : AppColors.textSecondary,
+                              ? AppColors.of(context).success
+                              : AppColors.of(context).textSecondary,
                           size: 18,
                         )
                       : GestureDetector(
@@ -1781,14 +1834,16 @@ class _SetRowState extends ConsumerState<_SetRow> {
                           child: Container(
                             margin: const EdgeInsets.symmetric(horizontal: 4),
                             decoration: BoxDecoration(
-                              color:
-                                  done ? AppColors.success : Colors.transparent,
+                              color: done
+                                  ? AppColors.of(context).success
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
                               border: done
                                   ? null
                                   : Border.all(
-                                      color: AppColors.textSecondary
-                                          .withValues(alpha: 0.3),
+                                      color: AppColors.of(
+                                        context,
+                                      ).textSecondary.withValues(alpha: 0.3),
                                     ),
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 7),
@@ -1796,8 +1851,8 @@ class _SetRowState extends ConsumerState<_SetRow> {
                               Icons.check,
                               size: 15,
                               color: done
-                                  ? Colors.white
-                                  : AppColors.textSecondary,
+                                  ? AppColors.of(context).onPrimary
+                                  : AppColors.of(context).textSecondary,
                             ),
                           ),
                         ),
@@ -1809,22 +1864,21 @@ class _SetRowState extends ConsumerState<_SetRow> {
               Builder(
                 builder: (context) {
                   final rightFirst =
-                      widget.preferredStartSide ==
-                          PreferredWorkoutSide.right;
-                  final firstSide =
-                      rightFirst ? WorkoutSide.right : WorkoutSide.left;
-                  final secondSide =
-                      rightFirst ? WorkoutSide.left : WorkoutSide.right;
+                      widget.preferredStartSide == PreferredWorkoutSide.right;
+                  final firstSide = rightFirst
+                      ? WorkoutSide.right
+                      : WorkoutSide.left;
+                  final secondSide = rightFirst
+                      ? WorkoutSide.left
+                      : WorkoutSide.right;
 
                   Widget buttonFor(WorkoutSide side) => Expanded(
-                        child: _SideButton(
-                          label: _sidePerformanceLabel(side),
-                          selected:
-                              widget.initialSet.completedForSide(side),
-                          onTap: () =>
-                              _toggleSide(side == WorkoutSide.left),
-                        ),
-                      );
+                    child: _SideButton(
+                      label: _sidePerformanceLabel(side),
+                      selected: widget.initialSet.completedForSide(side),
+                      onTap: () => _toggleSide(side == WorkoutSide.left),
+                    ),
+                  );
 
                   return Padding(
                     padding: const EdgeInsets.only(left: 4, right: 4),
@@ -1844,17 +1898,16 @@ class _SetRowState extends ConsumerState<_SetRow> {
                     ? 'Cambio directo al otro lado'
                     : 'Descanso entre lados: ${widget.initialSet.sideRestSeconds}s',
                 style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
               if (!widget.initialSet.leftCompleted &&
                   !widget.initialSet.rightCompleted &&
-                  widget.preferredStartSide !=
-                      PreferredWorkoutSide.automatic)
+                  widget.preferredStartSide != PreferredWorkoutSide.automatic)
                 Text(
                   'Empieza por ${widget.preferredStartSide.label.toLowerCase()}',
                   style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.primary,
+                    color: AppColors.of(context).primary,
                   ),
                 ),
             ],
@@ -1885,10 +1938,14 @@ class _SideButton extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppColors.successFaded : AppColors.surface,
+          color: selected
+              ? AppColors.of(context).successFaded
+              : AppColors.of(context).surface,
           borderRadius: AppRadius.sm_,
           border: Border.all(
-            color: selected ? AppColors.success : AppColors.surfaceBorder,
+            color: selected
+                ? AppColors.of(context).success
+                : AppColors.of(context).surfaceBorder,
           ),
         ),
         child: Row(
@@ -1896,7 +1953,9 @@ class _SideButton extends StatelessWidget {
           children: [
             Icon(
               selected ? Icons.check_circle : Icons.circle_outlined,
-              color: selected ? AppColors.success : AppColors.textSecondary,
+              color: selected
+                  ? AppColors.of(context).success
+                  : AppColors.of(context).textSecondary,
               size: 16,
             ),
             const SizedBox(width: 5),
@@ -1966,8 +2025,8 @@ class _MinimalCellState extends State<_MinimalCell> {
             color: widget.done
                 ? Colors.transparent
                 : _isFocused
-                    ? AppColors.primary
-                    : AppColors.textSecondary.withValues(alpha: 0.3),
+                ? AppColors.of(context).primary
+                : AppColors.of(context).textSecondary.withValues(alpha: 0.3),
             width: _isFocused ? 2 : 1,
           ),
         ),
@@ -1980,14 +2039,14 @@ class _MinimalCellState extends State<_MinimalCell> {
         textInputAction: TextInputAction.done,
         style: AppTypography.monoMedium.copyWith(
           color: widget.done
-              ? AppColors.textSecondary
-              : AppColors.textPrimary,
+              ? AppColors.of(context).textSecondary
+              : AppColors.of(context).textPrimary,
         ),
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: widget.hint,
           hintStyle: AppTypography.monoMedium.copyWith(
-            color: AppColors.textDisabled,
+            color: AppColors.of(context).textDisabled,
           ),
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(vertical: 7),
@@ -2018,7 +2077,7 @@ class _ProgressionReferenceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _progressionColor(suggestion);
+    final color = _progressionColor(context, suggestion);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(11),
@@ -2047,7 +2106,7 @@ class _ProgressionReferenceCard extends StatelessWidget {
           Text(
             FitnessFormatter.progressionExplanation(suggestion),
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
               height: 1.35,
             ),
           ),
@@ -2062,14 +2121,14 @@ class _ProgressionReferenceCard extends StatelessWidget {
           Text(
             FitnessFormatter.progressionEvidence(suggestion),
             style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             FitnessFormatter.progressionSafetyNote,
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
               height: 1.3,
             ),
           ),
@@ -2079,16 +2138,19 @@ class _ProgressionReferenceCard extends StatelessWidget {
   }
 }
 
-Color _progressionColor(ProgressionSuggestion suggestion) {
+Color _progressionColor(
+  BuildContext context,
+  ProgressionSuggestion suggestion,
+) {
   if (suggestion.reason == ProgressionReason.recoveryCaution ||
       suggestion.reason == ProgressionReason.effortTooHigh) {
-    return AppColors.warning;
+    return AppColors.of(context).warning;
   }
   return switch (suggestion.type) {
-    ProgressionType.increase => AppColors.success,
-    ProgressionType.maintain => AppColors.info,
-    ProgressionType.deload => AppColors.warning,
-    ProgressionType.insufficientData => AppColors.textSecondary,
+    ProgressionType.increase => AppColors.of(context).success,
+    ProgressionType.maintain => AppColors.of(context).info,
+    ProgressionType.deload => AppColors.of(context).warning,
+    ProgressionType.insufficientData => AppColors.of(context).textSecondary,
   };
 }
 

@@ -65,17 +65,26 @@ class _AiChatPageWebState extends ConsumerState<AiChatPageWeb> {
                 padding: const EdgeInsets.fromLTRB(16, 22, 16, 6),
                 child: Column(
                   children: [
-                    Text('¿Cómo quieres comenzar?', style: AppTypography.headlineSmall),
+                    Text(
+                      '¿Cómo quieres comenzar?',
+                      style: AppTypography.headlineSmall,
+                    ),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       alignment: WrapAlignment.center,
-                      children: havenFaithQuickActions.map((action) => ActionChip(
-                        avatar: const Icon(Icons.bolt_outlined, size: 17),
-                        label: Text(action.label),
-                        onPressed: state.isGenerating ? null : () => _sendQuickAction(action),
-                      )).toList(growable: false),
+                      children: havenFaithQuickActions
+                          .map(
+                            (action) => ActionChip(
+                              avatar: const Icon(Icons.bolt_outlined, size: 17),
+                              label: Text(action.label),
+                              onPressed: state.isGenerating
+                                  ? null
+                                  : () => _sendQuickAction(action),
+                            ),
+                          )
+                          .toList(growable: false),
                     ),
                   ],
                 ),
@@ -83,7 +92,13 @@ class _AiChatPageWebState extends ConsumerState<AiChatPageWeb> {
             Expanded(
               child: state.messages.isEmpty
                   ? Center(
-                      child: Text('Elige una acción rápida o escribe lo que tengas en mente.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary), textAlign: TextAlign.center),
+                      child: Text(
+                        'Elige una acción rápida o escribe lo que tengas en mente.',
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.of(context).textSecondary,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     )
                   : ListView.builder(
                       controller: _scrollController,
@@ -91,8 +106,13 @@ class _AiChatPageWebState extends ConsumerState<AiChatPageWeb> {
                       itemCount: state.messages.length,
                       itemBuilder: (context, index) {
                         final message = state.messages[index];
-                        if (message.text.isEmpty && state.isGenerating) return const _GeneratingBubble();
-                        return _ChatMessage(text: message.text, isUser: message.isUser, isError: message.isError);
+                        if (message.text.isEmpty && state.isGenerating)
+                          return const _GeneratingBubble();
+                        return _ChatMessage(
+                          text: message.text,
+                          isUser: message.isUser,
+                          isError: message.isError,
+                        );
                       },
                     ),
             ),
@@ -100,15 +120,29 @@ class _AiChatPageWebState extends ConsumerState<AiChatPageWeb> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
               child: Row(
-                children: havenFaithQuickActions.map((action) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ActionChip(label: Text(action.label), onPressed: state.isGenerating ? null : () => _sendQuickAction(action)),
-                )).toList(growable: false),
+                children: havenFaithQuickActions
+                    .map(
+                      (action) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ActionChip(
+                          label: Text(action.label),
+                          onPressed: state.isGenerating
+                              ? null
+                              : () => _sendQuickAction(action),
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
               ),
             ),
             Container(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
-              decoration: BoxDecoration(color: AppColors.surface, border: Border(top: BorderSide(color: AppColors.border))),
+              decoration: BoxDecoration(
+                color: AppColors.of(context).surface,
+                border: Border(
+                  top: BorderSide(color: AppColors.of(context).border),
+                ),
+              ),
               child: SafeArea(
                 top: false,
                 child: Row(
@@ -122,11 +156,23 @@ class _AiChatPageWebState extends ConsumerState<AiChatPageWeb> {
                         textInputAction: TextInputAction.send,
                         onSubmitted: (_) => _sendMessage(),
                         decoration: InputDecoration(
-                          hintText: state.isGenerating ? 'Haven Faith está respondiendo...' : 'Escribe un mensaje...',
+                          hintText: state.isGenerating
+                              ? 'Haven Faith está respondiendo...'
+                              : 'Escribe un mensaje...',
                           filled: true,
-                          fillColor: AppColors.background,
-                          border: OutlineInputBorder(borderRadius: AppRadius.lg_, borderSide: BorderSide(color: AppColors.border)),
-                          enabledBorder: OutlineInputBorder(borderRadius: AppRadius.lg_, borderSide: BorderSide(color: AppColors.border)),
+                          fillColor: AppColors.of(context).background,
+                          border: OutlineInputBorder(
+                            borderRadius: AppRadius.lg_,
+                            borderSide: BorderSide(
+                              color: AppColors.of(context).border,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: AppRadius.lg_,
+                            borderSide: BorderSide(
+                              color: AppColors.of(context).border,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -134,7 +180,11 @@ class _AiChatPageWebState extends ConsumerState<AiChatPageWeb> {
                     IconButton.filled(
                       onPressed: state.isGenerating ? null : _sendMessage,
                       icon: state.isGenerating
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
                           : const Icon(Icons.send_rounded),
                       tooltip: 'Enviar',
                     ),
@@ -149,11 +199,15 @@ class _AiChatPageWebState extends ConsumerState<AiChatPageWeb> {
 
     if (widget.embedded) return content;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
         title: Text('Haven Faith', style: AppTypography.headlineMedium),
         actions: [
-          IconButton(onPressed: () => ref.read(aiChatProvider.notifier).clearChat(), icon: const Icon(Icons.delete_outline), tooltip: 'Limpiar conversación'),
+          IconButton(
+            onPressed: () => ref.read(aiChatProvider.notifier).clearChat(),
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Limpiar conversación',
+          ),
         ],
       ),
       body: content,
@@ -165,11 +219,19 @@ class _ChatMessage extends StatelessWidget {
   final String text;
   final bool isUser;
   final bool isError;
-  const _ChatMessage({required this.text, required this.isUser, required this.isError});
+  const _ChatMessage({
+    required this.text,
+    required this.isUser,
+    required this.isError,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bubbleColor = isUser ? AppColors.primary : isError ? AppColors.error.withValues(alpha: 0.14) : AppColors.surfaceHigh;
+    final bubbleColor = isUser
+        ? AppColors.of(context).primary
+        : isError
+        ? AppColors.of(context).error.withValues(alpha: 0.14)
+        : AppColors.of(context).surfaceHigh;
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -178,10 +240,25 @@ class _ChatMessage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
           color: bubbleColor,
-          borderRadius: BorderRadius.only(topLeft: const Radius.circular(18), topRight: const Radius.circular(18), bottomLeft: Radius.circular(isUser ? 18 : 4), bottomRight: Radius.circular(isUser ? 4 : 18)),
-          border: isError ? Border.all(color: AppColors.error.withValues(alpha: 0.35)) : null,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(18),
+            topRight: const Radius.circular(18),
+            bottomLeft: Radius.circular(isUser ? 18 : 4),
+            bottomRight: Radius.circular(isUser ? 4 : 18),
+          ),
+          border: isError
+              ? Border.all(
+                  color: AppColors.of(context).error.withValues(alpha: 0.35),
+                )
+              : null,
         ),
-        child: SelectableText(text, style: AppTypography.bodyLarge.copyWith(color: AppColors.textPrimary, height: 1.45)),
+        child: SelectableText(
+          text,
+          style: AppTypography.bodyLarge.copyWith(
+            color: AppColors.of(context).textPrimary,
+            height: 1.45,
+          ),
+        ),
       ),
     );
   }
@@ -192,13 +269,23 @@ class _GeneratingBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Align(
+    return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
         padding: EdgeInsets.only(bottom: 12),
         child: DecoratedBox(
-          decoration: BoxDecoration(color: AppColors.surfaceHigh, borderRadius: BorderRadius.all(Radius.circular(18))),
-          child: Padding(padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+          decoration: BoxDecoration(
+            color: AppColors.of(context).surfaceHigh,
+            borderRadius: BorderRadius.all(Radius.circular(18)),
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
         ),
       ),
     );

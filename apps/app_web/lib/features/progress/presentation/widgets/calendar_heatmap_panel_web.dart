@@ -39,9 +39,9 @@ class CalendarHeatmapPanelWeb extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,12 +55,12 @@ class CalendarHeatmapPanelWeb extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: AppColors.primaryFaded,
+                      color: AppColors.of(context).primaryFaded,
                       borderRadius: AppRadius.md_,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.calendar_view_month_outlined,
-                      color: AppColors.primary,
+                      color: AppColors.of(context).primary,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -75,7 +75,7 @@ class CalendarHeatmapPanelWeb extends StatelessWidget {
                         Text(
                           '${_formatDate(snapshot.startDate)} – ${_formatDate(snapshot.endDate)} · $periodLabel',
                           style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                         ),
                       ],
@@ -93,19 +93,14 @@ class CalendarHeatmapPanelWeb extends StatelessWidget {
                   const SizedBox(width: 8),
                   _SummaryValueWeb(
                     value: '${snapshot.totalWorkouts}',
-                    label:
-                        snapshot.totalWorkouts == 1 ? 'SESIÓN' : 'SESIONES',
+                    label: snapshot.totalWorkouts == 1 ? 'SESIÓN' : 'SESIONES',
                   ),
                 ],
               );
               if (compact) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    title,
-                    const SizedBox(height: 14),
-                    stats,
-                  ],
+                  children: [title, const SizedBox(height: 14), stats],
                 );
               }
               return Row(
@@ -134,7 +129,7 @@ class CalendarHeatmapPanelWeb extends StatelessWidget {
                             child: Text(
                               label,
                               style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.textDisabled,
+                                color: AppColors.of(context).textDisabled,
                               ),
                             ),
                           ),
@@ -153,7 +148,7 @@ class CalendarHeatmapPanelWeb extends StatelessWidget {
                           .map(
                             (week) => Column(
                               children: week
-                                  .map(_buildDayCell)
+                                  .map((day) => _buildDayCell(context, day))
                                   .toList(growable: false),
                             ),
                           )
@@ -189,7 +184,7 @@ class CalendarHeatmapPanelWeb extends StatelessWidget {
               Text(
                 'Una sesión guardada marca el día; el color no puntúa descanso, carga ni calidad.',
                 style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ],
@@ -199,7 +194,7 @@ class CalendarHeatmapPanelWeb extends StatelessWidget {
     );
   }
 
-  Widget _buildDayCell(CalendarHeatmapDay day) {
+  Widget _buildDayCell(BuildContext context, CalendarHeatmapDay day) {
     if (!day.isInPeriod) {
       return const SizedBox(width: 20, height: 20);
     }
@@ -219,11 +214,13 @@ class CalendarHeatmapPanelWeb extends StatelessWidget {
           margin: const EdgeInsets.all(2),
           decoration: BoxDecoration(
             color: day.isActive
-                ? AppColors.primary.withValues(alpha: 0.82)
-                : AppColors.surfaceHigh,
+                ? AppColors.of(context).primary.withValues(alpha: 0.82)
+                : AppColors.of(context).surfaceHigh,
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
-              color: day.isActive ? AppColors.primary : AppColors.border,
+              color: day.isActive
+                  ? AppColors.of(context).primary
+                  : AppColors.of(context).border,
             ),
           ),
         ),
@@ -248,9 +245,9 @@ class _SummaryValueWeb extends StatelessWidget {
       constraints: const BoxConstraints(minWidth: 116),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.md_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,11 +273,13 @@ class _LegendDotWeb extends StatelessWidget {
       height: 13,
       decoration: BoxDecoration(
         color: active
-            ? AppColors.primary.withValues(alpha: 0.82)
-            : AppColors.surfaceHigh,
+            ? AppColors.of(context).primary.withValues(alpha: 0.82)
+            : AppColors.of(context).surfaceHigh,
         borderRadius: BorderRadius.circular(3),
         border: Border.all(
-          color: active ? AppColors.primary : AppColors.border,
+          color: active
+              ? AppColors.of(context).primary
+              : AppColors.of(context).border,
         ),
       ),
     );

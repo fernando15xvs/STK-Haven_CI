@@ -17,7 +17,8 @@ class CreateRoutinePageWeb extends ConsumerStatefulWidget {
   const CreateRoutinePageWeb({super.key, this.editingRoutine});
 
   @override
-  ConsumerState<CreateRoutinePageWeb> createState() => _CreateRoutinePageWebState();
+  ConsumerState<CreateRoutinePageWeb> createState() =>
+      _CreateRoutinePageWebState();
 }
 
 class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
@@ -61,11 +62,7 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
     if (newIndex > oldIndex) newIndex -= 1;
     setState(() {
       _replaceExercises(
-        RoutineOrderCoordinator.move(
-          _selectedExercises,
-          oldIndex,
-          newIndex,
-        ),
+        RoutineOrderCoordinator.move(_selectedExercises, oldIndex, newIndex),
       );
     });
   }
@@ -87,15 +84,16 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
     final personal = ref
         .read(exercisePersonalSettingsProvider.notifier)
         .settingsFor(exercise.id);
-    final notesController = TextEditingController(text: personal.technicalNotes);
+    final notesController = TextEditingController(
+      text: personal.technicalNotes,
+    );
     int sets = current?.targetSets ?? 3;
     int minReps = current?.targetRepsMin ?? 8;
     int maxReps = current?.targetRepsMax ?? 12;
     int rest = current?.restSeconds ?? 90;
     int warmupSets = current?.warmupSets ?? personal.warmupSets;
     int approachSets = current?.approachSets ?? personal.approachSets;
-    RoutineExercisePhase phase =
-        current?.phase ?? RoutineExercisePhase.main;
+    RoutineExercisePhase phase = current?.phase ?? RoutineExercisePhase.main;
     bool unilateral = current?.unilateral ?? false;
     UnilateralTarget unilateralTarget =
         current?.unilateralTarget ?? UnilateralTarget.other;
@@ -142,7 +140,7 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                 Text(
                   'Configura este ejercicio sin afectar a los demás.',
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
               ],
@@ -182,8 +180,8 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                       title: phase == RoutineExercisePhase.main
                           ? 'Series efectivas'
                           : phase == RoutineExercisePhase.mobility
-                              ? 'Movilidad'
-                              : 'Estiramiento',
+                          ? 'Movilidad'
+                          : 'Estiramiento',
                       child: Column(
                         children: [
                           counter(
@@ -277,7 +275,8 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                         maxLines: 5,
                         maxLength: 1200,
                         decoration: const InputDecoration(
-                          hintText: 'Ej. mantener escápulas atrás, pausa abajo...',
+                          hintText:
+                              'Ej. mantener escápulas atrás, pausa abajo...',
                         ),
                       ),
                     ),
@@ -339,10 +338,12 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                     targetRepsMin: minReps,
                     targetRepsMax: maxReps,
                     restSeconds: rest,
-                    warmupSets:
-                        phase == RoutineExercisePhase.main ? warmupSets : 0,
-                    approachSets:
-                        phase == RoutineExercisePhase.main ? approachSets : 0,
+                    warmupSets: phase == RoutineExercisePhase.main
+                        ? warmupSets
+                        : 0,
+                    approachSets: phase == RoutineExercisePhase.main
+                        ? approachSets
+                        : 0,
                     phase: phase,
                     unilateral: unilateral,
                     unilateralTarget: unilateralTarget,
@@ -358,7 +359,9 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
     );
 
     if (result != null && mounted) {
-      await ref.read(exercisePersonalSettingsProvider.notifier).save(
+      await ref
+          .read(exercisePersonalSettingsProvider.notifier)
+          .save(
             exerciseId: exercise.id,
             warmupSets: result.warmupSets,
             approachSets: result.approachSets,
@@ -384,7 +387,9 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
     if (_selectedExercises.length < 2) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Añade al menos dos ejercicios para crear una superserie.'),
+          content: Text(
+            'Añade al menos dos ejercicios para crear una superserie.',
+          ),
         ),
       );
       return;
@@ -398,9 +403,9 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
         builder: (dialogContext, setDialogState) {
           final groups = RoutineSupersetCoordinator.groups(_selectedExercises);
           return AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.link, color: AppColors.primary),
+                Icon(Icons.link, color: AppColors.of(context).primary),
                 SizedBox(width: 10),
                 Text('Superseries de la rutina'),
               ],
@@ -415,7 +420,7 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                     Text(
                       'Estos pares se cargarán automáticamente cada vez que inicies esta rutina.',
                       style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -431,18 +436,26 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppColors.primaryFaded,
+                            color: AppColors.of(context).primaryFaded,
                             borderRadius: AppRadius.md_,
                             border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.25),
+                              color: AppColors.of(
+                                context,
+                              ).primary.withValues(alpha: 0.25),
                             ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.link, color: AppColors.primary),
+                              Icon(
+                                Icons.link,
+                                color: AppColors.of(context).primary,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
-                                child: Text(names, style: AppTypography.bodyMedium),
+                                child: Text(
+                                  names,
+                                  style: AppTypography.bodyMedium,
+                                ),
                               ),
                               IconButton(
                                 tooltip: 'Quitar superserie',
@@ -457,9 +470,9 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                                   });
                                   setDialogState(() {});
                                 },
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.link_off,
-                                  color: AppColors.error,
+                                  color: AppColors.of(context).error,
                                 ),
                               ),
                             ],
@@ -471,7 +484,9 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                     const SizedBox(height: 10),
                     DropdownButtonFormField<int>(
                       initialValue: firstIndex,
-                      decoration: const InputDecoration(labelText: 'Ejercicio A'),
+                      decoration: const InputDecoration(
+                        labelText: 'Ejercicio A',
+                      ),
                       items: List.generate(
                         _selectedExercises.length,
                         (itemIndex) => DropdownMenuItem(
@@ -498,22 +513,25 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                         'web-routine-superset-$firstIndex-$secondIndex',
                       ),
                       initialValue: secondIndex,
-                      decoration: const InputDecoration(labelText: 'Ejercicio B'),
-                      items: List.generate(
-                        _selectedExercises.length,
-                        (itemIndex) => itemIndex,
-                      )
-                          .where((itemIndex) => itemIndex != firstIndex)
-                          .map(
-                            (itemIndex) => DropdownMenuItem(
-                              value: itemIndex,
-                              child: Text(
-                                _exerciseName(itemIndex),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
+                      decoration: const InputDecoration(
+                        labelText: 'Ejercicio B',
+                      ),
+                      items:
+                          List.generate(
+                                _selectedExercises.length,
+                                (itemIndex) => itemIndex,
+                              )
+                              .where((itemIndex) => itemIndex != firstIndex)
+                              .map(
+                                (itemIndex) => DropdownMenuItem(
+                                  value: itemIndex,
+                                  child: Text(
+                                    _exerciseName(itemIndex),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(),
                       onChanged: (value) {
                         if (value != null) {
                           setDialogState(() => secondIndex = value);
@@ -618,8 +636,9 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
     final allExercises = ref.watch(exerciseListProvider);
     final byId = {for (final exercise in allExercises) exercise.id: exercise};
     final editing = widget.editingRoutine != null;
-    final supersetCount =
-        RoutineSupersetCoordinator.groups(_selectedExercises).length;
+    final supersetCount = RoutineSupersetCoordinator.groups(
+      _selectedExercises,
+    ).length;
 
     final form = _RoutineDetails(
       nameController: _nameController,
@@ -642,7 +661,7 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
         title: Text(editing ? 'Editar rutina' : 'Nueva rutina'),
         actions: [
@@ -666,11 +685,7 @@ class _CreateRoutinePageWebState extends ConsumerState<CreateRoutinePageWeb> {
                 if (!wide) {
                   return ListView(
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 100),
-                    children: [
-                      form,
-                      const SizedBox(height: 16),
-                      exercises,
-                    ],
+                    children: [form, const SizedBox(height: 16), exercises],
                   );
                 }
                 return Padding(
@@ -725,15 +740,12 @@ class _RoutineDetails extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Text(
-            'Programación opcional',
-            style: AppTypography.labelLarge,
-          ),
+          Text('Programación opcional', style: AppTypography.labelLarge),
           const SizedBox(height: 4),
           Text(
             'Úsala solo si entrenas esta rutina de forma independiente.',
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
           const SizedBox(height: 10),
@@ -753,7 +765,7 @@ class _RoutineDetails extends StatelessWidget {
           Text(
             'Si esta rutina forma parte de un Plan de entrenamiento activo, la programación del plan tiene prioridad y estos días no interfieren.',
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
         ],
@@ -801,8 +813,8 @@ class _ExerciseSelection extends StatelessWidget {
                   icon: Icon(
                     Icons.link,
                     color: supersetCount > 0
-                        ? AppColors.primary
-                        : AppColors.textSecondary,
+                        ? AppColors.of(context).primary
+                        : AppColors.of(context).textSecondary,
                   ),
                   label: Text(
                     supersetCount > 0
@@ -821,16 +833,16 @@ class _ExerciseSelection extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.drag_indicator,
                   size: 17,
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   'Arrastra el asa para definir el orden de ejecución.',
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
               ],
@@ -843,14 +855,16 @@ class _ExerciseSelection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 42, horizontal: 20),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: AppColors.surfaceHigh.withValues(alpha: 0.45),
+                color: AppColors.of(
+                  context,
+                ).surfaceHigh.withValues(alpha: 0.45),
                 borderRadius: AppRadius.md_,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.of(context).border),
               ),
               child: Text(
                 'Selecciona los ejercicios que formarán tu rutina.',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             )
@@ -884,12 +898,12 @@ class _ExerciseSelection extends StatelessWidget {
                   ),
                   margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceHigh,
+                    color: AppColors.of(context).surfaceHigh,
                     borderRadius: AppRadius.md_,
                     border: Border.all(
                       color: item.isInSuperset
-                          ? AppColors.primary.withValues(alpha: 0.4)
-                          : AppColors.border,
+                          ? AppColors.of(context).primary.withValues(alpha: 0.4)
+                          : AppColors.of(context).border,
                     ),
                   ),
                   child: InkWell(
@@ -911,18 +925,20 @@ class _ExerciseSelection extends StatelessWidget {
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: item.isInSuperset
-                                      ? AppColors.primaryFaded
-                                      : AppColors.background,
+                                      ? AppColors.of(context).primaryFaded
+                                      : AppColors.of(context).background,
                                   borderRadius: AppRadius.sm_,
-                                  border: Border.all(color: AppColors.border),
+                                  border: Border.all(
+                                    color: AppColors.of(context).border,
+                                  ),
                                 ),
                                 child: Icon(
                                   item.isInSuperset
                                       ? Icons.link
                                       : Icons.drag_indicator,
                                   color: item.isInSuperset
-                                      ? AppColors.primary
-                                      : AppColors.textSecondary,
+                                      ? AppColors.of(context).primary
+                                      : AppColors.of(context).textSecondary,
                                 ),
                               ),
                             ),
@@ -940,21 +956,21 @@ class _ExerciseSelection extends StatelessWidget {
                                 Text(
                                   '${item.targetSets} trabajo · ${item.targetRepsMin}-${item.targetRepsMax} reps · ${item.restSeconds}s${extras.isEmpty ? '' : ' · ${extras.join(' · ')}'}',
                                   style: AppTypography.bodySmall.copyWith(
-                                    color: AppColors.textSecondary,
+                                    color: AppColors.of(context).textSecondary,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(
+                          Icon(
                             Icons.tune,
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                           IconButton(
                             onPressed: () => onRemove(index),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.delete_outline,
-                              color: AppColors.error,
+                              color: AppColors.of(context).error,
                             ),
                             tooltip: 'Quitar',
                           ),
@@ -978,9 +994,9 @@ class _EmptySupersetState extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.md_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: const Text('No hay superseries configuradas.'),
     );
@@ -1004,9 +1020,9 @@ class _DialogSection extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.md_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1017,7 +1033,7 @@ class _DialogSection extends StatelessWidget {
             Text(
               subtitle!,
               style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
           ],
@@ -1040,10 +1056,10 @@ class _Panel extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppElevation.low,
+        border: Border.all(color: AppColors.of(context).border),
+        boxShadow: AppElevation.low(context),
       ),
       child: child,
     );

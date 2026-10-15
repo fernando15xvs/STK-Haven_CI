@@ -54,9 +54,7 @@ class TrainingPreferencesPage extends ConsumerWidget {
                     unit,
                   );
                   final selected = options.reduce(
-                    (a, b) => (a - current).abs() < (b - current).abs()
-                        ? a
-                        : b,
+                    (a, b) => (a - current).abs() < (b - current).abs() ? a : b,
                   );
 
                   return ListTile(
@@ -126,6 +124,37 @@ class TrainingPreferencesPage extends ConsumerWidget {
                 ),
                 value: settings.autoRestEnabled,
                 onChanged: notifier.setAutoRestEnabled,
+              ),
+              ListTile(
+                title: const Text('Tiempo de descanso según'),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButton<RestTimingMode>(
+                      isExpanded: true,
+                      value: settings.restTimingMode,
+                      items: const [
+                        DropdownMenuItem(
+                          value: RestTimingMode.completedSet,
+                          child: Text('La serie completada'),
+                        ),
+                        DropdownMenuItem(
+                          value: RestTimingMode.nextSet,
+                          child: Text('La siguiente serie'),
+                        ),
+                      ],
+                      onChanged: settings.autoRestEnabled
+                          ? (value) {
+                              if (value != null)
+                                notifier.setRestTimingMode(value);
+                            }
+                          : null,
+                    ),
+                    const Text(
+                      'Siguiente serie: usa su descanso, incluso al cambiar de ejercicio. Sigue el orden de la sesión. Las superseries mantienen el descanso por ronda; entre lados se usa su tiempo propio.',
+                    ),
+                  ],
+                ),
               ),
               const Divider(height: 1),
               SwitchListTile.adaptive(
@@ -234,21 +263,21 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 6),
-              ...children,
-            ],
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
-        ),
-      );
+          const SizedBox(height: 6),
+          ...children,
+        ],
+      ),
+    ),
+  );
 }

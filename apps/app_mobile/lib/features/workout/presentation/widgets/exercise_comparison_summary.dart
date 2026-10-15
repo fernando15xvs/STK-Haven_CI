@@ -31,15 +31,12 @@ class ExerciseComparisonSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            comparison.exerciseName,
-            style: AppTypography.bodyLarge,
-          ),
+          Text(comparison.exerciseName, style: AppTypography.bodyLarge),
           const SizedBox(height: 3),
           Text(
             'Última ejecución global: $dateLabel · $previousContext',
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -71,7 +68,7 @@ class ExerciseComparisonSummary extends StatelessWidget {
           Text(
             '${FitnessFormatter.formatVolume(comparison.previousVolume, unit)} → ${FitnessFormatter.formatVolume(comparison.currentVolume, unit)} registrados',
             style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
             ),
           ),
         ],
@@ -91,13 +88,17 @@ class _DeltaChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.info.withValues(alpha: 0.08),
+        color: AppColors.of(context).info.withValues(alpha: 0.08),
         borderRadius: AppRadius.sm_,
-        border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: AppColors.of(context).info.withValues(alpha: 0.2),
+        ),
       ),
       child: Text(
         '$label · $value',
-        style: AppTypography.labelSmall.copyWith(color: AppColors.info),
+        style: AppTypography.labelSmall.copyWith(
+          color: AppColors.of(context).info,
+        ),
       ),
     );
   }

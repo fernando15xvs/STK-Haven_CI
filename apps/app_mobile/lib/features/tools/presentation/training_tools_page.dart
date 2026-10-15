@@ -51,14 +51,11 @@ class _TrainingToolsPageState extends ConsumerState<TrainingToolsPage> {
     _weightController = TextEditingController(
       text: _number(initialDisplayWeight),
     );
-    _repsController = TextEditingController(
-      text: '${widget.initialReps ?? 8}',
-    );
+    _repsController = TextEditingController(text: '${widget.initialReps ?? 8}');
   }
 
-  String _number(double value) => value % 1 == 0
-      ? '${value.toInt()}'
-      : value.toStringAsFixed(1);
+  String _number(double value) =>
+      value % 1 == 0 ? '${value.toInt()}' : value.toStringAsFixed(1);
 
   @override
   void dispose() {
@@ -107,13 +104,16 @@ class _TrainingToolsPageState extends ConsumerState<TrainingToolsPage> {
     for (final item in exercises) {
       if (item.id == _exerciseId) selected = item;
     }
-    final advice =
-        selected == null ? null : ExerciseToolAdvisor.forExercise(selected);
+    final advice = selected == null
+        ? null
+        : ExerciseToolAdvisor.forExercise(selected);
     final typedWeight =
         double.tryParse(_weightController.text.replaceAll(',', '.')) ?? 0;
     final reps = int.tryParse(_repsController.text) ?? 0;
-    final canonicalKg =
-        WeightConverter.toCanonicalKg(typedWeight, settings.weightUnit);
+    final canonicalKg = WeightConverter.toCanonicalKg(
+      typedWeight,
+      settings.weightUnit,
+    );
     final oneRmKg = OneRmCalculator.estimate(weight: canonicalKg, reps: reps);
     final percentages = OneRmCalculator.percentageTable(oneRmKg);
 
@@ -133,7 +133,7 @@ class _TrainingToolsPageState extends ConsumerState<TrainingToolsPage> {
             Text(
               'Valores precargados desde el ejercicio activo; puedes modificarlos sin alterar la serie.',
               style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
           ],
@@ -181,7 +181,8 @@ class _TrainingToolsPageState extends ConsumerState<TrainingToolsPage> {
                                   context: context,
                                   isScrollControlled: true,
                                   useSafeArea: true,
-                                  builder: (_) => const BarbellCalculatorModal(),
+                                  builder: (_) =>
+                                      const BarbellCalculatorModal(),
                                 );
                               } else if (kind == TrainingToolKind.timer) {
                                 _resetTimer(90);
@@ -219,8 +220,9 @@ class _TrainingToolsPageState extends ConsumerState<TrainingToolsPage> {
                       child: TextField(
                         controller: _repsController,
                         keyboardType: TextInputType.number,
-                        decoration:
-                            const InputDecoration(labelText: 'Repeticiones'),
+                        decoration: const InputDecoration(
+                          labelText: 'Repeticiones',
+                        ),
                         onChanged: (_) => setState(() {}),
                       ),
                     ),
@@ -234,13 +236,15 @@ class _TrainingToolsPageState extends ConsumerState<TrainingToolsPage> {
                         ? '1RM estimado: ${WeightConverter.formatWeight(oneRmKg, settings.weightUnit)}'
                         : 'Ingresa peso y repeticiones válidos',
                     style: AppTypography.headlineMedium.copyWith(
-                      color: AppColors.primary,
+                      color: AppColors.of(context).primary,
                     ),
                   ),
                 ),
                 if (percentages.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  ...percentages.entries.take(6).map(
+                  ...percentages.entries
+                      .take(6)
+                      .map(
                         (entry) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 3),
                           child: Row(
@@ -269,8 +273,8 @@ class _TrainingToolsPageState extends ConsumerState<TrainingToolsPage> {
                   _formatSeconds(_remaining),
                   style: AppTypography.displayMedium.copyWith(
                     color: _remaining == 0
-                        ? AppColors.success
-                        : AppColors.textPrimary,
+                        ? AppColors.of(context).success
+                        : AppColors.of(context).textPrimary,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -328,16 +332,16 @@ class _TrainingToolsPageState extends ConsumerState<TrainingToolsPage> {
       '${(total ~/ 60).toString().padLeft(2, '0')}:${(total % 60).toString().padLeft(2, '0')}';
 
   static String _labelFor(TrainingToolKind kind) => switch (kind) {
-        TrainingToolKind.oneRm => '1RM',
-        TrainingToolKind.timer => 'Temporizador',
-        TrainingToolKind.plates => 'Discos',
-      };
+    TrainingToolKind.oneRm => '1RM',
+    TrainingToolKind.timer => 'Temporizador',
+    TrainingToolKind.plates => 'Discos',
+  };
 
   static IconData _iconFor(TrainingToolKind kind) => switch (kind) {
-        TrainingToolKind.oneRm => Icons.calculate_outlined,
-        TrainingToolKind.timer => Icons.timer_outlined,
-        TrainingToolKind.plates => Icons.fitness_center,
-      };
+    TrainingToolKind.oneRm => Icons.calculate_outlined,
+    TrainingToolKind.timer => Icons.timer_outlined,
+    TrainingToolKind.plates => Icons.fitness_center,
+  };
 }
 
 class _Panel extends StatelessWidget {
@@ -347,19 +351,19 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceHigh,
-          borderRadius: AppRadius.lg_,
-          border: Border.all(color: AppColors.surfaceBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: AppTypography.headlineMedium),
-            const SizedBox(height: 14),
-            child,
-          ],
-        ),
-      );
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: AppColors.of(context).surfaceHigh,
+      borderRadius: AppRadius.lg_,
+      border: Border.all(color: AppColors.of(context).surfaceBorder),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: AppTypography.headlineMedium),
+        const SizedBox(height: 14),
+        child,
+      ],
+    ),
+  );
 }

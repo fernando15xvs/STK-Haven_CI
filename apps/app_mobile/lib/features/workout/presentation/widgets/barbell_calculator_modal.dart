@@ -11,7 +11,10 @@ class BarbellCalculatorModal extends ConsumerStatefulWidget {
 
   const BarbellCalculatorModal({super.key, this.initialTargetWeight});
 
-  static Future<void> show(BuildContext context, {double? initialTargetWeight}) {
+  static Future<void> show(
+    BuildContext context, {
+    double? initialTargetWeight,
+  }) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -26,10 +29,12 @@ class BarbellCalculatorModal extends ConsumerStatefulWidget {
   }
 
   @override
-  ConsumerState<BarbellCalculatorModal> createState() => _BarbellCalculatorModalState();
+  ConsumerState<BarbellCalculatorModal> createState() =>
+      _BarbellCalculatorModalState();
 }
 
-class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal> {
+class _BarbellCalculatorModalState
+    extends ConsumerState<BarbellCalculatorModal> {
   late TextEditingController _weightCtrl;
   BarbellCalculatorResult? _result;
 
@@ -37,7 +42,9 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
   void initState() {
     super.initState();
     final initial = widget.initialTargetWeight ?? 0;
-    _weightCtrl = TextEditingController(text: initial > 0 ? initial.toString() : '');
+    _weightCtrl = TextEditingController(
+      text: initial > 0 ? initial.toString() : '',
+    );
     if (initial > 0) {
       // Delay to let provider read settings
       WidgetsBinding.instance.addPostFrameCallback((_) => _calculate());
@@ -61,9 +68,9 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
     final isLb = unit == WeightUnit.lb;
 
     final barWeight = isLb ? 45.0 : 20.0;
-    final plates = isLb 
-      ? const [45.0, 35.0, 25.0, 10.0, 5.0, 2.5]
-      : const [25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 1.25];
+    final plates = isLb
+        ? const [45.0, 35.0, 25.0, 10.0, 5.0, 2.5]
+        : const [25.0, 20.0, 15.0, 10.0, 5.0, 2.5, 1.25];
 
     setState(() {
       _result = BarbellCalculator.calculate(
@@ -80,14 +87,14 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
       if (weight >= 35) return Colors.blue;
       if (weight >= 25) return Colors.green;
       if (weight >= 10) return Colors.white;
-      return AppColors.textSecondary;
+      return AppColors.of(context).textSecondary;
     } else {
       if (weight >= 25) return Colors.red;
       if (weight >= 20) return Colors.blue;
       if (weight >= 15) return Colors.yellow;
       if (weight >= 10) return Colors.green;
       if (weight >= 5) return Colors.white;
-      return AppColors.textSecondary;
+      return AppColors.of(context).textSecondary;
     }
   }
 
@@ -103,24 +110,38 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
     final isLb = unit == WeightUnit.lb;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surfaceHigh,
+      decoration: BoxDecoration(
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.textSecondary.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.of(context).textSecondary.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
           const SizedBox(height: 16),
-          Text('Calculadora de Discos', style: AppTypography.headlineMedium.copyWith(color: AppColors.primary)),
+          Text(
+            'Calculadora de Discos',
+            style: AppTypography.headlineMedium.copyWith(
+              color: AppColors.of(context).primary,
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _weightCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   style: AppTypography.headlineLarge,
                   textAlign: TextAlign.center,
                   decoration: InputDecoration(
@@ -133,18 +154,31 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
             ],
           ),
           const SizedBox(height: 24),
-          
+
           if (_result != null) ...[
-            Text('Barra: ${_result!.barWeight} ${unit.label}', style: AppTypography.bodyMedium),
+            Text(
+              'Barra: ${_result!.barWeight} ${unit.label}',
+              style: AppTypography.bodyMedium,
+            ),
             const SizedBox(height: 16),
             if (_result!.platesPerSide.isEmpty)
-              Text('Usa solo la barra vacía', style: AppTypography.headlineSmall.copyWith(color: AppColors.textSecondary))
+              Text(
+                'Usa solo la barra vacía',
+                style: AppTypography.headlineSmall.copyWith(
+                  color: AppColors.of(context).textSecondary,
+                ),
+              )
             else
-              _buildVisualizer(_result!, isLb),
-            
+              _buildVisualizer(context, _result!, isLb),
+
             const SizedBox(height: 16),
             if (_result!.remainder > 0)
-              Text('Sobran ${_result!.remainder.toStringAsFixed(1)} ${unit.label}', style: AppTypography.bodySmall.copyWith(color: AppColors.warning)),
+              Text(
+                'Sobran ${_result!.remainder.toStringAsFixed(1)} ${unit.label}',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.of(context).warning,
+                ),
+              ),
           ],
 
           const SizedBox(height: 24),
@@ -157,11 +191,15 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
     );
   }
 
-  Widget _buildVisualizer(BarbellCalculatorResult result, bool isLb) {
+  Widget _buildVisualizer(
+    BuildContext context,
+    BarbellCalculatorResult result,
+    bool isLb,
+  ) {
     return Container(
       height: 120,
       width: double.infinity,
-      color: AppColors.surface,
+      color: AppColors.of(context).surface,
       child: Center(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -170,17 +208,9 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // Barra
-              Container(
-                width: 100,
-                height: 12,
-                color: Colors.grey.shade400,
-              ),
+              Container(width: 100, height: 12, color: Colors.grey.shade400),
               // Manga de la barra
-              Container(
-                width: 10,
-                height: 30,
-                color: Colors.grey.shade300,
-              ),
+              Container(width: 10, height: 30, color: Colors.grey.shade300),
               const SizedBox(width: 2),
               // Discos
               ...result.platesPerSide.map((plate) {
@@ -198,11 +228,15 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
                       child: RotatedBox(
                         quarterTurns: 3,
                         child: Text(
-                          plate.weight % 1 == 0 ? plate.weight.toInt().toString() : plate.weight.toString(),
+                          plate.weight % 1 == 0
+                              ? plate.weight.toInt().toString()
+                              : plate.weight.toString(),
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: plate.weight >= 10 && plate.weight != 15 ? Colors.white : Colors.black,
+                            color: plate.weight >= 10 && plate.weight != 15
+                                ? Colors.white
+                                : Colors.black,
                           ),
                         ),
                       ),
@@ -212,11 +246,7 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
               }),
               const SizedBox(width: 2),
               // Manga sobrante
-              Container(
-                width: 40,
-                height: 12,
-                color: Colors.grey.shade400,
-              ),
+              Container(width: 40, height: 12, color: Colors.grey.shade400),
             ],
           ),
         ),

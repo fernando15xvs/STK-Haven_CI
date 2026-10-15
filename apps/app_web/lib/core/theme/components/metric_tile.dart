@@ -25,9 +25,11 @@ class MetricTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface.withValues(alpha: 0.6),
+            color: AppColors.of(context).surface.withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.surfaceBorder.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: AppColors.of(context).surfaceBorder.withValues(alpha: 0.3),
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.1),
@@ -41,27 +43,15 @@ class MetricTile extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  if (icon != null) ...[
-                    icon!,
-                    const SizedBox(width: 8),
-                  ],
-                  Text(
-                    label.toUpperCase(),
-                    style: AppTypography.labelSmall,
-                  ),
+                  if (icon != null) ...[icon!, const SizedBox(width: 8)],
+                  Text(label.toUpperCase(), style: AppTypography.labelSmall),
                 ],
               ),
               const SizedBox(height: 8),
-              Text(
-                value,
-                style: AppTypography.headlineLarge,
-              ),
+              Text(value, style: AppTypography.headlineLarge),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),
-                Text(
-                  subtitle!,
-                  style: AppTypography.bodySmall,
-                ),
+                Text(subtitle!, style: AppTypography.bodySmall),
               ],
             ],
           ),

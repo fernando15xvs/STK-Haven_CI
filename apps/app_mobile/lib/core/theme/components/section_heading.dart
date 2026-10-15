@@ -13,7 +13,7 @@ class SectionHeading extends StatelessWidget {
       title.toUpperCase(),
       style: AppTypography.labelMedium.copyWith(
         letterSpacing: 1.2,
-        color: color ?? AppColors.textSecondary,
+        color: color ?? AppColors.of(context).textSecondary,
       ),
     );
   }

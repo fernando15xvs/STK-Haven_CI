@@ -56,13 +56,28 @@ class SettingsNotifier extends Notifier<SettingsState> {
     updateSettings(state.copyWith(autoRestEnabled: enabled));
   }
 
+  void setRestTimingMode(RestTimingMode mode) {
+    updateSettings(state.copyWith(restTimingMode: mode));
+  }
+
+  Future<void> setAppearance(AppearanceSettings appearance) async {
+    final next = state.copyWith(appearance: appearance);
+    await _repository.saveSettings(next);
+    state = state.copyWith(appearance: appearance);
+  }
+
   void setWeightUnit(WeightUnit unit) {
     updateSettings(state.copyWith(weightUnit: unit));
   }
 
-  void setDefaultIncrement(double incrementInActiveUnit, WeightUnit activeUnit) {
-    final incrementKg =
-        WeightConverter.toCanonicalKg(incrementInActiveUnit, activeUnit);
+  void setDefaultIncrement(
+    double incrementInActiveUnit,
+    WeightUnit activeUnit,
+  ) {
+    final incrementKg = WeightConverter.toCanonicalKg(
+      incrementInActiveUnit,
+      activeUnit,
+    );
     updateSettings(state.copyWith(defaultIncrement: incrementKg));
   }
 
@@ -76,7 +91,10 @@ class SettingsNotifier extends Notifier<SettingsState> {
     if (incrementInActiveUnit == null) {
       values.remove(exerciseId);
     } else {
-      final value = WeightConverter.toCanonicalKg(incrementInActiveUnit, activeUnit);
+      final value = WeightConverter.toCanonicalKg(
+        incrementInActiveUnit,
+        activeUnit,
+      );
       if (!value.isFinite || value <= 0 || value > 100) return;
       values[exerciseId] = value;
     }
@@ -110,9 +128,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
 
   Future<void> setDailyVerseNotifications(bool enable) async {
     final effectiveValue = await configureDailyVerseNotifications(enable);
-    final newState = state.copyWith(
-      dailyVerseNotifications: effectiveValue,
-    );
+    final newState = state.copyWith(dailyVerseNotifications: effectiveValue);
     state = newState;
     await _repository.saveSettings(newState);
   }
