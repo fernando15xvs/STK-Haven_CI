@@ -17,14 +17,16 @@ class ActiveWorkoutPageWeb extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(activeWorkoutProvider).session;
-    final groupCount = session?.exercises
+    final groupCount =
+        session?.exercises
             .map((exercise) => exercise.supersetGroupId)
             .whereType<String>()
             .toSet()
             .length ??
         0;
     final canManage = (session?.exercises.length ?? 0) >= 2;
-    final hasPendingUnilateral = session?.exercises.any(
+    final hasPendingUnilateral =
+        session?.exercises.any(
           (exercise) =>
               exercise.unilateral && exercise.sets.any((set) => !set.completed),
         ) ??
@@ -85,11 +87,11 @@ class ActiveWorkoutPageWeb extends ConsumerWidget {
                       ),
                       style: FilledButton.styleFrom(
                         backgroundColor: groupCount > 0
-                            ? AppColors.primaryFaded
-                            : AppColors.surfaceHigh,
+                            ? AppColors.of(context).primaryFaded
+                            : AppColors.of(context).surfaceHigh,
                         foregroundColor: groupCount > 0
-                            ? AppColors.primary
-                            : AppColors.textPrimary,
+                            ? AppColors.of(context).primary
+                            : AppColors.of(context).textPrimary,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 13,

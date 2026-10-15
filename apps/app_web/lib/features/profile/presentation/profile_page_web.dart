@@ -1,3 +1,4 @@
+import 'package:core/features/profile/presentation/pages/appearance_settings_page.dart';
 import 'package:core/features/coach_pro/presentation/coach_pro_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,7 +52,7 @@ class ProfilePageWeb extends ConsumerWidget {
     );
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -64,7 +65,7 @@ class ProfilePageWeb extends ConsumerWidget {
                 Text(
                   '${routines.length} rutinas · ${history.length} entrenamientos · ${measurements.length} registros corporales',
                   style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -154,6 +155,21 @@ class ProfilePageWeb extends ConsumerWidget {
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const AchievementsPageWeb(),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _Section(
+                  title: 'Aspecto',
+                  child: _ActionTile(
+                    icon: Icons.palette_outlined,
+                    title: 'Personalizar aspecto',
+                    subtitle:
+                        'Modo claro, oscuro o automático; colores y acabado.',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const AppearanceSettingsPage(),
                       ),
                     ),
                   ),
@@ -567,7 +583,7 @@ class ProfilePageWeb extends ConsumerWidget {
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
+        backgroundColor: AppColors.of(context).surfaceHigh,
         title: Text(program.name),
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
@@ -588,7 +604,7 @@ class ProfilePageWeb extends ConsumerWidget {
                 Text(
                   program.description,
                   style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                     height: 1.5,
                   ),
                 ),
@@ -601,9 +617,9 @@ class ProfilePageWeb extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.of(context).surface,
                       borderRadius: AppRadius.md_,
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.of(context).border),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -613,7 +629,7 @@ class ProfilePageWeb extends ConsumerWidget {
                         Text(
                           '${routine.scheduledDays.map((day) => dayNames[day] ?? '$day').join(', ')} · ${routine.exercises.length} ejercicios',
                           style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                         ),
                       ],
@@ -757,9 +773,9 @@ class _ProgramSection extends StatelessWidget {
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(
+          leading: Icon(
             Icons.calendar_month_outlined,
-            color: AppColors.primary,
+            color: AppColors.of(context).primary,
           ),
           title: Text(
             program.programNameSnapshot,
@@ -801,7 +817,7 @@ class _ProgramPickerDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       title: const Text('Selecciona un programa'),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720, maxHeight: 560),
@@ -812,7 +828,7 @@ class _ProgramPickerDialog extends StatelessWidget {
           itemBuilder: (context, index) {
             final program = presetPrograms[index];
             return Material(
-              color: AppColors.surface,
+              color: AppColors.of(context).surface,
               borderRadius: AppRadius.md_,
               child: InkWell(
                 borderRadius: AppRadius.md_,
@@ -821,7 +837,7 @@ class _ProgramPickerDialog extends StatelessWidget {
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     borderRadius: AppRadius.md_,
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: AppColors.of(context).border),
                   ),
                   child: Row(
                     children: [
@@ -829,12 +845,14 @@ class _ProgramPickerDialog extends StatelessWidget {
                         width: 46,
                         height: 46,
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
+                          color: AppColors.of(
+                            context,
+                          ).primary.withValues(alpha: 0.1),
                           borderRadius: AppRadius.sm_,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.fitness_center,
-                          color: AppColors.primary,
+                          color: AppColors.of(context).primary,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -883,16 +901,20 @@ class _ProfileHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Row(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 34,
-            backgroundColor: AppColors.surfaceHigh,
-            child: Icon(Icons.person, size: 36, color: AppColors.textSecondary),
+            backgroundColor: AppColors.of(context).surfaceHigh,
+            child: Icon(
+              Icons.person,
+              size: 36,
+              color: AppColors.of(context).textSecondary,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -906,7 +928,7 @@ class _ProfileHeader extends StatelessWidget {
                       ? 'Entrenamiento personalizado'
                       : settings.activeProgram!.programNameSnapshot,
                   style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
               ],
@@ -978,7 +1000,7 @@ class _Section extends StatelessWidget {
         Text(
           title.toUpperCase(),
           style: AppTypography.labelMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: AppColors.of(context).textSecondary,
             letterSpacing: 1.1,
           ),
         ),
@@ -987,9 +1009,9 @@ class _Section extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.of(context).surface,
             borderRadius: AppRadius.lg_,
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: AppColors.of(context).border),
           ),
           child: child,
         ),
@@ -1018,7 +1040,9 @@ class _ActionTile extends StatelessWidget {
       enabled: onTap != null,
       leading: Icon(
         icon,
-        color: onTap == null ? AppColors.textDisabled : AppColors.primary,
+        color: onTap == null
+            ? AppColors.of(context).textDisabled
+            : AppColors.of(context).primary,
       ),
       title: Text(title),
       subtitle: Text(subtitle),
@@ -1039,7 +1063,7 @@ class _SmallStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.md_,
       ),
       child: Column(
@@ -1049,7 +1073,7 @@ class _SmallStat extends StatelessWidget {
           Text(
             label,
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
         ],

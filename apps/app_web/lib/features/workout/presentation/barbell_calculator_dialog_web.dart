@@ -10,18 +10,24 @@ class BarbellCalculatorDialogWeb extends ConsumerStatefulWidget {
 
   const BarbellCalculatorDialogWeb({super.key, this.initialTargetWeight});
 
-  static Future<void> show(BuildContext context, {double? initialTargetWeight}) {
+  static Future<void> show(
+    BuildContext context, {
+    double? initialTargetWeight,
+  }) {
     return showDialog<void>(
       context: context,
-      builder: (_) => BarbellCalculatorDialogWeb(initialTargetWeight: initialTargetWeight),
+      builder: (_) =>
+          BarbellCalculatorDialogWeb(initialTargetWeight: initialTargetWeight),
     );
   }
 
   @override
-  ConsumerState<BarbellCalculatorDialogWeb> createState() => _BarbellCalculatorDialogWebState();
+  ConsumerState<BarbellCalculatorDialogWeb> createState() =>
+      _BarbellCalculatorDialogWebState();
 }
 
-class _BarbellCalculatorDialogWebState extends ConsumerState<BarbellCalculatorDialogWeb> {
+class _BarbellCalculatorDialogWebState
+    extends ConsumerState<BarbellCalculatorDialogWeb> {
   late final TextEditingController _controller;
   BarbellCalculatorResult? _result;
 
@@ -29,7 +35,8 @@ class _BarbellCalculatorDialogWebState extends ConsumerState<BarbellCalculatorDi
   void initState() {
     super.initState();
     _controller = TextEditingController(
-      text: widget.initialTargetWeight != null && widget.initialTargetWeight! > 0
+      text:
+          widget.initialTargetWeight != null && widget.initialTargetWeight! > 0
           ? _number(widget.initialTargetWeight!)
           : '',
     );
@@ -42,7 +49,12 @@ class _BarbellCalculatorDialogWebState extends ConsumerState<BarbellCalculatorDi
     super.dispose();
   }
 
-  String _number(double value) => value % 1 == 0 ? '${value.toInt()}' : value.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+  String _number(double value) => value % 1 == 0
+      ? '${value.toInt()}'
+      : value
+            .toStringAsFixed(2)
+            .replaceFirst(RegExp(r'0+$'), '')
+            .replaceFirst(RegExp(r'\.$'), '');
 
   void _calculate() {
     final target = double.tryParse(_controller.text.replaceAll(',', '.')) ?? 0;
@@ -70,10 +82,10 @@ class _BarbellCalculatorDialogWebState extends ConsumerState<BarbellCalculatorDi
     final result = _result;
 
     return AlertDialog(
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       title: Row(
         children: [
-          const Icon(Icons.calculate_outlined, color: AppColors.primary),
+          Icon(Icons.calculate_outlined, color: AppColors.of(context).primary),
           const SizedBox(width: 10),
           const Expanded(child: Text('Calculadora de discos')),
         ],
@@ -88,7 +100,9 @@ class _BarbellCalculatorDialogWebState extends ConsumerState<BarbellCalculatorDi
               TextField(
                 controller: _controller,
                 autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Peso total (${unit.label})',
                   prefixIcon: const Icon(Icons.monitor_weight_outlined),
@@ -97,19 +111,41 @@ class _BarbellCalculatorDialogWebState extends ConsumerState<BarbellCalculatorDi
               ),
               const SizedBox(height: 18),
               if (result == null)
-                Text('Ingresa el peso total que deseas cargar, incluyendo la barra.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary))
+                Text(
+                  'Ingresa el peso total que deseas cargar, incluyendo la barra.',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.of(context).textSecondary,
+                  ),
+                )
               else ...[
-                _InfoRow(label: 'Barra', value: '${_number(result.barWeight)} ${unit.label}'),
-                _InfoRow(label: 'Peso alcanzado', value: '${_number(result.actualTotalWeight)} ${unit.label}'),
+                _InfoRow(
+                  label: 'Barra',
+                  value: '${_number(result.barWeight)} ${unit.label}',
+                ),
+                _InfoRow(
+                  label: 'Peso alcanzado',
+                  value: '${_number(result.actualTotalWeight)} ${unit.label}',
+                ),
                 const SizedBox(height: 12),
-                Text('DISCOS POR LADO', style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary)),
+                Text(
+                  'DISCOS POR LADO',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.of(context).textSecondary,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 if (result.platesPerSide.isEmpty)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(color: AppColors.surface, borderRadius: AppRadius.md_),
-                    child: Text('No necesitas añadir discos.', style: AppTypography.bodyMedium),
+                    decoration: BoxDecoration(
+                      color: AppColors.of(context).surface,
+                      borderRadius: AppRadius.md_,
+                    ),
+                    child: Text(
+                      'No necesitas añadir discos.',
+                      style: AppTypography.bodyMedium,
+                    ),
                   )
                 else
                   Wrap(
@@ -119,7 +155,9 @@ class _BarbellCalculatorDialogWebState extends ConsumerState<BarbellCalculatorDi
                         .map(
                           (plate) => Chip(
                             avatar: const Icon(Icons.circle, size: 15),
-                            label: Text('${_number(plate.weight)} ${unit.label}'),
+                            label: Text(
+                              '${_number(plate.weight)} ${unit.label}',
+                            ),
                           ),
                         )
                         .toList(growable: false),
@@ -128,13 +166,17 @@ class _BarbellCalculatorDialogWebState extends ConsumerState<BarbellCalculatorDi
                   const SizedBox(height: 12),
                   Text(
                     'Con los discos disponibles faltan ${_number(result.remainder.abs())} ${unit.label} para llegar exactamente al objetivo.',
-                    style: AppTypography.bodySmall.copyWith(color: AppColors.warning),
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.of(context).warning,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 14),
                 Text(
                   'Verifica siempre el peso cargado y asegura los discos antes de usar la barra.',
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.of(context).textSecondary,
+                  ),
                 ),
               ],
             ],
@@ -142,7 +184,10 @@ class _BarbellCalculatorDialogWebState extends ConsumerState<BarbellCalculatorDi
         ),
       ),
       actions: [
-        FilledButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cerrar')),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cerrar'),
+        ),
       ],
     );
   }
@@ -160,7 +205,14 @@ class _InfoRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary))),
+          Expanded(
+            child: Text(
+              label,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
+            ),
+          ),
           Text(value, style: AppTypography.monoMedium),
         ],
       ),

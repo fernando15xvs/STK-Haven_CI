@@ -1,3 +1,5 @@
+import 'appearance_settings.dart';
+export 'appearance_settings.dart';
 import 'package:core/domain/models/active_program_state.dart';
 
 enum RestTimingMode { completedSet, nextSet }
@@ -36,6 +38,7 @@ extension PerformanceModeX on PerformanceMode {
 }
 
 class SettingsState {
+  final AppearanceSettings appearance;
   final bool isRirEnabled;
   final bool autoRestEnabled;
   final RestTimingMode restTimingMode;
@@ -63,6 +66,7 @@ class SettingsState {
   final PerformanceMode performanceMode;
 
   const SettingsState({
+    this.appearance = const AppearanceSettings(),
     this.isRirEnabled = true,
     this.autoRestEnabled = true,
     this.restTimingMode = RestTimingMode.completedSet,
@@ -89,6 +93,7 @@ class SettingsState {
   });
 
   SettingsState copyWith({
+    AppearanceSettings? appearance,
     bool? isRirEnabled,
     bool? autoRestEnabled,
     RestTimingMode? restTimingMode,
@@ -115,6 +120,7 @@ class SettingsState {
     PerformanceMode? performanceMode,
   }) {
     return SettingsState(
+      appearance: appearance ?? this.appearance,
       isRirEnabled: isRirEnabled ?? this.isRirEnabled,
       autoRestEnabled: autoRestEnabled ?? this.autoRestEnabled,
       restTimingMode: restTimingMode ?? this.restTimingMode,
@@ -157,6 +163,7 @@ class SettingsState {
 
   Map<String, dynamic> toJson() {
     return {
+      'appearance': appearance.toJson(),
       'isRirEnabled': isRirEnabled,
       'autoRestEnabled': autoRestEnabled,
       'restTimingMode': restTimingMode.name,
@@ -211,6 +218,7 @@ class SettingsState {
     final minute = (json['workoutReminderMinute'] as num?)?.toInt() ?? 0;
     final sideRest = (json['unilateralSideRestSeconds'] as num?)?.toInt() ?? 60;
     return SettingsState(
+      appearance: AppearanceSettings.fromJson(json['appearance']),
       isRirEnabled: json['isRirEnabled'] as bool? ?? true,
       autoRestEnabled: json['autoRestEnabled'] as bool? ?? true,
       restTimingMode: RestTimingMode.values.firstWhere(

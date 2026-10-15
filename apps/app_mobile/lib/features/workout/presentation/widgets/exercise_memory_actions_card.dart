@@ -38,9 +38,9 @@ class ExerciseMemoryActionsCard extends ConsumerWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.sm_,
-        border: Border.all(color: AppColors.surfaceBorder),
+        border: Border.all(color: AppColors.of(context).surfaceBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,17 +48,17 @@ class ExerciseMemoryActionsCard extends ConsumerWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
+              Icon(
                 Icons.history_rounded,
                 size: 18,
-                color: AppColors.primary,
+                color: AppColors.of(context).primary,
               ),
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
                   _lastPerformanceText(memory, latest, settings.weightUnit),
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textPrimary,
+                    color: AppColors.of(context).textPrimary,
                     height: 1.35,
                   ),
                 ),
@@ -120,9 +120,9 @@ class ExerciseMemoryActionsCard extends ConsumerWidget {
       if (!copied) continue;
 
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Serie ${index + 1} copiada.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Serie ${index + 1} copiada.')));
       return;
     }
 
@@ -147,7 +147,10 @@ class ExerciseMemoryActionsCard extends ConsumerWidget {
 
     if (latest == null) return 'Última vez: $day/$month · $routine';
 
-    final weight = FitnessFormatter.formatWeight(latest.performanceWeight, unit);
+    final weight = FitnessFormatter.formatWeight(
+      latest.performanceWeight,
+      unit,
+    );
     final rir = latest.performanceRir;
     return 'Última vez: $day/$month · $routine · $weight × ${latest.performanceReps}${rir == null ? '' : ' @RIR $rir'}';
   }

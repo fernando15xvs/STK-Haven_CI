@@ -23,22 +23,24 @@ class PrimaryButton extends StatelessWidget {
       child: FilledButton(
         onPressed: isLoading ? null : onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: AppColors.surfaceBorder,
-          disabledForegroundColor: AppColors.textDisabled,
+          backgroundColor: AppColors.of(context).primary,
+          foregroundColor: AppColors.of(context).onPrimary,
+          disabledBackgroundColor: AppColors.of(context).surfaceBorder,
+          disabledForegroundColor: AppColors.of(context).textDisabled,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           elevation: 0,
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.of(context).onPrimary,
+                  ),
                 ),
               )
             : Row(
@@ -51,7 +53,9 @@ class PrimaryButton extends StatelessWidget {
                   Text(
                     label.toUpperCase(),
                     style: AppTypography.labelLarge.copyWith(
-                      color: onPressed == null ? AppColors.textDisabled : Colors.white,
+                      color: onPressed == null
+                          ? AppColors.of(context).textDisabled
+                          : AppColors.of(context).onPrimary,
                     ),
                   ),
                 ],

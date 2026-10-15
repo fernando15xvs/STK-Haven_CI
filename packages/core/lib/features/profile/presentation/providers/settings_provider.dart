@@ -60,6 +60,12 @@ class SettingsNotifier extends Notifier<SettingsState> {
     updateSettings(state.copyWith(restTimingMode: mode));
   }
 
+  Future<void> setAppearance(AppearanceSettings appearance) async {
+    final next = state.copyWith(appearance: appearance);
+    await _repository.saveSettings(next);
+    state = state.copyWith(appearance: appearance);
+  }
+
   void setWeightUnit(WeightUnit unit) {
     updateSettings(state.copyWith(weightUnit: unit));
   }

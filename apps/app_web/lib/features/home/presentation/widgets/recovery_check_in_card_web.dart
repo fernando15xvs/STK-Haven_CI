@@ -16,7 +16,7 @@ class RecoveryCheckInCardWeb extends ConsumerWidget {
     final history = ref.watch(recoveryHistoryProvider);
     final snapshot = RecoveryHistorySnapshot.fromEntries(history);
     final performance = ref.watch(recoveryPerformanceProvider);
-    final color = _statusColor(checkIn);
+    final color = _statusColor(context, checkIn);
     final onHistory = history.isEmpty
         ? null
         : () {
@@ -34,10 +34,10 @@ class RecoveryCheckInCardWeb extends ConsumerWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: AppColors.of(context).surface,
             borderRadius: AppRadius.lg_,
             border: Border.all(color: color.withValues(alpha: 0.3)),
-            boxShadow: AppElevation.soft,
+            boxShadow: AppElevation.soft(context),
           ),
           child: checkIn == null
               ? _EmptyRecoveryState(onHistory: onHistory)
@@ -67,7 +67,7 @@ class RecoveryCheckInCardWeb extends ConsumerWidget {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              backgroundColor: AppColors.surfaceHigh,
+              backgroundColor: AppColors.of(context).surfaceHigh,
               title: const Text('Check-in de recuperación'),
               content: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 620),
@@ -79,7 +79,7 @@ class RecoveryCheckInCardWeb extends ConsumerWidget {
                       Text(
                         'Evalúa rápidamente cómo llegas hoy. STK Haven usa estas respuestas solo para ajustar la recomendación del día.',
                         style: AppTypography.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
+                          color: AppColors.of(context).textSecondary,
                           height: 1.45,
                         ),
                       ),
@@ -130,7 +130,9 @@ class RecoveryCheckInCardWeb extends ConsumerWidget {
                 ),
                 FilledButton.icon(
                   onPressed: () async {
-                    await ref.read(recoveryProvider.notifier).save(
+                    await ref
+                        .read(recoveryProvider.notifier)
+                        .save(
                           energy: energy,
                           sleep: sleep,
                           stress: stress,
@@ -149,12 +151,12 @@ class RecoveryCheckInCardWeb extends ConsumerWidget {
     );
   }
 
-  static Color _statusColor(RecoveryCheckIn? checkIn) {
-    if (checkIn == null) return AppColors.primary;
+  static Color _statusColor(BuildContext context, RecoveryCheckIn? checkIn) {
+    if (checkIn == null) return AppColors.of(context).primary;
     return switch (checkIn.status) {
-      RecoveryStatus.ready => AppColors.success,
-      RecoveryStatus.moderate => AppColors.warning,
-      RecoveryStatus.low => AppColors.error,
+      RecoveryStatus.ready => AppColors.of(context).success,
+      RecoveryStatus.moderate => AppColors.of(context).warning,
+      RecoveryStatus.low => AppColors.of(context).error,
     };
   }
 }
@@ -172,10 +174,13 @@ class _EmptyRecoveryState extends StatelessWidget {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: AppColors.primaryFaded,
+            color: AppColors.of(context).primaryFaded,
             borderRadius: AppRadius.md_,
           ),
-          child: const Icon(Icons.favorite_outline, color: AppColors.primary),
+          child: Icon(
+            Icons.favorite_outline,
+            color: AppColors.of(context).primary,
+          ),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
@@ -190,7 +195,7 @@ class _EmptyRecoveryState extends StatelessWidget {
               Text(
                 'Energía, sueño, estrés y molestias en un check-in rápido.',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ],
@@ -200,13 +205,13 @@ class _EmptyRecoveryState extends StatelessWidget {
           IconButton(
             tooltip: 'Ver historial de recuperación',
             onPressed: onHistory,
-            icon: const Icon(
+            icon: Icon(
               Icons.insights_outlined,
-              color: AppColors.primary,
+              color: AppColors.of(context).primary,
             ),
           )
         else
-          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          Icon(Icons.chevron_right, color: AppColors.of(context).textSecondary),
       ],
     );
   }
@@ -226,9 +231,9 @@ class _RecoverySummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (checkIn.status) {
-      RecoveryStatus.ready => AppColors.success,
-      RecoveryStatus.moderate => AppColors.warning,
-      RecoveryStatus.low => AppColors.error,
+      RecoveryStatus.ready => AppColors.of(context).success,
+      RecoveryStatus.moderate => AppColors.of(context).warning,
+      RecoveryStatus.low => AppColors.of(context).error,
     };
     final trends = <(String, RecoveryMetricTrend?)>[
       ('Energía', history.energyTrend),
@@ -249,7 +254,7 @@ class _RecoverySummary extends StatelessWidget {
               CircularProgressIndicator(
                 value: checkIn.score / 100,
                 strokeWidth: 5,
-                backgroundColor: AppColors.surfaceBorder,
+                backgroundColor: AppColors.of(context).surfaceBorder,
                 color: color,
               ),
               Text(
@@ -274,7 +279,7 @@ class _RecoverySummary extends StatelessWidget {
               Text(
                 checkIn.recommendation,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                   height: 1.45,
                 ),
               ),
@@ -285,10 +290,7 @@ class _RecoverySummary extends StatelessWidget {
                   runSpacing: 7,
                   children: trends
                       .map(
-                        (item) => _TrendChip(
-                          label: item.$1,
-                          trend: item.$2!,
-                        ),
+                        (item) => _TrendChip(label: item.$1, trend: item.$2!),
                       )
                       .toList(growable: false),
                 ),
@@ -300,13 +302,13 @@ class _RecoverySummary extends StatelessWidget {
           IconButton(
             tooltip: 'Ver historial de recuperación',
             onPressed: onHistory,
-            icon: const Icon(
+            icon: Icon(
               Icons.insights_outlined,
-              color: AppColors.primary,
+              color: AppColors.of(context).primary,
             ),
           )
         else
-          const Icon(Icons.tune, color: AppColors.textSecondary),
+          Icon(Icons.tune, color: AppColors.of(context).textSecondary),
       ],
     );
   }
@@ -323,14 +325,14 @@ class _TrendChip extends StatelessWidget {
     final symbol = trend.isStable
         ? '→'
         : trend.delta > 0
-            ? '↑'
-            : '↓';
+        ? '↑'
+        : '↓';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.sm_,
-        border: Border.all(color: AppColors.surfaceBorder),
+        border: Border.all(color: AppColors.of(context).surfaceBorder),
       ),
       child: Text(
         '$label $symbol ${trend.recentAverage.toStringAsFixed(1)}/5',
@@ -362,7 +364,7 @@ class _RatingRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 20, color: AppColors.primary),
+            Icon(icon, size: 20, color: AppColors.of(context).primary),
             const SizedBox(width: AppSpacing.xs),
             Text(label, style: AppTypography.headlineSmall),
             const SizedBox(width: AppSpacing.sm),
@@ -370,7 +372,7 @@ class _RatingRow extends StatelessWidget {
               child: Text(
                 hint,
                 style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ),

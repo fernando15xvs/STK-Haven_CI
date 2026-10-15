@@ -22,152 +22,182 @@ class BibleReaderPageWeb extends ConsumerWidget {
 
     final content = switch (initState.status) {
       BibleDbStatus.idle || BibleDbStatus.loading => const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Preparando la Biblia...'),
-            ],
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Preparando la Biblia...'),
+          ],
         ),
+      ),
       BibleDbStatus.error => _BibleError(
-          message: initState.errorMessage,
-          onRetry: () => ref.read(bibleInitProvider.notifier).initialize(),
-        ),
+        message: initState.errorMessage,
+        onRetry: () => ref.read(bibleInitProvider.notifier).initialize(),
+      ),
       BibleDbStatus.ready => reader.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => _BibleError(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(bibleReaderProvider),
-          ),
-          data: (state) {
-            if (state.isLoading) return const Center(child: CircularProgressIndicator());
-            if (state.books.isEmpty) {
-              return _BibleError(
-                message: 'No se encontraron libros para mostrar.',
-                onRetry: () => ref.read(bibleInitProvider.notifier).initialize(),
-              );
-            }
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => _BibleError(
+          message: error.toString(),
+          onRetry: () => ref.invalidate(bibleReaderProvider),
+        ),
+        data: (state) {
+          if (state.isLoading)
+            return const Center(child: CircularProgressIndicator());
+          if (state.books.isEmpty) {
+            return _BibleError(
+              message: 'No se encontraron libros para mostrar.',
+              onRetry: () => ref.read(bibleInitProvider.notifier).initialize(),
+            );
+          }
 
-            return Column(
-              children: [
-                _BibleSelectors(
-                  selectedBook: state.selectedBook,
-                  books: state.books,
-                  selectedChapter: state.selectedChapter,
-                  chapters: state.chapters,
-                  onBookChanged: (book) {
-                    if (book != null) ref.read(bibleReaderProvider.notifier).selectBook(book);
-                  },
-                  onChapterChanged: (chapter) {
-                    if (chapter != null) ref.read(bibleReaderProvider.notifier).selectChapter(chapter);
-                  },
-                ),
-                Expanded(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 820),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(18, 16, 18, 120),
-                        itemCount: state.verses.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index == 0) {
-                            return Padding(
-                              padding: const EdgeInsets.only(top: 12, bottom: 26),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    '${state.selectedBook?.toUpperCase()} ${state.selectedChapter}',
-                                    textAlign: TextAlign.center,
-                                    style: AppTypography.displaySmall.copyWith(letterSpacing: 1.4),
+          return Column(
+            children: [
+              _BibleSelectors(
+                selectedBook: state.selectedBook,
+                books: state.books,
+                selectedChapter: state.selectedChapter,
+                chapters: state.chapters,
+                onBookChanged: (book) {
+                  if (book != null)
+                    ref.read(bibleReaderProvider.notifier).selectBook(book);
+                },
+                onChapterChanged: (chapter) {
+                  if (chapter != null)
+                    ref
+                        .read(bibleReaderProvider.notifier)
+                        .selectChapter(chapter);
+                },
+              ),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 820),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 120),
+                      itemCount: state.verses.length + 1,
+                      itemBuilder: (context, index) {
+                        if (index == 0) {
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 12, bottom: 26),
+                            child: Column(
+                              children: [
+                                Text(
+                                  '${state.selectedBook?.toUpperCase()} ${state.selectedChapter}',
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.displaySmall.copyWith(
+                                    letterSpacing: 1.4,
                                   ),
-                                  const SizedBox(height: 12),
-                                  Container(width: 42, height: 2, color: AppColors.primary),
-                                ],
-                              ),
-                            );
-                          }
-
-                          final verse = state.verses[index - 1];
-                          final isFavorite = favoriteIds.contains(verse.id);
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              color: isFavorite ? AppColors.primary.withValues(alpha: 0.04) : Colors.transparent,
-                              borderRadius: AppRadius.md_,
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SizedBox(
-                                    width: 34,
-                                    child: Text(
-                                      '${verse.verse}',
-                                      style: AppTypography.labelSmall.copyWith(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: SelectableText(
-                                      verse.text,
-                                      style: AppTypography.bodyLarge.copyWith(
-                                        color: AppColors.textPrimary,
-                                        height: 1.65,
-                                        fontSize: 17,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  IconButton(
-                                    visualDensity: VisualDensity.compact,
-                                    tooltip: isFavorite ? 'Quitar de favoritos' : 'Guardar en favoritos',
-                                    onPressed: () {
-                                      ref.read(favoritesProvider.notifier).toggleFavorite(verse);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(isFavorite ? '${verse.reference} eliminado de favoritos' : '${verse.reference} guardado en favoritos'),
-                                          behavior: SnackBarBehavior.floating,
-                                        ),
-                                      );
-                                    },
-                                    icon: Icon(
-                                      isFavorite ? Icons.bookmark : Icons.bookmark_border,
-                                      color: isFavorite ? AppColors.primary : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: 42,
+                                  height: 2,
+                                  color: AppColors.of(context).primary,
+                                ),
+                              ],
                             ),
                           );
-                        },
-                      ),
+                        }
+
+                        final verse = state.verses[index - 1];
+                        final isFavorite = favoriteIds.contains(verse.id);
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: isFavorite
+                                ? AppColors.of(
+                                    context,
+                                  ).primary.withValues(alpha: 0.04)
+                                : Colors.transparent,
+                            borderRadius: AppRadius.md_,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 8,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(
+                                  width: 34,
+                                  child: Text(
+                                    '${verse.verse}',
+                                    style: AppTypography.labelSmall.copyWith(
+                                      color: AppColors.of(context).primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: SelectableText(
+                                    verse.text,
+                                    style: AppTypography.bodyLarge.copyWith(
+                                      color: AppColors.of(context).textPrimary,
+                                      height: 1.65,
+                                      fontSize: 17,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                IconButton(
+                                  visualDensity: VisualDensity.compact,
+                                  tooltip: isFavorite
+                                      ? 'Quitar de favoritos'
+                                      : 'Guardar en favoritos',
+                                  onPressed: () {
+                                    ref
+                                        .read(favoritesProvider.notifier)
+                                        .toggleFavorite(verse);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          isFavorite
+                                              ? '${verse.reference} eliminado de favoritos'
+                                              : '${verse.reference} guardado en favoritos',
+                                        ),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  },
+                                  icon: Icon(
+                                    isFavorite
+                                        ? Icons.bookmark
+                                        : Icons.bookmark_border,
+                                    color: isFavorite
+                                        ? AppColors.of(context).primary
+                                        : AppColors.of(context).textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
+      ),
     };
 
     if (embedded) return content;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
         title: Text('La Biblia', style: AppTypography.headlineMedium),
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         actions: [
           IconButton(
             tooltip: 'Versículos favoritos',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const FavoritesPageWeb()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const FavoritesPageWeb())),
             icon: const Icon(Icons.bookmarks_outlined),
           ),
           const SizedBox(width: 8),
@@ -205,9 +235,9 @@ class _BibleSelectors extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.of(context).surface,
               borderRadius: AppRadius.md_,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.of(context).border),
             ),
             child: Row(
               children: [
@@ -217,20 +247,42 @@ class _BibleSelectors extends StatelessWidget {
                     child: DropdownButton<String>(
                       isExpanded: true,
                       value: selectedBook,
-                      dropdownColor: AppColors.surfaceHigh,
-                      items: books.map((book) => DropdownMenuItem(value: book, child: Text(book, overflow: TextOverflow.ellipsis))).toList(growable: false),
+                      dropdownColor: AppColors.of(context).surfaceHigh,
+                      items: books
+                          .map(
+                            (book) => DropdownMenuItem(
+                              value: book,
+                              child: Text(
+                                book,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(growable: false),
                       onChanged: onBookChanged,
                     ),
                   ),
                 ),
-                Container(width: 1, height: 28, margin: const EdgeInsets.symmetric(horizontal: 12), color: AppColors.border),
+                Container(
+                  width: 1,
+                  height: 28,
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  color: AppColors.of(context).border,
+                ),
                 Expanded(
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<int>(
                       isExpanded: true,
                       value: selectedChapter,
-                      dropdownColor: AppColors.surfaceHigh,
-                      items: chapters.map((chapter) => DropdownMenuItem(value: chapter, child: Text('Cap. $chapter'))).toList(growable: false),
+                      dropdownColor: AppColors.of(context).surfaceHigh,
+                      items: chapters
+                          .map(
+                            (chapter) => DropdownMenuItem(
+                              value: chapter,
+                              child: Text('Cap. $chapter'),
+                            ),
+                          )
+                          .toList(growable: false),
                       onChanged: onChapterChanged,
                     ),
                   ),
@@ -260,17 +312,31 @@ class _BibleError extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.menu_book_outlined, size: 44, color: AppColors.primary),
+              Icon(
+                Icons.menu_book_outlined,
+                size: 44,
+                color: AppColors.of(context).primary,
+              ),
               const SizedBox(height: 14),
-              Text('No pude cargar la Biblia', style: AppTypography.headlineMedium, textAlign: TextAlign.center),
+              Text(
+                'No pude cargar la Biblia',
+                style: AppTypography.headlineMedium,
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 8),
               Text(
                 message ?? 'Revisa tu conexión e inténtalo nuevamente.',
-                style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.of(context).textSecondary,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 18),
-              FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Reintentar')),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+              ),
             ],
           ),
         ),

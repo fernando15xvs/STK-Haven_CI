@@ -41,7 +41,7 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
     final summary = WorkoutSummarySnapshot.fromSession(session);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
         title: const Text('Resumen del entrenamiento'),
         automaticallyImplyLeading: false,
@@ -97,27 +97,46 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
                 if (analysisResult.personalRecords.isNotEmpty) ...[
                   const SizedBox(height: 28),
                   _Section(
-                    title: '${analysisResult.personalRecords.length} récord${analysisResult.personalRecords.length == 1 ? '' : 's'} personal${analysisResult.personalRecords.length == 1 ? '' : 'es'}',
+                    title:
+                        '${analysisResult.personalRecords.length} récord${analysisResult.personalRecords.length == 1 ? '' : 's'} personal${analysisResult.personalRecords.length == 1 ? '' : 'es'}',
                     icon: Icons.emoji_events_outlined,
-                    iconColor: AppColors.gold,
+                    iconColor: AppColors.of(context).gold,
                     child: Column(
-                      children: analysisResult.personalRecords.asMap().entries.map((entry) {
-                        final pr = entry.value;
-                        return Column(
-                          children: [
-                            if (entry.key > 0) const Divider(height: 1),
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(pr.exerciseNameSnapshot, style: AppTypography.headlineSmall),
-                              subtitle: Text(_prLabel(pr.type), style: AppTypography.bodySmall.copyWith(color: AppColors.gold)),
-                              trailing: Text(
-                                FitnessFormatter.formatPRValue(pr.newValue, pr.type, unit),
-                                style: AppTypography.monoMedium.copyWith(color: AppColors.primary),
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(growable: false),
+                      children: analysisResult.personalRecords
+                          .asMap()
+                          .entries
+                          .map((entry) {
+                            final pr = entry.value;
+                            return Column(
+                              children: [
+                                if (entry.key > 0) const Divider(height: 1),
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    pr.exerciseNameSnapshot,
+                                    style: AppTypography.headlineSmall,
+                                  ),
+                                  subtitle: Text(
+                                    _prLabel(pr.type),
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: AppColors.of(context).gold,
+                                    ),
+                                  ),
+                                  trailing: Text(
+                                    FitnessFormatter.formatPRValue(
+                                      pr.newValue,
+                                      pr.type,
+                                      unit,
+                                    ),
+                                    style: AppTypography.monoMedium.copyWith(
+                                      color: AppColors.of(context).primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          })
+                          .toList(growable: false),
                     ),
                   ),
                 ],
@@ -132,7 +151,7 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
                         Text(
                           'Comparación con la sesión anterior de esta misma rutina. Las diferencias son descriptivas.',
                           style: AppTypography.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                             height: 1.35,
                           ),
                         ),
@@ -153,7 +172,8 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
                         const Divider(height: 1),
                         _ComparisonRow(
                           label: 'Duración',
-                          value: '${analysisResult.comparison!.durationDifferenceSeconds >= 0 ? '+' : ''}${analysisResult.comparison!.durationDifferenceSeconds ~/ 60} min',
+                          value:
+                              '${analysisResult.comparison!.durationDifferenceSeconds >= 0 ? '+' : ''}${analysisResult.comparison!.durationDifferenceSeconds ~/ 60} min',
                         ),
                       ],
                     ),
@@ -170,7 +190,7 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
                         Text(
                           'Cada movimiento se compara con su última ejecución global por exerciseId, aunque haya ocurrido en otra rutina.',
                           style: AppTypography.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                             height: 1.35,
                           ),
                         ),
@@ -189,29 +209,33 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
                     title: 'Referencias para la próxima sesión',
                     icon: Icons.trending_up,
                     child: Column(
-                      children: analysisResult.progressionSuggestions.asMap().entries.map((entry) {
-                        final suggestion = entry.value;
-                        return Column(
-                          children: [
-                            if (entry.key > 0) const Divider(height: 1),
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(
-                                Icons.insights_outlined,
-                                color: AppColors.primary,
-                              ),
-                              title: Text(
-                                suggestion.exerciseName,
-                                style: AppTypography.headlineSmall,
-                              ),
-                              subtitle: _ProgressionSummaryContentWeb(
-                                suggestion: suggestion,
-                                unit: unit,
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(growable: false),
+                      children: analysisResult.progressionSuggestions
+                          .asMap()
+                          .entries
+                          .map((entry) {
+                            final suggestion = entry.value;
+                            return Column(
+                              children: [
+                                if (entry.key > 0) const Divider(height: 1),
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(
+                                    Icons.insights_outlined,
+                                    color: AppColors.of(context).primary,
+                                  ),
+                                  title: Text(
+                                    suggestion.exerciseName,
+                                    style: AppTypography.headlineSmall,
+                                  ),
+                                  subtitle: _ProgressionSummaryContentWeb(
+                                    suggestion: suggestion,
+                                    unit: unit,
+                                  ),
+                                ),
+                              ],
+                            );
+                          })
+                          .toList(growable: false),
                     ),
                   ),
                 ],
@@ -220,31 +244,35 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
                   _Section(
                     title: 'Ajuste opcional',
                     icon: Icons.info_outline,
-                    iconColor: AppColors.warning,
+                    iconColor: AppColors.of(context).warning,
                     child: Column(
-                      children: analysisResult.deloadSuggestions.asMap().entries.map((entry) {
-                        final suggestion = entry.value;
-                        return Column(
-                          children: [
-                            if (entry.key > 0) const Divider(height: 1),
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(
-                                Icons.south_rounded,
-                                color: AppColors.warning,
-                              ),
-                              title: Text(
-                                suggestion.exerciseName,
-                                style: AppTypography.headlineSmall,
-                              ),
-                              subtitle: _ProgressionSummaryContentWeb(
-                                suggestion: suggestion,
-                                unit: unit,
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(growable: false),
+                      children: analysisResult.deloadSuggestions
+                          .asMap()
+                          .entries
+                          .map((entry) {
+                            final suggestion = entry.value;
+                            return Column(
+                              children: [
+                                if (entry.key > 0) const Divider(height: 1),
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: Icon(
+                                    Icons.south_rounded,
+                                    color: AppColors.of(context).warning,
+                                  ),
+                                  title: Text(
+                                    suggestion.exerciseName,
+                                    style: AppTypography.headlineSmall,
+                                  ),
+                                  subtitle: _ProgressionSummaryContentWeb(
+                                    suggestion: suggestion,
+                                    unit: unit,
+                                  ),
+                                ),
+                              ],
+                            );
+                          })
+                          .toList(growable: false),
                     ),
                   ),
                 ],
@@ -277,7 +305,8 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
     }
   }
 
-  String _percent(double value) => '${value > 0 ? '+' : ''}${value.toStringAsFixed(1)}%';
+  String _percent(double value) =>
+      '${value > 0 ? '+' : ''}${value.toStringAsFixed(1)}%';
   String _signed(int value) => '${value > 0 ? '+' : ''}$value';
 }
 
@@ -286,7 +315,11 @@ class _MetricCard extends StatelessWidget {
   final String value;
   final IconData icon;
 
-  const _MetricCard({required this.label, required this.value, required this.icon});
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -294,20 +327,25 @@ class _MetricCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primary),
+          Icon(icon, color: AppColors.of(context).primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(value, style: AppTypography.headlineLarge),
-                Text(label, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                Text(
+                  label,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.of(context).textSecondary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -320,19 +358,24 @@ class _MetricCard extends StatelessWidget {
 class _Section extends StatelessWidget {
   final String title;
   final IconData icon;
-  final Color iconColor;
+  final Color? iconColor;
   final Widget child;
 
-  const _Section({required this.title, required this.icon, required this.child, this.iconColor = AppColors.primary});
+  _Section({
+    required this.title,
+    required this.icon,
+    required this.child,
+    this.iconColor,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,7 +384,12 @@ class _Section extends StatelessWidget {
             children: [
               Icon(icon, color: iconColor, size: 20),
               const SizedBox(width: 8),
-              Expanded(child: Text(title.toUpperCase(), style: AppTypography.labelLarge)),
+              Expanded(
+                child: Text(
+                  title.toUpperCase(),
+                  style: AppTypography.labelLarge,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -356,28 +404,21 @@ class _ComparisonRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _ComparisonRow({
-    required this.label,
-    required this.value,
-  });
+  const _ComparisonRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     final neutral = value.startsWith('0');
-    final color =
-        neutral ? AppColors.textSecondary : AppColors.info;
+    final color = neutral
+        ? AppColors.of(context).textSecondary
+        : AppColors.of(context).info;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
-          Expanded(
-            child: Text(label, style: AppTypography.bodyMedium),
-          ),
+          Expanded(child: Text(label, style: AppTypography.bodyMedium)),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 10,
-              vertical: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
               borderRadius: AppRadius.sm_,
@@ -454,9 +495,9 @@ class _ExerciseComparisonCardWeb extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.md_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -466,7 +507,7 @@ class _ExerciseComparisonCardWeb extends StatelessWidget {
           Text(
             'Última vez $dateLabel · $routine',
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
           const SizedBox(height: 10),
@@ -495,7 +536,7 @@ class _ExerciseComparisonCardWeb extends StatelessWidget {
           Text(
             '${FitnessFormatter.formatVolume(comparison.previousVolume, unit)} → ${FitnessFormatter.formatVolume(comparison.currentVolume, unit)} registrados',
             style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
             ),
           ),
         ],
@@ -514,13 +555,17 @@ class _DeltaChipWeb extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.info.withValues(alpha: 0.08),
+        color: AppColors.of(context).info.withValues(alpha: 0.08),
         borderRadius: AppRadius.sm_,
-        border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: AppColors.of(context).info.withValues(alpha: 0.2),
+        ),
       ),
       child: Text(
         text,
-        style: AppTypography.labelSmall.copyWith(color: AppColors.info),
+        style: AppTypography.labelSmall.copyWith(
+          color: AppColors.of(context).info,
+        ),
       ),
     );
   }
@@ -535,17 +580,38 @@ class _FaithMessage extends ConsumerWidget {
       icon: Icons.auto_awesome_outlined,
       child: verse.when(
         loading: () => const LinearProgressIndicator(),
-        error: (_, _) => Text('No se pudo cargar el mensaje en este momento.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+        error: (_, _) => Text(
+          'No se pudo cargar el mensaje en este momento.',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.of(context).textSecondary,
+          ),
+        ),
         data: (value) {
           if (value == null) {
-            return Text('Tu entrenamiento quedó guardado correctamente.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary));
+            return Text(
+              'Tu entrenamiento quedó guardado correctamente.',
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
+            );
           }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('“${value.text}”', style: AppTypography.bodyLarge.copyWith(fontStyle: FontStyle.italic, height: 1.55)),
+              Text(
+                '“${value.text}”',
+                style: AppTypography.bodyLarge.copyWith(
+                  fontStyle: FontStyle.italic,
+                  height: 1.55,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text(value.reference, style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
+              Text(
+                value.reference,
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.of(context).primary,
+                ),
+              ),
             ],
           );
         },
@@ -565,7 +631,7 @@ class _ProgressionSummaryContentWeb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _summaryProgressionColorWeb(suggestion);
+    final color = _summaryProgressionColorWeb(context, suggestion);
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Column(
@@ -579,7 +645,7 @@ class _ProgressionSummaryContentWeb extends StatelessWidget {
           Text(
             FitnessFormatter.progressionExplanation(suggestion),
             style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
               height: 1.35,
             ),
           ),
@@ -594,14 +660,14 @@ class _ProgressionSummaryContentWeb extends StatelessWidget {
           Text(
             FitnessFormatter.progressionEvidence(suggestion),
             style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
             ),
           ),
           const SizedBox(height: 3),
           Text(
             FitnessFormatter.progressionSafetyNote,
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
             ),
           ),
         ],
@@ -610,16 +676,19 @@ class _ProgressionSummaryContentWeb extends StatelessWidget {
   }
 }
 
-Color _summaryProgressionColorWeb(ProgressionSuggestion suggestion) {
+Color _summaryProgressionColorWeb(
+  BuildContext context,
+  ProgressionSuggestion suggestion,
+) {
   if (suggestion.reason == ProgressionReason.recoveryCaution ||
       suggestion.reason == ProgressionReason.effortTooHigh) {
-    return AppColors.warning;
+    return AppColors.of(context).warning;
   }
   return switch (suggestion.type) {
-    ProgressionType.increase => AppColors.success,
-    ProgressionType.maintain => AppColors.info,
-    ProgressionType.deload => AppColors.warning,
-    ProgressionType.insufficientData => AppColors.textSecondary,
+    ProgressionType.increase => AppColors.of(context).success,
+    ProgressionType.maintain => AppColors.of(context).info,
+    ProgressionType.deload => AppColors.of(context).warning,
+    ProgressionType.insufficientData => AppColors.of(context).textSecondary,
   };
 }
 
@@ -638,14 +707,17 @@ class _SessionOverviewCardWeb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = summary.isComplete ? AppColors.success : AppColors.info;
-    final displayName =
-        routineName.trim().isEmpty ? 'Entrenamiento libre' : routineName;
+    final color = summary.isComplete
+        ? AppColors.of(context).success
+        : AppColors.of(context).info;
+    final displayName = routineName.trim().isEmpty
+        ? 'Entrenamiento libre'
+        : routineName;
 
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.xl_,
         border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
@@ -663,7 +735,7 @@ class _SessionOverviewCardWeb extends StatelessWidget {
                     CircularProgressIndicator(
                       value: summary.completionRatio,
                       strokeWidth: 8,
-                      backgroundColor: AppColors.surfaceBorder,
+                      backgroundColor: AppColors.of(context).surfaceBorder,
                       color: color,
                     ),
                     Text(
@@ -688,7 +760,7 @@ class _SessionOverviewCardWeb extends StatelessWidget {
                     Text(
                       _sessionCompletionMessageWeb(summary),
                       style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                   ],
@@ -738,8 +810,7 @@ class _SessionOverviewCardWeb extends StatelessWidget {
                       .map(
                         (item) => Expanded(
                           child: Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 5),
+                            padding: const EdgeInsets.symmetric(horizontal: 5),
                             child: item,
                           ),
                         ),
@@ -751,7 +822,7 @@ class _SessionOverviewCardWeb extends StatelessWidget {
                 Text(
                   'RIR medio registrado: ${summary.averageRir!.toStringAsFixed(1)} · ${summary.rirLoggedSets} series',
                   style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.primary,
+                    color: AppColors.of(context).primary,
                   ),
                 ),
               ],
@@ -759,7 +830,7 @@ class _SessionOverviewCardWeb extends StatelessWidget {
               Text(
                 'El tiempo y el volumen describen lo registrado; no califican por sí solos la calidad de la sesión.',
                 style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textDisabled,
+                  color: AppColors.of(context).textDisabled,
                 ),
               ),
             ],
@@ -789,51 +860,54 @@ class _ExerciseMapWeb extends StatelessWidget {
           return Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: summary.exercises.map((exercise) {
-              final color =
-                  exercise.isComplete ? AppColors.success : AppColors.info;
-              return Container(
-                width: width,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceHigh,
-                  borderRadius: AppRadius.md_,
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+            children: summary.exercises
+                .map((exercise) {
+                  final color = exercise.isComplete
+                      ? AppColors.of(context).success
+                      : AppColors.of(context).info;
+                  return Container(
+                    width: width,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.of(context).surfaceHigh,
+                      borderRadius: AppRadius.md_,
+                      border: Border.all(color: AppColors.of(context).border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            exercise.exerciseName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.headlineSmall,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                exercise.exerciseName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.headlineSmall,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${exercise.completedWorkingSets}/${exercise.plannedWorkingSets}',
+                              style: AppTypography.labelMedium.copyWith(
+                                color: color,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${exercise.completedWorkingSets}/${exercise.plannedWorkingSets}',
-                          style: AppTypography.labelMedium.copyWith(
-                            color: color,
-                          ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: exercise.completionRatio,
+                          minHeight: 8,
+                          borderRadius: BorderRadius.circular(99),
+                          backgroundColor: AppColors.of(context).surfaceBorder,
+                          color: color,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: exercise.completionRatio,
-                      minHeight: 8,
-                      borderRadius: BorderRadius.circular(99),
-                      backgroundColor: AppColors.surfaceBorder,
-                      color: color,
-                    ),
-                  ],
-                ),
-              );
-            }).toList(growable: false),
+                  );
+                })
+                .toList(growable: false),
           );
         },
       ),

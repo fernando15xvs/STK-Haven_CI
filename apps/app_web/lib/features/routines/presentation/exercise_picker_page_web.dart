@@ -20,8 +20,7 @@ class ExercisePickerPageWeb extends ConsumerStatefulWidget {
       _ExercisePickerPageWebState();
 }
 
-class _ExercisePickerPageWebState
-    extends ConsumerState<ExercisePickerPageWeb> {
+class _ExercisePickerPageWebState extends ConsumerState<ExercisePickerPageWeb> {
   String _query = '';
   String _muscle = ExerciseLibraryFilter.allOption;
   String _equipment = ExerciseLibraryFilter.allOption;
@@ -68,7 +67,7 @@ class _ExercisePickerPageWebState
     );
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
         title: const Text('Seleccionar ejercicio'),
         actions: [
@@ -165,30 +164,30 @@ class _ExercisePickerPageWebState
                         width: 240,
                         child:
                             DropdownButtonFormField<ExerciseLateralityFilter>(
-                          initialValue: _laterality,
-                          decoration: const InputDecoration(
-                            labelText: 'Ejecución',
-                            isDense: true,
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                              value: ExerciseLateralityFilter.all,
-                              child: Text('Todos'),
+                              initialValue: _laterality,
+                              decoration: const InputDecoration(
+                                labelText: 'Ejecución',
+                                isDense: true,
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: ExerciseLateralityFilter.all,
+                                  child: Text('Todos'),
+                                ),
+                                DropdownMenuItem(
+                                  value: ExerciseLateralityFilter.unilateral,
+                                  child: Text('Unilateral'),
+                                ),
+                                DropdownMenuItem(
+                                  value: ExerciseLateralityFilter.bilateral,
+                                  child: Text('Bilateral'),
+                                ),
+                              ],
+                              onChanged: (value) => setState(
+                                () => _laterality =
+                                    value ?? ExerciseLateralityFilter.all,
+                              ),
                             ),
-                            DropdownMenuItem(
-                              value: ExerciseLateralityFilter.unilateral,
-                              child: Text('Unilateral'),
-                            ),
-                            DropdownMenuItem(
-                              value: ExerciseLateralityFilter.bilateral,
-                              child: Text('Bilateral'),
-                            ),
-                          ],
-                          onChanged: (value) => setState(
-                            () => _laterality =
-                                value ?? ExerciseLateralityFilter.all,
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -202,7 +201,7 @@ class _ExercisePickerPageWebState
                                 ? 'Aún no tienes favoritos con estos filtros'
                                 : 'No se encontraron ejercicios',
                             style: AppTypography.bodyLarge.copyWith(
-                              color: AppColors.textSecondary,
+                              color: AppColors.of(context).textSecondary,
                             ),
                           ),
                         )
@@ -211,33 +210,39 @@ class _ExercisePickerPageWebState
                             final columns = constraints.maxWidth >= 900
                                 ? 3
                                 : constraints.maxWidth >= 600
-                                    ? 2
-                                    : 1;
+                                ? 2
+                                : 1;
                             return GridView.builder(
                               padding: const EdgeInsets.fromLTRB(16, 8, 16, 30),
                               gridDelegate:
                                   SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: columns,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: columns == 1 ? 3.45 : 2.15,
-                              ),
+                                    crossAxisCount: columns,
+                                    crossAxisSpacing: 12,
+                                    mainAxisSpacing: 12,
+                                    childAspectRatio: columns == 1
+                                        ? 3.45
+                                        : 2.15,
+                                  ),
                               itemCount: filtered.length,
                               itemBuilder: (context, index) {
                                 final exercise = filtered[index];
-                                final isFavorite =
-                                    favoriteIds.contains(exercise.id);
+                                final isFavorite = favoriteIds.contains(
+                                  exercise.id,
+                                );
                                 final isUnilateral =
-                                    ExerciseLibraryFilter.isUnilateral(exercise);
-                                final isCustom =
-                                    CustomExerciseService.isCustom(exercise);
+                                    ExerciseLibraryFilter.isUnilateral(
+                                      exercise,
+                                    );
+                                final isCustom = CustomExerciseService.isCustom(
+                                  exercise,
+                                );
                                 final memory = memoryById[exercise.id];
                                 final lastSet = memory?.latestRepresentativeSet;
                                 final lastPerformance = lastSet == null
                                     ? null
                                     : '${FitnessFormatter.formatWeight(lastSet.performanceWeight, weightUnit)} × ${lastSet.performanceReps}${lastSet.performanceRir == null ? '' : ' @RIR ${lastSet.performanceRir}'}';
                                 return Material(
-                                  color: AppColors.surface,
+                                  color: AppColors.of(context).surface,
                                   borderRadius: AppRadius.md_,
                                   child: InkWell(
                                     onTap: () =>
@@ -247,8 +252,9 @@ class _ExercisePickerPageWebState
                                       padding: const EdgeInsets.all(14),
                                       decoration: BoxDecoration(
                                         borderRadius: AppRadius.md_,
-                                        border:
-                                            Border.all(color: AppColors.border),
+                                        border: Border.all(
+                                          color: AppColors.of(context).border,
+                                        ),
                                       ),
                                       child: Row(
                                         children: [
@@ -256,13 +262,16 @@ class _ExercisePickerPageWebState
                                             width: 48,
                                             height: 48,
                                             decoration: BoxDecoration(
-                                              color: AppColors.primary
-                                                  .withValues(alpha: 0.1),
+                                              color: AppColors.of(
+                                                context,
+                                              ).primary.withValues(alpha: 0.1),
                                               borderRadius: AppRadius.sm_,
                                             ),
-                                            child: const Icon(
+                                            child: Icon(
                                               Icons.fitness_center,
-                                              color: AppColors.primary,
+                                              color: AppColors.of(
+                                                context,
+                                              ).primary,
                                             ),
                                           ),
                                           const SizedBox(width: 12),
@@ -286,16 +295,17 @@ class _ExercisePickerPageWebState
                                                       ),
                                                     ),
                                                     if (isCustom)
-                                                      const Padding(
+                                                      Padding(
                                                         padding:
                                                             EdgeInsets.only(
-                                                          left: 6,
-                                                        ),
+                                                              left: 6,
+                                                            ),
                                                         child: Icon(
                                                           Icons.person_outline,
                                                           size: 16,
-                                                          color:
-                                                              AppColors.primary,
+                                                          color: AppColors.of(
+                                                            context,
+                                                          ).primary,
                                                         ),
                                                       ),
                                                   ],
@@ -305,25 +315,28 @@ class _ExercisePickerPageWebState
                                                   '${exercise.muscleGroup} · ${exercise.equipment.isEmpty ? 'Libre' : exercise.equipment}${isUnilateral ? ' · Unilateral' : ''}',
                                                   style: AppTypography.bodySmall
                                                       .copyWith(
-                                                    color: AppColors
-                                                        .textSecondary,
-                                                  ),
+                                                        color: AppColors
+                                                            .textSecondary,
+                                                      ),
                                                   maxLines: 1,
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                 ),
-                                                if (lastPerformance != null) ...[
+                                                if (lastPerformance !=
+                                                    null) ...[
                                                   const SizedBox(height: 5),
                                                   Text(
                                                     'Última: $lastPerformance · ${memory!.routineName.trim().isEmpty ? 'Entrenamiento libre' : memory.routineName}',
                                                     maxLines: 1,
                                                     overflow:
                                                         TextOverflow.ellipsis,
-                                                    style: AppTypography.bodySmall
+                                                    style: AppTypography
+                                                        .bodySmall
                                                         .copyWith(
-                                                      color:
-                                                          AppColors.primary,
-                                                    ),
+                                                          color: AppColors.of(
+                                                            context,
+                                                          ).primary,
+                                                        ),
                                                   ),
                                                 ],
                                               ],
@@ -334,10 +347,10 @@ class _ExercisePickerPageWebState
                                               tooltip: 'Editar ejercicio',
                                               onPressed: () =>
                                                   showCustomExerciseDialogWeb(
-                                                context,
-                                                ref,
-                                                exercise: exercise,
-                                              ),
+                                                    context,
+                                                    ref,
+                                                    exercise: exercise,
+                                                  ),
                                               icon: const Icon(
                                                 Icons.edit_outlined,
                                               ),
@@ -357,13 +370,17 @@ class _ExercisePickerPageWebState
                                                   ? Icons.star
                                                   : Icons.star_border,
                                               color: isFavorite
-                                                  ? AppColors.gold
-                                                  : AppColors.textSecondary,
+                                                  ? AppColors.of(context).gold
+                                                  : AppColors.of(
+                                                      context,
+                                                    ).textSecondary,
                                             ),
                                           ),
-                                          const Icon(
+                                          Icon(
                                             Icons.add_circle,
-                                            color: AppColors.primary,
+                                            color: AppColors.of(
+                                              context,
+                                            ).primary,
                                           ),
                                         ],
                                       ),

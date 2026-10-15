@@ -28,7 +28,7 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.of(context).surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
@@ -79,8 +79,8 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
               padding: const EdgeInsets.only(bottom: 80.0),
               child: FloatingActionButton(
                 onPressed: () => _showAddMeasurementModal(context),
-                backgroundColor: AppColors.primary,
-                child: const Icon(Icons.add, color: Colors.white),
+                backgroundColor: AppColors.of(context).primary,
+                child: Icon(Icons.add, color: AppColors.of(context).onPrimary),
               ),
             )
           : null,
@@ -94,16 +94,23 @@ class _MeasurementCard extends ConsumerWidget {
 
   const _MeasurementCard({required this.measurement, required this.onTap});
 
-  Widget _buildPill(String label, String value, {bool highlight = false}) {
+  Widget _buildPill(
+    BuildContext context,
+    String label,
+    String value, {
+    bool highlight = false,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: highlight ? AppColors.primaryFaded : AppColors.surface,
+        color: highlight
+            ? AppColors.of(context).primaryFaded
+            : AppColors.of(context).surface,
         borderRadius: AppRadius.sm_,
         border: Border.all(
           color: highlight
-              ? AppColors.primary.withValues(alpha: 0.3)
-              : AppColors.surfaceBorder,
+              ? AppColors.of(context).primary.withValues(alpha: 0.3)
+              : AppColors.of(context).surfaceBorder,
         ),
       ),
       child: Column(
@@ -112,14 +119,18 @@ class _MeasurementCard extends ConsumerWidget {
           Text(
             label,
             style: AppTypography.labelSmall.copyWith(
-              color: highlight ? AppColors.primary : AppColors.textSecondary,
+              color: highlight
+                  ? AppColors.of(context).primary
+                  : AppColors.of(context).textSecondary,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             value,
             style: AppTypography.monoMedium.copyWith(
-              color: highlight ? AppColors.primary : AppColors.textPrimary,
+              color: highlight
+                  ? AppColors.of(context).primary
+                  : AppColors.of(context).textPrimary,
             ),
           ),
         ],
@@ -137,9 +148,9 @@ class _MeasurementCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surfaceHigh,
+          color: AppColors.of(context).surfaceHigh,
           borderRadius: AppRadius.lg_,
-          border: Border.all(color: AppColors.surfaceBorder),
+          border: Border.all(color: AppColors.of(context).surfaceBorder),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,10 +160,10 @@ class _MeasurementCard extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.straighten,
                       size: 16,
-                      color: AppColors.primary,
+                      color: AppColors.of(context).primary,
                     ),
                     const SizedBox(width: 8),
                     Text(
@@ -161,15 +172,15 @@ class _MeasurementCard extends ConsumerWidget {
                         'es',
                       ).format(measurement.date),
                       style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.primary,
+                        color: AppColors.of(context).primary,
                       ),
                     ),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.delete_outline,
-                    color: AppColors.error,
+                    color: AppColors.of(context).error,
                     size: 20,
                   ),
                   onPressed: () async {
@@ -222,49 +233,58 @@ class _MeasurementCard extends ConsumerWidget {
               children: [
                 if (measurement.weightKg != null)
                   _buildPill(
+                    context,
                     'Peso',
                     FitnessFormatter.formatWeight(measurement.weightKg!, unit),
                     highlight: true,
                   ),
                 if (measurement.bodyFatPercentage != null)
                   _buildPill(
+                    context,
                     'Grasa',
                     '${measurement.bodyFatPercentage!.toStringAsFixed(1)}%',
                   ),
                 if (measurement.shouldersCm != null)
                   _buildPill(
+                    context,
                     'Hombros',
                     '${measurement.shouldersCm!.toStringAsFixed(1)} cm',
                   ),
                 if (measurement.chestCm != null)
                   _buildPill(
+                    context,
                     'Pecho',
                     '${measurement.chestCm!.toStringAsFixed(1)} cm',
                   ),
                 if (measurement.waistCm != null)
                   _buildPill(
+                    context,
                     'Cintura',
                     '${measurement.waistCm!.toStringAsFixed(1)} cm',
                   ),
                 if (measurement.hipsCm != null)
                   _buildPill(
+                    context,
                     'Caderas',
                     '${measurement.hipsCm!.toStringAsFixed(1)} cm',
                   ),
                 if (measurement.leftArmCm != null ||
                     measurement.rightArmCm != null)
                   _buildPill(
+                    context,
                     'Brazos (I/D)',
                     '${measurement.leftArmCm?.toStringAsFixed(1) ?? '-'} / ${measurement.rightArmCm?.toStringAsFixed(1) ?? '-'} cm',
                   ),
                 if (measurement.leftLegCm != null ||
                     measurement.rightLegCm != null)
                   _buildPill(
+                    context,
                     'Piernas (I/D)',
                     '${measurement.leftLegCm?.toStringAsFixed(1) ?? '-'} / ${measurement.rightLegCm?.toStringAsFixed(1) ?? '-'} cm',
                   ),
                 if (measurement.calvesCm != null)
                   _buildPill(
+                    context,
                     'Gemelos',
                     '${measurement.calvesCm!.toStringAsFixed(1)} cm',
                   ),
@@ -438,6 +458,7 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
   }
 
   Widget _buildField(
+    BuildContext context,
     String label,
     TextEditingController controller,
     String suffix,
@@ -456,25 +477,27 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
           return null;
         },
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        style: AppTypography.monoMedium.copyWith(color: AppColors.textPrimary),
+        style: AppTypography.monoMedium.copyWith(
+          color: AppColors.of(context).textPrimary,
+        ),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: AppColors.of(context).textSecondary,
           ),
           suffixText: suffix,
           suffixStyle: AppTypography.monoMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: AppColors.of(context).textSecondary,
           ),
           filled: true,
-          fillColor: AppColors.surface,
+          fillColor: AppColors.of(context).surface,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppRadius.sm),
-            borderSide: const BorderSide(color: AppColors.surfaceBorder),
+            borderSide: BorderSide(color: AppColors.of(context).surfaceBorder),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppRadius.sm),
-            borderSide: const BorderSide(color: AppColors.surfaceBorder),
+            borderSide: BorderSide(color: AppColors.of(context).surfaceBorder),
           ),
         ),
       ),
@@ -504,7 +527,7 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.surfaceBorder,
+                        color: AppColors.of(context).surfaceBorder,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -515,36 +538,49 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
                         ? 'Nueva Medida'
                         : 'Editar Medida',
                     style: AppTypography.headlineMedium.copyWith(
-                      color: AppColors.textPrimary,
+                      color: AppColors.of(context).textPrimary,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
 
-                  _buildField('Peso', _weightCtrl, unit.label),
-                  _buildField('Grasa Corporal', _fatCtrl, '%'),
+                  _buildField(context, 'Peso', _weightCtrl, unit.label),
+                  _buildField(context, 'Grasa Corporal', _fatCtrl, '%'),
 
-                  const Divider(height: 32, color: AppColors.surfaceBorder),
+                  Divider(
+                    height: 32,
+                    color: AppColors.of(context).surfaceBorder,
+                  ),
                   Text(
                     'Medidas (cm)',
                     style: AppTypography.labelLarge.copyWith(
-                      color: AppColors.primary,
+                      color: AppColors.of(context).primary,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
 
-                  _buildField('Hombros', _shouldersCtrl, 'cm'),
-                  _buildField('Pecho', _chestCtrl, 'cm'),
-                  _buildField('Cintura', _waistCtrl, 'cm'),
-                  _buildField('Caderas o Glúteos', _hipsCtrl, 'cm'),
+                  _buildField(context, 'Hombros', _shouldersCtrl, 'cm'),
+                  _buildField(context, 'Pecho', _chestCtrl, 'cm'),
+                  _buildField(context, 'Cintura', _waistCtrl, 'cm'),
+                  _buildField(context, 'Caderas o Glúteos', _hipsCtrl, 'cm'),
 
                   Row(
                     children: [
                       Expanded(
-                        child: _buildField('Brazo Izq', _leftArmCtrl, 'cm'),
+                        child: _buildField(
+                          context,
+                          'Brazo Izq',
+                          _leftArmCtrl,
+                          'cm',
+                        ),
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
-                        child: _buildField('Brazo Der', _rightArmCtrl, 'cm'),
+                        child: _buildField(
+                          context,
+                          'Brazo Der',
+                          _rightArmCtrl,
+                          'cm',
+                        ),
                       ),
                     ],
                   ),
@@ -552,16 +588,26 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildField('Pierna Izq', _leftLegCtrl, 'cm'),
+                        child: _buildField(
+                          context,
+                          'Pierna Izq',
+                          _leftLegCtrl,
+                          'cm',
+                        ),
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
-                        child: _buildField('Pierna Der', _rightLegCtrl, 'cm'),
+                        child: _buildField(
+                          context,
+                          'Pierna Der',
+                          _rightLegCtrl,
+                          'cm',
+                        ),
                       ),
                     ],
                   ),
 
-                  _buildField('Gemelos', _calvesCtrl, 'cm'),
+                  _buildField(context, 'Gemelos', _calvesCtrl, 'cm'),
 
                   const SizedBox(height: AppSpacing.xl),
                   PrimaryButton(

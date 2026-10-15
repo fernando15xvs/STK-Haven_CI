@@ -23,13 +23,25 @@ class FavoritesPageWeb extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.bookmark_border, size: 58, color: AppColors.textSecondary.withValues(alpha: 0.45)),
+                    Icon(
+                      Icons.bookmark_border,
+                      size: 58,
+                      color: AppColors.of(
+                        context,
+                      ).textSecondary.withValues(alpha: 0.45),
+                    ),
                     const SizedBox(height: 14),
-                    Text('No hay versículos guardados', style: AppTypography.headlineLarge, textAlign: TextAlign.center),
+                    Text(
+                      'No hay versículos guardados',
+                      style: AppTypography.headlineLarge,
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       'En la Biblia, usa el botón de marcador junto a un versículo para guardarlo aquí.',
-                      style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.of(context).textSecondary,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ],
@@ -49,9 +61,9 @@ class FavoritesPageWeb extends ConsumerWidget {
                   return Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.of(context).surface,
                       borderRadius: AppRadius.lg_,
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: AppColors.of(context).border),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,26 +72,43 @@ class FavoritesPageWeb extends ConsumerWidget {
                           width: 42,
                           height: 42,
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.12),
+                            color: AppColors.of(
+                              context,
+                            ).primary.withValues(alpha: 0.12),
                             borderRadius: AppRadius.md_,
                           ),
-                          child: const Icon(Icons.bookmark, color: AppColors.primary),
+                          child: Icon(
+                            Icons.bookmark,
+                            color: AppColors.of(context).primary,
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('${favorite.book} ${favorite.chapter}:${favorite.verse}', style: AppTypography.headlineSmall.copyWith(color: AppColors.primary)),
+                              Text(
+                                '${favorite.book} ${favorite.chapter}:${favorite.verse}',
+                                style: AppTypography.headlineSmall.copyWith(
+                                  color: AppColors.of(context).primary,
+                                ),
+                              ),
                               const SizedBox(height: 7),
-                              SelectableText('“${favorite.text}”', style: AppTypography.bodyLarge.copyWith(height: 1.55)),
+                              SelectableText(
+                                '“${favorite.text}”',
+                                style: AppTypography.bodyLarge.copyWith(
+                                  height: 1.55,
+                                ),
+                              ),
                             ],
                           ),
                         ),
                         IconButton(
                           tooltip: 'Quitar de favoritos',
                           onPressed: () {
-                            ref.read(favoritesProvider.notifier).toggleFavorite(
+                            ref
+                                .read(favoritesProvider.notifier)
+                                .toggleFavorite(
                                   Verse(
                                     book: favorite.book,
                                     chapter: favorite.chapter,
@@ -88,7 +117,10 @@ class FavoritesPageWeb extends ConsumerWidget {
                                   ),
                                 );
                           },
-                          icon: const Icon(Icons.bookmark_remove_outlined, color: AppColors.error),
+                          icon: Icon(
+                            Icons.bookmark_remove_outlined,
+                            color: AppColors.of(context).error,
+                          ),
                         ),
                       ],
                     ),
@@ -100,7 +132,7 @@ class FavoritesPageWeb extends ConsumerWidget {
 
     if (embedded) return content;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(title: const Text('Versículos favoritos')),
       body: content,
     );

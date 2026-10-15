@@ -64,9 +64,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       settingsProvider.select((settings) => settings.performanceMode),
     );
     final savings = performanceMode == PerformanceMode.savings;
-    final experienceProfile = ref.watch(
-      userExperienceProfileProvider,
-    ).value;
+    final experienceProfile = ref.watch(userExperienceProfileProvider).value;
     final faithEnabled = experienceProfile?.faithEnabled ?? false;
     final coachCapability = experienceProfile?.isCoach ?? false;
     final signedIn = ref.watch(
@@ -148,9 +146,9 @@ class _BottomBarSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        border: Border.all(color: AppColors.of(context).surfaceBorder),
         boxShadow: savings
             ? const []
             : [
@@ -201,8 +199,8 @@ class _BottomNavItem extends StatelessWidget {
                   Icon(
                     isSelected ? activeIcon : icon,
                     color: isSelected
-                        ? AppColors.primary
-                        : AppColors.textSecondary,
+                        ? AppColors.of(context).primary
+                        : AppColors.of(context).textSecondary,
                     size: 24,
                   ),
                   const SizedBox(height: 4),
@@ -212,10 +210,11 @@ class _BottomNavItem extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: isSelected
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.w500,
+                          ? AppColors.of(context).primary
+                          : AppColors.of(context).textSecondary,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.w500,
                       fontSize: 10,
                     ),
                   ),
@@ -340,8 +339,7 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                         _MenuOption(
                           icon: Icons.layers_outlined,
                           label: 'Programas',
-                          onTap: () =>
-                              _openPage(const TrainingProgramsPage()),
+                          onTap: () => _openPage(const TrainingProgramsPage()),
                         ),
                         _MenuOption(
                           icon: Icons.insights_rounded,
@@ -410,14 +408,17 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, Color(0xFF00B4D8)],
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.of(context).primary,
+                  AppColors.of(context).primary,
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.30),
+                  color: AppColors.of(context).primary.withValues(alpha: 0.30),
                   blurRadius: 7,
                   offset: const Offset(0, 3),
                 ),
@@ -425,7 +426,11 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
             ),
             child: RotationTransition(
               turns: Tween(begin: 0.0, end: 0.125).animate(_controller),
-              child: const Icon(Icons.add, color: Colors.white, size: 28),
+              child: Icon(
+                Icons.add,
+                color: AppColors.of(context).onPrimary,
+                size: 28,
+              ),
             ),
           ),
         ),
@@ -462,14 +467,18 @@ class _MenuOption extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceHigh,
+                    color: AppColors.of(context).surfaceHigh,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: AppColors.surfaceBorder,
+                      color: AppColors.of(context).surfaceBorder,
                       width: 2,
                     ),
                   ),
-                  child: Icon(icon, color: AppColors.primary, size: 25),
+                  child: Icon(
+                    icon,
+                    color: AppColors.of(context).primary,
+                    size: 25,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -477,8 +486,8 @@ class _MenuOption extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: AppColors.of(context).textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 10,
                   ),

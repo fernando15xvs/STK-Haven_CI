@@ -58,8 +58,9 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
     final weightUnit = ref.watch(
       settingsProvider.select((settings) => settings.weightUnit),
     );
-    final equipmentOptions =
-        ExerciseLibraryFilter.equipmentOptions(allExercises);
+    final equipmentOptions = ExerciseLibraryFilter.equipmentOptions(
+      allExercises,
+    );
     final filteredExercises = ExerciseLibraryFilter.apply(
       exercises: allExercises,
       query: _searchQuery,
@@ -81,7 +82,7 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
           style: AppTypography.headlineMedium,
         ),
         elevation: 0,
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         actions: [
           IconButton(
             tooltip: 'Crear ejercicio personalizado',
@@ -98,14 +99,14 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
               decoration: InputDecoration(
                 hintText: 'Buscar ejercicio...',
                 hintStyle: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textDisabled,
+                  color: AppColors.of(context).textDisabled,
                 ),
-                prefixIcon: const Icon(
+                prefixIcon: Icon(
                   Icons.search,
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
                 filled: true,
-                fillColor: AppColors.surfaceHigh,
+                fillColor: AppColors.of(context).surfaceHigh,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
@@ -113,7 +114,7 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
+                color: AppColors.of(context).textPrimary,
               ),
               onChanged: (value) => setState(() => _searchQuery = value),
             ),
@@ -122,8 +123,7 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
             height: 48,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               itemCount: _muscles.length + 1,
               itemBuilder: (context, index) {
                 if (index == 0) {
@@ -134,16 +134,16 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                         _favoritesOnly ? Icons.star : Icons.star_border,
                         size: 17,
                         color: _favoritesOnly
-                            ? Colors.white
-                            : AppColors.textSecondary,
+                            ? AppColors.of(context).onPrimary
+                            : AppColors.of(context).textSecondary,
                       ),
                       label: const Text('Favoritos'),
                       selected: _favoritesOnly,
                       showCheckmark: false,
                       onSelected: (selected) =>
                           setState(() => _favoritesOnly = selected),
-                      selectedColor: AppColors.primary,
-                      backgroundColor: AppColors.surfaceHigh,
+                      selectedColor: AppColors.of(context).primary,
+                      backgroundColor: AppColors.of(context).surfaceHigh,
                       side: BorderSide.none,
                     ),
                   );
@@ -155,10 +155,9 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                     label: Text(muscle),
                     selected: _selectedMuscle == muscle,
                     showCheckmark: false,
-                    onSelected: (_) =>
-                        setState(() => _selectedMuscle = muscle),
-                    selectedColor: AppColors.primary,
-                    backgroundColor: AppColors.surfaceHigh,
+                    onSelected: (_) => setState(() => _selectedMuscle = muscle),
+                    selectedColor: AppColors.of(context).primary,
+                    backgroundColor: AppColors.of(context).surfaceHigh,
                     side: BorderSide.none,
                   ),
                 );
@@ -171,20 +170,17 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    initialValue:
-                        equipmentOptions.contains(_selectedEquipment)
-                            ? _selectedEquipment
-                            : ExerciseLibraryFilter.allOption,
+                    initialValue: equipmentOptions.contains(_selectedEquipment)
+                        ? _selectedEquipment
+                        : ExerciseLibraryFilter.allOption,
                     decoration: const InputDecoration(
                       labelText: 'Equipo',
                       isDense: true,
                     ),
                     items: equipmentOptions
                         .map(
-                          (item) => DropdownMenuItem(
-                            value: item,
-                            child: Text(item),
-                          ),
+                          (item) =>
+                              DropdownMenuItem(value: item, child: Text(item)),
                         )
                         .toList(),
                     onChanged: (value) => setState(
@@ -216,8 +212,7 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                       ),
                     ],
                     onChanged: (value) => setState(
-                      () => _laterality =
-                          value ?? ExerciseLateralityFilter.all,
+                      () => _laterality = value ?? ExerciseLateralityFilter.all,
                     ),
                   ),
                 ),
@@ -234,7 +229,7 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                           : 'No se encontraron ejercicios',
                       textAlign: TextAlign.center,
                       style: AppTypography.bodyLarge.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                   )
@@ -248,8 +243,9 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                     itemBuilder: (context, index) {
                       final exercise = filteredExercises[index];
                       final isFavorite = favoriteIds.contains(exercise.id);
-                      final isUnilateral =
-                          ExerciseLibraryFilter.isUnilateral(exercise);
+                      final isUnilateral = ExerciseLibraryFilter.isUnilateral(
+                        exercise,
+                      );
                       final isCustom = CustomExerciseService.isCustom(exercise);
                       final memory = memoryById[exercise.id];
                       final lastSet = memory?.latestRepresentativeSet;
@@ -277,12 +273,12 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                               width: 64,
                               height: 64,
                               decoration: BoxDecoration(
-                                color: AppColors.surfaceHigh,
+                                color: AppColors.of(context).surfaceHigh,
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.fitness_center,
-                                color: AppColors.textSecondary,
+                                color: AppColors.of(context).textSecondary,
                                 size: 28,
                               ),
                             ),
@@ -298,9 +294,11 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                                           exercise.name,
                                           style: AppTypography.headlineMedium
                                               .copyWith(
-                                            color: AppColors.textPrimary,
-                                            fontSize: 16,
-                                          ),
+                                                color: AppColors.of(
+                                                  context,
+                                                ).textPrimary,
+                                                fontSize: 16,
+                                              ),
                                         ),
                                       ),
                                       if (isCustom)
@@ -310,17 +308,21 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                                             vertical: 3,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: AppColors.primary
-                                                .withValues(alpha: 0.12),
-                                            borderRadius:
-                                                BorderRadius.circular(999),
+                                            color: AppColors.of(
+                                              context,
+                                            ).primary.withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(
+                                              999,
+                                            ),
                                           ),
                                           child: Text(
                                             'Personalizado',
                                             style: AppTypography.labelSmall
                                                 .copyWith(
-                                              color: AppColors.primary,
-                                            ),
+                                                  color: AppColors.of(
+                                                    context,
+                                                  ).primary,
+                                                ),
                                           ),
                                         ),
                                     ],
@@ -329,7 +331,9 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                                   Text(
                                     '${exercise.muscleGroup} • ${exercise.equipment.isEmpty ? 'Libre' : exercise.equipment}${isUnilateral ? ' • Unilateral' : ''}',
                                     style: AppTypography.labelMedium.copyWith(
-                                      color: AppColors.textSecondary,
+                                      color: AppColors.of(
+                                        context,
+                                      ).textSecondary,
                                     ),
                                   ),
                                   if (lastPerformance != null) ...[
@@ -339,7 +343,7 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: AppTypography.bodySmall.copyWith(
-                                        color: AppColors.primary,
+                                        color: AppColors.of(context).primary,
                                       ),
                                     ),
                                   ],
@@ -362,8 +366,8 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                               icon: Icon(
                                 isFavorite ? Icons.star : Icons.star_border,
                                 color: isFavorite
-                                    ? AppColors.gold
-                                    : AppColors.textSecondary,
+                                    ? AppColors.of(context).gold
+                                    : AppColors.of(context).textSecondary,
                               ),
                             ),
                             Icon(
@@ -371,8 +375,8 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                                   ? Icons.add_circle
                                   : Icons.chevron_right,
                               color: widget.isSelectionMode
-                                  ? AppColors.primary
-                                  : AppColors.textSecondary,
+                                  ? AppColors.of(context).primary
+                                  : AppColors.of(context).textSecondary,
                               size: widget.isSelectionMode ? 28 : 24,
                             ),
                           ],

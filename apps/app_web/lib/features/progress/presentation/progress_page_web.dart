@@ -24,7 +24,7 @@ class ProgressPageWeb extends StatelessWidget {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         body: SafeArea(
           child: Center(
             child: ConstrainedBox(
@@ -113,8 +113,8 @@ class _SummaryTabWeb extends ConsumerWidget {
             final columns = constraints.maxWidth >= 820
                 ? 4
                 : constraints.maxWidth >= 480
-                    ? 2
-                    : 1;
+                ? 2
+                : 1;
             final cards = [
               _MetricCard(
                 title: 'Volumen',
@@ -181,7 +181,7 @@ class _SummaryTabWeb extends ConsumerWidget {
                         child: Text(
                           'Aún no hay datos en este periodo.',
                           style: AppTypography.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                         ),
                       )
@@ -210,42 +210,48 @@ class _SummaryTabWeb extends ConsumerWidget {
             child: Text(
               'Aún no hay entrenamientos guardados.',
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
           )
         else
           _Panel(
             child: Column(
-              children: history.take(8).map((session) {
-                return ListTile(
-                  onTap: () => RecentWorkoutDetails.show(
-                    context, session, settings.weightUnit,
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                  leading: CircleAvatar(
-                    backgroundColor:
-                        AppColors.primary.withValues(alpha: 0.12),
-                    child: const Icon(
-                      Icons.fitness_center,
-                      color: AppColors.primary,
-                      size: 18,
-                    ),
-                  ),
-                  title: Text(
-                    session.routineNameSnapshot.isEmpty
-                        ? 'Entrenamiento libre'
-                        : session.routineNameSnapshot,
-                  ),
-                  subtitle: Text(_date(session.startedAt)),
-                  trailing: Text(
-                    '${session.durationSeconds ~/ 60} min',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                );
-              }).toList(growable: false),
+              children: history
+                  .take(8)
+                  .map((session) {
+                    return ListTile(
+                      onTap: () => RecentWorkoutDetails.show(
+                        context,
+                        session,
+                        settings.weightUnit,
+                      ),
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.of(
+                          context,
+                        ).primary.withValues(alpha: 0.12),
+                        child: Icon(
+                          Icons.fitness_center,
+                          color: AppColors.of(context).primary,
+                          size: 18,
+                        ),
+                      ),
+                      title: Text(
+                        session.routineNameSnapshot.isEmpty
+                            ? 'Entrenamiento libre'
+                            : session.routineNameSnapshot,
+                      ),
+                      subtitle: Text(_date(session.startedAt)),
+                      trailing: Text(
+                        '${session.durationSeconds ~/ 60} min',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: AppColors.of(context).textSecondary,
+                        ),
+                      ),
+                    );
+                  })
+                  .toList(growable: false),
             ),
           ),
       ],
@@ -271,12 +277,12 @@ class _ConsistencyPanel extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.primaryFaded,
+                  color: AppColors.of(context).primaryFaded,
                   borderRadius: AppRadius.md_,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.calendar_month_outlined,
-                  color: AppColors.primary,
+                  color: AppColors.of(context).primary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -288,7 +294,7 @@ class _ConsistencyPanel extends StatelessWidget {
                     Text(
                       'Ritmo de entrenamiento · ${filter.label}',
                       style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                   ],
@@ -363,13 +369,13 @@ class _InsightMetric extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.md_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 19, color: AppColors.primary),
+          Icon(icon, size: 19, color: AppColors.of(context).primary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -400,7 +406,9 @@ class _TrendBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final positive = value >= 0;
-    final color = positive ? AppColors.success : AppColors.error;
+    final color = positive
+        ? AppColors.of(context).success
+        : AppColors.of(context).error;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
@@ -438,26 +446,27 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
     final history = ref.watch(workoutHistoryProvider);
     final settings = ref.watch(settingsProvider);
 
-    final dashboards = exercises
-        .map(
-          (exercise) => (
-            exercise: exercise,
-            trend: ExerciseProgressCalculator.calculateTrend(
-              history,
-              exercise.id,
-            ),
-          ),
-        )
-        .where((entry) => entry.trend.hasRecordedWork)
-        .toList()
-      ..sort((a, b) {
-        final aDate = a.trend.lastPerformedAt;
-        final bDate = b.trend.lastPerformedAt;
-        if (aDate == null && bDate == null) return 0;
-        if (aDate == null) return 1;
-        if (bDate == null) return -1;
-        return bDate.compareTo(aDate);
-      });
+    final dashboards =
+        exercises
+            .map(
+              (exercise) => (
+                exercise: exercise,
+                trend: ExerciseProgressCalculator.calculateTrend(
+                  history,
+                  exercise.id,
+                ),
+              ),
+            )
+            .where((entry) => entry.trend.hasRecordedWork)
+            .toList()
+          ..sort((a, b) {
+            final aDate = a.trend.lastPerformedAt;
+            final bDate = b.trend.lastPerformedAt;
+            if (aDate == null && bDate == null) return 0;
+            if (aDate == null) return 1;
+            if (bDate == null) return -1;
+            return bDate.compareTo(aDate);
+          });
 
     if (dashboards.isEmpty) {
       return const _CenteredEmpty(
@@ -473,13 +482,13 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
         final columns = constraints.maxWidth >= 1080
             ? 3
             : constraints.maxWidth >= 680
-                ? 2
-                : 1;
+            ? 2
+            : 1;
         final aspectRatio = columns == 1
             ? 2.25
             : columns == 2
-                ? 1.08
-                : 0.92;
+            ? 1.08
+            : 0.92;
 
         return GridView.builder(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 110),
@@ -529,12 +538,12 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: AppColors.primaryFaded,
+                          color: AppColors.of(context).primaryFaded,
                           borderRadius: AppRadius.md_,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.monitor_heart_outlined,
-                          color: AppColors.primary,
+                          color: AppColors.of(context).primary,
                           size: 21,
                         ),
                       ),
@@ -553,7 +562,7 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                             Text(
                               entry.exercise.muscleGroup,
                               style: AppTypography.bodySmall.copyWith(
-                                color: AppColors.textSecondary,
+                                color: AppColors.of(context).textSecondary,
                               ),
                             ),
                           ],
@@ -566,7 +575,7 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                         Text(
                           'Sin base 30D',
                           style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                         ),
                     ],
@@ -618,7 +627,7 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                         child: Text(
                           'Volumen acumulado',
                           style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                         ),
                       ),
@@ -637,14 +646,14 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                               ? 'Sin sesión reciente'
                               : 'Última ${_date(dashboard.lastPerformedAt!)}',
                           style: AppTypography.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                         ),
                       ),
                       Text(
                         '${lastSessionVolume.toStringAsFixed(0)} ${settings.weightUnit.label} vol.',
                         style: AppTypography.labelSmall.copyWith(
-                          color: AppColors.textSecondary,
+                          color: AppColors.of(context).textSecondary,
                         ),
                       ),
                     ],
@@ -654,13 +663,16 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                     Text(
                       'Tendencia e1RM',
                       style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Expanded(
                       child: CustomPaint(
-                        painter: _VolumePainter(data: chartData),
+                        painter: _VolumePainter(
+                          colors: AppColors.of(context),
+                          data: chartData,
+                        ),
                         child: const SizedBox.expand(),
                       ),
                     ),
@@ -670,7 +682,7 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                   Text(
                     'Solo series efectivas completadas; preparación e incompletas quedan fuera.',
                     style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                       height: 1.3,
                     ),
                   ),
@@ -695,9 +707,9 @@ class _ExerciseMetricWeb extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.md_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -788,7 +800,7 @@ class _MuscleProgressTabWeb extends ConsumerWidget {
                     Text(
                       '${entry.value.sets} series',
                       style: AppTypography.labelLarge.copyWith(
-                        color: AppColors.primary,
+                        color: AppColors.of(context).primary,
                       ),
                     ),
                   ],
@@ -803,7 +815,7 @@ class _MuscleProgressTabWeb extends ConsumerWidget {
                 Text(
                   '${volume.toStringAsFixed(0)} ${settings.weightUnit.label} de volumen acumulado',
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
               ],
@@ -876,17 +888,19 @@ class _MeasurementsTabWeb extends ConsumerWidget {
               child: _Panel(
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading:
-                      const Icon(Icons.straighten, color: AppColors.primary),
+                  leading: Icon(
+                    Icons.straighten,
+                    color: AppColors.of(context).primary,
+                  ),
                   title: Text(_date(measurement.date)),
                   subtitle: Text(
                     detail.isEmpty ? 'Registro corporal' : detail.join(' · '),
                   ),
                   trailing: IconButton(
                     tooltip: 'Eliminar registro',
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.delete_outline,
-                      color: AppColors.error,
+                      color: AppColors.of(context).error,
                     ),
                     onPressed: () => ref
                         .read(bodyMeasurementProvider.notifier)
@@ -927,10 +941,7 @@ class _MeasurementsTabWeb extends ConsumerWidget {
                   controller: weight,
                   label: 'Peso (${unit.label})',
                 ),
-                _MeasureField(
-                  controller: fat,
-                  label: 'Grasa corporal (%)',
-                ),
+                _MeasureField(controller: fat, label: 'Grasa corporal (%)'),
                 _MeasureField(controller: chest, label: 'Pecho (cm)'),
                 _MeasureField(controller: waist, label: 'Cintura (cm)'),
                 _MeasureField(controller: arm, label: 'Brazo (cm)'),
@@ -956,7 +967,9 @@ class _MeasurementsTabWeb extends ConsumerWidget {
       double? parse(TextEditingController controller) =>
           double.tryParse(controller.text.replaceAll(',', '.'));
       final displayedWeight = parse(weight);
-      await ref.read(bodyMeasurementProvider.notifier).saveMeasurement(
+      await ref
+          .read(bodyMeasurementProvider.notifier)
+          .saveMeasurement(
             BodyMeasurement(
               id: 'measurement_${DateTime.now().microsecondsSinceEpoch}',
               date: DateTime.now(),
@@ -1022,10 +1035,10 @@ class _MetricCard extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
+              color: AppColors.of(context).primary.withValues(alpha: 0.12),
               borderRadius: AppRadius.md_,
             ),
-            child: Icon(icon, color: AppColors.primary),
+            child: Icon(icon, color: AppColors.of(context).primary),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1042,7 +1055,7 @@ class _MetricCard extends StatelessWidget {
                 Text(
                   title,
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
               ],
@@ -1064,10 +1077,10 @@ class _Panel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppElevation.soft,
+        border: Border.all(color: AppColors.of(context).border),
+        boxShadow: AppElevation.soft(context),
       ),
       child: child,
     );
@@ -1098,7 +1111,9 @@ class _CenteredEmpty extends StatelessWidget {
               Icon(
                 icon,
                 size: 58,
-                color: AppColors.textSecondary.withValues(alpha: 0.4),
+                color: AppColors.of(
+                  context,
+                ).textSecondary.withValues(alpha: 0.4),
               ),
               const SizedBox(height: 14),
               Text(
@@ -1110,7 +1125,7 @@ class _CenteredEmpty extends StatelessWidget {
               Text(
                 message,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -1125,12 +1140,13 @@ class _CenteredEmpty extends StatelessWidget {
 class _VolumePainter extends CustomPainter {
   final List<double> data;
 
-  _VolumePainter({required this.data});
+  final AppColors colors;
+  _VolumePainter({required this.data, required this.colors});
 
   @override
   void paint(Canvas canvas, Size size) {
     final grid = Paint()
-      ..color = AppColors.border
+      ..color = colors.border
       ..strokeWidth = 1;
     for (var i = 1; i < 4; i++) {
       final y = size.height * i / 4;
@@ -1140,13 +1156,13 @@ class _VolumePainter extends CustomPainter {
 
     final maxValue = math.max(1.0, data.reduce(math.max));
     final line = Paint()
-      ..color = AppColors.primary
+      ..color = colors.primary
       ..strokeWidth = 3
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final fill = Paint()
-      ..color = AppColors.primary.withValues(alpha: 0.08)
+      ..color = colors.primary.withValues(alpha: 0.08)
       ..style = PaintingStyle.fill;
 
     final path = Path();
@@ -1174,5 +1190,5 @@ class _VolumePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _VolumePainter oldDelegate) =>
-      oldDelegate.data != data;
+      oldDelegate.data != data || oldDelegate.colors != colors;
 }
