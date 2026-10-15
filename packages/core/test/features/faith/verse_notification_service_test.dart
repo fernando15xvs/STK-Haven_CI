@@ -45,7 +45,7 @@ void main() {
         case 'pendingNotificationRequests':
           return pending.values.toList();
         case 'cancel':
-          pending.remove((call.arguments as Map)['id']);
+          pending.remove(call.arguments as int);
           return null;
         case 'zonedSchedule':
           final args = Map<dynamic, dynamic>.from(call.arguments as Map);
