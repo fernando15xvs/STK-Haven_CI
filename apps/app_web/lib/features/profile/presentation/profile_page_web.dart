@@ -649,47 +649,6 @@ class _ProgramPickerDialog extends StatelessWidget {
   }
 }
 
-class _ProfileHeader extends StatelessWidget {
-  final SettingsState settings;
-
-  const _ProfileHeader({required this.settings});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            radius: 34,
-            backgroundColor: AppColors.surfaceHigh,
-            child: Icon(Icons.person, size: 36, color: AppColors.textSecondary),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Atleta Principal', style: AppTypography.headlineLarge),
-                const SizedBox(height: 4),
-                Text(
-                  settings.activeProgram == null ? 'Entrenamiento personalizado' : settings.activeProgram!.programNameSnapshot,
-                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _IncrementSelector extends StatelessWidget {
   final SettingsState settings;
   final SettingsNotifier notifier;
