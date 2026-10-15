@@ -13,6 +13,8 @@ import 'package:core/features/habits/application/habit_study_timer_provider.dart
 import 'package:core/features/habits/application/habit_tasks_provider.dart';
 import 'package:core/features/habits/application/study_plan_provider.dart';
 import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
+import 'package:core/features/profile/presentation/pages/personal_profile_page.dart';
+import 'package:core/features/profile/presentation/widgets/personal_profile_summary.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
@@ -59,14 +61,20 @@ class ProfilePageWeb extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 110),
               children: [
-                Text('Ajustes y perfil', style: AppTypography.displaySmall),
+                Text('Mi perfil', style: AppTypography.displaySmall),
                 const SizedBox(height: 6),
                 Text(
                   '${routines.length} rutinas · ${history.length} entrenamientos · ${measurements.length} registros corporales',
                   style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 20),
-                _ProfileHeader(settings: settings),
+                PersonalProfileSummary(
+                  onEdit: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PersonalProfilePage()),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('CONFIGURACIÓN', style: AppTypography.labelLarge),
                 const SizedBox(height: 18),
                 _Section(
                   title: 'Personalización',
