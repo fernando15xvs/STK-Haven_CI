@@ -33,13 +33,18 @@ class _CustomExerciseEditorPageState
     super.initState();
     final exercise = widget.exercise;
     _nameController = TextEditingController(text: exercise?.name ?? '');
-    _muscleController = TextEditingController(text: exercise?.muscleGroup ?? '');
+    _muscleController = TextEditingController(
+      text: exercise?.muscleGroup ?? '',
+    );
     _secondaryController = TextEditingController(
       text: exercise?.secondaryMuscles.join(', ') ?? '',
     );
-    _equipmentController = TextEditingController(text: exercise?.equipment ?? '');
-    _instructionsController =
-        TextEditingController(text: exercise?.instructions ?? '');
+    _equipmentController = TextEditingController(
+      text: exercise?.equipment ?? '',
+    );
+    _instructionsController = TextEditingController(
+      text: exercise?.instructions ?? '',
+    );
   }
 
   @override
@@ -53,12 +58,12 @@ class _CustomExerciseEditorPageState
   }
 
   CustomExerciseDraft _draft() => CustomExerciseDraft(
-        name: _nameController.text,
-        muscleGroup: _muscleController.text,
-        secondaryMuscles: _secondaryController.text.split(','),
-        equipment: _equipmentController.text,
-        instructions: _instructionsController.text,
-      );
+    name: _nameController.text,
+    muscleGroup: _muscleController.text,
+    secondaryMuscles: _secondaryController.text.split(','),
+    equipment: _equipmentController.text,
+    instructions: _instructionsController.text,
+  );
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
@@ -68,7 +73,9 @@ class _CustomExerciseEditorPageState
       editingExerciseId: widget.exercise?.id,
     );
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
 
@@ -82,9 +89,9 @@ class _CustomExerciseEditorPageState
       Navigator.of(context).pop(saved);
     } on Object catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No se pudo guardar: $error')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No se pudo guardar: $error')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -124,10 +131,9 @@ class _CustomExerciseEditorPageState
     );
     if (confirmed != true || !mounted) return;
 
-    final deleted = await ref.read(exerciseListProvider.notifier).deleteCustomExercise(
-          exercise,
-          routines: routines,
-        );
+    final deleted = await ref
+        .read(exerciseListProvider.notifier)
+        .deleteCustomExercise(exercise, routines: routines);
     if (!mounted) return;
     if (deleted) {
       Navigator.of(context).pop(null);
@@ -163,7 +169,7 @@ class _CustomExerciseEditorPageState
                     ? 'Actualiza tus datos sin perder el historial asociado.'
                     : 'Crea un ejercicio propio para usarlo en rutinas y entrenamientos.',
                 style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
               const SizedBox(height: 20),

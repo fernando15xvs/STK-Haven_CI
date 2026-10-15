@@ -16,7 +16,7 @@ class FavoritesPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Favoritos', style: AppTypography.headlineMedium),
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         elevation: 0,
         centerTitle: true,
       ),
@@ -25,23 +25,25 @@ class FavoritesPage extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.favorite_border,
                     size: 64,
-                    color: AppColors.surfaceBorder,
+                    color: AppColors.of(context).surfaceBorder,
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'No tienes favoritos aún',
                     style: AppTypography.bodyLarge.copyWith(
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Guarda versículos para leerlos después',
                     style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textSecondary.withValues(alpha: 0.5),
+                      color: AppColors.of(
+                        context,
+                      ).textSecondary.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -70,22 +72,22 @@ class FavoritesPage extends ConsumerWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.primaryFaded,
+                              color: AppColors.of(context).primaryFaded,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               '${fav.book} ${fav.chapter}:${fav.verse}',
                               style: AppTypography.labelMedium.copyWith(
-                                color: AppColors.primary,
+                                color: AppColors.of(context).primary,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.1,
                               ),
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.favorite,
-                              color: AppColors.error,
+                              color: AppColors.of(context).error,
                               size: 24,
                             ),
                             onPressed: () {
@@ -109,23 +111,23 @@ class FavoritesPage extends ConsumerWidget {
                         '“${fav.text}”',
                         style: AppTypography.bodyLarge.copyWith(
                           fontStyle: FontStyle.italic,
-                          color: AppColors.textPrimary,
+                          color: AppColors.of(context).textPrimary,
                           height: 1.5,
                         ),
                       ),
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.calendar_today,
                             size: 12,
-                            color: AppColors.textSecondary,
+                            color: AppColors.of(context).textSecondary,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             DateFormat.yMMMd('es').format(fav.savedAt),
                             style: AppTypography.labelSmall.copyWith(
-                              color: AppColors.textSecondary,
+                              color: AppColors.of(context).textSecondary,
                             ),
                           ),
                         ],

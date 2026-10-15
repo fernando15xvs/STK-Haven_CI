@@ -58,17 +58,40 @@ class BibleDatabase {
     return List<String>.unmodifiable(chapters[chapter - 1]);
   }
 
-  Future<Map<String, Object?>?> getRandomVerseRaw(
-    List<String> keywords,
-  ) async {
+  Future<List<Map<String, Object?>>> getRandomVersesRaw(int count) async {
+    if (count < 1 || count > 48) throw ArgumentError.value(count);
+    final rows = <Map<String, Object?>>[];
+    _books.forEach((book, chapters) {
+      for (var c = 0; c < chapters.length; c++) {
+        for (var v = 0; v < chapters[c].length; v++) {
+          if (chapters[c][v].trim().isEmpty) continue;
+          rows.add({
+            'libro': book,
+            'capitulo': c + 1,
+            'versiculo': v + 1,
+            'texto': chapters[c][v],
+          });
+        }
+      }
+    });
+    rows.shuffle(_random);
+    return rows.take(count).toList();
+  }
+
+  Future<Map<String, Object?>?> getRandomVerseRaw(List<String> keywords) async {
     final candidates = <Map<String, Object?>>[];
 
     _books.forEach((book, chapters) {
-      for (var chapterIndex = 0; chapterIndex < chapters.length; chapterIndex++) {
+      for (
+        var chapterIndex = 0;
+        chapterIndex < chapters.length;
+        chapterIndex++
+      ) {
         final verses = chapters[chapterIndex];
         for (var verseIndex = 0; verseIndex < verses.length; verseIndex++) {
           final text = verses[verseIndex];
-          final matches = keywords.isEmpty ||
+          final matches =
+              keywords.isEmpty ||
               keywords.any(
                 (keyword) => text.toLowerCase().contains(keyword.toLowerCase()),
               );

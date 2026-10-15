@@ -40,27 +40,21 @@ class _UnilateralQuickEditorWebState
   String _number(double value) => value == 0
       ? ''
       : value % 1 == 0
-          ? '${value.toInt()}'
-          : value.toStringAsFixed(1);
+      ? '${value.toInt()}'
+      : value.toStringAsFixed(1);
 
   void _bind(WorkoutSet set, WeightUnit unit, String key) {
     if (_boundKey == key) return;
     _boundKey = key;
     _leftWeight.text = _number(
-      WeightConverter.displayWeight(
-        set.weightForSide(WorkoutSide.left),
-        unit,
-      ),
+      WeightConverter.displayWeight(set.weightForSide(WorkoutSide.left), unit),
     );
     _leftReps.text = set.repsForSide(WorkoutSide.left) == 0
         ? ''
         : '${set.repsForSide(WorkoutSide.left)}';
     _leftRir.text = set.rirForSide(WorkoutSide.left)?.toString() ?? '';
     _rightWeight.text = _number(
-      WeightConverter.displayWeight(
-        set.weightForSide(WorkoutSide.right),
-        unit,
-      ),
+      WeightConverter.displayWeight(set.weightForSide(WorkoutSide.right), unit),
     );
     _rightReps.text = set.repsForSide(WorkoutSide.right) == 0
         ? ''
@@ -70,7 +64,9 @@ class _UnilateralQuickEditorWebState
 
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(activeWorkoutProvider.select((state) => state.session));
+    final session = ref.watch(
+      activeWorkoutProvider.select((state) => state.session),
+    );
     final settings = ref.watch(settingsProvider);
     if (session == null) return const SizedBox.shrink();
 
@@ -93,11 +89,15 @@ class _UnilateralQuickEditorWebState
       if (set != null) break;
     }
 
-    if (exerciseIndex == null || setIndex == null || exercise == null || set == null) {
+    if (exerciseIndex == null ||
+        setIndex == null ||
+        exercise == null ||
+        set == null) {
       return const SizedBox.shrink();
     }
 
-    final key = '${session.id}:${exercise.exerciseId}:$setIndex:${set.leftCompleted}:${set.rightCompleted}';
+    final key =
+        '${session.id}:${exercise.exerciseId}:$setIndex:${set.leftCompleted}:${set.rightCompleted}';
     _bind(set, settings.weightUnit, key);
 
     return ConstrainedBox(
@@ -105,12 +105,14 @@ class _UnilateralQuickEditorWebState
       child: Material(
         elevation: settings.performanceMode == PerformanceMode.savings ? 0 : 10,
         borderRadius: BorderRadius.circular(18),
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.28)),
+            border: Border.all(
+              color: AppColors.of(context).primary.withValues(alpha: 0.28),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -118,7 +120,10 @@ class _UnilateralQuickEditorWebState
             children: [
               Row(
                 children: [
-                  const Icon(Icons.compare_arrows, color: AppColors.primary),
+                  Icon(
+                    Icons.compare_arrows,
+                    color: AppColors.of(context).primary,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -131,7 +136,7 @@ class _UnilateralQuickEditorWebState
                         ? 'Mismo peso'
                         : 'Peso independiente',
                     style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                 ],
@@ -148,7 +153,8 @@ class _UnilateralQuickEditorWebState
                       reps: _leftReps,
                       rir: _leftRir,
                       unit: settings.weightUnit,
-                      rirEnabled: settings.isRirEnabled &&
+                      rirEnabled:
+                          settings.isRirEnabled &&
                           set.setType == WorkoutSetType.working,
                       onCommit: () => _commitSide(
                         exerciseIndex: exerciseIndex!,
@@ -168,7 +174,8 @@ class _UnilateralQuickEditorWebState
                       reps: _rightReps,
                       rir: _rightRir,
                       unit: settings.weightUnit,
-                      rirEnabled: settings.isRirEnabled &&
+                      rirEnabled:
+                          settings.isRirEnabled &&
                           set.setType == WorkoutSetType.working,
                       onCommit: () => _commitSide(
                         exerciseIndex: exerciseIndex!,
@@ -187,7 +194,7 @@ class _UnilateralQuickEditorWebState
                     ? 'Sin descanso automático entre lados.'
                     : 'Al completar el primer lado, el descanso entre lados usa ${set.sideRestSeconds}s. El descanso posterior a la serie sigue siendo independiente.',
                 style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ],
@@ -207,11 +214,9 @@ class _UnilateralQuickEditorWebState
     final left = side == WorkoutSide.left;
     final alreadyCompleted = set.completedForSide(side);
     if (alreadyCompleted) {
-      ref.read(activeWorkoutProvider.notifier).toggleUnilateralSide(
-            exerciseIndex,
-            setIndex,
-            left: left,
-          );
+      ref
+          .read(activeWorkoutProvider.notifier)
+          .toggleUnilateralSide(exerciseIndex, setIndex, left: left);
       return;
     }
 
@@ -219,7 +224,10 @@ class _UnilateralQuickEditorWebState
     final repsText = left ? _leftReps.text : _rightReps.text;
     final rirText = left ? _leftRir.text : _rightRir.text;
     final displayWeight = double.tryParse(weightText.replaceAll(',', '.')) ?? 0;
-    final weight = WeightConverter.toCanonicalKg(displayWeight, settings.weightUnit);
+    final weight = WeightConverter.toCanonicalKg(
+      displayWeight,
+      settings.weightUnit,
+    );
     final reps = int.tryParse(repsText) ?? 0;
     final rir = int.tryParse(rirText);
 
@@ -258,11 +266,7 @@ class _UnilateralQuickEditorWebState
 
     final notifier = ref.read(activeWorkoutProvider.notifier);
     notifier.updateSet(exerciseIndex, setIndex, draft);
-    notifier.toggleUnilateralSide(
-      exerciseIndex,
-      setIndex,
-      left: left,
-    );
+    notifier.toggleUnilateralSide(exerciseIndex, setIndex, left: left);
   }
 }
 
@@ -292,10 +296,14 @@ class _SideColumn extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: completed ? AppColors.successFaded : AppColors.surfaceHigh,
+        color: completed
+            ? AppColors.of(context).successFaded
+            : AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.md_,
         border: Border.all(
-          color: completed ? AppColors.success : AppColors.border,
+          color: completed
+              ? AppColors.of(context).success
+              : AppColors.of(context).border,
         ),
       ),
       child: Column(
@@ -310,9 +318,12 @@ class _SideColumn extends StatelessWidget {
                 child: TextField(
                   controller: weight,
                   enabled: !completed,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: 'Peso (${unit.label})'),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: 'Peso (${unit.label})',
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -343,7 +354,7 @@ class _SideColumn extends StatelessWidget {
           FilledButton.icon(
             onPressed: onCommit,
             style: FilledButton.styleFrom(
-              backgroundColor: completed ? AppColors.success : null,
+              backgroundColor: completed ? AppColors.of(context).success : null,
             ),
             icon: Icon(completed ? Icons.undo_rounded : Icons.check_rounded),
             label: Text(completed ? 'Desmarcar lado' : 'Completar lado'),

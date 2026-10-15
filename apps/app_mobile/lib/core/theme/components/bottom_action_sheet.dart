@@ -10,14 +10,16 @@ class BottomActionSheet {
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + MediaQuery.of(ctx).padding.bottom,
+            bottom:
+                MediaQuery.of(ctx).viewInsets.bottom +
+                MediaQuery.of(ctx).padding.bottom,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -27,15 +29,15 @@ class BottomActionSheet {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceBorder,
+                  color: AppColors.of(context).surfaceBorder,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
                 title,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: AppColors.of(context).textPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),

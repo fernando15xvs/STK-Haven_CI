@@ -47,12 +47,14 @@ class _PremiumCardState extends State<PremiumCard> {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = widget.backgroundColor ?? AppColors.surface;
-    final bColor = widget.borderColor ?? AppColors.surfaceBorder;
+    final bgColor = widget.backgroundColor ?? AppColors.of(context).surface;
+    final bColor = widget.borderColor ?? AppColors.of(context).surfaceBorder;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
 
     final content = AnimatedContainer(
-      duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 120),
+      duration: reduceMotion
+          ? Duration.zero
+          : const Duration(milliseconds: 120),
       curve: Curves.easeOut,
       transform: Matrix4.diagonal3Values(
         _isPressed ? 0.985 : 1.0,
@@ -64,13 +66,7 @@ class _PremiumCardState extends State<PremiumCard> {
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: bColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.14),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        boxShadow: AppColors.of(context).shadows,
       ),
       child: widget.child,
     );

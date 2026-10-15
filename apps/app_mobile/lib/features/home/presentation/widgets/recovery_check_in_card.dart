@@ -25,7 +25,7 @@ class RecoveryCheckInCard extends ConsumerWidget {
 
     return PremiumCard(
       onTap: () => _showCheckInSheet(context, ref, checkIn),
-      borderColor: _statusColor(checkIn).withValues(alpha: 0.32),
+      borderColor: _statusColor(context, checkIn).withValues(alpha: 0.32),
       child: checkIn == null
           ? _EmptyRecoveryState(onHistory: onHistory)
           : _RecoverySummary(
@@ -50,7 +50,7 @@ class RecoveryCheckInCard extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
@@ -72,7 +72,7 @@ class RecoveryCheckInCard extends ConsumerWidget {
                       width: 44,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.textDisabled,
+                        color: AppColors.of(context).textDisabled,
                         borderRadius: BorderRadius.circular(99),
                       ),
                     ),
@@ -86,7 +86,7 @@ class RecoveryCheckInCard extends ConsumerWidget {
                   Text(
                     'Cuatro respuestas rápidas para ajustar mejor la exigencia de hoy.',
                     style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
+                      color: AppColors.of(context).textSecondary,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),
@@ -127,7 +127,9 @@ class RecoveryCheckInCard extends ConsumerWidget {
                     height: 54,
                     child: FilledButton.icon(
                       onPressed: () async {
-                        await ref.read(recoveryProvider.notifier).save(
+                        await ref
+                            .read(recoveryProvider.notifier)
+                            .save(
                               energy: energy,
                               sleep: sleep,
                               stress: stress,
@@ -152,12 +154,12 @@ class RecoveryCheckInCard extends ConsumerWidget {
     );
   }
 
-  static Color _statusColor(RecoveryCheckIn? checkIn) {
-    if (checkIn == null) return AppColors.primary;
+  static Color _statusColor(BuildContext context, RecoveryCheckIn? checkIn) {
+    if (checkIn == null) return AppColors.of(context).primary;
     return switch (checkIn.status) {
-      RecoveryStatus.ready => AppColors.success,
-      RecoveryStatus.moderate => AppColors.warning,
-      RecoveryStatus.low => AppColors.error,
+      RecoveryStatus.ready => AppColors.of(context).success,
+      RecoveryStatus.moderate => AppColors.of(context).warning,
+      RecoveryStatus.low => AppColors.of(context).error,
     };
   }
 }
@@ -175,10 +177,13 @@ class _EmptyRecoveryState extends StatelessWidget {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: AppColors.primaryFaded,
+            color: AppColors.of(context).primaryFaded,
             borderRadius: AppRadius.md_,
           ),
-          child: const Icon(Icons.favorite_outline, color: AppColors.primary),
+          child: Icon(
+            Icons.favorite_outline,
+            color: AppColors.of(context).primary,
+          ),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
@@ -193,7 +198,7 @@ class _EmptyRecoveryState extends StatelessWidget {
               Text(
                 'Haz un check-in de 20 segundos antes de entrenar.',
                 style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ],
@@ -203,13 +208,13 @@ class _EmptyRecoveryState extends StatelessWidget {
           IconButton(
             tooltip: 'Ver historial de recuperación',
             onPressed: onHistory,
-            icon: const Icon(
+            icon: Icon(
               Icons.insights_outlined,
-              color: AppColors.primary,
+              color: AppColors.of(context).primary,
             ),
           )
         else
-          const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          Icon(Icons.chevron_right, color: AppColors.of(context).textSecondary),
       ],
     );
   }
@@ -229,9 +234,9 @@ class _RecoverySummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (checkIn.status) {
-      RecoveryStatus.ready => AppColors.success,
-      RecoveryStatus.moderate => AppColors.warning,
-      RecoveryStatus.low => AppColors.error,
+      RecoveryStatus.ready => AppColors.of(context).success,
+      RecoveryStatus.moderate => AppColors.of(context).warning,
+      RecoveryStatus.low => AppColors.of(context).error,
     };
     final trends = <(String, RecoveryMetricTrend?)>[
       ('Energía', history.energyTrend),
@@ -255,7 +260,7 @@ class _RecoverySummary extends StatelessWidget {
                   CircularProgressIndicator(
                     value: checkIn.score / 100,
                     strokeWidth: 5,
-                    backgroundColor: AppColors.surfaceBorder,
+                    backgroundColor: AppColors.of(context).surfaceBorder,
                     color: color,
                   ),
                   Text(
@@ -286,31 +291,31 @@ class _RecoverySummary extends StatelessWidget {
               IconButton(
                 tooltip: 'Ver historial de recuperación',
                 onPressed: onHistory,
-                icon: const Icon(
+                icon: Icon(
                   Icons.insights_outlined,
-                  color: AppColors.primary,
+                  color: AppColors.of(context).primary,
                 ),
               )
             else
-              const Icon(Icons.tune, color: AppColors.textSecondary),
+              Icon(Icons.tune, color: AppColors.of(context).textSecondary),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
           checkIn.recommendation,
           style: AppTypography.bodyMedium.copyWith(
-            color: AppColors.textSecondary,
+            color: AppColors.of(context).textSecondary,
             height: 1.45,
           ),
         ),
         if (visibleTrends.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          Divider(color: AppColors.surfaceBorder),
+          Divider(color: AppColors.of(context).surfaceBorder),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'TENDENCIA RECIENTE',
             style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
           ),
           const SizedBox(height: 7),
@@ -318,12 +323,7 @@ class _RecoverySummary extends StatelessWidget {
             spacing: 7,
             runSpacing: 7,
             children: visibleTrends
-                .map(
-                  (item) => _TrendChip(
-                    label: item.$1,
-                    trend: item.$2!,
-                  ),
-                )
+                .map((item) => _TrendChip(label: item.$1, trend: item.$2!))
                 .toList(growable: false),
           ),
         ],
@@ -344,14 +344,14 @@ class _TrendChip extends StatelessWidget {
     final symbol = trend.isStable
         ? '→'
         : delta > 0
-            ? '↑'
-            : '↓';
+        ? '↑'
+        : '↓';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.surfaceHigh,
+        color: AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.sm_,
-        border: Border.all(color: AppColors.surfaceBorder),
+        border: Border.all(color: AppColors.of(context).surfaceBorder),
       ),
       child: Text(
         '$label $symbol ${trend.recentAverage.toStringAsFixed(1)}/5',
@@ -383,7 +383,7 @@ class _RatingRow extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(icon, size: 20, color: AppColors.primary),
+            Icon(icon, size: 20, color: AppColors.of(context).primary),
             const SizedBox(width: AppSpacing.xs),
             Text(label, style: AppTypography.headlineSmall),
           ],
@@ -392,7 +392,7 @@ class _RatingRow extends StatelessWidget {
         Text(
           hint,
           style: AppTypography.bodySmall.copyWith(
-            color: AppColors.textSecondary,
+            color: AppColors.of(context).textSecondary,
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -402,8 +402,7 @@ class _RatingRow extends StatelessWidget {
             final selected = rating == value;
             return Expanded(
               child: Padding(
-                padding:
-                    EdgeInsets.only(right: index == 4 ? 0 : AppSpacing.xs),
+                padding: EdgeInsets.only(right: index == 4 ? 0 : AppSpacing.xs),
                 child: InkWell(
                   onTap: () => onChanged(rating),
                   borderRadius: AppRadius.sm_,
@@ -413,21 +412,22 @@ class _RatingRow extends StatelessWidget {
                     height: 44,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color:
-                          selected ? AppColors.primary : AppColors.surface,
+                      color: selected
+                          ? AppColors.of(context).primary
+                          : AppColors.of(context).surface,
                       borderRadius: AppRadius.sm_,
                       border: Border.all(
                         color: selected
-                            ? AppColors.primary
-                            : AppColors.surfaceBorder,
+                            ? AppColors.of(context).primary
+                            : AppColors.of(context).surfaceBorder,
                       ),
                     ),
                     child: Text(
                       '$rating',
                       style: AppTypography.labelLarge.copyWith(
                         color: selected
-                            ? Colors.white
-                            : AppColors.textSecondary,
+                            ? AppColors.of(context).onPrimary
+                            : AppColors.of(context).textSecondary,
                       ),
                     ),
                   ),

@@ -50,8 +50,9 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
     setState(() {
       _focusMode = !_focusMode;
       if (_focusMode) {
-        final current =
-            session.exercises.indexWhere((exercise) => !exercise.completed);
+        final current = session.exercises.indexWhere(
+          (exercise) => !exercise.completed,
+        );
         if (current >= 0) {
           _selectedExercise = current;
         } else if (_selectedExercise >= session.exercises.length) {
@@ -69,8 +70,7 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
       final effective = exercise.sets
           .where((set) => set.setType == WorkoutSetType.working)
           .toList(growable: false);
-      return effective.isNotEmpty &&
-          effective.any((set) => !set.completed);
+      return effective.isNotEmpty && effective.any((set) => !set.completed);
     }).length;
 
     if (incomplete > 0) {
@@ -109,8 +109,9 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
     // mobile browsers when an incomplete workout is saved.
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
-    final result =
-        await ref.read(activeWorkoutProvider.notifier).finishWorkout();
+    final result = await ref
+        .read(activeWorkoutProvider.notifier)
+        .finishWorkout();
     if (!mounted) return;
     setState(() => _finishing = false);
 
@@ -139,7 +140,9 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.of(context).error,
+              ),
               child: const Text('Descartar'),
             ),
           ],
@@ -176,7 +179,9 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.of(context).error,
+            ),
             child: const Text('Descartar'),
           ),
         ],
@@ -228,10 +233,10 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.fitness_center,
                 size: 54,
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
               const SizedBox(height: 12),
               const Text('No hay un entrenamiento activo.'),
@@ -254,7 +259,7 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
     final currentIndex = session.exercises.indexWhere((e) => !e.completed);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +272,7 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
             Text(
               _formatTime(elapsed),
               style: AppTypography.labelMedium.copyWith(
-                color: AppColors.primary,
+                color: AppColors.of(context).primary,
               ),
             ),
           ],
@@ -275,21 +280,24 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
         actions: [
           IconButton(
             tooltip: _focusMode ? 'Salir del modo enfoque' : 'Modo enfoque',
-            onPressed:
-                session.exercises.isEmpty ? null : () => _toggleFocus(session),
+            onPressed: session.exercises.isEmpty
+                ? null
+                : () => _toggleFocus(session),
             icon: Icon(
               _focusMode
                   ? Icons.view_agenda_outlined
                   : Icons.center_focus_strong_outlined,
-              color: _focusMode ? AppColors.primary : AppColors.textSecondary,
+              color: _focusMode
+                  ? AppColors.of(context).primary
+                  : AppColors.of(context).textSecondary,
             ),
           ),
           IconButton(
             tooltip: 'Calculadora de discos',
             onPressed: () => BarbellCalculatorDialogWeb.show(context),
-            icon: const Icon(
+            icon: Icon(
               Icons.calculate_outlined,
-              color: AppColors.primary,
+              color: AppColors.of(context).primary,
             ),
           ),
           PopupMenuButton<String>(
@@ -334,9 +342,7 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   if (session.exercises.isEmpty) {
-                    return _EmptyWorkoutExercises(
-                      onAddExercise: _addExercise,
-                    );
+                    return _EmptyWorkoutExercises(onAddExercise: _addExercise);
                   }
 
                   if (_focusMode) {
@@ -374,23 +380,24 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
                             exerciseIndex: index,
                             exercise: session.exercises[index],
                             settings: settings,
-                            isCurrent: index == currentIndex ||
+                            isCurrent:
+                                index == currentIndex ||
                                 (currentIndex == -1 &&
                                     index == session.exercises.length - 1),
                             totalExercises: session.exercises.length,
                             onMoveUp: index > 0
                                 ? () => _moveExercise(
-                                      index,
-                                      -1,
-                                      session.exercises.length,
-                                    )
+                                    index,
+                                    -1,
+                                    session.exercises.length,
+                                  )
                                 : null,
                             onMoveDown: index < session.exercises.length - 1
                                 ? () => _moveExercise(
-                                      index,
-                                      1,
-                                      session.exercises.length,
-                                    )
+                                    index,
+                                    1,
+                                    session.exercises.length,
+                                  )
                                 : null,
                           ),
                         );
@@ -424,24 +431,24 @@ class _ActiveWorkoutPageWebState extends ConsumerState<ActiveWorkoutPageWeb> {
                               constraints: const BoxConstraints(maxWidth: 850),
                               child: _ExerciseEditor(
                                 exerciseIndex: _selectedExercise,
-                                exercise:
-                                    session.exercises[_selectedExercise],
+                                exercise: session.exercises[_selectedExercise],
                                 settings: settings,
                                 totalExercises: session.exercises.length,
                                 onMoveUp: _selectedExercise > 0
                                     ? () => _moveExercise(
-                                          _selectedExercise,
-                                          -1,
-                                          session.exercises.length,
-                                        )
+                                        _selectedExercise,
+                                        -1,
+                                        session.exercises.length,
+                                      )
                                     : null,
-                                onMoveDown: _selectedExercise <
+                                onMoveDown:
+                                    _selectedExercise <
                                         session.exercises.length - 1
                                     ? () => _moveExercise(
-                                          _selectedExercise,
-                                          1,
-                                          session.exercises.length,
-                                        )
+                                        _selectedExercise,
+                                        1,
+                                        session.exercises.length,
+                                      )
                                     : null,
                               ),
                             ),
@@ -487,12 +494,17 @@ class _FocusWorkoutPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryFaded,
+                  color: AppColors.of(context).primaryFaded,
                   borderRadius: AppRadius.md_,
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.25),
+                    color: AppColors.of(
+                      context,
+                    ).primary.withValues(alpha: 0.25),
                   ),
                 ),
                 child: Row(
@@ -508,7 +520,7 @@ class _FocusWorkoutPanel extends StatelessWidget {
                           Text(
                             'MODO ENFOQUE',
                             style: AppTypography.labelSmall.copyWith(
-                              color: AppColors.primary,
+                              color: AppColors.of(context).primary,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -557,10 +569,10 @@ class _EmptyWorkoutExercises extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.add_task,
               size: 52,
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
             ),
             const SizedBox(height: 12),
             Text(
@@ -597,17 +609,21 @@ class _RestBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-      color: AppColors.primary.withValues(alpha: 0.12),
+      color: AppColors.of(context).primary.withValues(alpha: 0.12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.timer_outlined, color: AppColors.primary, size: 20),
+          Icon(
+            Icons.timer_outlined,
+            color: AppColors.of(context).primary,
+            size: 20,
+          ),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               'Descanso ${format(seconds)}',
               style: AppTypography.headlineSmall.copyWith(
-                color: AppColors.primary,
+                color: AppColors.of(context).primary,
               ),
             ),
           ),
@@ -662,22 +678,26 @@ class _MobileExerciseCardState extends State<_MobileExerciseCard> {
         .where((set) => set.setType == WorkoutSetType.working)
         .toList();
     final doneWorking = working.where((set) => set.completed).length;
-    final leftDone =
-        widget.exercise.sets.where((set) => set.leftCompleted).length;
-    final rightDone =
-        widget.exercise.sets.where((set) => set.rightCompleted).length;
+    final leftDone = widget.exercise.sets
+        .where((set) => set.leftCompleted)
+        .length;
+    final rightDone = widget.exercise.sets
+        .where((set) => set.rightCompleted)
+        .length;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       decoration: BoxDecoration(
-        color: expanded ? AppColors.surface : AppColors.surfaceHigh,
+        color: expanded
+            ? AppColors.of(context).surface
+            : AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.lg_,
         border: Border.all(
           color: completed
-              ? AppColors.success.withValues(alpha: 0.32)
+              ? AppColors.of(context).success.withValues(alpha: 0.32)
               : widget.isCurrent
-                  ? AppColors.primary.withValues(alpha: 0.32)
-                  : AppColors.border,
+              ? AppColors.of(context).primary.withValues(alpha: 0.32)
+              : AppColors.of(context).border,
         ),
       ),
       child: Column(
@@ -695,18 +715,18 @@ class _MobileExerciseCardState extends State<_MobileExerciseCard> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: completed
-                          ? AppColors.successFaded
+                          ? AppColors.of(context).successFaded
                           : widget.isCurrent
-                              ? AppColors.primaryFaded
-                              : AppColors.background,
+                          ? AppColors.of(context).primaryFaded
+                          : AppColors.of(context).background,
                     ),
                     child: Icon(
                       completed ? Icons.check : Icons.fitness_center,
                       color: completed
-                          ? AppColors.success
+                          ? AppColors.of(context).success
                           : widget.isCurrent
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
+                          ? AppColors.of(context).primary
+                          : AppColors.of(context).textSecondary,
                       size: 19,
                     ),
                   ),
@@ -727,8 +747,8 @@ class _MobileExerciseCardState extends State<_MobileExerciseCard> {
                             '${widget.exercise.unilateralTarget.label} · I $leftDone/${widget.exercise.sets.length} · D $rightDone/${widget.exercise.sets.length}',
                             style: AppTypography.bodySmall.copyWith(
                               color: completed
-                                  ? AppColors.success
-                                  : AppColors.textSecondary,
+                                  ? AppColors.of(context).success
+                                  : AppColors.of(context).textSecondary,
                             ),
                           )
                         else
@@ -736,8 +756,8 @@ class _MobileExerciseCardState extends State<_MobileExerciseCard> {
                             '$doneWorking/${working.length} series efectivas${completed ? ' · Completado' : ''}',
                             style: AppTypography.bodySmall.copyWith(
                               color: completed
-                                  ? AppColors.success
-                                  : AppColors.textSecondary,
+                                  ? AppColors.of(context).success
+                                  : AppColors.of(context).textSecondary,
                             ),
                           ),
                       ],
@@ -745,7 +765,7 @@ class _MobileExerciseCardState extends State<_MobileExerciseCard> {
                   ),
                   Icon(
                     expanded ? Icons.expand_less : Icons.expand_more,
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ],
               ),
@@ -814,13 +834,15 @@ class _ExerciseNavigation extends StatelessWidget {
             itemBuilder: (context, index) {
               final exercise = exercises[index];
               final completed = exercise.completed;
-              final leftDone =
-                  exercise.sets.where((set) => set.leftCompleted).length;
-              final rightDone =
-                  exercise.sets.where((set) => set.rightCompleted).length;
+              final leftDone = exercise.sets
+                  .where((set) => set.leftCompleted)
+                  .length;
+              final rightDone = exercise.sets
+                  .where((set) => set.rightCompleted)
+                  .length;
               return Material(
                 color: index == selectedIndex
-                    ? AppColors.primary.withValues(alpha: 0.1)
+                    ? AppColors.of(context).primary.withValues(alpha: 0.1)
                     : Colors.transparent,
                 borderRadius: AppRadius.md_,
                 child: InkWell(
@@ -835,8 +857,8 @@ class _ExerciseNavigation extends StatelessWidget {
                               ? Icons.check_circle
                               : Icons.radio_button_unchecked,
                           color: completed
-                              ? AppColors.success
-                              : AppColors.textSecondary,
+                              ? AppColors.of(context).success
+                              : AppColors.of(context).textSecondary,
                         ),
                         const SizedBox(width: 9),
                         Expanded(
@@ -991,7 +1013,9 @@ class _ExerciseEditor extends ConsumerWidget {
       ),
     );
     if (result == null) return;
-    ref.read(activeWorkoutProvider.notifier).configureExerciseUnilateral(
+    ref
+        .read(activeWorkoutProvider.notifier)
+        .configureExerciseUnilateral(
           exerciseIndex,
           unilateral: result.$1,
           target: result.$2,
@@ -1013,7 +1037,8 @@ class _ExerciseEditor extends ConsumerWidget {
             maxLines: 7,
             maxLength: 300,
             decoration: const InputDecoration(
-              hintText: 'Ej.: cuidar técnica, agarre, dolor, ajuste del banco...',
+              hintText:
+                  'Ej.: cuidar técnica, agarre, dolor, ajuste del banco...',
             ),
           ),
         ),
@@ -1100,7 +1125,7 @@ class _ExerciseEditor extends ConsumerWidget {
                     Text(
                       exercise.muscleGroupSnapshot,
                       style: AppTypography.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                   ],
@@ -1113,16 +1138,16 @@ class _ExerciseEditor extends ConsumerWidget {
               icon: Icon(
                 Icons.edit_note_outlined,
                 color: exercise.notes.trim().isNotEmpty
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
+                    ? AppColors.of(context).primary
+                    : AppColors.of(context).textSecondary,
               ),
             ),
             IconButton(
               tooltip: 'Sustituir ejercicio',
               onPressed: () => _replaceExercise(context, ref),
-              icon: const Icon(
+              icon: Icon(
                 Icons.swap_horiz,
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
             IconButton(
@@ -1133,8 +1158,8 @@ class _ExerciseEditor extends ConsumerWidget {
               icon: Icon(
                 Icons.compare_arrows,
                 color: exercise.unilateral
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
+                    ? AppColors.of(context).primary
+                    : AppColors.of(context).textSecondary,
               ),
             ),
             if (totalExercises > 1) ...[
@@ -1157,24 +1182,21 @@ class _ExerciseEditor extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.surfaceHigh,
+              color: AppColors.of(context).surfaceHigh,
               borderRadius: AppRadius.md_,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.of(context).border),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
+                Icon(
                   Icons.sticky_note_2_outlined,
                   size: 18,
-                  color: AppColors.primary,
+                  color: AppColors.of(context).primary,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    exercise.notes,
-                    style: AppTypography.bodyMedium,
-                  ),
+                  child: Text(exercise.notes, style: AppTypography.bodyMedium),
                 ),
               ],
             ),
@@ -1186,25 +1208,25 @@ class _ExerciseEditor extends ConsumerWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.primaryFaded,
+              color: AppColors.of(context).primaryFaded,
               borderRadius: AppRadius.md_,
               border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.22),
+                color: AppColors.of(context).primary.withValues(alpha: 0.22),
               ),
             ),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.compare_arrows,
                   size: 18,
-                  color: AppColors.primary,
+                  color: AppColors.of(context).primary,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '${exercise.unilateralTarget.label}: registra cada lado por separado. Descanso entre lados: ${settings.unilateralSideRestSeconds}s; el descanso de serie sigue siendo independiente.',
                     style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.primary,
+                      color: AppColors.of(context).primary,
                     ),
                   ),
                 ),
@@ -1224,20 +1246,24 @@ class _ExerciseEditor extends ConsumerWidget {
         const SizedBox(height: 16),
         ...List.generate(exercise.sets.length, (setIndex) {
           final set = exercise.sets[setIndex];
-          final previousSet = previous != null && setIndex < previous.sets.length
+          final previousSet =
+              previous != null && setIndex < previous.sets.length
               ? previous.sets[setIndex]
               : null;
           return Padding(
             padding: const EdgeInsets.only(bottom: 9),
             child: _SetEditor(
-              key: ValueKey('${exercise.exerciseId}_${exercise.sets.length}_${set.setType.name}_$setIndex'),
+              key: ValueKey(
+                '${exercise.exerciseId}_${exercise.sets.length}_${set.setType.name}_$setIndex',
+              ),
               exerciseIndex: exerciseIndex,
               setIndex: setIndex,
               set: set,
               previousSet: previousSet,
               weightUnit: settings.weightUnit,
               rirEnabled:
-                  settings.isRirEnabled && set.setType == WorkoutSetType.working,
+                  settings.isRirEnabled &&
+                  set.setType == WorkoutSetType.working,
               canDelete: exercise.sets.length > 1,
               unilateral: exercise.unilateral,
               unilateralTarget: exercise.unilateralTarget,
@@ -1275,9 +1301,9 @@ class _ExerciseEditor extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: content,
     );
@@ -1293,7 +1319,7 @@ class _AddSetButton extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         borderRadius: AppRadius.md_,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.of(context).border),
       ),
       child: const Row(
         mainAxisSize: MainAxisSize.min,
@@ -1317,18 +1343,19 @@ class _SetTypeBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (type) {
-      WorkoutSetType.mobility => AppColors.info,
-      WorkoutSetType.warmup => AppColors.warning,
-      WorkoutSetType.approach => AppColors.gold,
-      WorkoutSetType.working => AppColors.primary,
-      WorkoutSetType.stretching => AppColors.success,
+      WorkoutSetType.mobility => AppColors.of(context).info,
+      WorkoutSetType.warmup => AppColors.of(context).warning,
+      WorkoutSetType.approach => AppColors.of(context).gold,
+      WorkoutSetType.working => AppColors.of(context).primary,
+      WorkoutSetType.stretching => AppColors.of(context).success,
     };
     return Container(
       constraints: const BoxConstraints(minWidth: 28),
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: AppColors.background == AppColors.background
+        borderRadius:
+            AppColors.of(context).background == AppColors.of(context).background
             ? BorderRadius.circular(AppRadius.full)
             : AppRadius.sm_,
         border: Border.all(color: color.withValues(alpha: 0.3)),
@@ -1378,9 +1405,10 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
 
   String _number(double value) => value == 0
       ? ''
-      : value.toStringAsFixed(2)
-          .replaceFirst(RegExp(r'0+$'), '')
-          .replaceFirst(RegExp(r'\.$'), '');
+      : value
+            .toStringAsFixed(2)
+            .replaceFirst(RegExp(r'0+$'), '')
+            .replaceFirst(RegExp(r'\.$'), '');
 
   String _sideLabel(bool left) {
     final side = left ? WorkoutSide.left : WorkoutSide.right;
@@ -1452,7 +1480,9 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
         : WeightConverter.toCanonicalKg(displayWeight, widget.weightUnit);
     final reps = int.tryParse(_reps.text) ?? 0;
     final rir = int.tryParse(_rir.text);
-    ref.read(activeWorkoutProvider.notifier).updateSet(
+    ref
+        .read(activeWorkoutProvider.notifier)
+        .updateSet(
           widget.exerciseIndex,
           widget.setIndex,
           widget.set.copyWith(
@@ -1503,7 +1533,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
     );
   }
 
-  Widget _sideButton({required bool left}) {
+  Widget _sideButton(BuildContext context, {required bool left}) {
     final selected = left
         ? widget.set.leftCompleted
         : widget.set.rightCompleted;
@@ -1511,23 +1541,30 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
       child: OutlinedButton.icon(
         onPressed: () {
           _flushUpdate();
-          ref.read(activeWorkoutProvider.notifier).toggleUnilateralSide(
+          ref
+              .read(activeWorkoutProvider.notifier)
+              .toggleUnilateralSide(
                 widget.exerciseIndex,
                 widget.setIndex,
                 left: left,
               );
         },
         style: OutlinedButton.styleFrom(
-          backgroundColor:
-              selected ? AppColors.successFaded : Colors.transparent,
+          backgroundColor: selected
+              ? AppColors.of(context).successFaded
+              : Colors.transparent,
           side: BorderSide(
-            color: selected ? AppColors.success : AppColors.border,
+            color: selected
+                ? AppColors.of(context).success
+                : AppColors.of(context).border,
           ),
           minimumSize: const Size(0, 46),
         ),
         icon: Icon(
           selected ? Icons.check_circle : Icons.circle_outlined,
-          color: selected ? AppColors.success : AppColors.textSecondary,
+          color: selected
+              ? AppColors.of(context).success
+              : AppColors.of(context).textSecondary,
           size: 18,
         ),
         label: Text(
@@ -1550,14 +1587,16 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: done ? AppColors.successFaded : AppColors.surfaceHigh,
+        color: done
+            ? AppColors.of(context).successFaded
+            : AppColors.of(context).surfaceHigh,
         borderRadius: AppRadius.md_,
         border: Border.all(
           color: done
-              ? AppColors.success.withValues(alpha: 0.35)
+              ? AppColors.of(context).success.withValues(alpha: 0.35)
               : widget.set.setType == WorkoutSetType.working
-                  ? AppColors.border
-                  : AppColors.warning.withValues(alpha: 0.22),
+              ? AppColors.of(context).border
+              : AppColors.of(context).warning.withValues(alpha: 0.22),
         ),
       ),
       child: LayoutBuilder(
@@ -1571,8 +1610,9 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
               onPressed: done
                   ? null
                   : () {
-                      final target =
-                          double.tryParse(_weight.text.replaceAll(',', '.'));
+                      final target = double.tryParse(
+                        _weight.text.replaceAll(',', '.'),
+                      );
                       BarbellCalculatorDialogWeb.show(
                         context,
                         initialTargetWeight: target,
@@ -1607,11 +1647,11 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
                   onPressed: done
                       ? null
                       : () => ref
-                          .read(activeWorkoutProvider.notifier)
-                          .removeSet(widget.exerciseIndex, widget.setIndex),
-                  icon: const Icon(
+                            .read(activeWorkoutProvider.notifier)
+                            .removeSet(widget.exerciseIndex, widget.setIndex),
+                  icon: Icon(
                     Icons.delete_outline,
-                    color: AppColors.error,
+                    color: AppColors.of(context).error,
                   ),
                 ),
             ],
@@ -1625,15 +1665,15 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
                     Text(
                       '${widget.unilateralTarget.label} · registra los valores y marca el lado realizado',
                       style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                     const SizedBox(height: 7),
                     Row(
                       children: [
-                        _sideButton(left: true),
+                        _sideButton(context, left: true),
                         const SizedBox(width: 8),
-                        _sideButton(left: false),
+                        _sideButton(context, left: false),
                       ],
                     ),
                     const SizedBox(height: 7),
@@ -1642,7 +1682,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
                           ? 'Sin descanso automático entre lados'
                           : 'Descanso entre lados: ${widget.set.sideRestSeconds}s',
                       style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                       ),
                     ),
                   ],
@@ -1657,7 +1697,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
                 Text(
                   'Anterior: $previousText',
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -1675,7 +1715,9 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
                   FilledButton.icon(
                     onPressed: () => _flushUpdate(completed: !done),
                     style: FilledButton.styleFrom(
-                      backgroundColor: done ? AppColors.success : null,
+                      backgroundColor: done
+                          ? AppColors.of(context).success
+                          : null,
                       minimumSize: const Size(0, 48),
                     ),
                     icon: Icon(done ? Icons.check_circle : Icons.check),
@@ -1717,8 +1759,9 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
                       child: FilledButton.icon(
                         onPressed: () => _flushUpdate(completed: !done),
                         style: FilledButton.styleFrom(
-                          backgroundColor:
-                              done ? AppColors.success : null,
+                          backgroundColor: done
+                              ? AppColors.of(context).success
+                              : null,
                           minimumSize: const Size(0, 48),
                         ),
                         icon: Icon(
@@ -1751,7 +1794,7 @@ class _ProgressionReferenceCardWeb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _progressionColorWeb(suggestion);
+    final color = _progressionColorWeb(context, suggestion);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
@@ -1780,7 +1823,7 @@ class _ProgressionReferenceCardWeb extends StatelessWidget {
           Text(
             FitnessFormatter.progressionExplanation(suggestion),
             style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
               height: 1.35,
             ),
           ),
@@ -1795,14 +1838,14 @@ class _ProgressionReferenceCardWeb extends StatelessWidget {
           Text(
             FitnessFormatter.progressionEvidence(suggestion),
             style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             FitnessFormatter.progressionSafetyNote,
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
             ),
           ),
         ],
@@ -1811,16 +1854,19 @@ class _ProgressionReferenceCardWeb extends StatelessWidget {
   }
 }
 
-Color _progressionColorWeb(ProgressionSuggestion suggestion) {
+Color _progressionColorWeb(
+  BuildContext context,
+  ProgressionSuggestion suggestion,
+) {
   if (suggestion.reason == ProgressionReason.recoveryCaution ||
       suggestion.reason == ProgressionReason.effortTooHigh) {
-    return AppColors.warning;
+    return AppColors.of(context).warning;
   }
   return switch (suggestion.type) {
-    ProgressionType.increase => AppColors.success,
-    ProgressionType.maintain => AppColors.info,
-    ProgressionType.deload => AppColors.warning,
-    ProgressionType.insufficientData => AppColors.textSecondary,
+    ProgressionType.increase => AppColors.of(context).success,
+    ProgressionType.maintain => AppColors.of(context).info,
+    ProgressionType.deload => AppColors.of(context).warning,
+    ProgressionType.insufficientData => AppColors.of(context).textSecondary,
   };
 }
 

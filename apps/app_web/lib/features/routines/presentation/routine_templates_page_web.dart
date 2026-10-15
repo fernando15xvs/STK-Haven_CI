@@ -9,10 +9,12 @@ class RoutineTemplatesPageWeb extends ConsumerStatefulWidget {
   const RoutineTemplatesPageWeb({super.key});
 
   @override
-  ConsumerState<RoutineTemplatesPageWeb> createState() => _RoutineTemplatesPageWebState();
+  ConsumerState<RoutineTemplatesPageWeb> createState() =>
+      _RoutineTemplatesPageWebState();
 }
 
-class _RoutineTemplatesPageWebState extends ConsumerState<RoutineTemplatesPageWeb> {
+class _RoutineTemplatesPageWebState
+    extends ConsumerState<RoutineTemplatesPageWeb> {
   String _level = 'Todos';
   bool _creating = false;
 
@@ -21,13 +23,15 @@ class _RoutineTemplatesPageWebState extends ConsumerState<RoutineTemplatesPageWe
     final templates = ref.watch(routineTemplateServiceProvider).templates;
     final visible = _level == 'Todos'
         ? templates
-        : templates.where((template) => template.level == _level).toList(growable: false);
+        : templates
+              .where((template) => template.level == _level)
+              .toList(growable: false);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       appBar: AppBar(
         title: const Text('Plantillas de rutina'),
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
       ),
       body: SafeArea(
         child: Center(
@@ -41,24 +45,38 @@ class _RoutineTemplatesPageWebState extends ConsumerState<RoutineTemplatesPageWe
                     child: Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.10),
+                        color: AppColors.of(
+                          context,
+                        ).primary.withValues(alpha: 0.10),
                         borderRadius: AppRadius.lg_,
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.28)),
+                        border: Border.all(
+                          color: AppColors.of(
+                            context,
+                          ).primary.withValues(alpha: 0.28),
+                        ),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.auto_awesome_outlined, color: AppColors.primary),
+                          Icon(
+                            Icons.auto_awesome_outlined,
+                            color: AppColors.of(context).primary,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Empieza con una base', style: AppTypography.headlineLarge),
+                                Text(
+                                  'Empieza con una base',
+                                  style: AppTypography.headlineLarge,
+                                ),
                                 const SizedBox(height: 4),
                                 Text(
                                   'Elige una rutina preconfigurada y después personalízala: ejercicios, días, series, superseries y notas.',
-                                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                                  style: AppTypography.bodyMedium.copyWith(
+                                    color: AppColors.of(context).textSecondary,
+                                  ),
                                 ),
                               ],
                             ),
@@ -74,15 +92,17 @@ class _RoutineTemplatesPageWebState extends ConsumerState<RoutineTemplatesPageWe
                     child: Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: ['Todos', 'Principiante', 'Intermedio', 'Avanzado']
-                          .map(
-                            (level) => ChoiceChip(
-                              label: Text(level),
-                              selected: _level == level,
-                              onSelected: (_) => setState(() => _level = level),
-                            ),
-                          )
-                          .toList(growable: false),
+                      children:
+                          ['Todos', 'Principiante', 'Intermedio', 'Avanzado']
+                              .map(
+                                (level) => ChoiceChip(
+                                  label: Text(level),
+                                  selected: _level == level,
+                                  onSelected: (_) =>
+                                      setState(() => _level = level),
+                                ),
+                              )
+                              .toList(growable: false),
                     ),
                   ),
                 ),
@@ -91,7 +111,11 @@ class _RoutineTemplatesPageWebState extends ConsumerState<RoutineTemplatesPageWe
                   sliver: SliverLayoutBuilder(
                     builder: (context, constraints) {
                       final width = constraints.crossAxisExtent;
-                      final columns = width >= 940 ? 3 : width >= 620 ? 2 : 1;
+                      final columns = width >= 940
+                          ? 3
+                          : width >= 620
+                          ? 2
+                          : 1;
                       return SliverGrid(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: columns,
@@ -123,10 +147,14 @@ class _RoutineTemplatesPageWebState extends ConsumerState<RoutineTemplatesPageWe
     if (_creating) return;
     setState(() => _creating = true);
     try {
-      final routine = await ref.read(routineTemplateServiceProvider).createFromTemplate(template);
+      final routine = await ref
+          .read(routineTemplateServiceProvider)
+          .createFromTemplate(template);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Se creó “${routine.name}”. Ya puedes personalizarla.')),
+        SnackBar(
+          content: Text('Se creó “${routine.name}”. Ya puedes personalizarla.'),
+        ),
       );
       Navigator.of(context).pop(routine);
     } finally {
@@ -152,10 +180,10 @@ class _TemplateCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppElevation.soft,
+        border: Border.all(color: AppColors.of(context).border),
+        boxShadow: AppElevation.soft(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,12 +199,17 @@ class _TemplateCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Chip(label: Text(template.level), visualDensity: VisualDensity.compact),
+              Chip(
+                label: Text(template.level),
+                visualDensity: VisualDensity.compact,
+              ),
             ],
           ),
           Text(
             template.sourceProgramName,
-            style: AppTypography.labelMedium.copyWith(color: AppColors.primary),
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.of(context).primary,
+            ),
           ),
           const SizedBox(height: 10),
           Expanded(
@@ -184,15 +217,25 @@ class _TemplateCard extends StatelessWidget {
               template.description,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.45),
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.of(context).textSecondary,
+                height: 1.45,
+              ),
             ),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.fitness_center, size: 16, color: AppColors.textSecondary),
+              Icon(
+                Icons.fitness_center,
+                size: 16,
+                color: AppColors.of(context).textSecondary,
+              ),
               const SizedBox(width: 6),
-              Text('${template.exerciseCount} ejercicios', style: AppTypography.bodySmall),
+              Text(
+                '${template.exerciseCount} ejercicios',
+                style: AppTypography.bodySmall,
+              ),
               const Spacer(),
               ...List.generate(7, (index) {
                 final active = template.suggestedDays.contains(index + 1);
@@ -203,15 +246,25 @@ class _TemplateCard extends StatelessWidget {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: active ? AppColors.primary.withValues(alpha: 0.16) : AppColors.surfaceHigh,
-                    border: Border.all(color: active ? AppColors.primary.withValues(alpha: 0.45) : AppColors.border),
+                    color: active
+                        ? AppColors.of(context).primary.withValues(alpha: 0.16)
+                        : AppColors.of(context).surfaceHigh,
+                    border: Border.all(
+                      color: active
+                          ? AppColors.of(
+                              context,
+                            ).primary.withValues(alpha: 0.45)
+                          : AppColors.of(context).border,
+                    ),
                   ),
                   child: Text(
                     dayLabels[index],
                     style: TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
-                      color: active ? AppColors.primary : AppColors.textDisabled,
+                      color: active
+                          ? AppColors.of(context).primary
+                          : AppColors.of(context).textDisabled,
                     ),
                   ),
                 );

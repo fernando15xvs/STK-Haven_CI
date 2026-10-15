@@ -1,4 +1,8 @@
+import 'appearance_settings.dart';
+export 'appearance_settings.dart';
 import 'package:core/domain/models/active_program_state.dart';
+
+enum RestTimingMode { completedSet, nextSet }
 
 enum WeightUnit { kg, lb }
 
@@ -19,24 +23,27 @@ extension WeightUnitExtension on WeightUnit {
 
 extension PreferredWorkoutSideX on PreferredWorkoutSide {
   String get label => switch (this) {
-        PreferredWorkoutSide.automatic => 'Automático',
-        PreferredWorkoutSide.left => 'Izquierda',
-        PreferredWorkoutSide.right => 'Derecha',
-      };
+    PreferredWorkoutSide.automatic => 'Automático',
+    PreferredWorkoutSide.left => 'Izquierda',
+    PreferredWorkoutSide.right => 'Derecha',
+  };
 }
 
 extension PerformanceModeX on PerformanceMode {
   String get label => switch (this) {
-        PerformanceMode.automatic => 'Automático',
-        PerformanceMode.quality => 'Calidad',
-        PerformanceMode.savings => 'Ahorro',
-      };
+    PerformanceMode.automatic => 'Automático',
+    PerformanceMode.quality => 'Calidad',
+    PerformanceMode.savings => 'Ahorro',
+  };
 }
 
 class SettingsState {
+  final AppearanceSettings appearance;
   final bool isRirEnabled;
   final bool autoRestEnabled;
+  final RestTimingMode restTimingMode;
   final double defaultIncrement;
+
   /// Per-exercise machine/plate step in canonical kilograms.
   final Map<String, double> exerciseIncrementsKg;
   final WeightUnit weightUnit;
@@ -59,8 +66,10 @@ class SettingsState {
   final PerformanceMode performanceMode;
 
   const SettingsState({
+    this.appearance = const AppearanceSettings(),
     this.isRirEnabled = true,
     this.autoRestEnabled = true,
+    this.restTimingMode = RestTimingMode.completedSet,
     this.defaultIncrement = 2.5,
     this.exerciseIncrementsKg = const {},
     this.weightUnit = WeightUnit.kg,
@@ -84,8 +93,10 @@ class SettingsState {
   });
 
   SettingsState copyWith({
+    AppearanceSettings? appearance,
     bool? isRirEnabled,
     bool? autoRestEnabled,
+    RestTimingMode? restTimingMode,
     double? defaultIncrement,
     Map<String, double>? exerciseIncrementsKg,
     WeightUnit? weightUnit,
@@ -109,8 +120,10 @@ class SettingsState {
     PerformanceMode? performanceMode,
   }) {
     return SettingsState(
+      appearance: appearance ?? this.appearance,
       isRirEnabled: isRirEnabled ?? this.isRirEnabled,
       autoRestEnabled: autoRestEnabled ?? this.autoRestEnabled,
+      restTimingMode: restTimingMode ?? this.restTimingMode,
       defaultIncrement: defaultIncrement ?? this.defaultIncrement,
       exerciseIncrementsKg: Map.unmodifiable(
         exerciseIncrementsKg ?? this.exerciseIncrementsKg,
@@ -120,15 +133,17 @@ class SettingsState {
       timerSoundEnabled: timerSoundEnabled ?? this.timerSoundEnabled,
       hasCompletedOnboarding:
           hasCompletedOnboarding ?? this.hasCompletedOnboarding,
-      activeProgram:
-          clearActiveProgram ? null : (activeProgram ?? this.activeProgram),
+      activeProgram: clearActiveProgram
+          ? null
+          : (activeProgram ?? this.activeProgram),
       showDailyVerse: showDailyVerse ?? this.showDailyVerse,
       dailyVerseNotifications:
           dailyVerseNotifications ?? this.dailyVerseNotifications,
       workoutRemindersEnabled:
           workoutRemindersEnabled ?? this.workoutRemindersEnabled,
       unfinishedWorkoutRemindersEnabled:
-          unfinishedWorkoutRemindersEnabled ?? this.unfinishedWorkoutRemindersEnabled,
+          unfinishedWorkoutRemindersEnabled ??
+          this.unfinishedWorkoutRemindersEnabled,
       workoutReminderHour: workoutReminderHour ?? this.workoutReminderHour,
       workoutReminderMinute:
           workoutReminderMinute ?? this.workoutReminderMinute,
@@ -148,8 +163,10 @@ class SettingsState {
 
   Map<String, dynamic> toJson() {
     return {
+      'appearance': appearance.toJson(),
       'isRirEnabled': isRirEnabled,
       'autoRestEnabled': autoRestEnabled,
+      'restTimingMode': restTimingMode.name,
       'defaultIncrement': defaultIncrement,
       'exerciseIncrementsKg': exerciseIncrementsKg,
       'weightUnit': weightUnit.name,
@@ -176,7 +193,8 @@ class SettingsState {
   double incrementForExercise(String exerciseId) {
     final value = exerciseIncrementsKg[exerciseId];
     return value != null && value.isFinite && value > 0
-        ? value : defaultIncrement;
+        ? value
+        : defaultIncrement;
   }
 
   static Map<String, double> _readExerciseIncrements(Object? raw) {
@@ -186,7 +204,9 @@ class SettingsState {
       if (entry.key is! String || entry.value is! num) continue;
       final value = (entry.value as num).toDouble();
       if ((entry.key as String).isNotEmpty &&
-          value.isFinite && value > 0 && value <= 100) {
+          value.isFinite &&
+          value > 0 &&
+          value <= 100) {
         parsed[entry.key as String] = value;
       }
     }
@@ -196,13 +216,19 @@ class SettingsState {
   factory SettingsState.fromJson(Map<String, dynamic> json) {
     final hour = (json['workoutReminderHour'] as num?)?.toInt() ?? 18;
     final minute = (json['workoutReminderMinute'] as num?)?.toInt() ?? 0;
-    final sideRest =
-        (json['unilateralSideRestSeconds'] as num?)?.toInt() ?? 60;
+    final sideRest = (json['unilateralSideRestSeconds'] as num?)?.toInt() ?? 60;
     return SettingsState(
+      appearance: AppearanceSettings.fromJson(json['appearance']),
       isRirEnabled: json['isRirEnabled'] as bool? ?? true,
       autoRestEnabled: json['autoRestEnabled'] as bool? ?? true,
+      restTimingMode: RestTimingMode.values.firstWhere(
+        (v) => v.name == json['restTimingMode'],
+        orElse: () => RestTimingMode.completedSet,
+      ),
       defaultIncrement: (json['defaultIncrement'] as num?)?.toDouble() ?? 2.5,
-      exerciseIncrementsKg: _readExerciseIncrements(json['exerciseIncrementsKg']),
+      exerciseIncrementsKg: _readExerciseIncrements(
+        json['exerciseIncrementsKg'],
+      ),
       weightUnit: WeightUnit.values.firstWhere(
         (e) => e.name == json['weightUnit'],
         orElse: () => WeightUnit.kg,
@@ -216,8 +242,7 @@ class SettingsState {
             )
           : null,
       showDailyVerse: json['showDailyVerse'] as bool? ?? true,
-      dailyVerseNotifications:
-          json['dailyVerseNotifications'] as bool? ?? true,
+      dailyVerseNotifications: json['dailyVerseNotifications'] as bool? ?? true,
       workoutRemindersEnabled:
           json['workoutRemindersEnabled'] as bool? ?? false,
       unfinishedWorkoutRemindersEnabled:

@@ -31,7 +31,7 @@ class DailyVersePage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Reflexión Diaria'),
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.of(context).background,
         elevation: 0,
         actions: [
           IconButton(
@@ -49,7 +49,12 @@ class DailyVersePage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('¿CÓMO TE SIENTES?', style: AppTypography.labelLarge.copyWith(color: AppColors.textSecondary)),
+            Text(
+              '¿CÓMO TE SIENTES?',
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
+            ),
             const SizedBox(height: 12),
             stateAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -62,11 +67,19 @@ class DailyVersePage extends ConsumerWidget {
                   return ChoiceChip(
                     label: Text(m),
                     selected: isSelected,
-                    selectedColor: AppColors.primary,
-                    backgroundColor: AppColors.surfaceHigh,
-                    labelStyle: TextStyle(color: isSelected ? Colors.white : AppColors.textSecondary, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+                    selectedColor: AppColors.of(context).primary,
+                    backgroundColor: AppColors.of(context).surfaceHigh,
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? AppColors.of(context).onPrimary
+                          : AppColors.of(context).textSecondary,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
                     onSelected: (selected) {
-                      if (selected) ref.read(dailyVerseProvider.notifier).changeMood(m);
+                      if (selected)
+                        ref.read(dailyVerseProvider.notifier).changeMood(m);
                     },
                   );
                 }).toList(),
@@ -77,12 +90,19 @@ class DailyVersePage extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => const SizedBox(),
               data: (state) {
-                if (state.isLoading) return const Center(child: CircularProgressIndicator());
+                if (state.isLoading)
+                  return const Center(child: CircularProgressIndicator());
                 if (state.verse == null) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 32),
-                      child: Text('Preparando el contenido...\nVuelve en un momento.', textAlign: TextAlign.center, style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                      child: Text(
+                        'Preparando el contenido...\nVuelve en un momento.',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.of(context).textSecondary,
+                        ),
+                      ),
                     ),
                   );
                 }
@@ -100,24 +120,55 @@ class DailyVersePage extends ConsumerWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Icon(Icons.format_quote, color: AppColors.primary.withValues(alpha: 0.5), size: 32),
+                              Icon(
+                                Icons.format_quote,
+                                color: AppColors.of(
+                                  context,
+                                ).primary.withValues(alpha: 0.5),
+                                size: 32,
+                              ),
                               IconButton(
-                                icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? AppColors.error : AppColors.textSecondary),
-                                onPressed: () => ref.read(favoritesProvider.notifier).toggleFavorite(verse),
+                                icon: Icon(
+                                  isFavorite
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  color: isFavorite
+                                      ? AppColors.of(context).error
+                                      : AppColors.of(context).textSecondary,
+                                ),
+                                onPressed: () => ref
+                                    .read(favoritesProvider.notifier)
+                                    .toggleFavorite(verse),
                               ),
                             ],
                           ),
                           const SizedBox(height: 16),
-                          Text('“${verse.text}”', style: AppTypography.headlineMedium.copyWith(fontSize: 20, height: 1.5), textAlign: TextAlign.center),
+                          Text(
+                            '“${verse.text}”',
+                            style: AppTypography.headlineMedium.copyWith(
+                              fontSize: 20,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                           const SizedBox(height: 24),
-                          Text(verse.reference, style: AppTypography.bodyMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
-                          ContextualPassageDetails(verse: verse, onReadChapter: () async {
-                            await ref.read(bibleReaderProvider.future);
-                            await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
-                            await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
-                            if (!context.mounted) return;
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleReaderPage()));
-                          }),
+                          Text(
+                            verse.reference,
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: AppColors.of(context).primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          ContextualPassageDetails(
+                            verse: verse,
+                            onReadChapter: () async {
+                              await ref.read(bibleReaderProvider.future);
+                              await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
+                              await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
+                              if (!context.mounted) return;
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleReaderPage()));
+                            },
+                          ),
                         ],
                       ),
                     ),
@@ -126,10 +177,16 @@ class DailyVersePage extends ConsumerWidget {
                       width: double.infinity,
                       child: FilledButton.tonalIcon(
                         onPressed: () async {
-                          await ref.read(reflectionJournalProvider.notifier).saveVerse(verse, state.mood);
+                          await ref
+                              .read(reflectionJournalProvider.notifier)
+                              .saveVerse(verse, state.mood);
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Reflexión guardada. Puedes añadir una nota en tu historial.')),
+                            const SnackBar(
+                              content: Text(
+                                'Reflexión guardada. Puedes añadir una nota en tu historial.',
+                              ),
+                            ),
                           );
                         },
                         icon: const Icon(Icons.bookmark_add_outlined),
@@ -152,25 +209,27 @@ class DailyVersePage extends ConsumerWidget {
                   final message = diagnostics == null
                       ? 'No se pudo consultar la instalación nativa del widget.'
                       : diagnostics['extensionBundled'] != true
-                          ? 'El widget no está instalado en la aplicación firmada. '
+                      ? 'El widget no está instalado en la aplicación firmada. '
                             'En Sideloadly desactiva Remove App Extensions. '
                             'No elimines STK Haven para corregirlo.'
-                          : diagnostics['appGroupAvailable'] != true
-                              ? 'El widget está incluido, pero la firma no '
-                                'permite el App Group compartido. Revisa '
-                                'los permisos y perfiles de firma.'
-                              : 'Extensión y App Group detectados. Si el '
-                                'widget no aparece en iOS, reinicia el '
-                                'iPhone y revisa los registros de Sideloadly.';
+                      : diagnostics['appGroupAvailable'] != true
+                      ? 'El widget está incluido, pero la firma no '
+                            'permite el App Group compartido. Revisa '
+                            'los permisos y perfiles de firma.'
+                      : 'Extensión y App Group detectados. Si el '
+                            'widget no aparece en iOS, reinicia el '
+                            'iPhone y revisa los registros de Sideloadly.';
                   await showDialog<void>(
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: const Text('Diagnóstico del widget'),
                       content: Text(message),
-                      actions: [TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Entendido'),
-                      )],
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: const Text('Entendido'),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -184,23 +243,35 @@ class DailyVersePage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-            stateAsync.whenData((state) => Center(
-              child: state.verse == null
-                  ? const SizedBox()
-                  : ElevatedButton.icon(
-                      onPressed: () async {
-                          final verse = state.verse;
-                          if (verse == null) return;
-                          await ref.read(bibleReaderProvider.future);
-                          await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
-                          await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
-                          if (context.mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleReaderPage()));
-                        },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Leer el capítulo'),
-                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.surfaceHigh, foregroundColor: AppColors.textPrimary),
-                    ),
-            )).value ?? const SizedBox(),
+            stateAsync
+                    .whenData(
+                      (state) => Center(
+                        child: state.verse == null
+                            ? const SizedBox()
+                            : ElevatedButton.icon(
+                                onPressed: () async {
+                                  final verse = state.verse;
+                                  if (verse == null) return;
+                                  await ref.read(bibleReaderProvider.future);
+                                  await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
+                                  await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
+                                  if (context.mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleReaderPage()));
+                                },
+                                icon: const Icon(Icons.menu_book_outlined),
+                                label: const Text('Leer el capítulo'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.of(
+                                    context,
+                                  ).surfaceHigh,
+                                  foregroundColor: AppColors.of(
+                                    context,
+                                  ).textPrimary,
+                                ),
+                              ),
+                      ),
+                    )
+                    .value ??
+                const SizedBox(),
           ],
         ),
       ),

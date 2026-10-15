@@ -1,3 +1,4 @@
+import 'package:core/core/theme/appearance_theme.dart';
 import 'dart:async';
 
 import 'package:core/core/config/storage_namespace.dart';
@@ -17,7 +18,6 @@ import 'core/layout/web_layout.dart';
 import 'core/navigation/web_browser_history_bridge.dart';
 import 'core/notifications/web_platform_notification_service.dart';
 import 'features/onboarding/presentation/onboarding_page_web.dart';
-import 'core/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,11 +29,7 @@ Future<void> main() async {
   );
   await HiveDatabase.init();
 
-  runApp(
-    const ProviderScope(
-      child: WebApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: WebApp()));
 }
 
 class WebApp extends ConsumerStatefulWidget {
@@ -76,9 +72,7 @@ class _WebAppState extends ConsumerState<WebApp> {
   }
 
   void _syncBibleInitialization(bool faithEnabled) {
-    if (!faithEnabled ||
-        _bibleInitStarted ||
-        _bibleInitSchedulePending) {
+    if (!faithEnabled || _bibleInitStarted || _bibleInitSchedulePending) {
       return;
     }
 
@@ -110,19 +104,19 @@ class _WebAppState extends ConsumerState<WebApp> {
       }
     });
     final experienceProfile = ref.watch(userExperienceProfileProvider);
-    _syncBibleInitialization(
-      experienceProfile.value?.faithEnabled == true,
-    );
-    _syncProgramPersonalization(
-      experienceProfile.value?.trainingDaysPerWeek,
-    );
+    _syncBibleInitialization(experienceProfile.value?.faithEnabled == true);
+    _syncProgramPersonalization(experienceProfile.value?.trainingDaysPerWeek);
 
+    final appearance = settings.appearance;
     return MaterialApp(
       navigatorKey: _navigatorKey,
       navigatorObservers: <NavigatorObserver>[_historyBridge],
       debugShowCheckedModeBanner: false,
       title: 'STK Haven',
-      theme: AppTheme.darkTheme,
+      theme: AppearanceTheme.build(appearance, Brightness.light),
+      darkTheme: AppearanceTheme.build(appearance, Brightness.dark),
+      themeMode: AppearanceTheme.mode(appearance.mode),
+      themeAnimationDuration: Duration.zero,
       builder: (context, child) {
         final media = MediaQuery.of(context);
         final savings = settings.performanceMode == PerformanceMode.savings;

@@ -1,6 +1,6 @@
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/core/services/workout_notification_service.dart';
-import 'package:core/features/faith/services/verse_notification_service.dart';
+import 'package:core/features/faith/presentation/verse_notification_settings_page.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/features/profile/presentation/pages/personal_reminder_page.dart';
@@ -42,8 +42,10 @@ class NotificationsSettingsPage extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.favorite_outline_rounded),
                 title: const Text('Mis mensajes personales'),
-                subtitle: const Text('Escribe mensajes con título y hasta 3.000 '
-                  'caracteres. Recíbelos por turnos cada 30 o 60 minutos.'),
+                subtitle: const Text(
+                  'Escribe mensajes con título y hasta 3.000 '
+                  'caracteres. Recíbelos por turnos cada 30 o 60 minutos.',
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push<void>(
                   MaterialPageRoute(
@@ -65,33 +67,37 @@ class NotificationsSettingsPage extends ConsumerWidget {
                   'Nunca finaliza ni descarta la rutina automáticamente.',
                 ),
                 value: !kIsWeb && settings.unfinishedWorkoutRemindersEnabled,
-                onChanged: kIsWeb ? null : (enabled) async {
-                  if (enabled) {
-                    final granted = await WorkoutNotificationService
-                        .requestNotificationPermission();
-                    if (!granted) {
-                      if (context.mounted) _showPermissionMessage(context);
-                      return;
-                    }
-                  }
-                  settingsNotifier.setUnfinishedWorkoutReminders(enabled);
-                  if (!enabled) {
-                    await WorkoutNotificationService
-                        .cancelUnfinishedWorkoutReminders();
-                  } else {
-                    final session = ref.read(activeWorkoutProvider).session;
-                    if (session != null) {
-                      await WorkoutNotificationService
-                          .scheduleUnfinishedWorkoutReminder(
-                        lastActivityAt: ref
-                                .read(activeWorkoutRepositoryProvider)
-                                .lastActivityAt ??
-                            session.startedAt,
-                        workoutName: session.routineNameSnapshot,
-                      );
-                    }
-                  }
-                },
+                onChanged: kIsWeb
+                    ? null
+                    : (enabled) async {
+                        if (enabled) {
+                          final granted =
+                              await WorkoutNotificationService.requestNotificationPermission();
+                          if (!granted) {
+                            if (context.mounted)
+                              _showPermissionMessage(context);
+                            return;
+                          }
+                        }
+                        settingsNotifier.setUnfinishedWorkoutReminders(enabled);
+                        if (!enabled) {
+                          await WorkoutNotificationService.cancelUnfinishedWorkoutReminders();
+                        } else {
+                          final session = ref
+                              .read(activeWorkoutProvider)
+                              .session;
+                          if (session != null) {
+                            await WorkoutNotificationService.scheduleUnfinishedWorkoutReminder(
+                              lastActivityAt:
+                                  ref
+                                      .read(activeWorkoutRepositoryProvider)
+                                      .lastActivityAt ??
+                                  session.startedAt,
+                              workoutName: session.routineNameSnapshot,
+                            );
+                          }
+                        }
+                      },
               ),
               const Divider(height: 1),
               SwitchListTile.adaptive(
@@ -108,8 +114,9 @@ class NotificationsSettingsPage extends ConsumerWidget {
                     : (enabled) async {
                         await settingsNotifier.setWorkoutReminders(enabled);
                         if (!context.mounted) return;
-                        final effective =
-                            ref.read(settingsProvider).workoutRemindersEnabled;
+                        final effective = ref
+                            .read(settingsProvider)
+                            .workoutRemindersEnabled;
                         if (enabled && !effective) {
                           _showPermissionMessage(context);
                         }
@@ -162,18 +169,19 @@ class NotificationsSettingsPage extends ConsumerWidget {
                 onChanged: kIsWeb
                     ? null
                     : (enabled) async {
-                        final notifier =
-                            ref.read(hydrationPreferencesProvider.notifier);
+                        final notifier = ref.read(
+                          hydrationPreferencesProvider.notifier,
+                        );
                         await notifier.setReminderEnabled(enabled);
                         final updated = ref.read(hydrationPreferencesProvider);
                         final granted =
                             await HydrationReminderService.syncNextReminder(
-                          enabled: updated.reminderEnabled,
-                          currentMl: hydration.waterMl,
-                          targetMl: updated.targetMl,
-                          reminderHour: updated.reminderHour,
-                          requestPermissionIfNeeded: enabled,
-                        );
+                              enabled: updated.reminderEnabled,
+                              currentMl: hydration.waterMl,
+                              targetMl: updated.targetMl,
+                              reminderHour: updated.reminderHour,
+                              requestPermissionIfNeeded: enabled,
+                            );
                         if (enabled && !granted) {
                           await notifier.setReminderEnabled(false);
                           if (context.mounted) {
@@ -205,8 +213,9 @@ class NotificationsSettingsPage extends ConsumerWidget {
                         .toList(growable: false),
                     onChanged: (hour) async {
                       if (hour == null) return;
-                      final notifier =
-                          ref.read(hydrationPreferencesProvider.notifier);
+                      final notifier = ref.read(
+                        hydrationPreferencesProvider.notifier,
+                      );
                       await notifier.setReminderHour(hour);
                       final updated = ref.read(hydrationPreferencesProvider);
                       await HydrationReminderService.syncNextReminder(
@@ -228,15 +237,14 @@ class NotificationsSettingsPage extends ConsumerWidget {
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Avisarme si falta completar la meta'),
-                subtitle: Text(
-                  'Meta actual: ${stepPrefs.targetSteps} pasos.',
-                ),
+                subtitle: Text('Meta actual: ${stepPrefs.targetSteps} pasos.'),
                 value: !kIsWeb && stepPrefs.reminderEnabled,
                 onChanged: kIsWeb
                     ? null
                     : (enabled) async {
-                        final notifier =
-                            ref.read(stepGoalPreferencesProvider.notifier);
+                        final notifier = ref.read(
+                          stepGoalPreferencesProvider.notifier,
+                        );
                         await notifier.setReminderEnabled(enabled);
                         final updated = ref.read(stepGoalPreferencesProvider);
                         final granted = await StepGoalReminderService.syncToday(
@@ -260,8 +268,7 @@ class NotificationsSettingsPage extends ConsumerWidget {
                   leading: const Icon(Icons.notifications_active_outlined),
                   title: const Text('Frecuencia'),
                   subtitle: Text(
-                    stepPrefs.reminderCadence ==
-                            StepReminderCadence.balanced
+                    stepPrefs.reminderCadence == StepReminderCadence.balanced
                         ? 'Inteligente: máximo dos avisos (17:30 y 20:30).'
                         : 'Suave: un aviso a las 20:00.',
                   ),
@@ -279,8 +286,9 @@ class NotificationsSettingsPage extends ConsumerWidget {
                     ],
                     onChanged: (cadence) async {
                       if (cadence == null) return;
-                      final notifier =
-                          ref.read(stepGoalPreferencesProvider.notifier);
+                      final notifier = ref.read(
+                        stepGoalPreferencesProvider.notifier,
+                      );
                       await notifier.setReminderCadence(cadence);
                       await StepGoalReminderService.syncToday(
                         preferences: ref.read(stepGoalPreferencesProvider),
@@ -296,84 +304,25 @@ class NotificationsSettingsPage extends ConsumerWidget {
           if (faithEnabled) ...[
             const SizedBox(height: 14),
             _Section(
-              title: 'Fortaleza diaria',
+              title: 'Versículos',
               children: [
-                SwitchListTile.adaptive(
+                ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Versículo diario'),
+                  leading: const Icon(Icons.notifications_active_outlined),
+                  title: const Text('Versículos durante el día'),
                   subtitle: const Text(
-                    'Recordatorio local diario a las 08:00.',
+                    'Elige intervalos o una o varias horas. Comprueba y prueba los avisos.',
                   ),
-                  value: !kIsWeb && settings.dailyVerseNotifications,
-                  onChanged: kIsWeb
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: kIsWeb
                       ? null
-                      : (enabled) async {
-                          await settingsNotifier
-                              .setDailyVerseNotifications(enabled);
-                          if (!context.mounted) return;
-                          final effective = ref
-                              .read(settingsProvider)
-                              .dailyVerseNotifications;
-                          if (enabled && !effective) {
-                            _showPermissionMessage(context);
-                          }
-                        },
+                      : () => Navigator.of(context).push<void>(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const VerseNotificationSettingsPage(),
+                          ),
+                        ),
                 ),
-                if (!kIsWeb)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.notifications_active_outlined),
-                    title: const Text('Probar aviso de versículo'),
-                    subtitle: const Text(
-                      'Envía una prueba y comprueba la programación de las 08:00.',
-                    ),
-                    onTap: () async {
-                      try {
-                        final granted = await VerseNotificationService
-                            .requestPermissions();
-                        if (!context.mounted) return;
-                        if (!granted) {
-                          _showPermissionMessage(context);
-                          return;
-                        }
-                        // A preview must not silently opt the user into
-                        // daily notifications when the switch is OFF.
-                        if (ref.read(settingsProvider).dailyVerseNotifications) {
-                          await VerseNotificationService.scheduleDailyReminder();
-                        }
-                        final count = await VerseNotificationService
-                            .pendingDailyReminderCount();
-                        await VerseNotificationService.showNotification(
-                          title: 'STK Haven · Notificación de prueba',
-                          body: 'Si recibes este aviso, STK Haven puede '
-                              'mostrarte recordatorios bíblicos.',
-                        );
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(
-                            !ref.read(settingsProvider).dailyVerseNotifications
-                                ? 'Prueba enviada. Activa «Versículo diario» '
-                                    'para recibir avisos cada mañana.'
-                                : count == 1
-                                    ? 'Prueba enviada. Hay 1 aviso diario '
-                                        'programado para las 08:00.'
-                                    : 'Prueba enviada, pero no se encontró '
-                                        'el aviso diario en iOS. Revisa el estado '
-                                        'de las notificaciones.',
-                          )),
-                        );
-                      } catch (_) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text(
-                              'No fue posible programar la prueba. '
-                              'Revisa Ajustes → Notificaciones → STK Haven.',
-                            )),
-                          );
-                        }
-                      }
-                    },
-                  ),
               ],
             ),
           ],
@@ -418,21 +367,21 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 6),
-              ...children,
-            ],
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
-        ),
-      );
+          const SizedBox(height: 6),
+          ...children,
+        ],
+      ),
+    ),
+  );
 }

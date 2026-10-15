@@ -45,13 +45,13 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
       parent: _controller,
       curve: const Interval(0.1, 0.6, curve: Curves.easeOut),
     );
-    _slidePRsAnim = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
-    ));
+    _slidePRsAnim = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.4, 1.0, curve: Curves.easeOut),
+          ),
+        );
 
     _controller.forward();
 
@@ -62,7 +62,6 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
         HapticFeedback.heavyImpact();
       }
     }
-
   }
 
   @override
@@ -71,8 +70,7 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
     super.dispose();
   }
 
-  String _formatDuration(int seconds) =>
-      '${seconds ~/ 60}m ${seconds % 60}s';
+  String _formatDuration(int seconds) => '${seconds ~/ 60}m ${seconds % 60}s';
 
   @override
   Widget build(BuildContext context) {
@@ -98,283 +96,383 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
                       children: [
                         const SizedBox(height: AppSpacing.xxl),
 
-              // ── 1. Visual session overview ─────────────────────────────
-              FadeTransition(
-                opacity: _fadeAnim,
-                child: _SessionOverviewCard(
-                  summary: summary,
-                  routineName: session.routineNameSnapshot,
-                  duration: _formatDuration(
-                    widget.analysisResult.durationSeconds,
-                  ),
-                  volume: FitnessFormatter.formatVolume(
-                    widget.analysisResult.totalVolume,
-                    unit,
-                  ),
-                ),
-              ),
-              if (showClosingReflection) ...[
-                const SizedBox(height: AppSpacing.md),
-                WorkoutClosingReflectionCard(
-                  session: session,
-                  summary: summary,
-                ),
-              ],
-              if (!summary.isComplete) ...[
-                const SizedBox(height: AppSpacing.md),
-                FilledButton.icon(
-                  onPressed: () async {
-                    await ref
-                        .read(activeWorkoutProvider.notifier)
-                        .resumeSavedWorkout(session);
-                    if (!context.mounted) return;
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (_) => const ActiveWorkoutPage(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Continuar entrenamiento incompleto'),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.xxl),
-
-              // ── 2. Exercise completion map ──────────────────────────────
-              if (summary.exercises.isNotEmpty) ...[
-                const SectionHeading(title: 'MAPA DE LA SESIÓN'),
-                const SizedBox(height: AppSpacing.sm),
-                PremiumCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: summary.exercises.asMap().entries.map((entry) {
-                      return Column(
-                        children: [
-                          if (entry.key > 0) const Divider(height: 1),
-                          _ExerciseCompletionRow(
-                            exercise: entry.value,
+                        // ── 1. Visual session overview ─────────────────────────────
+                        FadeTransition(
+                          opacity: _fadeAnim,
+                          child: _SessionOverviewCard(
+                            summary: summary,
+                            routineName: session.routineNameSnapshot,
+                            duration: _formatDuration(
+                              widget.analysisResult.durationSeconds,
+                            ),
+                            volume: FitnessFormatter.formatVolume(
+                              widget.analysisResult.totalVolume,
+                              unit,
+                            ),
+                          ),
+                        ),
+                        if (showClosingReflection) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          WorkoutClosingReflectionCard(
+                            session: session,
+                            summary: summary,
                           ),
                         ],
-                      );
-                    }).toList(growable: false),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-              ],
-
-              // ── 3. Personal Records — slide-up animation ────────────────
-              if (widget.analysisResult.personalRecords.isNotEmpty) ...[
-                SlideTransition(
-                  position: _slidePRsAnim,
-                  child: FadeTransition(
-                    opacity: _fadeAnim,
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.emoji_events, color: AppColors.gold, size: 20),
-                            const SizedBox(width: AppSpacing.xs),
-                            Text(
-                              '${widget.analysisResult.personalRecords.length} RÉCORDS',
-                              style: AppTypography.labelLarge.copyWith(color: AppColors.gold),
+                        if (!summary.isComplete) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          FilledButton.icon(
+                            onPressed: () async {
+                              await ref
+                                  .read(activeWorkoutProvider.notifier)
+                                  .resumeSavedWorkout(session);
+                              if (!context.mounted) return;
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (_) => const ActiveWorkoutPage(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.play_arrow_rounded),
+                            label: const Text(
+                              'Continuar entrenamiento incompleto',
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        PremiumCard(
-                          padding: EdgeInsets.zero,
-                          child: Column(
-                            children: widget.analysisResult.personalRecords.asMap().entries.map((entry) {
-                              final i = entry.key;
-                              final pr = entry.value;
-                              return Column(
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.xxl),
+
+                        // ── 2. Exercise completion map ──────────────────────────────
+                        if (summary.exercises.isNotEmpty) ...[
+                          const SectionHeading(title: 'MAPA DE LA SESIÓN'),
+                          const SizedBox(height: AppSpacing.sm),
+                          PremiumCard(
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              children: summary.exercises
+                                  .asMap()
+                                  .entries
+                                  .map((entry) {
+                                    return Column(
+                                      children: [
+                                        if (entry.key > 0)
+                                          const Divider(height: 1),
+                                        _ExerciseCompletionRow(
+                                          exercise: entry.value,
+                                        ),
+                                      ],
+                                    );
+                                  })
+                                  .toList(growable: false),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                        ],
+
+                        // ── 3. Personal Records — slide-up animation ────────────────
+                        if (widget
+                            .analysisResult
+                            .personalRecords
+                            .isNotEmpty) ...[
+                          SlideTransition(
+                            position: _slidePRsAnim,
+                            child: FadeTransition(
+                              opacity: _fadeAnim,
+                              child: Column(
                                 children: [
-                                  if (i > 0) const Divider(),
-                                  ListTile(
-                                    title: Text(pr.exerciseNameSnapshot, style: AppTypography.bodyLarge),
-                                    subtitle: Text(
-                                      _prTypeLabel(pr.type),
-                                      style: AppTypography.bodySmall.copyWith(color: AppColors.gold),
-                                    ),
-                                    trailing: Text(
-                                      FitnessFormatter.formatPRValue(pr.newValue, pr.type, unit),
-                                      style: AppTypography.monoMedium.copyWith(color: AppColors.primary),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.emoji_events,
+                                        color: AppColors.of(context).gold,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: AppSpacing.xs),
+                                      Text(
+                                        '${widget.analysisResult.personalRecords.length} RÉCORDS',
+                                        style: AppTypography.labelLarge
+                                            .copyWith(
+                                              color: AppColors.of(context).gold,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: AppSpacing.md),
+                                  PremiumCard(
+                                    padding: EdgeInsets.zero,
+                                    child: Column(
+                                      children: widget
+                                          .analysisResult
+                                          .personalRecords
+                                          .asMap()
+                                          .entries
+                                          .map((entry) {
+                                            final i = entry.key;
+                                            final pr = entry.value;
+                                            return Column(
+                                              children: [
+                                                if (i > 0) const Divider(),
+                                                ListTile(
+                                                  title: Text(
+                                                    pr.exerciseNameSnapshot,
+                                                    style:
+                                                        AppTypography.bodyLarge,
+                                                  ),
+                                                  subtitle: Text(
+                                                    _prTypeLabel(pr.type),
+                                                    style: AppTypography
+                                                        .bodySmall
+                                                        .copyWith(
+                                                          color: AppColors.of(
+                                                            context,
+                                                          ).gold,
+                                                        ),
+                                                  ),
+                                                  trailing: Text(
+                                                    FitnessFormatter.formatPRValue(
+                                                      pr.newValue,
+                                                      pr.type,
+                                                      unit,
+                                                    ),
+                                                    style: AppTypography
+                                                        .monoMedium
+                                                        .copyWith(
+                                                          color: AppColors.of(
+                                                            context,
+                                                          ).primary,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ],
+                                            );
+                                          })
+                                          .toList(),
                                     ),
                                   ),
                                 ],
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-              ],
-
-              // ── 4. Routine-scoped session comparison ────────────────────
-              if (widget.analysisResult.comparison != null) ...[
-                const SectionHeading(title: 'CAMBIOS REGISTRADOS'),
-                const SizedBox(height: AppSpacing.sm),
-                PremiumCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Frente a la sesión anterior de esta rutina. Son diferencias descriptivas, no una puntuación.',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      _ComparisonRow(
-                        label: 'Volumen',
-                        diffPercent: widget.analysisResult.comparison!.volumeDifferencePercent,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      _ComparisonRow(
-                        label: 'Series',
-                        diffRaw: widget.analysisResult.comparison!.setsDifference,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      _ComparisonRow(
-                        label: 'Duración',
-                        diffRaw: widget.analysisResult.comparison!.durationDifferenceSeconds ~/ 60,
-                        isTime: true,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-              ],
-
-              // ── 5. Global exercise comparison ───────────────────────────
-              if (widget.analysisResult.exerciseComparisons.isNotEmpty) ...[
-                const SectionHeading(title: 'CAMBIO POR EJERCICIO'),
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  'Cada ejercicio se compara con su última ejecución global por ID, aunque haya ocurrido en otra rutina.',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                PremiumCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: widget.analysisResult.exerciseComparisons
-                        .asMap()
-                        .entries
-                        .map((entry) => Column(
-                              children: [
-                                if (entry.key > 0) const Divider(height: 1),
-                                ExerciseComparisonSummary(
-                                  comparison: entry.value,
-                                  unit: unit,
-                                ),
-                              ],
-                            ))
-                        .toList(growable: false),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-              ],
-
-              // ── 6. Next Steps ───────────────────────────────────────────
-              if (widget.analysisResult.progressionSuggestions.isNotEmpty) ...[
-                const SectionHeading(title: 'PRÓXIMAS REFERENCIAS'),
-                const SizedBox(height: AppSpacing.sm),
-                PremiumCard(
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: widget.analysisResult.progressionSuggestions.asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final sug = entry.value;
-                      return Column(
-                        children: [
-                          if (i > 0) const Divider(),
-                          ListTile(
-                            leading: const Icon(
-                              Icons.insights_outlined,
-                              color: AppColors.primary,
-                            ),
-                            title: Text(
-                              sug.exerciseName,
-                              style: AppTypography.bodyLarge,
-                            ),
-                            subtitle: _ProgressionSummaryContent(
-                              suggestion: sug,
-                              unit: unit,
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-              ],
-
-              // ── 7. Deload Suggestions ───────────────────────────────────
-              if (widget.analysisResult.deloadSuggestions.isNotEmpty) ...[
-                Row(
-                  children: [
-                    const Icon(Icons.info_outline, color: AppColors.warning, size: 20),
-                    const SizedBox(width: AppSpacing.xs),
-                    const SectionHeading(title: 'AJUSTE OPCIONAL', color: AppColors.warning),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                PremiumCard(
-                  backgroundColor: AppColors.warning.withValues(alpha: 0.08),
-                  borderColor: AppColors.warning.withValues(alpha: 0.28),
-                  padding: EdgeInsets.zero,
-                  child: Column(
-                    children: widget.analysisResult.deloadSuggestions.asMap().entries.map((entry) {
-                      final i = entry.key;
-                      final sug = entry.value;
-                      return Column(
-                        children: [
-                          if (i > 0) const Divider(color: Colors.transparent, height: 1),
-                          ListTile(
-                            leading: const Icon(
-                              Icons.south_rounded,
-                              color: AppColors.warning,
-                            ),
-                            title: Text(
-                              sug.exerciseName,
-                              style: AppTypography.bodyLarge.copyWith(
-                                color: AppColors.warning,
                               ),
                             ),
-                            subtitle: _ProgressionSummaryContent(
-                              suggestion: sug,
-                              unit: unit,
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                        ],
+
+                        // ── 4. Routine-scoped session comparison ────────────────────
+                        if (widget.analysisResult.comparison != null) ...[
+                          const SectionHeading(title: 'CAMBIOS REGISTRADOS'),
+                          const SizedBox(height: AppSpacing.sm),
+                          PremiumCard(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Frente a la sesión anterior de esta rutina. Son diferencias descriptivas, no una puntuación.',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.of(context).textSecondary,
+                                    height: 1.35,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                _ComparisonRow(
+                                  label: 'Volumen',
+                                  diffPercent: widget
+                                      .analysisResult
+                                      .comparison!
+                                      .volumeDifferencePercent,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                _ComparisonRow(
+                                  label: 'Series',
+                                  diffRaw: widget
+                                      .analysisResult
+                                      .comparison!
+                                      .setsDifference,
+                                ),
+                                const SizedBox(height: AppSpacing.md),
+                                _ComparisonRow(
+                                  label: 'Duración',
+                                  diffRaw:
+                                      widget
+                                          .analysisResult
+                                          .comparison!
+                                          .durationDifferenceSeconds ~/
+                                      60,
+                                  isTime: true,
+                                ),
+                              ],
                             ),
                           ),
+                          const SizedBox(height: AppSpacing.xxl),
                         ],
-                      );
-                    }).toList(),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxl),
-              ],
 
-              const SizedBox(height: 100),
-            ],
+                        // ── 5. Global exercise comparison ───────────────────────────
+                        if (widget
+                            .analysisResult
+                            .exerciseComparisons
+                            .isNotEmpty) ...[
+                          const SectionHeading(title: 'CAMBIO POR EJERCICIO'),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            'Cada ejercicio se compara con su última ejecución global por ID, aunque haya ocurrido en otra rutina.',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.of(context).textSecondary,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          PremiumCard(
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              children: widget
+                                  .analysisResult
+                                  .exerciseComparisons
+                                  .asMap()
+                                  .entries
+                                  .map(
+                                    (entry) => Column(
+                                      children: [
+                                        if (entry.key > 0)
+                                          const Divider(height: 1),
+                                        ExerciseComparisonSummary(
+                                          comparison: entry.value,
+                                          unit: unit,
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                        ],
+
+                        // ── 6. Next Steps ───────────────────────────────────────────
+                        if (widget
+                            .analysisResult
+                            .progressionSuggestions
+                            .isNotEmpty) ...[
+                          const SectionHeading(title: 'PRÓXIMAS REFERENCIAS'),
+                          const SizedBox(height: AppSpacing.sm),
+                          PremiumCard(
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              children: widget
+                                  .analysisResult
+                                  .progressionSuggestions
+                                  .asMap()
+                                  .entries
+                                  .map((entry) {
+                                    final i = entry.key;
+                                    final sug = entry.value;
+                                    return Column(
+                                      children: [
+                                        if (i > 0) const Divider(),
+                                        ListTile(
+                                          leading: Icon(
+                                            Icons.insights_outlined,
+                                            color: AppColors.of(
+                                              context,
+                                            ).primary,
+                                          ),
+                                          title: Text(
+                                            sug.exerciseName,
+                                            style: AppTypography.bodyLarge,
+                                          ),
+                                          subtitle: _ProgressionSummaryContent(
+                                            suggestion: sug,
+                                            unit: unit,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  })
+                                  .toList(),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                        ],
+
+                        // ── 7. Deload Suggestions ───────────────────────────────────
+                        if (widget
+                            .analysisResult
+                            .deloadSuggestions
+                            .isNotEmpty) ...[
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                color: AppColors.of(context).warning,
+                                size: 20,
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              SectionHeading(
+                                title: 'AJUSTE OPCIONAL',
+                                color: AppColors.of(context).warning,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          PremiumCard(
+                            backgroundColor: AppColors.of(
+                              context,
+                            ).warning.withValues(alpha: 0.08),
+                            borderColor: AppColors.of(
+                              context,
+                            ).warning.withValues(alpha: 0.28),
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              children: widget.analysisResult.deloadSuggestions
+                                  .asMap()
+                                  .entries
+                                  .map((entry) {
+                                    final i = entry.key;
+                                    final sug = entry.value;
+                                    return Column(
+                                      children: [
+                                        if (i > 0)
+                                          const Divider(
+                                            color: Colors.transparent,
+                                            height: 1,
+                                          ),
+                                        ListTile(
+                                          leading: Icon(
+                                            Icons.south_rounded,
+                                            color: AppColors.of(
+                                              context,
+                                            ).warning,
+                                          ),
+                                          title: Text(
+                                            sug.exerciseName,
+                                            style: AppTypography.bodyLarge
+                                                .copyWith(
+                                                  color: AppColors.of(
+                                                    context,
+                                                  ).warning,
+                                                ),
+                                          ),
+                                          subtitle: _ProgressionSummaryContent(
+                                            suggestion: sug,
+                                            unit: unit,
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  })
+                                  .toList(),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                        ],
+
+                        const SizedBox(height: 100),
+                      ],
                     ),
                   ),
                 ),
               ),
             ],
           ),
-    ],
-  ),
-  floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: Padding(
         padding: const EdgeInsets.all(16.0),
         child: PrimaryButton(
@@ -414,6 +512,7 @@ class _Metric extends StatelessWidget {
   }
 }
 
+
 class _ComparisonRow extends StatelessWidget {
   final String label;
   final double? diffPercent;
@@ -438,12 +537,12 @@ class _ComparisonRow extends StatelessWidget {
           '${diffPercent! > 0 ? '+' : ''}${diffPercent!.toStringAsFixed(1)}%';
     } else if (diffRaw != null) {
       isNeutral = diffRaw == 0;
-      text =
-          '${diffRaw! > 0 ? '+' : ''}$diffRaw ${isTime ? 'min' : ''}';
+      text = '${diffRaw! > 0 ? '+' : ''}$diffRaw ${isTime ? 'min' : ''}';
     }
 
-    final color =
-        isNeutral ? AppColors.textSecondary : AppColors.info;
+    final color = isNeutral
+        ? AppColors.of(context).textSecondary
+        : AppColors.of(context).info;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -467,7 +566,6 @@ class _ComparisonRow extends StatelessWidget {
   }
 }
 
-
 class _ProgressionSummaryContent extends StatelessWidget {
   final ProgressionSuggestion suggestion;
   final WeightUnit unit;
@@ -479,7 +577,7 @@ class _ProgressionSummaryContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _summaryProgressionColor(suggestion);
+    final color = _summaryProgressionColor(context, suggestion);
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Column(
@@ -493,7 +591,7 @@ class _ProgressionSummaryContent extends StatelessWidget {
           Text(
             FitnessFormatter.progressionExplanation(suggestion),
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.of(context).textSecondary,
               height: 1.35,
             ),
           ),
@@ -508,14 +606,14 @@ class _ProgressionSummaryContent extends StatelessWidget {
           Text(
             FitnessFormatter.progressionEvidence(suggestion),
             style: AppTypography.labelSmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
             ),
           ),
           const SizedBox(height: 3),
           Text(
             FitnessFormatter.progressionSafetyNote,
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
               height: 1.3,
             ),
           ),
@@ -525,19 +623,21 @@ class _ProgressionSummaryContent extends StatelessWidget {
   }
 }
 
-Color _summaryProgressionColor(ProgressionSuggestion suggestion) {
+Color _summaryProgressionColor(
+  BuildContext context,
+  ProgressionSuggestion suggestion,
+) {
   if (suggestion.reason == ProgressionReason.recoveryCaution ||
       suggestion.reason == ProgressionReason.effortTooHigh) {
-    return AppColors.warning;
+    return AppColors.of(context).warning;
   }
   return switch (suggestion.type) {
-    ProgressionType.increase => AppColors.success,
-    ProgressionType.maintain => AppColors.info,
-    ProgressionType.deload => AppColors.warning,
-    ProgressionType.insufficientData => AppColors.textSecondary,
+    ProgressionType.increase => AppColors.of(context).success,
+    ProgressionType.maintain => AppColors.of(context).info,
+    ProgressionType.deload => AppColors.of(context).warning,
+    ProgressionType.insufficientData => AppColors.of(context).textSecondary,
   };
 }
-
 
 class _SessionOverviewCard extends StatelessWidget {
   final WorkoutSummarySnapshot summary;
@@ -554,9 +654,12 @@ class _SessionOverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = summary.isComplete ? AppColors.success : AppColors.info;
-    final displayName =
-        routineName.trim().isEmpty ? 'Entrenamiento libre' : routineName;
+    final color = summary.isComplete
+        ? AppColors.of(context).success
+        : AppColors.of(context).info;
+    final displayName = routineName.trim().isEmpty
+        ? 'Entrenamiento libre'
+        : routineName;
 
     return PremiumCard(
       borderColor: color.withValues(alpha: 0.28),
@@ -574,7 +677,7 @@ class _SessionOverviewCard extends StatelessWidget {
                     CircularProgressIndicator(
                       value: summary.completionRatio,
                       strokeWidth: 7,
-                      backgroundColor: AppColors.surfaceBorder,
+                      backgroundColor: AppColors.of(context).surfaceBorder,
                       color: color,
                     ),
                     Text(
@@ -599,7 +702,7 @@ class _SessionOverviewCard extends StatelessWidget {
                     Text(
                       _sessionCompletionMessage(summary),
                       style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+                        color: AppColors.of(context).textSecondary,
                         height: 1.35,
                       ),
                     ),
@@ -613,7 +716,9 @@ class _SessionOverviewCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              Expanded(child: _Metric(label: 'TIEMPO', value: duration)),
+              Expanded(
+                child: _Metric(label: 'TIEMPO', value: duration),
+              ),
               Expanded(
                 child: _Metric(
                   label: 'SERIES',
@@ -634,13 +739,13 @@ class _SessionOverviewCard extends StatelessWidget {
                 vertical: AppSpacing.xs,
               ),
               decoration: BoxDecoration(
-                color: AppColors.primaryFaded,
+                color: AppColors.of(context).primaryFaded,
                 borderRadius: AppRadius.sm_,
               ),
               child: Text(
                 'RIR medio registrado: ${summary.averageRir!.toStringAsFixed(1)} · ${summary.rirLoggedSets} series',
                 style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.primary,
+                  color: AppColors.of(context).primary,
                 ),
               ),
             ),
@@ -649,7 +754,7 @@ class _SessionOverviewCard extends StatelessWidget {
           Text(
             'El tiempo y el volumen describen lo registrado; no califican por sí solos la calidad de la sesión.',
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textDisabled,
+              color: AppColors.of(context).textDisabled,
               height: 1.35,
             ),
           ),
@@ -666,8 +771,9 @@ class _ExerciseCompletionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        exercise.isComplete ? AppColors.success : AppColors.info;
+    final color = exercise.isComplete
+        ? AppColors.of(context).success
+        : AppColors.of(context).info;
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -695,7 +801,7 @@ class _ExerciseCompletionRow extends StatelessWidget {
             value: exercise.completionRatio,
             minHeight: 7,
             borderRadius: BorderRadius.circular(99),
-            backgroundColor: AppColors.surfaceBorder,
+            backgroundColor: AppColors.of(context).surfaceBorder,
             color: color,
           ),
         ],

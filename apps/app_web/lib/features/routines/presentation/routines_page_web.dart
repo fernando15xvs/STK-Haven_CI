@@ -20,10 +20,12 @@ class RoutinesPageWeb extends ConsumerWidget {
     final routines = ref.watch(routineListProvider);
     final exercises = ref.watch(exerciseListProvider);
     final active = ref.watch(activeWorkoutProvider);
-    final exerciseMap = {for (final exercise in exercises) exercise.id: exercise};
+    final exerciseMap = {
+      for (final exercise in exercises) exercise.id: exercise,
+    };
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.of(context).background,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -35,11 +37,15 @@ class RoutinesPageWeb extends ConsumerWidget {
                   sliver: SliverToBoxAdapter(
                     child: _Header(
                       onTemplates: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const RoutineTemplatesPageWeb()),
+                        MaterialPageRoute(
+                          builder: (_) => const RoutineTemplatesPageWeb(),
+                        ),
                       ),
                       onPlan: () => _showWeeklyPlan(context, ref, routines),
                       onCreate: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CreateRoutinePageWeb()),
+                        MaterialPageRoute(
+                          builder: (_) => const CreateRoutinePageWeb(),
+                        ),
                       ),
                     ),
                   ),
@@ -51,7 +57,9 @@ class RoutinesPageWeb extends ConsumerWidget {
                       child: _ActiveWorkoutBanner(
                         name: active.routineDisplayName,
                         onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const ActiveWorkoutPageWeb()),
+                          MaterialPageRoute(
+                            builder: (_) => const ActiveWorkoutPageWeb(),
+                          ),
                         ),
                       ),
                     ),
@@ -61,10 +69,14 @@ class RoutinesPageWeb extends ConsumerWidget {
                     hasScrollBody: false,
                     child: _EmptyState(
                       onCreate: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const CreateRoutinePageWeb()),
+                        MaterialPageRoute(
+                          builder: (_) => const CreateRoutinePageWeb(),
+                        ),
                       ),
                       onTemplates: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const RoutineTemplatesPageWeb()),
+                        MaterialPageRoute(
+                          builder: (_) => const RoutineTemplatesPageWeb(),
+                        ),
                       ),
                     ),
                   )
@@ -74,36 +86,55 @@ class RoutinesPageWeb extends ConsumerWidget {
                     sliver: SliverLayoutBuilder(
                       builder: (context, constraints) {
                         final width = constraints.crossAxisExtent;
-                        final columns = width >= 1050 ? 3 : width >= 680 ? 2 : 1;
+                        final columns = width >= 1050
+                            ? 3
+                            : width >= 680
+                            ? 2
+                            : 1;
                         return SliverGrid(
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: columns,
-                            mainAxisSpacing: 14,
-                            crossAxisSpacing: 14,
-                            childAspectRatio: columns == 1 ? 1.85 : 1.45,
-                          ),
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final routine = routines[index];
-                              final names = routine.exercises
-                                  .map((item) => exerciseMap[item.exerciseId]?.name ?? 'Ejercicio eliminado')
-                                  .toList(growable: false);
-                              return _RoutineCard(
-                                routine: routine,
-                                exerciseNames: names,
-                                onStart: () => _launchWorkout(context, ref, routine, exercises),
-                                onEdit: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => CreateRoutinePageWeb(editingRoutine: routine),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: columns,
+                                mainAxisSpacing: 14,
+                                crossAxisSpacing: 14,
+                                childAspectRatio: columns == 1 ? 1.85 : 1.45,
+                              ),
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
+                            final routine = routines[index];
+                            final names = routine.exercises
+                                .map(
+                                  (item) =>
+                                      exerciseMap[item.exerciseId]?.name ??
+                                      'Ejercicio eliminado',
+                                )
+                                .toList(growable: false);
+                            return _RoutineCard(
+                              routine: routine,
+                              exerciseNames: names,
+                              onStart: () => _launchWorkout(
+                                context,
+                                ref,
+                                routine,
+                                exercises,
+                              ),
+                              onEdit: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => CreateRoutinePageWeb(
+                                    editingRoutine: routine,
                                   ),
                                 ),
-                                onNotes: () => _editRoutineNotes(context, ref, routine),
-                                onDuplicate: () => _duplicateRoutine(context, ref, routine),
-                                onDelete: () => _confirmDelete(context, ref, routine),
-                              );
-                            },
-                            childCount: routines.length,
-                          ),
+                              ),
+                              onNotes: () =>
+                                  _editRoutineNotes(context, ref, routine),
+                              onDuplicate: () =>
+                                  _duplicateRoutine(context, ref, routine),
+                              onDelete: () =>
+                                  _confirmDelete(context, ref, routine),
+                            );
+                          }, childCount: routines.length),
                         );
                       },
                     ),
@@ -126,14 +157,15 @@ class RoutinesPageWeb extends ConsumerWidget {
     if (active.isActive) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ya tienes un entrenamiento en curso. Ábrelo o finalízalo antes de iniciar otro.'),
+          content: Text(
+            'Ya tienes un entrenamiento en curso. Ábrelo o finalízalo antes de iniciar otro.',
+          ),
         ),
       );
       return;
     }
     final programSession = ref.read(nextProgramSessionProvider);
-    if (programSession != null &&
-        programSession.routine.id != routine.id) {
+    if (programSession != null && programSession.routine.id != routine.id) {
       final proceed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
@@ -159,9 +191,9 @@ class RoutinesPageWeb extends ConsumerWidget {
     }
     ref.read(activeWorkoutProvider.notifier).startWorkout(routine, exercises);
     if (!context.mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const ActiveWorkoutPageWeb()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const ActiveWorkoutPageWeb()));
   }
 
   Future<void> _editRoutineNotes(
@@ -173,9 +205,12 @@ class RoutinesPageWeb extends ConsumerWidget {
     final result = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.sticky_note_2_outlined, color: AppColors.primary),
+            Icon(
+              Icons.sticky_note_2_outlined,
+              color: AppColors.of(context).primary,
+            ),
             SizedBox(width: 10),
             Text('Nota de la rutina'),
           ],
@@ -191,7 +226,8 @@ class RoutinesPageWeb extends ConsumerWidget {
             textCapitalization: TextCapitalization.sentences,
             decoration: InputDecoration(
               labelText: routine.name,
-              hintText: 'Ej. Priorizar técnica, subir peso la próxima sesión...',
+              hintText:
+                  'Ej. Priorizar técnica, subir peso la próxima sesión...',
               border: const OutlineInputBorder(),
             ),
           ),
@@ -208,7 +244,8 @@ class RoutinesPageWeb extends ConsumerWidget {
             child: const Text('Cancelar'),
           ),
           FilledButton.icon(
-            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            onPressed: () =>
+                Navigator.pop(dialogContext, controller.text.trim()),
             icon: const Icon(Icons.check),
             label: const Text('Guardar'),
           ),
@@ -217,9 +254,9 @@ class RoutinesPageWeb extends ConsumerWidget {
     );
     controller.dispose();
     if (result == null || !context.mounted) return;
-    ref.read(routineListProvider.notifier).updateRoutine(
-          routine.copyWith(notes: result),
-        );
+    ref
+        .read(routineListProvider.notifier)
+        .updateRoutine(routine.copyWith(notes: result));
   }
 
   void _duplicateRoutine(BuildContext context, WidgetRef ref, Routine routine) {
@@ -227,27 +264,40 @@ class RoutinesPageWeb extends ConsumerWidget {
       id: 'routine_${DateTime.now().microsecondsSinceEpoch}',
       name: '${routine.name} (copia)',
       scheduledDays: List<int>.from(routine.scheduledDays),
-      exercises: routine.exercises.map((exercise) => exercise.copyWith()).toList(growable: false),
+      exercises: routine.exercises
+          .map((exercise) => exercise.copyWith())
+          .toList(growable: false),
       createdAt: DateTime.now(),
       notes: routine.notes,
     );
     ref.read(routineListProvider.notifier).addRoutine(copy);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Se creó “${copy.name}”.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Se creó “${copy.name}”.')));
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Routine routine) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Routine routine,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar rutina'),
-        content: Text('¿Eliminar “${routine.name}”? Esta acción no se puede deshacer.'),
+        content: Text(
+          '¿Eliminar “${routine.name}”? Esta acción no se puede deshacer.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.of(context).error,
+            ),
             child: const Text('Eliminar'),
           ),
         ],
@@ -275,7 +325,7 @@ class RoutinesPageWeb extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
+        backgroundColor: AppColors.of(context).surfaceHigh,
         title: const Text('Plan semanal'),
         content: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
@@ -286,7 +336,7 @@ class RoutinesPageWeb extends ConsumerWidget {
                 Text(
                   'Selecciona una rutina para moverla a otro día.',
                   style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(context).textSecondary,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -295,8 +345,7 @@ class RoutinesPageWeb extends ConsumerWidget {
                   final today = DateTime.now().weekday == weekday;
                   final dayRoutines = routines
                       .where(
-                        (routine) =>
-                            routine.scheduledDays.contains(weekday),
+                        (routine) => routine.scheduledDays.contains(weekday),
                       )
                       .toList(growable: false);
                   return Container(
@@ -305,13 +354,15 @@ class RoutinesPageWeb extends ConsumerWidget {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: today
-                          ? AppColors.primaryFaded
-                          : AppColors.surface,
+                          ? AppColors.of(context).primaryFaded
+                          : AppColors.of(context).surface,
                       borderRadius: AppRadius.md_,
                       border: Border.all(
                         color: today
-                            ? AppColors.primary.withValues(alpha: 0.4)
-                            : AppColors.border,
+                            ? AppColors.of(
+                                context,
+                              ).primary.withValues(alpha: 0.4)
+                            : AppColors.of(context).border,
                       ),
                     ),
                     child: Row(
@@ -323,8 +374,8 @@ class RoutinesPageWeb extends ConsumerWidget {
                             days[index],
                             style: AppTypography.labelMedium.copyWith(
                               color: today
-                                  ? AppColors.primary
-                                  : AppColors.textSecondary,
+                                  ? AppColors.of(context).primary
+                                  : AppColors.of(context).textSecondary,
                             ),
                           ),
                         ),
@@ -333,7 +384,7 @@ class RoutinesPageWeb extends ConsumerWidget {
                               ? Text(
                                   'Descanso',
                                   style: AppTypography.bodyMedium.copyWith(
-                                    color: AppColors.textDisabled,
+                                    color: AppColors.of(context).textDisabled,
                                   ),
                                 )
                               : Wrap(
@@ -349,8 +400,7 @@ class RoutinesPageWeb extends ConsumerWidget {
                                               size: 16,
                                             ),
                                             label: Text(routine.name),
-                                            onPressed: () =>
-                                                _moveRoutineToDay(
+                                            onPressed: () => _moveRoutineToDay(
                                               dialogContext,
                                               ref,
                                               routine,
@@ -396,10 +446,7 @@ class RoutinesPageWeb extends ConsumerWidget {
       'Domingo',
     ];
     final availableDays = List<int>.generate(7, (index) => index + 1)
-        .where(
-          (day) =>
-              day != fromDay && !routine.scheduledDays.contains(day),
-        )
+        .where((day) => day != fromDay && !routine.scheduledDays.contains(day))
         .toList(growable: false);
 
     if (availableDays.isEmpty) {
@@ -425,16 +472,16 @@ class RoutinesPageWeb extends ConsumerWidget {
                 Text(
                   '${routine.name} · desde ${days[fromDay - 1]}',
                   style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
+                    color: AppColors.of(planContext).textSecondary,
                   ),
                 ),
                 const SizedBox(height: 12),
                 ...availableDays.map(
                   (day) => ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.calendar_today_outlined,
-                      color: AppColors.primary,
+                      color: AppColors.of(planContext).primary,
                     ),
                     title: Text(days[day - 1]),
                     trailing: const Icon(Icons.chevron_right),
@@ -475,13 +522,10 @@ class RoutinesPageWeb extends ConsumerWidget {
     Navigator.of(planContext).pop();
     messenger.showSnackBar(
       SnackBar(
-        content: Text(
-          '“${routine.name}” se movió a ${days[destination - 1]}.',
-        ),
+        content: Text('“${routine.name}” se movió a ${days[destination - 1]}.'),
       ),
     );
   }
-
 }
 
 class _Header extends StatelessWidget {
@@ -510,7 +554,9 @@ class _Header extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     'Crea, organiza y comienza tus entrenamientos.',
-                    style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.of(context).textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -563,7 +609,7 @@ class _ActiveWorkoutBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.primary.withValues(alpha: 0.12),
+      color: AppColors.of(context).primary.withValues(alpha: 0.12),
       borderRadius: AppRadius.lg_,
       child: InkWell(
         onTap: onTap,
@@ -572,12 +618,14 @@ class _ActiveWorkoutBanner extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: AppRadius.lg_,
-            border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
-            boxShadow: AppElevation.accent,
+            border: Border.all(
+              color: AppColors.of(context).primary.withValues(alpha: 0.35),
+            ),
+            boxShadow: AppElevation.accent(context),
           ),
           child: Row(
             children: [
-              const Icon(Icons.timer_outlined, color: AppColors.primary),
+              Icon(Icons.timer_outlined, color: AppColors.of(context).primary),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -585,14 +633,16 @@ class _ActiveWorkoutBanner extends StatelessWidget {
                   children: [
                     Text(
                       'ENTRENAMIENTO EN CURSO',
-                      style: AppTypography.labelMedium.copyWith(color: AppColors.primary),
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.of(context).primary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(name, style: AppTypography.headlineSmall),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.primary),
+              Icon(Icons.chevron_right, color: AppColors.of(context).primary),
             ],
           ),
         ),
@@ -620,7 +670,9 @@ class _EmptyState extends StatelessWidget {
               Icon(
                 Icons.fitness_center,
                 size: 64,
-                color: AppColors.textSecondary.withValues(alpha: 0.35),
+                color: AppColors.of(
+                  context,
+                ).textSecondary.withValues(alpha: 0.35),
               ),
               const SizedBox(height: 18),
               Text('Aún no tienes rutinas', style: AppTypography.headlineLarge),
@@ -628,7 +680,9 @@ class _EmptyState extends StatelessWidget {
               Text(
                 'Crea una desde cero o empieza con una plantilla lista para personalizar.',
                 textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.of(context).textSecondary,
+                ),
               ),
               const SizedBox(height: 22),
               Wrap(
@@ -681,10 +735,10 @@ class _RoutineCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.of(context).surface,
         borderRadius: AppRadius.lg_,
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppElevation.soft,
+        border: Border.all(color: AppColors.of(context).border),
+        boxShadow: AppElevation.soft(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -707,18 +761,51 @@ class _RoutineCard extends StatelessWidget {
                   if (value == 'duplicate') onDuplicate();
                   if (value == 'delete') onDelete();
                 },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Editar'), dense: true)),
-                  PopupMenuItem(value: 'notes', child: ListTile(leading: Icon(Icons.sticky_note_2_outlined), title: Text('Nota'), dense: true)),
-                  PopupMenuItem(value: 'duplicate', child: ListTile(leading: Icon(Icons.copy_all_outlined), title: Text('Duplicar'), dense: true)),
-                  PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline, color: AppColors.error), title: Text('Eliminar'), dense: true)),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'edit',
+                    child: ListTile(
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Editar'),
+                      dense: true,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'notes',
+                    child: ListTile(
+                      leading: Icon(Icons.sticky_note_2_outlined),
+                      title: Text('Nota'),
+                      dense: true,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'duplicate',
+                    child: ListTile(
+                      leading: Icon(Icons.copy_all_outlined),
+                      title: Text('Duplicar'),
+                      dense: true,
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      leading: Icon(
+                        Icons.delete_outline,
+                        color: AppColors.of(context).error,
+                      ),
+                      title: Text('Eliminar'),
+                      dense: true,
+                    ),
+                  ),
                 ],
               ),
             ],
           ),
           Text(
             '${routine.exercises.length} ejercicios',
-            style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.of(context).textSecondary,
+            ),
           ),
           const SizedBox(height: 10),
           if (routine.hasNotes) ...[
@@ -726,14 +813,20 @@ class _RoutineCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.primaryFaded,
+                color: AppColors.of(context).primaryFaded,
                 borderRadius: AppRadius.sm_,
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
+                border: Border.all(
+                  color: AppColors.of(context).primary.withValues(alpha: 0.22),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.sticky_note_2_outlined, size: 15, color: AppColors.primary),
+                  Icon(
+                    Icons.sticky_note_2_outlined,
+                    size: 15,
+                    color: AppColors.of(context).primary,
+                  ),
                   const SizedBox(width: 7),
                   Expanded(
                     child: Text(
@@ -750,11 +843,13 @@ class _RoutineCard extends StatelessWidget {
           ],
           Expanded(
             child: Text(
-              exerciseNames.isEmpty ? 'Sin ejercicios' : exerciseNames.take(4).join(' · '),
+              exerciseNames.isEmpty
+                  ? 'Sin ejercicios'
+                  : exerciseNames.take(4).join(' · '),
               maxLines: routine.hasNotes ? 2 : 3,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
                 height: 1.45,
               ),
             ),
@@ -774,12 +869,16 @@ class _RoutineCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: selected
-                            ? AppColors.primary.withValues(alpha: 0.16)
-                            : AppColors.surfaceHigh,
+                            ? AppColors.of(
+                                context,
+                              ).primary.withValues(alpha: 0.16)
+                            : AppColors.of(context).surfaceHigh,
                         border: Border.all(
                           color: selected
-                              ? AppColors.primary.withValues(alpha: 0.5)
-                              : AppColors.border,
+                              ? AppColors.of(
+                                  context,
+                                ).primary.withValues(alpha: 0.5)
+                              : AppColors.of(context).border,
                         ),
                       ),
                       child: Text(
@@ -787,7 +886,9 @@ class _RoutineCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: selected ? AppColors.primary : AppColors.textSecondary,
+                          color: selected
+                              ? AppColors.of(context).primary
+                              : AppColors.of(context).textSecondary,
                         ),
                       ),
                     );

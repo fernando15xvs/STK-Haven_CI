@@ -114,7 +114,9 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget> {
                         for (final hour in [12, 15, 18, 20, 22])
                           DropdownMenuItem(
                             value: hour,
-                            child: Text('${hour.toString().padLeft(2, '0')}:00'),
+                            child: Text(
+                              '${hour.toString().padLeft(2, '0')}:00',
+                            ),
                           ),
                       ],
                       onChanged: (value) {
@@ -141,9 +143,7 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget> {
     );
 
     if (saved != true) return;
-    await ref
-        .read(hydrationPreferencesProvider.notifier)
-        .setTargetMl(targetMl);
+    await ref.read(hydrationPreferencesProvider.notifier).setTargetMl(targetMl);
     await ref
         .read(hydrationPreferencesProvider.notifier)
         .setReminderHour(reminderHour);
@@ -159,8 +159,9 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget> {
     final preferences = ref.watch(hydrationPreferencesProvider);
     final targetMl = preferences.targetMl;
     final remaining = (targetMl - hydration.waterMl).clamp(0, targetMl);
-    final progress =
-        targetMl <= 0 ? 0.0 : (hydration.waterMl / targetMl).clamp(0.0, 1.0);
+    final progress = targetMl <= 0
+        ? 0.0
+        : (hydration.waterMl / targetMl).clamp(0.0, 1.0);
 
     return Card(
       elevation: 2,
@@ -189,9 +190,9 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget> {
             ),
             Text(
               '${hydration.waterMl} / $targetMl ml',
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
             const SizedBox(height: 12),
@@ -200,7 +201,7 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget> {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 12,
-                backgroundColor: AppColors.surfaceBorder,
+                backgroundColor: AppColors.of(context).surfaceBorder,
                 color: Colors.blue,
               ),
             ),
@@ -209,15 +210,15 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget> {
               remaining == 0
                   ? 'Meta registrada por hoy.'
                   : 'Te faltan $remaining ml para tu meta personal.',
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: AppColors.of(context).textSecondary),
             ),
             if (preferences.reminderEnabled) ...[
               const SizedBox(height: 4),
               Text(
                 'Recordatorio: ${preferences.reminderHour.toString().padLeft(2, '0')}:00',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: AppColors.of(context).textSecondary,
                 ),
               ),
             ],
@@ -238,9 +239,6 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget> {
   }
 
   Widget _addButton(String label, int ml) {
-    return OutlinedButton(
-      onPressed: () => _addWater(ml),
-      child: Text(label),
-    );
+    return OutlinedButton(onPressed: () => _addWater(ml), child: Text(label));
   }
 }

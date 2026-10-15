@@ -1,3 +1,4 @@
+import 'package:core/core/theme/appearance_theme.dart';
 import 'dart:async';
 
 import 'package:core/domain/models/settings_state.dart';
@@ -89,9 +90,13 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
       });
     }
 
+    final appearance = ref.watch(settingsProvider.select((s) => s.appearance));
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppearanceTheme.build(appearance, Brightness.light),
+      darkTheme: AppearanceTheme.build(appearance, Brightness.dark),
+      themeMode: AppearanceTheme.mode(appearance.mode),
+      themeAnimationDuration: Duration.zero,
       scrollBehavior: const AppScrollBehavior(),
       builder: (context, child) {
         final media = MediaQuery.of(context);
@@ -110,10 +115,15 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   }
 }
 
-Future<void> _publishVerseWidgetBestEffort(String text, String reference) async {
+Future<void> _publishVerseWidgetBestEffort(
+  String text,
+  String reference,
+) async {
   try {
     await VerseWidgetSync.publish(
-      text: text, reference: reference, date: DateTime.now(),
+      text: text,
+      reference: reference,
+      date: DateTime.now(),
     );
   } catch (error) {
     debugPrint('Verse widget sync skipped: $error');

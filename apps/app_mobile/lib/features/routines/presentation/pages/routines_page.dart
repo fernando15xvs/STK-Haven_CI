@@ -21,7 +21,9 @@ class RoutinesPage extends ConsumerWidget {
     final routines = ref.watch(routineListProvider);
     final active = ref.watch(activeWorkoutProvider);
     final exercises = ref.watch(exerciseListProvider);
-    final exerciseMap = {for (final exercise in exercises) exercise.id: exercise};
+    final exerciseMap = {
+      for (final exercise in exercises) exercise.id: exercise,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -44,7 +46,7 @@ class RoutinesPage extends ConsumerWidget {
           ),
           IconButton(
             tooltip: 'Crear rutina',
-            icon: const Icon(Icons.add, color: AppColors.primary),
+            icon: Icon(Icons.add, color: AppColors.of(context).primary),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const CreateRoutinePage()),
@@ -63,15 +65,22 @@ class RoutinesPage extends ConsumerWidget {
                 AppSpacing.sm,
               ),
               child: PremiumCard(
-                backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                borderColor: AppColors.primary.withValues(alpha: 0.4),
+                backgroundColor: AppColors.of(
+                  context,
+                ).primary.withValues(alpha: 0.15),
+                borderColor: AppColors.of(
+                  context,
+                ).primary.withValues(alpha: 0.4),
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const ActiveWorkoutPage()),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.fitness_center, color: AppColors.primary),
+                    Icon(
+                      Icons.fitness_center,
+                      color: AppColors.of(context).primary,
+                    ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
@@ -80,20 +89,24 @@ class RoutinesPage extends ConsumerWidget {
                           Text(
                             'ENTRENAMIENTO EN CURSO',
                             style: AppTypography.labelSmall.copyWith(
-                              color: AppColors.primary,
+                              color: AppColors.of(context).primary,
                               letterSpacing: 1.1,
                             ),
                           ),
                           Text(
-                            active.session?.routineNameSnapshot ?? 'Entrenamiento',
+                            active.session?.routineNameSnapshot ??
+                                'Entrenamiento',
                             style: AppTypography.headlineMedium.copyWith(
-                              color: AppColors.primary,
+                              color: AppColors.of(context).primary,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right, color: AppColors.primary),
+                    Icon(
+                      Icons.chevron_right,
+                      color: AppColors.of(context).primary,
+                    ),
                   ],
                 ),
               ),
@@ -103,11 +116,15 @@ class RoutinesPage extends ConsumerWidget {
                 ? _EmptyState(
                     onCreate: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const CreateRoutinePage()),
+                      MaterialPageRoute(
+                        builder: (_) => const CreateRoutinePage(),
+                      ),
                     ),
                     onTemplates: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const RoutineTemplatesPage()),
+                      MaterialPageRoute(
+                        builder: (_) => const RoutineTemplatesPage(),
+                      ),
                     ),
                   )
                 : ListView.builder(
@@ -122,8 +139,13 @@ class RoutinesPage extends ConsumerWidget {
                       final routine = routines[index];
                       final names = routine.exercises
                           .map(
-                            (item) => exerciseMap[item.exerciseId]?.name ??
-                                Exercise(id: '', name: 'Ejercicio eliminado', muscleGroup: '').name,
+                            (item) =>
+                                exerciseMap[item.exerciseId]?.name ??
+                                Exercise(
+                                  id: '',
+                                  name: 'Ejercicio eliminado',
+                                  muscleGroup: '',
+                                ).name,
                           )
                           .toList(growable: false);
                       return Padding(
@@ -131,15 +153,19 @@ class RoutinesPage extends ConsumerWidget {
                         child: _RoutineCard(
                           routine: routine,
                           exerciseNames: names,
-                          onStart: () => WorkoutLauncher.launch(context, ref, routine),
+                          onStart: () =>
+                              WorkoutLauncher.launch(context, ref, routine),
                           onEdit: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => CreateRoutinePage(editingRoutine: routine),
+                              builder: (_) =>
+                                  CreateRoutinePage(editingRoutine: routine),
                             ),
                           ),
-                          onNotes: () => _editRoutineNotes(context, ref, routine),
-                          onDuplicate: () => _duplicateRoutine(context, ref, routine),
+                          onNotes: () =>
+                              _editRoutineNotes(context, ref, routine),
+                          onDuplicate: () =>
+                              _duplicateRoutine(context, ref, routine),
                           onDelete: () => _confirmDelete(context, ref, routine),
                         ),
                       );
@@ -161,7 +187,7 @@ class RoutinesPage extends ConsumerWidget {
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
@@ -181,7 +207,7 @@ class RoutinesPage extends ConsumerWidget {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textDisabled,
+                  color: AppColors.of(context).textDisabled,
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -199,7 +225,8 @@ class RoutinesPage extends ConsumerWidget {
               maxLength: 500,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                hintText: 'Ej. Priorizar técnica, subir peso la próxima sesión...',
+                hintText:
+                    'Ej. Priorizar técnica, subir peso la próxima sesión...',
                 border: OutlineInputBorder(),
               ),
             ),
@@ -213,7 +240,8 @@ class RoutinesPage extends ConsumerWidget {
                   ),
                 const Spacer(),
                 FilledButton.icon(
-                  onPressed: () => Navigator.pop(sheetContext, controller.text.trim()),
+                  onPressed: () =>
+                      Navigator.pop(sheetContext, controller.text.trim()),
                   icon: const Icon(Icons.check),
                   label: const Text('Guardar'),
                 ),
@@ -225,9 +253,9 @@ class RoutinesPage extends ConsumerWidget {
     );
     controller.dispose();
     if (result == null || !context.mounted) return;
-    ref.read(routineListProvider.notifier).updateRoutine(
-          routine.copyWith(notes: result),
-        );
+    ref
+        .read(routineListProvider.notifier)
+        .updateRoutine(routine.copyWith(notes: result));
   }
 
   void _duplicateRoutine(BuildContext context, WidgetRef ref, Routine routine) {
@@ -235,23 +263,31 @@ class RoutinesPage extends ConsumerWidget {
       id: 'routine_${DateTime.now().microsecondsSinceEpoch}',
       name: '${routine.name} (copia)',
       scheduledDays: List<int>.from(routine.scheduledDays),
-      exercises: routine.exercises.map((exercise) => exercise.copyWith()).toList(growable: false),
+      exercises: routine.exercises
+          .map((exercise) => exercise.copyWith())
+          .toList(growable: false),
       createdAt: DateTime.now(),
       notes: routine.notes,
     );
     ref.read(routineListProvider.notifier).addRoutine(copy);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Se creó “${copy.name}”.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Se creó “${copy.name}”.')));
   }
 
-  Future<void> _confirmDelete(BuildContext context, WidgetRef ref, Routine routine) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    Routine routine,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surfaceHigh,
+        backgroundColor: AppColors.of(context).surfaceHigh,
         title: const Text('Eliminar rutina'),
-        content: Text('¿Eliminar “${routine.name}”? Esta acción no se puede deshacer.'),
+        content: Text(
+          '¿Eliminar “${routine.name}”? Esta acción no se puede deshacer.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -259,7 +295,10 @@ class RoutinesPage extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar', style: TextStyle(color: AppColors.error)),
+            child: Text(
+              'Eliminar',
+              style: TextStyle(color: AppColors.of(context).error),
+            ),
           ),
         ],
       ),
@@ -287,7 +326,7 @@ class RoutinesPage extends ConsumerWidget {
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(context).surfaceHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
@@ -305,28 +344,28 @@ class RoutinesPage extends ConsumerWidget {
             Text(
               'Usa el botón de mover para cambiar una rutina de día.',
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.of(context).textSecondary,
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
             ...List.generate(7, (index) {
               final weekday = index + 1;
               final dayRoutines = routines
-                  .where(
-                    (routine) => routine.scheduledDays.contains(weekday),
-                  )
+                  .where((routine) => routine.scheduledDays.contains(weekday))
                   .toList(growable: false);
               final today = DateTime.now().weekday == weekday;
               return Container(
                 margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: today ? AppColors.primaryFaded : AppColors.surface,
+                  color: today
+                      ? AppColors.of(context).primaryFaded
+                      : AppColors.of(context).surface,
                   borderRadius: AppRadius.md_,
                   border: Border.all(
                     color: today
-                        ? AppColors.primary.withValues(alpha: 0.4)
-                        : AppColors.surfaceBorder,
+                        ? AppColors.of(context).primary.withValues(alpha: 0.4)
+                        : AppColors.of(context).surfaceBorder,
                   ),
                 ),
                 child: Row(
@@ -338,8 +377,8 @@ class RoutinesPage extends ConsumerWidget {
                         days[index],
                         style: AppTypography.labelMedium.copyWith(
                           color: today
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
+                              ? AppColors.of(context).primary
+                              : AppColors.of(context).textSecondary,
                         ),
                       ),
                     ),
@@ -348,7 +387,7 @@ class RoutinesPage extends ConsumerWidget {
                           ? Text(
                               'Descanso',
                               style: AppTypography.bodyMedium.copyWith(
-                                color: AppColors.textDisabled,
+                                color: AppColors.of(context).textDisabled,
                               ),
                             )
                           : Column(
@@ -408,10 +447,7 @@ class RoutinesPage extends ConsumerWidget {
       'Domingo',
     ];
     final availableDays = List<int>.generate(7, (index) => index + 1)
-        .where(
-          (day) =>
-              day != fromDay && !routine.scheduledDays.contains(day),
-        )
+        .where((day) => day != fromDay && !routine.scheduledDays.contains(day))
         .toList(growable: false);
 
     if (availableDays.isEmpty) {
@@ -426,7 +462,7 @@ class RoutinesPage extends ConsumerWidget {
     final destination = await showModalBottomSheet<int>(
       context: planContext,
       useSafeArea: true,
-      backgroundColor: AppColors.surfaceHigh,
+      backgroundColor: AppColors.of(planContext).surfaceHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
@@ -446,16 +482,16 @@ class RoutinesPage extends ConsumerWidget {
             Text(
               '${routine.name} · desde ${days[fromDay - 1]}',
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.textSecondary,
+                color: AppColors.of(planContext).textSecondary,
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             ...availableDays.map(
               (day) => ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(
+                leading: Icon(
                   Icons.calendar_today_outlined,
-                  color: AppColors.primary,
+                  color: AppColors.of(planContext).primary,
                 ),
                 title: Text(days[day - 1]),
                 trailing: const Icon(Icons.chevron_right),
@@ -488,13 +524,10 @@ class RoutinesPage extends ConsumerWidget {
     Navigator.of(planContext).pop();
     messenger.showSnackBar(
       SnackBar(
-        content: Text(
-          '“${routine.name}” se movió a ${days[destination - 1]}.',
-        ),
+        content: Text('“${routine.name}” se movió a ${days[destination - 1]}.'),
       ),
     );
   }
-
 }
 
 class _RoutineCard extends StatelessWidget {
@@ -531,21 +564,35 @@ class _RoutineCard extends StatelessWidget {
                 child: Text(routine.name, style: AppTypography.headlineLarge),
               ),
               const SizedBox(height: 4),
-              Text('${routine.exercises.length} ejercicios', style: AppTypography.bodyMedium),
+              Text(
+                '${routine.exercises.length} ejercicios',
+                style: AppTypography.bodyMedium,
+              ),
               if (routine.hasNotes) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryFaded,
+                    color: AppColors.of(context).primaryFaded,
                     borderRadius: AppRadius.sm_,
-                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
+                    border: Border.all(
+                      color: AppColors.of(
+                        context,
+                      ).primary.withValues(alpha: 0.22),
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.sticky_note_2_outlined, size: 16, color: AppColors.primary),
+                      Icon(
+                        Icons.sticky_note_2_outlined,
+                        size: 16,
+                        color: AppColors.of(context).primary,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -565,7 +612,9 @@ class _RoutineCard extends StatelessWidget {
                   exerciseNames.take(3).join(' · '),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.of(context).textSecondary,
+                  ),
                 ),
               ],
               const SizedBox(height: AppSpacing.md),
@@ -575,7 +624,9 @@ class _RoutineCard extends StatelessWidget {
                     child: Wrap(
                       spacing: 4,
                       children: List.generate(7, (index) {
-                        final selected = routine.scheduledDays.contains(index + 1);
+                        final selected = routine.scheduledDays.contains(
+                          index + 1,
+                        );
                         return Container(
                           width: 23,
                           height: 23,
@@ -583,12 +634,16 @@ class _RoutineCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: selected
-                                ? AppColors.primary.withValues(alpha: 0.18)
-                                : AppColors.surfaceHigh,
+                                ? AppColors.of(
+                                    context,
+                                  ).primary.withValues(alpha: 0.18)
+                                : AppColors.of(context).surfaceHigh,
                             border: Border.all(
                               color: selected
-                                  ? AppColors.primary.withValues(alpha: 0.45)
-                                  : AppColors.surfaceBorder,
+                                  ? AppColors.of(
+                                      context,
+                                    ).primary.withValues(alpha: 0.45)
+                                  : AppColors.of(context).surfaceBorder,
                             ),
                           ),
                           child: Text(
@@ -596,7 +651,9 @@ class _RoutineCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
-                              color: selected ? AppColors.primary : AppColors.textDisabled,
+                              color: selected
+                                  ? AppColors.of(context).primary
+                                  : AppColors.of(context).textDisabled,
                             ),
                           ),
                         );
@@ -606,10 +663,15 @@ class _RoutineCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.15),
+                      color: AppColors.of(
+                        context,
+                      ).primary.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.play_arrow, color: AppColors.primary),
+                    child: Icon(
+                      Icons.play_arrow,
+                      color: AppColors.of(context).primary,
+                    ),
                   ),
                 ],
               ),
@@ -621,18 +683,49 @@ class _RoutineCard extends StatelessWidget {
           right: 4,
           child: PopupMenuButton<String>(
             tooltip: 'Opciones',
-            color: AppColors.surfaceHigh,
+            color: AppColors.of(context).surfaceHigh,
             onSelected: (value) {
               if (value == 'edit') onEdit();
               if (value == 'notes') onNotes();
               if (value == 'duplicate') onDuplicate();
               if (value == 'delete') onDelete();
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Editar'), dense: true)),
-              PopupMenuItem(value: 'notes', child: ListTile(leading: Icon(Icons.sticky_note_2_outlined), title: Text('Nota'), dense: true)),
-              PopupMenuItem(value: 'duplicate', child: ListTile(leading: Icon(Icons.copy_all_outlined), title: Text('Duplicar'), dense: true)),
-              PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete_outline, color: AppColors.error), title: Text('Eliminar'), dense: true)),
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'edit',
+                child: ListTile(
+                  leading: Icon(Icons.edit_outlined),
+                  title: Text('Editar'),
+                  dense: true,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'notes',
+                child: ListTile(
+                  leading: Icon(Icons.sticky_note_2_outlined),
+                  title: Text('Nota'),
+                  dense: true,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'duplicate',
+                child: ListTile(
+                  leading: Icon(Icons.copy_all_outlined),
+                  title: Text('Duplicar'),
+                  dense: true,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: ListTile(
+                  leading: Icon(
+                    Icons.delete_outline,
+                    color: AppColors.of(context).error,
+                  ),
+                  title: Text('Eliminar'),
+                  dense: true,
+                ),
+              ),
             ],
           ),
         ),
@@ -658,7 +751,7 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.fitness_center,
               size: 64,
-              color: AppColors.textSecondary.withValues(alpha: 0.3),
+              color: AppColors.of(context).textSecondary.withValues(alpha: 0.3),
             ),
             const SizedBox(height: AppSpacing.lg),
             Text('No tienes rutinas aún', style: AppTypography.headlineMedium),
@@ -666,7 +759,9 @@ class _EmptyState extends StatelessWidget {
             Text(
               'Crea una desde cero o parte de una plantilla.',
               textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
             ),
             const SizedBox(height: AppSpacing.xl),
             PrimaryButton(label: 'CREAR RUTINA', onPressed: onCreate),
