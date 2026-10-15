@@ -44,6 +44,8 @@ class UserExperienceProfile {
 
   final String displayName;
   final String? avatarEmoji;
+  /// Private, locally stored thumbnail. Not included in coach-sharing payloads.
+  final String? avatarPhotoBase64;
   final bool showWorkoutReflections;
   final Set<UserCapability> capabilities;
   final TrainingGoal? trainingGoal;
@@ -61,6 +63,7 @@ class UserExperienceProfile {
   const UserExperienceProfile({
     this.displayName = '',
     this.avatarEmoji,
+    this.avatarPhotoBase64,
     this.showWorkoutReflections = true,
     this.capabilities = const <UserCapability>{UserCapability.athlete},
     this.trainingGoal,
@@ -91,6 +94,8 @@ class UserExperienceProfile {
     String? displayName,
     String? avatarEmoji,
     bool clearAvatar = false,
+    String? avatarPhotoBase64,
+    bool clearAvatarPhoto = false,
     bool? showWorkoutReflections,
     Set<UserCapability>? capabilities,
     TrainingGoal? trainingGoal,
@@ -112,6 +117,9 @@ class UserExperienceProfile {
     return UserExperienceProfile(
       displayName: displayName ?? this.displayName,
       avatarEmoji: clearAvatar ? null : (avatarEmoji ?? this.avatarEmoji),
+      avatarPhotoBase64: clearAvatarPhoto
+          ? null
+          : (avatarPhotoBase64 ?? this.avatarPhotoBase64),
       showWorkoutReflections: showWorkoutReflections ?? this.showWorkoutReflections,
       capabilities: capabilities ?? this.capabilities,
       trainingGoal:
@@ -140,6 +148,7 @@ class UserExperienceProfile {
     return <String, dynamic>{
       'displayName': displayName,
       'avatarEmoji': avatarEmoji,
+      'avatarPhotoBase64': avatarPhotoBase64,
       'showWorkoutReflections': showWorkoutReflections,
       'capabilities': capabilities.map((value) => value.name).toList()..sort(),
       'trainingGoal': trainingGoal?.name,
@@ -197,6 +206,9 @@ class UserExperienceProfile {
     return UserExperienceProfile(
       displayName: (json['displayName'] as String? ?? '').trim(),
       avatarEmoji: json['avatarEmoji'] as String?,
+      avatarPhotoBase64: json['avatarPhotoBase64'] is String
+          ? json['avatarPhotoBase64'] as String
+          : null,
       showWorkoutReflections: json['showWorkoutReflections'] as bool? ?? true,
       capabilities: parsedCapabilities.isEmpty
           ? const <UserCapability>{UserCapability.athlete}
