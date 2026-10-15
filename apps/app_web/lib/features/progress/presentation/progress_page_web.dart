@@ -672,7 +672,6 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                       child: CustomPaint(
                         painter: _VolumePainter(
                           colors: AppColors.of(context),
-                          colors: AppColors.of(context),
                           data: chartData,
                         ),
                         child: const SizedBox.expand(),
