@@ -154,7 +154,7 @@ class ContextualPassageCatalog {
         await prefs.setString('workout_reflection_session_$sessionId', candidate.key);
         await prefs.setStringList('workout_reflection_recent_v1',
           [...recent.where((key) => key != candidate.key), candidate.key]
-            .skip((recent.length + 1 - 4).clamp(0, recent.length)).toList());
+            .skip(recent.length >= 4 ? recent.length - 3 : 0).toList());
       }
       return verse;
     }
