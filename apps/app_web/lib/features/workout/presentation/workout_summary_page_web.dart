@@ -5,7 +5,7 @@ import 'package:core/domain/models/personal_record.dart';
 import 'package:core/domain/models/workout_analysis.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/domain/models/settings_state.dart';
-import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/faith/presentation/widgets/workout_closing_reflection_card.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/workout/application/workout_summary_snapshot.dart';
@@ -36,6 +36,8 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
         (profile) => profile.value?.faithEnabled ?? false,
       ),
     );
+    final showClosingReflection = faithEnabled &&
+        ref.watch(userExperienceProfileProvider).value?.showWorkoutReflections == true;
     final unit = settings.weightUnit;
     final session = analysisResult.session;
     final summary = WorkoutSummarySnapshot.fromSession(session);
@@ -248,9 +250,9 @@ class WorkoutSummaryPageWeb extends ConsumerWidget {
                     ),
                   ),
                 ],
-                if (faithEnabled && settings.showDailyVerse) ...[
+                if (showClosingReflection) ...[
                   const SizedBox(height: 20),
-                  _FaithMessage(),
+                  WorkoutClosingReflectionCard(session: session, summary: summary),
                 ],
                 const SizedBox(height: 28),
                 FilledButton.icon(
@@ -521,34 +523,6 @@ class _DeltaChipWeb extends StatelessWidget {
       child: Text(
         text,
         style: AppTypography.labelSmall.copyWith(color: AppColors.info),
-      ),
-    );
-  }
-}
-
-class _FaithMessage extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final verse = ref.watch(randomVerseProvider);
-    return _Section(
-      title: 'Fortaleza',
-      icon: Icons.auto_awesome_outlined,
-      child: verse.when(
-        loading: () => const LinearProgressIndicator(),
-        error: (_, _) => Text('No se pudo cargar el mensaje en este momento.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
-        data: (value) {
-          if (value == null) {
-            return Text('Tu entrenamiento quedó guardado correctamente.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary));
-          }
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('“${value.text}”', style: AppTypography.bodyLarge.copyWith(fontStyle: FontStyle.italic, height: 1.55)),
-              const SizedBox(height: 8),
-              Text(value.reference, style: AppTypography.labelMedium.copyWith(color: AppColors.primary)),
-            ],
-          );
-        },
       ),
     );
   }
