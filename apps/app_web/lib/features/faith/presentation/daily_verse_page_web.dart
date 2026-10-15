@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/faith/application/bible_reader_provider.dart';
+import 'package:core/features/faith/presentation/widgets/contextual_passage_details.dart';
+import 'bible_reader_page_web.dart';
 import 'package:core/features/faith/application/favorites_provider.dart';
 import 'package:core/features/faith/application/reflection_journal_provider.dart';
 
@@ -99,6 +102,13 @@ class DailyVersePageWeb extends ConsumerWidget {
                             SelectableText('“${verse.text}”', textAlign: TextAlign.center, style: AppTypography.headlineMedium.copyWith(fontSize: 21, height: 1.55)),
                             const SizedBox(height: 20),
                             Text(verse.reference, style: AppTypography.labelLarge.copyWith(color: AppColors.primary)),
+                            ContextualPassageDetails(verse: verse, onReadChapter: () async {
+                              await ref.read(bibleReaderProvider.future);
+                              await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
+                              await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
+                              if (!context.mounted) return;
+                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BibleReaderPageWeb()));
+                            }),
                           ],
                         ),
                       ),
@@ -127,9 +137,16 @@ class DailyVersePageWeb extends ConsumerWidget {
                   if (state.verse == null || state.isLoading) return const SizedBox.shrink();
                   return Center(
                     child: FilledButton.tonalIcon(
-                      onPressed: () => ref.read(dailyVerseProvider.notifier).changeMood(state.mood),
+                      onPressed: () async {
+                    final verse = state.verse;
+                    if (verse == null) return;
+                    await ref.read(bibleReaderProvider.future);
+                    await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
+                    await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
+                    if (context.mounted) Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BibleReaderPageWeb()));
+                  },
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Otra reflexión'),
+                      label: const Text('Leer el capítulo'),
                     ),
                   );
                 },
