@@ -2,7 +2,7 @@
 
 Source: fernando15xvs/STK-Haven
 Source branch: feat/verse-notification-schedule
-Source commit: 7602063f2b7bcf3e11418eea43e5eb892f9fdf26
+Source commit: b03527da7012961a3e9eae5650698bdc2e447a1e
 
 Sanitized mirror for validation only. Development originates in the private source repository.
 No private history, privileged credentials, signing material or local backups.

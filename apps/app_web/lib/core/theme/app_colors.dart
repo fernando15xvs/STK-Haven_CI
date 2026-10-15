@@ -136,14 +136,6 @@ class AppElevation {
   static List<BoxShadow> soft(BuildContext context) =>
       AppColors.of(context).shadows;
 
-  static List<BoxShadow> unusedSoft() => [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.22),
-      blurRadius: 18,
-      offset: const Offset(0, 8),
-    ),
-  ];
-
   static List<BoxShadow> low(BuildContext context) => soft(context);
 
   static List<BoxShadow> accent(BuildContext context) =>

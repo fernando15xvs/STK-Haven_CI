@@ -187,6 +187,7 @@ class _SummaryTabWeb extends ConsumerWidget {
                       )
                     : CustomPaint(
                         painter: _VolumePainter(
+                          colors: AppColors.of(context),
                           data: metrics.volumeChartData
                               .map(
                                 (point) => WeightConverter.displayWeight(
@@ -670,6 +671,7 @@ class _ExerciseProgressTabWeb extends ConsumerWidget {
                     Expanded(
                       child: CustomPaint(
                         painter: _VolumePainter(
+                          colors: AppColors.of(context),
                           colors: AppColors.of(context),
                           data: chartData,
                         ),

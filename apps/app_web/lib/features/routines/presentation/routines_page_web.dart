@@ -472,7 +472,7 @@ class RoutinesPageWeb extends ConsumerWidget {
                 Text(
                   '${routine.name} · desde ${days[fromDay - 1]}',
                   style: AppTypography.bodyMedium.copyWith(
-                    color: AppColors.of(context).textSecondary,
+                    color: AppColors.of(planContext).textSecondary,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -481,7 +481,7 @@ class RoutinesPageWeb extends ConsumerWidget {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(
                       Icons.calendar_today_outlined,
-                      color: AppColors.of(context).primary,
+                      color: AppColors.of(planContext).primary,
                     ),
                     title: Text(days[day - 1]),
                     trailing: const Icon(Icons.chevron_right),

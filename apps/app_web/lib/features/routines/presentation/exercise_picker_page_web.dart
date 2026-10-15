@@ -315,8 +315,9 @@ class _ExercisePickerPageWebState extends ConsumerState<ExercisePickerPageWeb> {
                                                   '${exercise.muscleGroup} · ${exercise.equipment.isEmpty ? 'Libre' : exercise.equipment}${isUnilateral ? ' · Unilateral' : ''}',
                                                   style: AppTypography.bodySmall
                                                       .copyWith(
-                                                        color: AppColors
-                                                            .textSecondary,
+                                                        color: AppColors.of(
+                                                          context,
+                                                        ).textSecondary,
                                                       ),
                                                   maxLines: 1,
                                                   overflow:

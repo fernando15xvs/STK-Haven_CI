@@ -253,7 +253,7 @@ class ProgramPreviewModal extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Theme(
-        data: ThemeData(dividerColor: Colors.transparent),
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           iconColor: AppColors.of(context).textPrimary,
           collapsedIconColor: AppColors.of(context).textSecondary,

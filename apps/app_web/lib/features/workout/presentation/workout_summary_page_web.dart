@@ -361,7 +361,7 @@ class _Section extends StatelessWidget {
   final Color? iconColor;
   final Widget child;
 
-  _Section({
+  const _Section({
     required this.title,
     required this.icon,
     required this.child,
@@ -382,7 +382,11 @@ class _Section extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, color: iconColor, size: 20),
+              Icon(
+                icon,
+                color: iconColor ?? AppColors.of(context).primary,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(

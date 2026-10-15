@@ -462,7 +462,7 @@ class RoutinesPage extends ConsumerWidget {
     final destination = await showModalBottomSheet<int>(
       context: planContext,
       useSafeArea: true,
-      backgroundColor: AppColors.of(context).surfaceHigh,
+      backgroundColor: AppColors.of(planContext).surfaceHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
       ),
@@ -482,7 +482,7 @@ class RoutinesPage extends ConsumerWidget {
             Text(
               '${routine.name} · desde ${days[fromDay - 1]}',
               style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.of(context).textSecondary,
+                color: AppColors.of(planContext).textSecondary,
               ),
             ),
             const SizedBox(height: AppSpacing.md),
@@ -491,7 +491,7 @@ class RoutinesPage extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(
                   Icons.calendar_today_outlined,
-                  color: AppColors.of(context).primary,
+                  color: AppColors.of(planContext).primary,
                 ),
                 title: Text(days[day - 1]),
                 trailing: const Icon(Icons.chevron_right),
