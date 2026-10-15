@@ -23,5 +23,7 @@ class Verse {
       ? '$book $chapter:$verse-$endVerse'
       : '$book $chapter:$verse';
 
-  String get id => '$book-$chapter-$verse-${endVerse ?? verse}';
+  String get id => endVerse == null || endVerse == verse
+      ? '$book-$chapter-$verse'
+      : '$book-$chapter-$verse-$endVerse';
 }
