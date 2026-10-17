@@ -115,7 +115,6 @@ class MuscleBalanceCalculator {
     final recentStart = recentEnd.subtract(const Duration(days: 7));
     final previousStart = recentStart.subtract(const Duration(days: 7));
     final fromDate = from;
-    final keysForWeek = <String, bool>{}; // reserved for avoiding duplicate IDs
     var comparableSessions = 0;
 
     for (final session in history) {
