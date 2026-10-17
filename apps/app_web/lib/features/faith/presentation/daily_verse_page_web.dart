@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/faith/data/contextual_passage_catalog.dart';
 import 'package:core/features/faith/application/bible_reader_provider.dart';
 import 'package:core/features/faith/presentation/widgets/contextual_passage_details.dart';
 import 'bible_reader_page_web.dart';
@@ -15,19 +16,13 @@ class DailyVersePageWeb extends ConsumerWidget {
 
   const DailyVersePageWeb({super.key, this.embedded = false});
 
-  static const moods = <String>[
-    'General',
-    'Triste',
-    'Agradecido',
-    'Ansioso',
-    'Esperanza',
-    'Enojado',
-    'Cansado',
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stateAsync = ref.watch(dailyVerseProvider);
+    final mood = stateAsync.value?.mood ?? 'General';
+    final moodAsync = mood == 'General'
+        ? null
+        : ref.watch(moodPassageProvider(mood));
 
     final content = SafeArea(
       child: Center(
@@ -69,23 +64,31 @@ class DailyVersePageWeb extends ConsumerWidget {
                 data: (state) => Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: moods
+                  children: ContextualPassageCatalog.moodOptions
                       .map(
                         (mood) => ChoiceChip(
                           label: Text(mood),
                           selected: state.mood == mood,
                           onSelected: (selected) {
-                            if (selected)
-                              ref
-                                  .read(dailyVerseProvider.notifier)
-                                  .changeMood(mood);
+                            if (selected) {
+                              ref.read(dailyVerseProvider.notifier).changeMood(mood);
+                            }
                           },
                         ),
                       )
                       .toList(growable: false),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
+              Text(
+                mood == 'General'
+                    ? 'Mensaje del día: permanece igual hasta mañana.'
+                    : 'Reflexión para tu estado de ánimo. El Mensaje de hoy en Inicio no cambia.',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.of(context).textSecondary,
+                ),
+              ),
+              const SizedBox(height: 18),
               stateAsync.when(
                 loading: () => const _LoadingCard(),
                 error: (error, _) => _MessageCard(
@@ -113,9 +116,21 @@ class DailyVersePageWeb extends ConsumerWidget {
                   ),
                 ),
                 data: (state) {
-                  final verse = state.verse;
-                  if (state.isLoading || verse == null)
+                  if (state.isLoading ||
+                      (state.mood != 'General' && moodAsync?.isLoading == true)) {
                     return const _LoadingCard();
+                  }
+                  final verse = state.mood == 'General'
+                      ? state.verse
+                      : moodAsync?.value;
+                  if (verse == null) {
+                    return _MessageCard(
+                      child: const Text(
+                        'No se encontró un pasaje para este estado de ánimo. '
+                        'Prueba otra opción o vuelve a General.',
+                      ),
+                    );
+                  }
                   final favorites = ref.watch(favoritesProvider);
                   final isFavorite = favorites.any(
                     (favorite) => favorite.id == verse.id,
@@ -213,13 +228,15 @@ class DailyVersePageWeb extends ConsumerWidget {
                 loading: () => const SizedBox.shrink(),
                 error: (_, _) => const SizedBox.shrink(),
                 data: (state) {
-                  if (state.verse == null || state.isLoading)
+                  final verse = state.mood == 'General'
+                      ? state.verse
+                      : moodAsync?.value;
+                  if (verse == null || state.isLoading) {
                     return const SizedBox.shrink();
+                  }
                   return Center(
                     child: FilledButton.tonalIcon(
                       onPressed: () async {
-                        final verse = state.verse;
-                        if (verse == null) return;
                         await ref.read(bibleReaderProvider.future);
                         await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
                         await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);

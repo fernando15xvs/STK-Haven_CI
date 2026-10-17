@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
+import 'package:core/features/faith/data/contextual_passage_catalog.dart';
 import 'package:core/features/faith/application/bible_reader_provider.dart';
 import 'package:core/features/faith/presentation/widgets/contextual_passage_details.dart';
 import 'bible_reader_page.dart';
@@ -14,19 +15,13 @@ import 'reflection_history_page.dart';
 class DailyVersePage extends ConsumerWidget {
   const DailyVersePage({super.key});
 
-  final List<String> moods = const [
-    'General',
-    'Triste',
-    'Agradecido',
-    'Ansioso',
-    'Esperanza',
-    'Enojado',
-    'Cansado',
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stateAsync = ref.watch(dailyVerseProvider);
+    final mood = stateAsync.value?.mood ?? 'General';
+    final moodAsync = mood == 'General'
+        ? null
+        : ref.watch(moodPassageProvider(mood));
 
     return Scaffold(
       appBar: AppBar(
@@ -62,7 +57,7 @@ class DailyVersePage extends ConsumerWidget {
               data: (state) => Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: moods.map((m) {
+                children: ContextualPassageCatalog.moodOptions.map((m) {
                   final isSelected = state.mood == m;
                   return ChoiceChip(
                     label: Text(m),
@@ -78,26 +73,48 @@ class DailyVersePage extends ConsumerWidget {
                           : FontWeight.normal,
                     ),
                     onSelected: (selected) {
-                      if (selected)
+                      if (selected) {
                         ref.read(dailyVerseProvider.notifier).changeMood(m);
+                      }
                     },
                   );
                 }).toList(),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            Text(
+              mood == 'General'
+                  ? 'Mensaje del día: permanece igual hasta mañana.'
+                  : 'Reflexión para tu estado de ánimo. El Mensaje de hoy en Inicio no cambia.',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
+            ),
+            const SizedBox(height: 16),
             stateAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => const SizedBox(),
               data: (state) {
-                if (state.isLoading)
-                  return const Center(child: CircularProgressIndicator());
-                if (state.verse == null) {
+                if (state.isLoading || (state.mood != 'General' &&
+                    moodAsync?.isLoading == true)) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+                final verse = state.mood == 'General'
+                    ? state.verse
+                    : moodAsync?.value;
+                if (verse == null) {
                   return Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Text(
-                        'Preparando el contenido...\nVuelve en un momento.',
+                        state.mood == 'General'
+                            ? 'Preparando el contenido...\nVuelve en un momento.'
+                            : 'No se encontró un pasaje para este estado de ánimo. Prueba otra opción o vuelve a General.',
                         textAlign: TextAlign.center,
                         style: AppTypography.bodyMedium.copyWith(
                           color: AppColors.of(context).textSecondary,
@@ -107,7 +124,6 @@ class DailyVersePage extends ConsumerWidget {
                   );
                 }
 
-                final verse = state.verse!;
                 final favorites = ref.watch(favoritesProvider);
                 final isFavorite = favorites.any((v) => v.id == verse.id);
 
@@ -243,35 +259,35 @@ class DailyVersePage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-            stateAsync
-                    .whenData(
-                      (state) => Center(
-                        child: state.verse == null
-                            ? const SizedBox()
-                            : ElevatedButton.icon(
-                                onPressed: () async {
-                                  final verse = state.verse;
-                                  if (verse == null) return;
-                                  await ref.read(bibleReaderProvider.future);
-                                  await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
-                                  await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
-                                  if (context.mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleReaderPage()));
-                                },
-                                icon: const Icon(Icons.menu_book_outlined),
-                                label: const Text('Leer el capítulo'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.of(
-                                    context,
-                                  ).surfaceHigh,
-                                  foregroundColor: AppColors.of(
-                                    context,
-                                  ).textPrimary,
-                                ),
-                              ),
-                      ),
-                    )
-                    .value ??
-                const SizedBox(),
+            stateAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+              data: (state) {
+                final verse = state.mood == 'General'
+                    ? state.verse
+                    : moodAsync?.value;
+                if (verse == null) return const SizedBox.shrink();
+                return Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await ref.read(bibleReaderProvider.future);
+                      await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
+                      await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
+                      if (!context.mounted) return;
+                      Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => const BibleReaderPage(),
+                      ));
+                    },
+                    icon: const Icon(Icons.menu_book_outlined),
+                    label: const Text('Leer el capítulo'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.of(context).surfaceHigh,
+                      foregroundColor: AppColors.of(context).textPrimary,
+                    ),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
