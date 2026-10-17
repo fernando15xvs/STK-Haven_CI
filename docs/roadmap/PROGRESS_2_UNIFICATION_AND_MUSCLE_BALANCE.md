@@ -32,12 +32,12 @@
 
 ## Fase 2 — Modelo de distribución muscular confiable
 
-- [ ] Calcular por grupo la frecuencia (días distintos), últimas fechas de trabajo y series efectivas directas.
-- [ ] Incluir grupos conocidos con cero actividad y semanas completas comparables.
-- [ ] Separar secundarios **estimados**, sin atribuirles series completas como si fueran directas; permitir omitirlos.
-- [ ] Comparar planificación vs. ejecución sin contar series de calentamiento/aproximación, con límites explícitos.
-- [ ] Mejorar `Progreso > Músculos` con resumen interpretable y detalle contextual de cada músculo, sin PR duplicados.
-- [ ] Añadir pruebas de ejercicios mixtos, unilaterales, incompletos, período vacío y frecuencia por día.
+- [x] Calcular por grupo la frecuencia (días distintos), últimas fechas de trabajo y series efectivas directas.
+- [x] Incluir grupos conocidos con cero actividad y semanas completas comparables.
+- [x] Separar secundarios **estimados**, sin atribuirles series completas como si fueran directas; permitir omitirlos.
+- [x] Comparar planificación vs. ejecución sin contar series de calentamiento/aproximación, con límites explícitos.
+- [x] Mejorar `Progreso > Músculos` con resumen interpretable y detalle contextual de cada músculo, sin PR duplicados.
+- [x] Añadir pruebas de ejercicios mixtos, unilaterales, incompletos, período vacío y frecuencia por día.
 
 ## Fase 3 — Observaciones inteligentes explicables
 
@@ -71,3 +71,5 @@
 - **2026-10-17 · CI validado:** ejecución [#39056630059](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39056630059) — **6/6 jobs aprobados**: móvil, Core/análisis, iOS profile/release, Android debug/profile/release/AAB/split, Supabase/RLS y Edge. Paridad de árboles confirmada salvo workflows/metadatos exclusivos del espejo. La validación física en teléfonos sigue pendiente.
 
 - **2026-10-17 · Fase 1 fusionada:** `STK-Haven/main` = [7bf4619](https://github.com/fernando15xvs/STK-Haven/commit/7bf4619f9b8bc49eca22290b3df7de1c189e9059); `STK-Haven_CI/main` = [967a087](https://github.com/fernando15xvs/STK-Haven_CI/commit/967a08773d2110b9c210e873ced0ad68ecbecf4c). PR [#28](https://github.com/fernando15xvs/STK-Haven_CI/pull/28) fusionado. Sigue pendiente la fase 2 de balance muscular y la validación manual en teléfonos.
+
+- **2026-10-17 · Fase 2 validada y fusionada:** PR [#29](https://github.com/fernando15xvs/STK-Haven_CI/pull/29). CI [#39058649590](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39058649590) **6/6 verde**: pruebas móviles (incluye 320 px), Core de reparto muscular, analyze, Supabase/RLS, iOS y Android. `STK-Haven/main`: [40f2989](https://github.com/fernando15xvs/STK-Haven/commit/40f29894c508cb5d13ee9c4773ef30f183eb8f65); `STK-Haven_CI/main`: [d74b426](https://github.com/fernando15xvs/STK-Haven_CI/commit/d74b4269a37129d4b8e02f2b079d8fc5ebe06e57). Se guardó **código**, sin cambios de Supabase ni de historial. Comparativa de rutinas existentes = referencia al plan actual en sesiones ya ejecutadas; secundarios = estimación opcional y separada; dos semanas completas independientes del filtro de días. Fase 3 (observaciones inteligentes) y pruebas manuales en teléfonos siguen pendientes.
