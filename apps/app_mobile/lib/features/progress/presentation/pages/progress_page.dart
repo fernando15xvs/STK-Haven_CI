@@ -13,6 +13,7 @@ import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detai
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/body_measurement_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/domain/models/settings_state.dart';
 import 'package:gym_tracker/core/theme/components/metric_tile.dart';
 
 class ProgressPage extends ConsumerWidget {
