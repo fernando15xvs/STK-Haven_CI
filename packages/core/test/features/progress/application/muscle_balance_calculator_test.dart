@@ -5,18 +5,18 @@ import 'package:core/features/progress/application/muscle_balance_calculator.dar
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  const primary = Exercise(
+  final primary = Exercise(
     id: 'press',
     name: 'Press de banca',
     muscleGroup: 'Pecho',
     secondaryMuscles: ['Tríceps', 'TRÍCEPS', 'Pecho'],
   );
-  const inactive = Exercise(
+  final inactive = Exercise(
     id: 'legs',
     name: 'Sentadillas',
     muscleGroup: 'Piernas',
   );
-  const curl = Exercise(
+  final curl = Exercise(
     id: 'curl',
     name: 'Curl',
     muscleGroup: 'Bíceps',
@@ -115,11 +115,11 @@ void main() {
   MuscleBalanceReport calculate({
     Iterable<WorkoutSession>? sessions,
     DateTime? from,
-    Iterable<Exercise> exerciseList = const [primary, inactive, curl],
+    Iterable<Exercise>? exerciseList,
     Iterable<Routine>? routines,
   }) => MuscleBalanceCalculator.calculate(
     history: sessions ?? history,
-    exercises: exerciseList,
+    exercises: exerciseList ?? [primary, inactive, curl],
     routines: routines ?? [routine],
     from: from ?? DateTime(2026, 9, 1),
     now: now,
@@ -206,7 +206,7 @@ void main() {
 
   test('historical primary snapshot survives catalog changes', () {
     final report = calculate(
-      exerciseList: const [inactive, curl],
+      exerciseList: [inactive, curl],
     );
     expect(muscle(report, 'Pecho').directSets, 5);
     expect(report.groups.where((g) => g.name == 'Tríceps'), isEmpty);
