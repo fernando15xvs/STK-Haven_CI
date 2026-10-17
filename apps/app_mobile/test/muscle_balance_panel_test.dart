@@ -1,4 +1,5 @@
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
@@ -23,7 +24,7 @@ class _Exercises extends ExerciseListNotifier {
 
 class _Routines extends RoutineListNotifier {
   @override
-  build() => [];
+  List<Routine> build() => [];
 }
 
 class _History extends WorkoutHistoryNotifier {
