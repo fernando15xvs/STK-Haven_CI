@@ -22,12 +22,12 @@
 
 ## Fase 1 — Una única pantalla de análisis por ejercicio
 
-- [ ] Exponer un widget reutilizable sin Scaffold para `Progreso > Ejercicios` desde el análisis avanzado existente.
-- [ ] Añadir búsqueda por nombre y filtros 30/90 días/todo; estado vacío claro y navegación a detalle/técnica.
-- [ ] Conservar e1RM, PR, anterior vs actual, series/reps/RIR, historial y comparación unilateral sin perder datos.
-- [ ] Eliminar la tarjeta duplicada previa de Ejercicios, y el acceso independiente a Inteligencia del menú móvil.
-- [ ] Retirar el resumen de volumen muscular de la ficha de ejercicios; Músculos tendrá esa responsabilidad.
-- [ ] Mantener `ProgressIntelligencePage` como redirección/compatibilidad interna para enlaces previos.
+- [x] Exponer un widget reutilizable sin Scaffold para `Progreso > Ejercicios` desde el análisis avanzado existente.
+- [x] Añadir búsqueda por nombre y filtros 30/90 días/todo; estado vacío claro y navegación a detalle/técnica.
+- [x] Conservar e1RM, PR, anterior vs actual, series/reps/RIR, historial y comparación unilateral sin perder datos.
+- [x] Eliminar la tarjeta duplicada previa de Ejercicios, y el acceso independiente a Inteligencia del menú móvil.
+- [x] Retirar el resumen de volumen muscular de la ficha de ejercicios; Músculos tendrá esa responsabilidad.
+- [x] Mantener `ProgressIntelligencePage` como redirección/compatibilidad interna para enlaces previos.
 - [ ] Pruebas del filtrado y del panel de Ejercicios en Flutter, más análisis estático.
 
 ## Fase 2 — Modelo de distribución muscular confiable
@@ -63,3 +63,7 @@
 - El músculo primario proviene de la instantánea histórica; secundarios de catálogo son inferencia etiquetada, jamás alterar registros anteriores.
 - No introducir cambios de sincronización, privacidad o Supabase sin análisis y permiso específico.
 - Marcar un checklist solo tras confirmar la modificación o validación correspondiente.
+
+## Bitácora de implementación
+
+- **2026-10-17 · Fase 1, código preparado:** panel único de Ejercicios con filtro temporal 30/90/todo, búsqueda, métricas avanzadas, análisis unilateral y acceso a técnica; eliminado el duplicado móvil de Inteligencia y los agregados musculares de Ejercicios. Prueba de widget iPhone/Android de 320 px añadida; **aún pendiente de aprobación CI y fusión a main**.
