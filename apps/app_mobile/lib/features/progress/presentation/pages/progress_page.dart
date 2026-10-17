@@ -5,6 +5,9 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/presentation/widgets/recent_workout_details.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
+import 'package:core/features/progress/application/progress_insight_calculator.dart';
+import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:gym_tracker/features/progress/presentation/widgets/progress_insights_panel.dart';
 import 'package:core/features/progress/presentation/pages/progress_intelligence_page.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/muscle_heatmap_grid.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/volume_chart.dart';
@@ -83,6 +86,14 @@ class _SummaryTab extends ConsumerWidget {
     final filter = ref.watch(timeFilterProvider);
     final history = ref.watch(workoutHistoryProvider);
     final settings = ref.watch(settingsProvider);
+    final exercises = ref.watch(exerciseListProvider);
+    final insights = ProgressInsightCalculator.calculate(
+      history: history,
+      exercises: exercises,
+      from: filter.startDate,
+      now: DateTime.now(),
+      periodKey: filter.label,
+    );
 
     return ListView(
       padding: const EdgeInsets.symmetric(
@@ -183,6 +194,8 @@ class _SummaryTab extends ConsumerWidget {
           snapshot: metrics.calendarHeatmap,
           periodLabel: filter.label,
         ),
+        const SizedBox(height: AppSpacing.xxl),
+        ProgressInsightsPanel(insights: insights),
         const SizedBox(height: AppSpacing.xxl),
         Text(
           'ESTE PERIODO (${filter.label.toUpperCase()})',
