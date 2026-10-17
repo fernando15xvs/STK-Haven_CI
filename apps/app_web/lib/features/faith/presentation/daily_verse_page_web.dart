@@ -228,13 +228,15 @@ class DailyVersePageWeb extends ConsumerWidget {
                 loading: () => const SizedBox.shrink(),
                 error: (_, _) => const SizedBox.shrink(),
                 data: (state) {
-                  if (state.verse == null || state.isLoading)
+                  final verse = state.mood == 'General'
+                      ? state.verse
+                      : moodAsync?.value;
+                  if (verse == null || state.isLoading) {
                     return const SizedBox.shrink();
+                  }
                   return Center(
                     child: FilledButton.tonalIcon(
                       onPressed: () async {
-                        final verse = state.verse;
-                        if (verse == null) return;
                         await ref.read(bibleReaderProvider.future);
                         await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
                         await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
