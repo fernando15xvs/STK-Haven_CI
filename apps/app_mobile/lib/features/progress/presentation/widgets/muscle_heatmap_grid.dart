@@ -1,4 +1,3 @@
-import 'package:core/domain/models/exercise.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/progress/application/muscle_balance_calculator.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
