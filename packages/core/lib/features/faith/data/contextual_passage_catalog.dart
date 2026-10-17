@@ -67,7 +67,7 @@ class ContextualPassageCatalog {
 
   /// Estas selecciones son temáticas; no reemplazan el pasaje fijo de Inicio.
   /// La rotación diaria original de [passages] no se modifica.
-  static const _moodSpecific = <String, List<ContextualPassage>>{
+  static final _moodSpecific = <String, List<ContextualPassage>>{
     'Triste': [
       ContextualPassage('Salmos', 34, 17, 19,
         'El salmo expresa que Dios escucha a quienes atraviesan aflicciones.',
