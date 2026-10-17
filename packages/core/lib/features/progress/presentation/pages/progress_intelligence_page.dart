@@ -22,17 +22,31 @@ enum ProgressPeriod {
   final int? days;
 }
 
-class ProgressIntelligencePage extends ConsumerStatefulWidget {
+/// Compatibility route for existing links; the actual mobile entry is the
+/// Progreso > Ejercicios tab, which uses the same shared panel.
+class ProgressIntelligencePage extends StatelessWidget {
   const ProgressIntelligencePage({super.key});
 
   @override
-  ConsumerState<ProgressIntelligencePage> createState() =>
-      _ProgressIntelligencePageState();
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Progreso por ejercicio')),
+    body: const ProgressExercisesPanel(),
+  );
 }
 
-class _ProgressIntelligencePageState
-    extends ConsumerState<ProgressIntelligencePage> {
+class ProgressExercisesPanel extends ConsumerStatefulWidget {
+  const ProgressExercisesPanel({super.key, this.onOpenExercise});
+
+  final ValueChanged<Exercise>? onOpenExercise;
+
+  @override
+  ConsumerState<ProgressExercisesPanel> createState() =>
+      _ProgressExercisesPanelState();
+}
+
+class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel> {
   ProgressPeriod _period = ProgressPeriod.days90;
+  String _search = '';
 
   @override
   Widget build(BuildContext context) {
@@ -44,140 +58,80 @@ class _ProgressIntelligencePageState
         : DateTime.now().subtract(Duration(days: _period.days!));
 
     final entries = <_ProgressEntry>[];
-    final groupVolume = <String, double>{};
     for (final exercise in exercises) {
       final trend = ExerciseProgressCalculator.calculateTrend(
         history,
         exercise.id,
         from: from,
         maxChartPoints: settings.performanceMode == PerformanceMode.savings
-            ? 48
-            : 120,
+            ? 48 : 120,
       );
-      if (!trend.hasRecordedWork) continue;
-      entries.add(_ProgressEntry(exercise: exercise, trend: trend));
-      final group = exercise.muscleGroup.trim().isEmpty
-          ? 'Sin grupo'
-          : exercise.muscleGroup.trim();
-      groupVolume.update(
-        group,
-        (value) => value + trend.totalVolume,
-        ifAbsent: () => trend.totalVolume,
-      );
+      if (trend.hasRecordedWork) {
+        entries.add(_ProgressEntry(exercise: exercise, trend: trend));
+      }
     }
-    entries.sort(
-      (a, b) => (b.trend.lastPerformedAt ?? DateTime(1970))
-          .compareTo(a.trend.lastPerformedAt ?? DateTime(1970)),
-    );
-    final groups = groupVolume.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    entries.sort((a, b) =>
+        (b.trend.lastPerformedAt ?? DateTime(1970)).compareTo(
+        a.trend.lastPerformedAt ?? DateTime(1970)));
+    final search = _search.trim().toLowerCase();
+    final matching = entries.where((entry) =>
+        entry.exercise.name.toLowerCase().contains(search))
+        .toList(growable: false);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Inteligencia de progreso'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<ProgressPeriod>(
-                value: _period,
-                items: ProgressPeriod.values
-                    .map(
-                      (period) => DropdownMenuItem(
-                        value: period,
-                        child: Text(period.label),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (period) {
-                  if (period != null) setState(() => _period = period);
-                },
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+          child: Row(children: [
+            Expanded(child: Text('Rendimiento por ejercicio',
+                style: Theme.of(context).textTheme.titleMedium)),
+            DropdownButton<ProgressPeriod>(
+              value: _period,
+              items: ProgressPeriod.values.map((period) =>
+                  DropdownMenuItem(value: period, child: Text(period.label)))
+                  .toList(growable: false),
+              onChanged: (period) {
+                if (period != null) setState(() => _period = period);
+              },
             ),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+          child: TextField(
+            key: const ValueKey('progress_exercises_search'),
+            decoration: const InputDecoration(
+              labelText: 'Buscar ejercicio',
+              prefixIcon: Icon(Icons.search_rounded),
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            onChanged: (value) => setState(() => _search = value),
           ),
-        ],
-      ),
-      body: entries.isEmpty
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.all(28),
-                child: Text(
-                  'Todavía no hay suficientes series de trabajo completadas en este período.',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
-              children: [
-                Text(
-                  'VOLUMEN POR GRUPO · ${_period.label.toUpperCase()}',
-                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w800,
+        ),
+        Expanded(
+          child: entries.isEmpty
+              ? const Center(child: Padding(
+                  padding: EdgeInsets.all(28),
+                  child: Text('Todavía no hay series efectivas registradas en este período.',
+                      textAlign: TextAlign.center)))
+              : matching.isEmpty
+                  ? const Center(child: Text('No hay ejercicios con ese nombre.'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                      itemCount: matching.length,
+                      itemBuilder: (context, index) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _ExerciseInsightCard(
+                          entry: matching[index],
+                          unit: settings.weightUnit,
+                          onOpenExercise: widget.onOpenExercise,
+                        ),
                       ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 92,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: groups.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (context, index) {
-                      final group = groups[index];
-                      return Container(
-                        width: 145,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              group.key,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context).textTheme.labelMedium,
-                            ),
-                            const Spacer(),
-                            Text(
-                              FitnessFormatter.formatVolume(
-                                group.value,
-                                settings.weightUnit,
-                              ),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  '${entries.length} ejercicios con historial',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                ...entries.map(
-                  (entry) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _ExerciseInsightCard(
-                      entry: entry,
-                      unit: settings.weightUnit,
                     ),
-                  ),
-                ),
-              ],
-            ),
+        ),
+      ],
     );
   }
 }
@@ -189,10 +143,11 @@ class _ProgressEntry {
 }
 
 class _ExerciseInsightCard extends StatelessWidget {
-  const _ExerciseInsightCard({required this.entry, required this.unit});
+  const _ExerciseInsightCard({required this.entry, required this.unit, this.onOpenExercise});
 
   final _ProgressEntry entry;
   final WeightUnit unit;
+  final ValueChanged<Exercise>? onOpenExercise;
 
   int get _maxReps {
     var best = 0;
@@ -456,6 +411,15 @@ class _ExerciseInsightCard extends StatelessWidget {
                   ),
                 ),
               ),
+          if (onOpenExercise != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => onOpenExercise!(entry.exercise),
+                icon: const Icon(Icons.menu_book_outlined),
+                label: const Text('Técnica y ficha del ejercicio'),
+              ),
+            ),
         ],
       ),
     );

@@ -6,7 +6,6 @@ import 'package:gym_tracker/features/habits/presentation/study_habits_mobile_pag
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/programs/presentation/pages/training_programs_page.dart';
-import 'package:core/features/progress/presentation/pages/progress_intelligence_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -340,12 +339,6 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                           icon: Icons.layers_outlined,
                           label: 'Programas',
                           onTap: () => _openPage(const TrainingProgramsPage()),
-                        ),
-                        _MenuOption(
-                          icon: Icons.insights_rounded,
-                          label: 'Inteligencia',
-                          onTap: () =>
-                              _openPage(const ProgressIntelligencePage()),
                         ),
                         if (widget.coachEnabled)
                           _MenuOption(
