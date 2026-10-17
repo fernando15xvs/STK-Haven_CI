@@ -53,7 +53,7 @@
 - [x] Ejecutar Flutter analyze + pruebas Core/móvil en **STK-Haven_CI solamente**.
 - [x] Compilar iOS release/profile sin firma y Android debug/profile/release/AAB en el espejo.
 - [x] Verificar paridad de árboles originales y CI (solo workflow/metadatos exclusivos del espejo).
-- [ ] Integrar en `main` original sin ejecutar Actions y después sincronizar `main` espejo; registrar SHA/CI.
+- [x] Integrar en `main` original sin ejecutar Actions y después sincronizar `main` espejo; registrar SHA/CI.
 - [ ] Pruebas manuales en iPhone y Android tras instalar; **no prometer** validación física previa.
 
 ## Reglas de producto
@@ -66,6 +66,8 @@
 
 ## Bitácora de implementación
 
-- **2026-10-17 · Fase 1, código preparado:** panel único de Ejercicios con filtro temporal 30/90/todo, búsqueda, métricas avanzadas, análisis unilateral y acceso a técnica; eliminado el duplicado móvil de Inteligencia y los agregados musculares de Ejercicios. Prueba de widget de 320 px y búsqueda **aprobada**, junto con el análisis estático y las pruebas Core/móviles. **Integración a main aún pendiente.**
+- **2026-10-17 · Fase 1, código preparado:** panel único de Ejercicios con filtro temporal 30/90/todo, búsqueda, métricas avanzadas, análisis unilateral y acceso a técnica; eliminado el duplicado móvil de Inteligencia y los agregados musculares de Ejercicios. Prueba de widget de 320 px y búsqueda **aprobada**, junto con el análisis estático y las pruebas Core/móviles. **Integración a main completada.**
 
 - **2026-10-17 · CI validado:** ejecución [#39056630059](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39056630059) — **6/6 jobs aprobados**: móvil, Core/análisis, iOS profile/release, Android debug/profile/release/AAB/split, Supabase/RLS y Edge. Paridad de árboles confirmada salvo workflows/metadatos exclusivos del espejo. La validación física en teléfonos sigue pendiente.
+
+- **2026-10-17 · Fase 1 fusionada:** `STK-Haven/main` = [7bf4619](https://github.com/fernando15xvs/STK-Haven/commit/7bf4619f9b8bc49eca22290b3df7de1c189e9059); `STK-Haven_CI/main` = [967a087](https://github.com/fernando15xvs/STK-Haven_CI/commit/967a08773d2110b9c210e873ced0ad68ecbecf4c). PR [#28](https://github.com/fernando15xvs/STK-Haven_CI/pull/28) fusionado. Sigue pendiente la fase 2 de balance muscular y la validación manual en teléfonos.
