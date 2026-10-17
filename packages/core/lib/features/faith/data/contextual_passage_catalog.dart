@@ -65,6 +65,108 @@ class ContextualPassageCatalog {
       'Celebra el tiempo que pudiste dedicarte hoy.'),
   ];
 
+  /// Estas selecciones son temáticas; no reemplazan el pasaje fijo de Inicio.
+  /// La rotación diaria original de [passages] no se modifica.
+  static const _moodSpecific = <String, List<ContextualPassage>>{
+    'Triste': [
+      ContextualPassage('Salmos', 34, 17, 19,
+        'El salmo expresa que Dios escucha a quienes atraviesan aflicciones.',
+        '¿Qué emoción necesitas reconocer y expresar hoy?',
+        'Reconocer una dificultad también es parte del camino.'),
+      passages[5],
+    ],
+    'Agradecido': [
+      ContextualPassage('Salmos', 100, 1, 3,
+        'El salmo invita a expresar gratitud y alabanza.',
+        '¿Qué pequeño gesto o momento agradeces hoy?',
+        'Puedes valorar tanto los grandes como los pequeños momentos.'),
+      passages[9],
+    ],
+    'Alegre': [
+      ContextualPassage('Salmos', 30, 4, 5,
+        'El salmista describe el paso de la tristeza hacia la alegría.',
+        '¿Qué momento de alegría te gustaría recordar hoy?',
+        'Disfrutar de los buenos momentos también merece su espacio.'),
+      ContextualPassage('Salmos', 150, 1, 3,
+        'El salmo invita a celebrar y alabar a Dios.',
+        '¿Cómo te gustaría compartir tu alegría?',
+        'La gratitud y la alegría pueden expresarse de muchas maneras.'),
+    ],
+    'Ansioso': [
+      ContextualPassage('1 Pedro', 5, 6, 7,
+        'El pasaje invita a poner las preocupaciones en manos de Dios.',
+        '¿Qué preocupación te gustaría expresar con sinceridad?',
+        'Puedes reconocer tus preocupaciones sin tener que resolverlas ahora.'),
+      passages[2],
+    ],
+    'Esperanza': [
+      ContextualPassage('Josué', 1, 7, 9,
+        'El llamado a Josué combina ánimo, fidelidad y confianza.',
+        '¿Qué te anima a seguir adelante en esta etapa?',
+        'Avanzar con esperanza también admite dudas y pausas.'),
+      passages[4],
+    ],
+    'Enojado': [
+      ContextualPassage('Efesios', 4, 26, 27,
+        'El pasaje distingue la emoción del enojo de las acciones que pueden hacer daño.',
+        '¿Qué necesitas expresar de forma constructiva?',
+        'Sentir enojo no tiene que definir tu siguiente acción.'),
+      passages[7],
+    ],
+    'Cansado': [
+      ContextualPassage('Isaías', 40, 29, 31,
+        'El profeta habla de fortaleza y esperanza para quienes sienten cansancio.',
+        '¿Qué forma de descanso necesitas hoy?',
+        'Descansar no disminuye el valor de lo que haces.'),
+      passages[1],
+    ],
+  };
+
+  static const moodOptions = <String>[
+    'General', 'Triste', 'Agradecido', 'Alegre',
+    'Ansioso', 'Esperanza', 'Enojado', 'Cansado',
+  ];
+
+  /// Selección reproducible durante el día y distinta del mensaje fijo
+  /// cuando al menos otro pasaje temático esté disponible.
+  static List<ContextualPassage> forMood(
+    String mood,
+    DateTime day, {
+    String? avoidKey,
+  }) {
+    final pool = _moodSpecific[mood];
+    if (pool == null || pool.isEmpty) return const [];
+    final offset = DateTime(day.year, day.month, day.day)
+        .difference(DateTime(2024, 1, 1)).inDays;
+    final index = offset % pool.length;
+    final ordered = [
+      for (var i = 0; i < pool.length; i++)
+        pool[(index + i) % pool.length],
+    ];
+    if (avoidKey == null) return ordered;
+    return [
+      ...ordered.where((p) => p.key != avoidKey),
+      ...ordered.where((p) => p.key == avoidKey),
+    ];
+  }
+
+  static Future<Verse?> mood(
+    BibleRepository repository, {
+    required String mood,
+    required DateTime day,
+    Verse? dailyVerse,
+  }) async {
+    final avoidKey = dailyVerse == null
+        ? null
+        : '${dailyVerse.book}-${dailyVerse.chapter}-'
+            '${dailyVerse.verse}-${dailyVerse.endVerse ?? dailyVerse.verse}';
+    for (final passage in forMood(mood, day, avoidKey: avoidKey)) {
+      final resolved = await resolve(repository, passage);
+      if (resolved != null) return resolved;
+    }
+    return null;
+  }
+
   static ContextualPassage forDay(DateTime date) {
     final day = DateTime(date.year, date.month, date.day);
     final offset = day.difference(DateTime(2024, 1, 1)).inDays;

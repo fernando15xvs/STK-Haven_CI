@@ -88,17 +88,41 @@ class DailyVerseNotifier extends AsyncNotifier<DailyVerseState> {
     );
   }
 
-  /// Mood is a journaling preference; it must not replace today's passage.
+  /// Actualiza la selección visible sin reemplazar el mensaje fijo de hoy.
+  /// La página de Reflexión observa moodPassageProvider para cargar la
+  /// lectura adecuada; Inicio sigue leyendo exclusivamente state.verse.
   Future<void> changeMood(String newMood) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('current_mood', newMood);
+    if (!ContextualPassageCatalog.moodOptions.contains(newMood)) return;
     final previous = state.value ?? DailyVerseState(isLoading: false);
     state = AsyncValue.data(previous.copyWith(mood: newMood));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('current_mood', newMood);
   }
 
 }
 
 final dailyVerseProvider = AsyncNotifierProvider<DailyVerseNotifier, DailyVerseState>(DailyVerseNotifier.new);
+
+/// Reflexión temática independiente del versículo diario compartido con
+/// Inicio, widget y notificaciones. Se resuelve solo cuando se visita la
+/// página de Reflexión diaria y se selecciona un estado distinto de General.
+final moodPassageProvider = FutureProvider.autoDispose.family<Verse?, String>(
+  (ref, mood) async {
+    if (mood == 'General' ||
+        !ContextualPassageCatalog.moodOptions.contains(mood)) {
+      return null;
+    }
+    final init = ref.watch(bibleInitProvider);
+    final dailyVerse = ref.watch(dailyVerseProvider).value?.verse;
+    if (!init.isReady) return null;
+    return ContextualPassageCatalog.mood(
+      ref.read(bibleRepositoryProvider),
+      mood: mood,
+      day: DateTime.now(),
+      dailyVerse: dailyVerse,
+    );
+  },
+);
 
 final randomVerseProvider = FutureProvider.autoDispose<Verse?>((ref) async {
   // Ensure DB is initialized
