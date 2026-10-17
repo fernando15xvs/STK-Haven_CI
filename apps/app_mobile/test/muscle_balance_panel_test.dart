@@ -81,18 +81,21 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Balance muscular'), findsOneWidget);
-    expect(find.text('Piernas'), findsOneWidget);
-    expect(find.text('Pecho'), findsOneWidget);
     expect(find.textContaining('Indirecto estimado:'), findsNothing);
     await tester.ensureVisible(find.byKey(const ValueKey('muscle_indirect_toggle')));
     await tester.tap(find.byKey(const ValueKey('muscle_indirect_toggle')));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Indirecto estimado: 0.5'), findsWidgets);
-    await tester.ensureVisible(find.text('Pecho'));
+    // ListView lazily creates cards below the fold at 320 logical pixels.
+    await tester.scrollUntilVisible(find.text('Pecho'), 120);
+    expect(find.text('Pecho'), findsOneWidget);
     await tester.tap(find.text('Pecho'));
     await tester.pumpAndSettle();
     expect(find.text('Ejercicios que aportaron trabajo directo'), findsWidgets);
     expect(find.text('Press banca'), findsWidgets);
+    await tester.scrollUntilVisible(find.text('Tríceps'), 120);
+    expect(find.textContaining('Indirecto estimado: 0.5'), findsWidgets);
+    await tester.scrollUntilVisible(find.text('Piernas'), 120);
+    expect(find.text('Piernas'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
