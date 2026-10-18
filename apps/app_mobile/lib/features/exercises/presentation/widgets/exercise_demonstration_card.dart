@@ -1,9 +1,10 @@
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/features/exercises/application/exercise_demonstration_library.dart';
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 
-/// Shows only exercise-ID-specific verified media. A GIF for a similar but
-/// different movement is never substituted. Works fully offline without media.
+/// Shows only exercise-ID-specific verified Lottie media or still posters.
+/// Never substitutes another exercise, downloads external files or loads GIFs.
 class ExerciseDemonstrationCard extends StatefulWidget {
   final Exercise exercise;
   final bool compact;
@@ -31,11 +32,6 @@ class _ExerciseDemonstrationCardState
     final media = ExerciseDemonstrationLibrary.mediaFor(widget.exercise);
     final reduceMotion = MediaQuery.disableAnimationsOf(context) ||
         widget.reduceMotion;
-    final showGif = media != null &&
-        media.format == ExerciseMediaFormat.gif &&
-        !reduceMotion &&
-        _play;
-
     Widget placeholder(String message) => Container(
           key: const Key('exercise_media_fallback'),
           constraints: BoxConstraints(
@@ -60,7 +56,7 @@ class _ExerciseDemonstrationCardState
     final mediaWidget = media == null
         ? placeholder('Animación específica todavía no disponible. '
             'Consulta la guía técnica de este ejercicio.')
-        : showGif || media.format == ExerciseMediaFormat.poster
+        : media.format == ExerciseMediaFormat.poster
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(14),
                 child: Image.asset(
@@ -74,11 +70,27 @@ class _ExerciseDemonstrationCardState
                   ),
                 ),
               )
-            : placeholder(
-                reduceMotion
-                    ? 'Movimiento reducido: no se reproduce la animación.'
-                    : 'Animación detenida. Activa Reproducir para verla.',
-              );
+            : reduceMotion
+                ? placeholder(
+                    'Movimiento reducido: no se reproduce la animación. '
+                    'Consulta los pasos de ejecución.',
+                  )
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Lottie.asset(
+                      media.assetPath,
+                      key: const Key('exercise_verified_media'),
+                      height: widget.compact ? 160 : 208,
+                      fit: BoxFit.contain,
+                      animate: _play,
+                      repeat: true,
+                      frameRate: FrameRate.composition,
+                      errorBuilder: (_, _, _) => placeholder(
+                        'La animación vectorial no pudo abrirse. '
+                        'La guía técnica sigue disponible sin conexión.',
+                      ),
+                    ),
+                  );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -95,7 +107,7 @@ class _ExerciseDemonstrationCardState
             'Material: ${media.attribution}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          if (media.format == ExerciseMediaFormat.gif && !reduceMotion)
+          if (media.format == ExerciseMediaFormat.lottie && !reduceMotion)
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
