@@ -41,7 +41,7 @@ void main() {
     };
 
     expect(byMuscle['Torso']?.plannedWorkingSets, 11);
-    expect(byMuscle['Pierna']?.plannedWorkingSets, 10);
+    expect(byMuscle['Piernas']?.plannedWorkingSets, 10);
   });
 }
 

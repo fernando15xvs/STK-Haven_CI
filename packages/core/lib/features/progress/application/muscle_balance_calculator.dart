@@ -1,4 +1,5 @@
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/features/exercises/application/canonical_muscle_projection.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 
@@ -25,6 +26,7 @@ class MuscleBalanceReport {
 
 class MuscleBalanceItem {
   final String name;
+  final String? canonicalGroupId;
   final int directSets;
   final double estimatedSecondarySets;
   final int trainingDays;
@@ -42,6 +44,7 @@ class MuscleBalanceItem {
 
   const MuscleBalanceItem({
     required this.name,
+    this.canonicalGroupId,
     required this.directSets,
     required this.estimatedSecondarySets,
     required this.trainingDays,
@@ -58,6 +61,7 @@ class MuscleBalanceItem {
 
 class _MuscleAccumulator {
   final String name;
+  final String? canonicalGroupId;
   int directSets = 0;
   double estimatedSecondarySets = 0;
   DateTime? lastTrainedAt;
@@ -69,7 +73,7 @@ class _MuscleAccumulator {
   int previousWeekSets = 0;
   int? planned;
   int completedAgainstPlan = 0;
-  _MuscleAccumulator(this.name);
+  _MuscleAccumulator(this.name, this.canonicalGroupId);
 }
 
 class MuscleBalanceCalculator {
@@ -87,9 +91,14 @@ class MuscleBalanceCalculator {
     final groups = <String, _MuscleAccumulator>{};
 
     _MuscleAccumulator ensure(String raw) {
-      final name = raw.trim();
-      final key = name.toLowerCase();
-      return groups.putIfAbsent(key, () => _MuscleAccumulator(name));
+      final projection = CanonicalMuscleProjector.resolve(raw);
+      if (projection == null) {
+        throw ArgumentError('Empty muscle label');
+      }
+      return groups.putIfAbsent(
+        projection.key,
+        () => _MuscleAccumulator(projection.label, projection.reportGroupId),
+      );
     }
 
     // Include known muscle groups even when there is no activity. The
@@ -188,13 +197,13 @@ class MuscleBalanceCalculator {
           // by immutable workout history. Estimate 0.5 per completed set and
           // keep this outside direct counts. Deduplicate each secondary.
           final secondaryKeys = <String>{};
+          final primaryKey = CanonicalMuscleProjector.resolve(primary)?.key;
           for (final secondary in exerciseMap[exercise.exerciseId]
                   ?.secondaryMuscles ?? const <String>[]) {
-            final label = secondary.trim();
-            final key = label.toLowerCase();
-            if (label.isEmpty || key == primary.toLowerCase() ||
-                !secondaryKeys.add(key)) continue;
-            ensure(label).estimatedSecondarySets += validSets * 0.5;
+            final projected = CanonicalMuscleProjector.resolve(secondary);
+            if (projected == null || projected.key == primaryKey ||
+                !secondaryKeys.add(projected.key)) continue;
+            ensure(secondary).estimatedSecondarySets += validSets * 0.5;
           }
         }
         if (inRecent) {
@@ -212,6 +221,7 @@ class MuscleBalanceCalculator {
       for (final item in groups.values)
         MuscleBalanceItem(
           name: item.name,
+          canonicalGroupId: item.canonicalGroupId,
           directSets: item.directSets,
           estimatedSecondarySets: item.estimatedSecondarySets,
           trainingDays: item.trainingDates.length,
