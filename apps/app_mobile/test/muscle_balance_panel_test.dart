@@ -54,6 +54,17 @@ class _History extends WorkoutHistoryNotifier {
               ),
             ],
           ),
+          WorkoutExercise(
+            exerciseId: 'retired-exercise',
+            exerciseNameSnapshot: 'Ejercicio histórico',
+            muscleGroupSnapshot: 'Glúteos e isquios',
+            sets: [
+              WorkoutSet(
+                weight: 20, reps: 10, completed: true,
+                setType: WorkoutSetType.working,
+              ),
+            ],
+          ),
         ],
       ),
     ];
@@ -81,6 +92,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Balance muscular'), findsOneWidget);
+    expect(find.textContaining('Hay etiquetas antiguas por clasificar'),
+        findsOneWidget);
     expect(find.textContaining('Indirecto estimado:'), findsNothing);
     await tester.ensureVisible(find.byKey(const ValueKey('muscle_indirect_toggle')));
     await tester.tap(find.byKey(const ValueKey('muscle_indirect_toggle')));
@@ -96,6 +109,10 @@ void main() {
     expect(find.textContaining('Indirecto estimado: 0.5'), findsWidgets);
     await tester.scrollUntilVisible(find.text('Piernas'), 120);
     expect(find.text('Piernas'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Glúteos e isquios · por clasificar'), 120,
+    );
+    expect(find.text('Glúteos e isquios · por clasificar'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

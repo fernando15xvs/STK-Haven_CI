@@ -69,6 +69,15 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
           active: report.groups.where((g) => g.directSets > 0).length,
           inactive: report.groups.where((g) => g.directSets == 0).length,
         ),
+        if (report.groups.any((group) =>
+            group.canonicalGroupId == null &&
+            (group.directSets > 0 || group.estimatedSecondarySets > 0))) ...[
+          const SizedBox(height: 10),
+          const Text(
+            'Hay etiquetas antiguas por clasificar. Se muestran por separado '
+            'sin asignarlas a un músculo específico ni alterar tus registros.',
+          ),
+        ],
         const SizedBox(height: 12),
         SwitchListTile.adaptive(
           key: const ValueKey('muscle_indirect_toggle'),
@@ -202,11 +211,20 @@ class _MuscleCard extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
         key: ValueKey('muscle_details_${muscle.name.toLowerCase()}'),
-        title: Text(muscle.name,
-            style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(
+          muscle.canonicalGroupId == null
+              ? '${muscle.name} · por clasificar'
+              : muscle.name,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (muscle.canonicalGroupId == null)
+              Text(
+                'Etiqueta histórica sin correspondencia anatómica segura.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             const SizedBox(height: 5),
             Text(
               '${muscle.directSets} series directas · '
