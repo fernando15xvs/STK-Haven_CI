@@ -33,7 +33,7 @@ void main() {
     expect(bench.movement, isNot(squat.movement));
   });
 
-  test('all 229 presets have instructions without fake approved GIF URLs', () {
+  test('all 229 presets preserve guides and have no fake Lottie assets', () {
     expect(presetExercises, hasLength(229));
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
     for (final exercise in presetExercises) {
@@ -42,6 +42,14 @@ void main() {
       expect(ExerciseDemonstrationLibrary.mediaFor(exercise), isNull);
       expect(exercise.media, isEmpty);
     }
+  });
+
+  test('media contract accepts Lottie and posters, never GIF', () {
+    expect(ExerciseMediaFormat.values.map((format) => format.name),
+        containsAll(['lottie', 'poster']));
+    expect(ExerciseMediaFormat.values.any((format) => format.name == 'gif'),
+        isFalse);
+    expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
   });
 
   test('custom exercise keeps its author instructions and no invented guide', () {
