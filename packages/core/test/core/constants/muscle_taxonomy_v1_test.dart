@@ -28,8 +28,10 @@ void main() {
   });
 
   test('all 49 legacy preset primary and secondary labels resolve safely', () {
-    expect(presetExercises, hasLength(49));
-    for (final exercise in presetExercises) {
+    final legacyPresets = presetExercises
+        .where((e) => e.id.startsWith('ex_')).toList();
+    expect(legacyPresets, hasLength(49));
+    for (final exercise in legacyPresets) {
       for (final label in [exercise.muscleGroup, ...exercise.secondaryMuscles]) {
         final resolved = MuscleTaxonomyV1.resolveLegacy(label);
         expect(resolved.status, isNot(LegacyMuscleResolutionStatus.unknown),
