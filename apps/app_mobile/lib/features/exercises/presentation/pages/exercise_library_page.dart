@@ -307,57 +307,75 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: equipmentOptions.contains(_selectedEquipment)
-                        ? _selectedEquipment
-                        : ExerciseLibraryFilter.allOption,
-                    decoration: const InputDecoration(
-                      labelText: 'Equipo',
-                      isDense: true,
-                    ),
-                    items: equipmentOptions
-                        .map(
-                          (item) =>
-                              DropdownMenuItem(value: item, child: Text(item)),
-                        )
-                        .toList(),
-                    onChanged: (value) => setState(
-                      () => _selectedEquipment =
-                          value ?? ExerciseLibraryFilter.allOption,
-                    ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final equipment = DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: equipmentOptions.contains(_selectedEquipment)
+                      ? _selectedEquipment
+                      : ExerciseLibraryFilter.allOption,
+                  decoration: const InputDecoration(
+                    labelText: 'Equipo',
+                    isDense: true,
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: DropdownButtonFormField<ExerciseLateralityFilter>(
-                    initialValue: _laterality,
-                    decoration: const InputDecoration(
-                      labelText: 'Ejecución',
-                      isDense: true,
+                  items: [
+                    for (final item in equipmentOptions)
+                      DropdownMenuItem<String>(
+                        value: item,
+                        child: Text(item,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
+                  onChanged: (value) => setState(
+                    () => _selectedEquipment =
+                        value ?? ExerciseLibraryFilter.allOption,
+                  ),
+                );
+                final laterality =
+                    DropdownButtonFormField<ExerciseLateralityFilter>(
+                  isExpanded: true,
+                  initialValue: _laterality,
+                  decoration: const InputDecoration(
+                    labelText: 'Ejecución',
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: ExerciseLateralityFilter.all,
+                      child: Text('Todos'),
                     ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: ExerciseLateralityFilter.all,
-                        child: Text('Todos'),
-                      ),
-                      DropdownMenuItem(
-                        value: ExerciseLateralityFilter.unilateral,
-                        child: Text('Unilateral'),
-                      ),
-                      DropdownMenuItem(
-                        value: ExerciseLateralityFilter.bilateral,
-                        child: Text('Bilateral'),
-                      ),
+                    DropdownMenuItem(
+                      value: ExerciseLateralityFilter.unilateral,
+                      child: Text('Unilateral'),
+                    ),
+                    DropdownMenuItem(
+                      value: ExerciseLateralityFilter.bilateral,
+                      child: Text('Bilateral'),
+                    ),
+                  ],
+                  onChanged: (value) => setState(
+                    () => _laterality =
+                        value ?? ExerciseLateralityFilter.all,
+                  ),
+                );
+                if (constraints.maxWidth < 350) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      equipment,
+                      const SizedBox(height: 8),
+                      laterality,
                     ],
-                    onChanged: (value) => setState(
-                      () => _laterality = value ?? ExerciseLateralityFilter.all,
-                    ),
-                  ),
-                ),
-              ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: equipment),
+                    const SizedBox(width: 10),
+                    Expanded(child: laterality),
+                  ],
+                );
+              },
             ),
           ),
           Padding(
