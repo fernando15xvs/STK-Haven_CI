@@ -89,6 +89,9 @@ void main() {
     expect(find.text('Diagnóstico de este dispositivo'), findsOneWidget);
     expect(find.text('Glúteos e isquios'), findsOneWidget);
     expect(find.text('Tríceps y hombro'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Etiquetas generales'), 120);
+    await tester.ensureVisible(find.text('Etiquetas generales'));
+    await tester.pumpAndSettle();
     expect(find.text('Etiquetas generales'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('anatomy_audit_backups')), 120,
