@@ -54,6 +54,17 @@ class _History extends WorkoutHistoryNotifier {
               ),
             ],
           ),
+          WorkoutExercise(
+            exerciseId: 'retired-exercise',
+            exerciseNameSnapshot: 'Ejercicio histórico',
+            muscleGroupSnapshot: 'Glúteos e isquios',
+            sets: [
+              WorkoutSet(
+                weight: 20, reps: 10, completed: true,
+                setType: WorkoutSetType.working,
+              ),
+            ],
+          ),
         ],
       ),
     ];
@@ -81,12 +92,24 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Balance muscular'), findsOneWidget);
+    expect(find.textContaining('Hay etiquetas antiguas por clasificar'),
+        findsOneWidget);
     expect(find.textContaining('Indirecto estimado:'), findsNothing);
     await tester.ensureVisible(find.byKey(const ValueKey('muscle_indirect_toggle')));
     await tester.tap(find.byKey(const ValueKey('muscle_indirect_toggle')));
     await tester.pumpAndSettle();
+    // The ambiguous historical row sorts before Pecho; verify it before
+    // moving down the lazy list so the test does not scroll past it.
+    await tester.scrollUntilVisible(
+      find.text('Glúteos e isquios · por clasificar'), 120,
+    );
+    expect(find.text('Glúteos e isquios · por clasificar'), findsOneWidget);
+    await tester.ensureVisible(find.text('Glúteos e isquios · por clasificar'));
+    await tester.pumpAndSettle();
     // ListView lazily creates cards below the fold at 320 logical pixels.
     await tester.scrollUntilVisible(find.text('Pecho'), 120);
+    await tester.ensureVisible(find.text('Pecho'));
+    await tester.pumpAndSettle();
     expect(find.text('Pecho'), findsOneWidget);
     await tester.tap(find.text('Pecho'));
     await tester.pumpAndSettle();

@@ -76,18 +76,21 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Plan de entrenamiento'),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: routines.isEmpty
-            ? null
-            : () => _showEditor(context, ref, routines, null),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Nuevo plan'),
+        actions: [
+          IconButton(
+            key: const ValueKey('create_training_plan'),
+            tooltip: 'Nuevo plan',
+            onPressed: routines.isEmpty
+                ? null
+                : () => _showEditor(context, ref, routines, null),
+            icon: const Icon(Icons.add_rounded),
+          ),
+        ],
       ),
       body: programs.isEmpty
           ? _EmptyPrograms(hasRoutines: routines.isNotEmpty)
           : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 112),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               itemCount: programs.length,
               itemBuilder: (context, index) {
                 final program = programs[index];
@@ -1047,14 +1050,26 @@ class _ProgramCard extends StatelessWidget {
                 tilePadding: EdgeInsets.zero,
                 title: const Text('Frecuencia muscular de esta semana'),
                 subtitle: const Text(
-                  'Cuántas sesiones estimulan cada grupo muscular.',
+                  'Sesiones por semana: una categoría se cuenta una sola vez '
+                  'por sesión, aunque intervenga en varios ejercicios.',
                 ),
-                children: muscleFrequency
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(0, 4, 0, 12),
+                    child: Text(
+                      'Directa: músculo principal del ejercicio. '
+                      'Secundaria: aparece como músculo asistente. '
+                      'No son series ni crecimiento muscular.',
+                    ),
+                  ),
+                  ...muscleFrequency
                     .map(
                       (item) => ListTile(
                         dense: true,
                         contentPadding: EdgeInsets.zero,
-                        title: Text(item.muscleGroup),
+                        title: Text(item.canonicalGroupId == null
+                            ? '${item.muscleGroup} · por clasificar'
+                            : item.muscleGroup),
                         subtitle: Text(
                           item.directSessions == item.totalSessions
                               ? '${item.directSessions} ${item.directSessions == 1 ? 'sesión directa' : 'sesiones directas'}'
@@ -1072,31 +1087,47 @@ class _ProgramCard extends StatelessWidget {
                       ),
                     )
                     .toList(),
+                ],
               ),
             if (volumes.isNotEmpty)
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 title: const Text('Volumen de esta semana'),
                 subtitle: const Text(
-                  'Previsto según el calendario y la rotación continua vs realizado.',
+                  'Series efectivas y volumen externo (kg·repeticiones) '
+                  'realizados frente a previstos; no mide crecimiento muscular.',
                 ),
-                children: volumes
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(0, 4, 0, 12),
+                    child: Text(
+                      'Las series excluyen calentamiento y aproximación. '
+                      'Los kg·rep son una estimación del volumen externo '
+                      'basada en cargas anteriores, no una medida de hipertrofia.',
+                    ),
+                  ),
+                  ...volumes
                     .map(
                       (volume) => ListTile(
                         dense: true,
                         contentPadding: EdgeInsets.zero,
-                        title: Text(volume.muscleGroup),
+                        title: Text(volume.canonicalGroupId == null
+                            ? '${volume.muscleGroup} · por clasificar'
+                            : volume.muscleGroup),
                         subtitle: Text(
-                          '${volume.completedWorkingSets}/${volume.plannedWorkingSets} series · ${volume.performedVolume.toStringAsFixed(0)}/${volume.plannedVolume.toStringAsFixed(0)} kg·rep',
+                          '${volume.completedWorkingSets}/${volume.plannedWorkingSets} '
+                          'series efectivas (realizadas/previstas)\n'
+                          '${volume.performedVolume.toStringAsFixed(0)}/'
+                          '${volume.plannedVolume.toStringAsFixed(0)} kg·rep '
+                          '(realizado/previsto)'
+                          '${volume.completionRatio == null ? '' : ' · '
+                            '${(volume.completionRatio! * 100).clamp(0, 999).toStringAsFixed(0)}% '
+                            'del volumen previsto'}',
                         ),
-                        trailing: volume.completionRatio == null
-                            ? null
-                            : Text(
-                                '${(volume.completionRatio! * 100).clamp(0, 999).toStringAsFixed(0)}%',
-                              ),
                       ),
                     )
                     .toList(),
+                ],
               ),
           ],
         ),
