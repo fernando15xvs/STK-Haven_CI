@@ -6,6 +6,7 @@ import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/core/constants/curated_exercise_catalog.dart';
 import 'package:core/core/constants/muscle_taxonomy_v1.dart';
+import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_demonstration_card.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
 import 'package:intl/intl.dart';
@@ -113,6 +114,8 @@ class ExerciseDetailPage extends ConsumerWidget {
             ],
           ),
 
+          const SizedBox(height: AppSpacing.xxl),
+          ExerciseDemonstrationCard(exercise: exercise),
           const SizedBox(height: AppSpacing.xxl),
 
           // Progress Section
@@ -435,27 +438,7 @@ class ExerciseDetailPage extends ConsumerWidget {
 
           const SizedBox(height: AppSpacing.xxl),
 
-          // Technique Section
-          if (exercise.instructions.isNotEmpty) ...[
-            Text(
-              'TÉCNICA',
-              style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.of(context).surfaceHigh,
-                borderRadius: AppRadius.lg_,
-                border: Border.all(color: AppColors.of(context).surfaceBorder),
-              ),
-              child: Text(
-                exercise.instructions,
-                style: AppTypography.bodyMedium.copyWith(height: 1.6),
-              ),
-            ),
-            const SizedBox(height: 40),
-          ],
+
         ],
       ),
     );
