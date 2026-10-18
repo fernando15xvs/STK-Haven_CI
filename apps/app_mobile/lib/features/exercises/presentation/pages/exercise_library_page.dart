@@ -125,7 +125,7 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                       child: FilledButton(
                         key: const Key('exercise_preview_add'),
                         onPressed: () => Navigator.pop(sheetContext, true),
-                        child: const Text('Seleccionar ejercicio'),
+                        child: const Text('Añadir'),
                       ),
                     ),
                   ],
@@ -185,6 +185,8 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
         title: Text(
           widget.isSelectionMode ? 'Seleccionar Ejercicio' : 'Biblioteca',
           style: AppTypography.headlineMedium,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         elevation: 0,
         backgroundColor: AppColors.of(context).background,
