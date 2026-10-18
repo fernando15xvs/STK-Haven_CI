@@ -70,6 +70,18 @@ class ExerciseDemonstrationLibrary {
             'Reduce la carga si pierdes el control.',
       );
     }
+    // Keep the 49 original presets' stored wording where a full editorial
+    // guide has not yet been written. No biomechanical specificity is inferred
+    // from a broad category such as "Piernas" or "Espalda".
+    if (CuratedExerciseCatalog.legacyProfiles.containsKey(exercise.id) &&
+        exercise.instructions.trim().isNotEmpty) {
+      return ExerciseTechniqueGuide(
+        setup: 'Comprueba que el equipo esté estable y utiliza una carga '
+            'que puedas controlar.',
+        movement: exercise.instructions.trim(),
+        safety: 'Realiza el recorrido sin dolor ni movimientos bruscos.',
+      );
+    }
     // For user-created exercises, preserve their authored text; never
     // invent a technique based solely on a generic muscle tag.
     return null;
