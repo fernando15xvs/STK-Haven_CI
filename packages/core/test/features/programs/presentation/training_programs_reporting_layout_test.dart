@@ -86,11 +86,19 @@ void main() {
     expect(find.byType(FloatingActionButton), findsNothing);
     expect(find.byKey(const ValueKey('create_training_plan')), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Volumen de esta semana'), 140);
+    // The whole program card is built in one list item. scrollUntilVisible
+    // discovers the Text early but can leave its clickable area off-screen.
+    await tester.ensureVisible(find.text('Volumen de esta semana'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Volumen de esta semana'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.textContaining('series efectivas (realizadas/previstas)'), 120,
     );
+    await tester.ensureVisible(
+      find.textContaining('series efectivas (realizadas/previstas)'),
+    );
+    await tester.pumpAndSettle();
     expect(find.textContaining('kg·rep'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
