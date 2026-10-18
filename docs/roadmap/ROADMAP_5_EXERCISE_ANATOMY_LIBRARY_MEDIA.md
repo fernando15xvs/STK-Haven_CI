@@ -1,6 +1,6 @@
 # STK Haven — Roadmap 5: biblioteca anatómica, ejercicios guiados y animaciones
 
-**Fecha:** 2026-10-17 · **Estado:** Fase 1 (núcleo anatómico y selector jerárquico móvil) implementada; migración, biblioteca extendida, medios y validación física pendientes.
+**Fecha:** 2026-10-17 · **Estado:** Fase 1 integrada. Fase 2 en progreso: proyección canónica de frecuencia, volumen y balance integrada sin modificar datos persistidos; auditoría de datos reales, respaldo, UI y pruebas físicas pendientes.
 **Documentos:** [Taxonomía detallada (obligatoria)](EXERCISE_MUSCLE_TAXONOMY_V1.md) · [Progreso 2.0](PROGRESS_2_UNIFICATION_AND_MUSCLE_BALANCE.md).
 
 > **Regla de los repositorios:** `fernando15xvs/STK-Haven` = **fuente de verdad**, sin workflows/GitHub Actions. `fernando15xvs/STK-Haven_CI` = **espejo** para Actions, pruebas y artefactos de iOS/Android. Mantener igualdad de código/datos/documentos salvo workflow y metadatos exclusivos del espejo. No iniciar acciones en original.
@@ -37,8 +37,8 @@
 ## 2. Migración segura y corrección de estadísticas/planes
 
 - [x] Implementar resolutor puro `MuscleTaxonomyV1.resolveLegacy` (versión de taxonomía) con resultado `exact`, `byExerciseContext`, `ambiguous` o `unknown`.
-- [ ] Mantener estables `exercise.id`, IDs de rutinas, entrenamiento, series, PRs, favoritos, referencias de Coach Pro y backups. **No reescribir a ciegas** `WorkoutExercise.muscleGroupSnapshot`.
-- [ ] Mapear «Hombro/Hombros» solo a categoría general cuando se ignore el movimiento; «Hombro anterior» sí a deltoide anterior; diferenciar dorsal de espalda y no convertir «Piernas» en cuádriceps.
+- [x] Mantener estables `exercise.id`, IDs de rutinas, entrenamiento, series, PRs, favoritos, referencias de Coach Pro y backups **durante esta proyección en memoria**. No se reescribe `WorkoutExercise.muscleGroupSnapshot` ni se realiza una migración persistente.
+- [x] En la proyección de informes, «Hombro/Hombros» queda como categoría general, «Hombro anterior» conserva ID de región sin multiplicar series; dorsal se distingue anatómicamente de espalda y «Piernas» no se convierte en cuádriceps.
 - [ ] Dividir etiquetas combinadas («tríceps y hombro», «glúteos y isquios») en participaciones **solo cuando el ejercicio permita determinar los roles**; caso ambiguo queda como «por clasificar» sin datos inventados.
 - [ ] Adoptar IDs anatómicos en biblioteca, filtros, `MuscleBalanceCalculator`, `ProgramMuscleFrequencyPlanner`, `ProgramVolumePlanner` y Progreso 2.0. Agregar con `distinct setId/sessionId` sin doble conteo.
 - [ ] Distinguir trabajo directo, secundario estimado, énfasis regional y estabilizador; indicar método y confianza; no mostrar un porcentaje de crecimiento muscular a partir de `kg·rep`.
@@ -123,7 +123,7 @@
 |---|---|---|
 | 0. Auditoría preliminar y documentos | **Parcial** | Auditoría de fuentes actuales; esta especificación y taxonomía creadas |
 | 1. Taxonomía anatómica | **Núcleo + navegación móvil implementados** | 98 nodos, pruebas Core y selector jerárquico; revisión anatómica de cada ejercicio y prueba física pendientes |
-| 2. Migración/estadísticas/planes | **Parcial** | Resolutor puro implementado; ninguna migración ni actualización de estadísticas aplicada |
+| 2. Migración/estadísticas/planes | **Parcial: proyección de informes entregada** | Frecuencia, volumen y balance usan IDs canónicos de lectura, PR #34, CI #369; no se ejecutó migración persistente ni respaldo de datos reales |
 | 3. Biblioteca ampliada | **Pendiente** | Se mantienen los 49 presets actuales |
 | 4. Animaciones y ficha | **Pendiente** | No se ha distribuido nuevo media |
 | 5. Editor personalizado guiado | **Pendiente** | No modificado |
@@ -141,7 +141,7 @@
 - [x] `STK-Haven` original conserva su función de fuente de verdad y carece de workflows; cambios replicados en el espejo.
 - [ ] Integración en Plan/Progreso, migración con respaldo y pruebas físicas; la selección visual móvil básica está disponible. No se ha alterado el historial existente ni generado una copia de seguridad del teléfono.
 
-**Siguiente tarea:** conectar un lector de IDs canónicos, sin escritura destructiva, al cálculo de frecuencias y volumen de Plan de entrenamiento, probar datos ambiguos antes de cambiar su interfaz y mantener snapshots originales.
+**Siguiente tarea:** inventariar etiquetas y respaldos reales, mostrar categorías «por revisar» e información técnica en la interfaz, corregir espacios del Plan y completar pruebas de reversibilidad y equipos físicos. Los cálculos ya utilizan una proyección canónica sin persistir cambios.
 
 ### Entrega 2 — Selector jerárquico móvil (18 oct 2026)
 
@@ -154,3 +154,19 @@
 - [ ] Revisión biomecánica por ejercicio, pruebas físicas, integración Plan/Progreso y migración de datos; tareas posteriores a la base de Fase 1.
 
 **Límite de esta entrega:** navegar toda la anatomía no implica que los 49 presets históricos estén clasificados a nivel de fascículos. El filtro no inventa objetivos de un movimiento y puede mostrar vacío para porciones que aún no tienen ejercicios revisados. Esto se resolverá en fases 2–3.
+
+### Entrega 3 — Fase 2 / proyección de informes sin escrituras (18 oct 2026)
+
+- [x] `CanonicalMuscleProjector`: agrupa etiquetas históricas mediante `MuscleTaxonomyV1` con IDs de categoría para informes, conserva la etiqueta exacta y el ID anatómico original cuando se conoce; expresiones ambiguas o desconocidas quedan en bucket `legacy:` no atribuido.
+- [x] `ProgramMuscleFrequencyPlanner`: una categoría única por sesión programada, trabajo principal separado de secundario. «Hombro»/«Hombros»/«Deltoides lateral» se agregan sin afirmar que una porción se aisló.
+- [x] `ProgramVolumePlanner`: agrupa series efectivas previstas y ejecutadas usando claves comunes aun si `WorkoutExercise.muscleGroupSnapshot` es antiguo. El `kg·rep` continúa siendo volumen **externo**, nunca porcentaje de crecimiento muscular.
+- [x] `MuscleBalanceCalculator`: agrupa nombres equivalentes, contabiliza series efectivas completadas una sola vez, excluye calentamiento/aproximación y conserva secundarios estimados por separado. La presencia de datos unilaterales no duplica una serie.
+- [x] Regresiones automatizadas con catálogo sintético e historial inmutable, alias, énfasis, etiquetas compuestas, ponderación secundaria y deduplicación de sesiones.
+- [x] [PR #34](https://github.com/fernando15xvs/STK-Haven_CI/pull/34) fusionado; [CI #369](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39150946650): **6/6 exitosos**, con análisis Flutter, Core, móvil, iOS, Android, Supabase y Edge.
+- [x] Fuente original y espejo CI sincronizados por SHA de archivos compartidos, sin workflows en original.
+- [ ] Auditoría con fixture anonimizado procedente de los datos históricos reales del dispositivo; respaldo verificado y restore/rollback antes de cualquier migración persistente.
+- [ ] Completar atribuciones de participantes por ejercicio (principal, secundario, énfasis, estabilizador, confianza) e integrar detalle técnico en Plan y Progreso; no asumir que el catálogo histórico tiene especificidad que todavía no se ha curado.
+- [ ] Aclarar rótulos visuales de sesiones/semana vs series efectivas/semana vs volumen externo; corregir el botón `Nuevo plan` en pantallas pequeñas.
+- [ ] Pruebas físicas Android/iPhone, tamaños pequeños, contrastes y accesibilidad.
+
+**Decisión de seguridad:** no se limpiaron entrenamientos, no se ejecutó migración sobre Hive o Supabase, no se reescribieron snapshots y no se creó respaldo del teléfono. La equivalencia por categorías en reportes es una vista reversible; los valores crudos históricos se preservan tal cual.
