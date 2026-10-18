@@ -1,4 +1,5 @@
 import 'package:core/core/constants/muscle_taxonomy_v1.dart';
+import 'package:core/core/constants/curated_exercise_catalog.dart';
 import 'package:core/domain/models/exercise.dart';
 
 /// Read-only anatomy browsing. Neither this class nor the filter writes to Hive
@@ -38,6 +39,18 @@ class MuscleHierarchyBrowser {
   static bool matchesExercise(Exercise exercise, String selectedId) {
     final selected = MuscleTaxonomyV1.byId[selectedId];
     if (selected == null) return false;
+    final profile = CuratedExerciseCatalog.anatomyFor(exercise.id);
+    if (profile != null) {
+      final targets = <String>[
+        profile.primaryId,
+        ...profile.secondaryIds,
+        ...profile.emphasisIds,
+      ];
+      return targets.any((id) =>
+          id == selectedId ||
+          (selected.isCategory &&
+              MuscleTaxonomyV1.belongsToGroup(id, selectedId)));
+    }
     for (final label in <String>[
       exercise.muscleGroup,
       ...exercise.secondaryMuscles,
