@@ -101,7 +101,9 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                 key: const Key('exercise_selection_preview'),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: ExerciseDemonstrationCard(
-                  exercise: exercise, compact: true,
+                  exercise: exercise,
+                  compact: true,
+                  reduceMotion: ref.read(settingsProvider).reduceMotion,
                 ),
               ),
             ),
