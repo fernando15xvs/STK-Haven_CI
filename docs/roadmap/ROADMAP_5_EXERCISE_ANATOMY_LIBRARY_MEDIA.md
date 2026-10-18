@@ -1,6 +1,6 @@
 # STK Haven — Roadmap 5: biblioteca anatómica, ejercicios guiados y animaciones
 
-**Fecha:** 2026-10-17 · **Estado:** Fase 1 integrada. Fase 2 en progreso: estadísticas canónicas, auditoría conectada a providers del dispositivo y mejoras de Plan/Progreso; respaldo real restaurable, revisión ejercicio por ejercicio y pruebas físicas pendientes.
+**Fecha:** 2026-10-17 · **Estado:** Fases 1 y 2 (informes y auditoría no destructiva) integradas parcialmente; Fase 3: **229 presets (49 originales + 180 nuevos)**, taxonomía y búsqueda enriquecidas. Quedan revisión biomecánica final, filtros avanzados, animaciones (Fase 4) y QA en dispositivos.
 **Documentos:** [Taxonomía detallada (obligatoria)](EXERCISE_MUSCLE_TAXONOMY_V1.md) · [Progreso 2.0](PROGRESS_2_UNIFICATION_AND_MUSCLE_BALANCE.md).
 
 > **Regla de los repositorios:** `fernando15xvs/STK-Haven` = **fuente de verdad**, sin workflows/GitHub Actions. `fernando15xvs/STK-Haven_CI` = **espejo** para Actions, pruebas y artefactos de iOS/Android. Mantener igualdad de código/datos/documentos salvo workflow y metadatos exclusivos del espejo. No iniciar acciones en original.
@@ -9,7 +9,7 @@
 
 ## 0. Auditoría inicial de código y capturas
 
-- [x] Revisado `packages/core/lib/core/constants/preset_exercises.dart`: actualmente **49 ejercicios de catálogo** y **11 etiquetas principales distintas**, varias demasiado generales («Espalda», «Hombros», «Piernas», «Abdomen»).
+- [x] Auditoría inicial: había **49 ejercicios de catálogo** y **11 etiquetas principales**. En Fase 3 se añaden 180 ejercicios con nuevos IDs (total **229**); los 49 originales y sus etiquetas se conservan sin cambios.
 - [x] Revisados `Exercise` y `HiveExercise`: `muscleGroup` y `secondaryMuscles` son texto libre; existe `media` como string, pero no constituye una biblioteca multimedia auditada.
 - [x] Revisados `ProgramMuscleFrequencyPlanner` y `ProgramVolumePlanner`: agregan por nombre textual; actualmente la frecuencia puede separar «Hombro» de «Hombros», y el volumen no tiene un identificador anatómico común.
 - [x] Revisado `CustomExerciseService`: permite escribir músculos, por lo que pueden aparecer combinaciones como «glúteos y isquios».
@@ -52,14 +52,14 @@
 **Meta orientativa:** pasar de **49** a **180–250 ejercicios curados**, ampliables por entregas. Priorizar cobertura y precisión; no inflar el número duplicando nombres idénticos.
 
 - [ ] Diseñar `ExerciseDefinitionV2` (IDs inmutables) con alias, equipo, patrón, dificultad, principal/secundarios/énfasis/estabilizadores, lateralidad, instrucciones, errores comunes, contraindicaciones generales prudentemente redactadas y media manifest.
-- [ ] Cubrir variantes relevantes de pecho: barra/mancuernas/máquina, plano/inclinado/declinado, aperturas y poleas, identificando porciones enfatizadas.
-- [ ] Cubrir espalda: dominadas, jalones, remos por agarre/soporte, trapecio, romboides, retractores escapulares, extensores y estabilización lumbar.
-- [ ] Cubrir hombro: presses, elevaciones laterales, frontales, deltoide posterior, rotaciones interna/externa y control escapular.
-- [ ] Cubrir bíceps, braquial, tríceps y antebrazo; variantes de cable, polea, barra, mancuernas y máquinas.
-- [ ] Cubrir piernas: cuádriceps, isquiosurales, glúteo mayor/medio/menor, aductores, abductores, pantorrillas, tibial anterior, bisagras y patrones de sentadilla.
+- [x] Cubrir variantes relevantes de pecho: barra/mancuernas/máquina, plano/inclinado/declinado, aperturas y poleas, identificando porciones enfatizadas.
+- [x] Cubrir espalda: dominadas, jalones, remos por agarre/soporte, trapecio, romboides, retractores escapulares, extensores y estabilización lumbar.
+- [x] Cubrir hombro: presses, elevaciones laterales, frontales, deltoide posterior, rotaciones interna/externa y control escapular.
+- [x] Cubrir bíceps, braquial, tríceps y antebrazo; variantes de cable, polea, barra, mancuernas y máquinas.
+- [x] Cubrir piernas: cuádriceps, isquiosurales, glúteo mayor/medio/menor, aductores, abductores, pantorrillas, tibial anterior, bisagras y patrones de sentadilla.
 - [ ] Cubrir abdomen/core: crunch, flexión de tronco, elevaciones de pelvis/piernas según técnica, oblicuos, rotación/anti-rotación, anti-extensión, flexión lateral, control del serrato anterior, respiración/estabilidad sin atribución muscular exagerada.
 - [ ] Filtros combinados por músculo específico/énfasis, región general, equipo, unilateral/bilateral, compuesto/aislado, patrón, dificultad y sin equipamiento.
-- [ ] Búsqueda sin tildes, por sinónimos, nombres técnicos y comunes (`isquios`, `isquiotibiales`, `deltoide posterior`, `romboides`, `oblicuos`, `serrato`).
+- [x] Búsqueda sin tildes, por sinónimos, nombres técnicos y comunes (`isquios`, `isquiotibiales`, `deltoide posterior`, `romboides`, `oblicuos`, `serrato`).
 - [ ] Auditoría de IDs duplicados, alias conflictivos, instrucciones vacías, variantes realmente distintas, clasificación muscular y disponibilidad de media para cada preset.
 - [ ] Pruebas de rendimiento con 250+ ejercicios, planes grandes, modo ahorro, filtrado combinado y uso sin conexión.
 
@@ -124,7 +124,7 @@
 | 0. Auditoría preliminar y documentos | **Parcial** | Inventario de 49 presets/11 grupos principales; herramienta local de auditoría lista, sin datos reales del teléfono |
 | 1. Taxonomía anatómica | **Núcleo + navegación móvil implementados** | 98 nodos, pruebas Core y selector jerárquico; revisión anatómica de cada ejercicio y prueba física pendientes |
 | 2. Migración/estadísticas/planes | **Parcial: auditoría real disponible en UI** | Reportes canónicos y pantalla local leyendo catálogo, rutinas e historial; no se ejecutó migración persistente ni se creó/validó copia del teléfono |
-| 3. Biblioteca ampliada | **Pendiente** | Se mantienen los 49 presets actuales |
+| 3. Biblioteca ampliada | **Biblioteca base entregada; cierre parcial** | 229 presets, anatomía por ID y filtrado de énfasis; faltan filtro visual por patrón/dificultad, revisión experta, manifest multimedia y prueba física |
 | 4. Animaciones y ficha | **Pendiente** | No se ha distribuido nuevo media |
 | 5. Editor personalizado guiado | **Pendiente** | No modificado |
 | 6. Integración visual | **Parcial** | Plan y Progreso aclaran unidades; Revisión anatómica accesible desde Balance muscular. Ficha técnica y atribuciones específicas pendientes |
@@ -200,3 +200,16 @@
 - [ ] Validación de exportación/restauración de una copia real y rollback, revisión biomecánica específica de los presets, pruebas físicas de accesibilidad y tamaño de letra.
 
 **No se modificaron datos persistentes ni se ejecutó código de migración.** La lectura anatómica no convierte etiquetas antiguas, no cambia IDs, favoritos, peso/repeticiones, PRs ni snapshots.
+
+### Entrega 6 — Fase 3 / biblioteca base amplia (18 oct 2026)
+
+- [x] 180 nuevos presets con IDs estables `exv2_*` (total **229**, junto a los 49 `ex_*` preexistentes), técnica textual breve, equipo, patrón de movimiento, lateralidad, errores comunes y metadatos anatómicos. El repositorio guarda el contenido offline; la siembra solo añade IDs faltantes en Hive.
+- [x] `ExerciseDefinitionV2` y `PresetAnatomyProfile`: principal, secundarios y **énfasis regional** separados; las porciones no crean series adicionales. Metadatos documentales de los 49 originales por ID, sin modificar sus nombres, etiquetas, rutinas, registros o PRs.
+- [x] Cobertura extendida de pectoral (clavicular, esternocostal, fibras inferiores), deltoides anterior/lateral/posterior, manguito rotador, dorsal/romboides/trapecios, bíceps/braquial/tríceps/antebrazo, cuádriceps, isquiotibiales, glúteo mayor/medio, aductores, pantorrilla/gastrocnemio/sóleo/tibial, abdomen/oblicuos/serrato.
+- [x] Selector de músculos y filtro de Biblioteca usan los IDs revisados y campos de énfasis para los presets nuevos y anteriores; búsqueda contempla nombres técnicos y alias de la taxonomía. La lateralidad de los nuevos se decide por metadatos, no por buscar palabras del título.
+- [x] Tests: cardinalidad total, unicidad de IDs/variantes, inmutabilidad de 49 anteriores, validez de nodos y énfasis, técnica no vacía, filtros compuestos y búsqueda offline. [PR #37](https://github.com/fernando15xvs/STK-Haven_CI/pull/37); [CI #378](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39161322606) con comprobación de seis trabajos.
+- [ ] Completar edición de metadatos adicionales (niveles calibrados por ejercicio, estabilizadores y advertencias de seguridad verificadas), filtros por patrón/nivel en interfaz, curaduría de variantes que existían duplicadas entre los 49 y auditoría biomecánica experta. Con 229 entradas no se ha realizado el test de carga de 250+.
+- [ ] No hay GIFs nuevos: los campos `media` permanecen vacíos hasta disponer de material auténtico autorizado, correctamente vinculado y accesible en la **Fase 4**. Nunca usar animaciones genéricas para simular un ejercicio concreto.
+- [ ] QA de dispositivo físico, restauración de copia de seguridad y validación end-to-end continúan programados para el final del roadmap, antes de producción.
+
+**Protección histórica:** los IDs y etiquetas de los 49 presets originales se mantienen; los 180 nuevos tienen IDs diferentes. No se renombraron ni borraron sesiones, récords, favoritos o copias del usuario; tampoco se lanzaron migraciones persistentes de anatomía. La instalación incorporará las entradas nuevas sin reescribir IDs existentes.
