@@ -1,4 +1,5 @@
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/features/exercises/application/muscle_hierarchy_browser.dart';
 
 enum ExerciseLateralityFilter { all, unilateral, bilateral }
 
@@ -71,6 +72,7 @@ class ExerciseLibraryFilter {
     required Iterable<Exercise> exercises,
     String query = '',
     String muscle = allOption,
+    String? anatomyId,
     String equipment = allOption,
     ExerciseLateralityFilter laterality = ExerciseLateralityFilter.all,
     Set<String> favoriteIds = const <String>{},
@@ -98,6 +100,8 @@ class ExerciseLibraryFilter {
 
       return matchesQuery &&
           matchesMuscle(exercise, muscle) &&
+          (anatomyId == null ||
+              MuscleHierarchyBrowser.matchesExercise(exercise, anatomyId)) &&
           matchesEquipment &&
           matchesLaterality &&
           matchesFavorite;
