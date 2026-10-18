@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:core/core/constants/muscle_taxonomy_v1.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
@@ -12,6 +13,7 @@ import 'package:core/features/workout/application/exercise_performance_memory.da
 import 'package:core/features/workout/application/workout_history_index.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/custom_exercise_editor_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detail_page.dart';
+import 'package:gym_tracker/features/exercises/presentation/widgets/muscle_hierarchy_picker.dart';
 
 class ExerciseLibraryPage extends ConsumerStatefulWidget {
   final bool isSelectionMode;
@@ -26,6 +28,7 @@ class ExerciseLibraryPage extends ConsumerStatefulWidget {
 class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
   String _searchQuery = '';
   String _selectedMuscle = ExerciseLibraryFilter.allOption;
+  String? _selectedAnatomyId;
   String _selectedEquipment = ExerciseLibraryFilter.allOption;
   ExerciseLateralityFilter _laterality = ExerciseLateralityFilter.all;
   bool _favoritesOnly = false;
@@ -39,6 +42,23 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
     'Brazos',
     'Core',
   ];
+
+  Future<void> _chooseAnatomicalMuscle() async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => const FractionallySizedBox(
+        heightFactor: 0.85,
+        child: MuscleHierarchyPicker(),
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _selectedAnatomyId = result.isEmpty ? null : result;
+      _selectedMuscle = ExerciseLibraryFilter.allOption;
+    });
+  }
 
   Future<void> _openCustomEditor([dynamic exercise]) async {
     final result = await Navigator.of(context).push(
@@ -65,6 +85,7 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
       exercises: allExercises,
       query: _searchQuery,
       muscle: _selectedMuscle,
+      anatomyId: _selectedAnatomyId,
       equipment: _selectedEquipment,
       laterality: _laterality,
       favoriteIds: favoriteIds,
@@ -153,15 +174,49 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                   padding: const EdgeInsets.only(right: 8),
                   child: FilterChip(
                     label: Text(muscle),
-                    selected: _selectedMuscle == muscle,
+                    selected: _selectedAnatomyId == null &&
+                        _selectedMuscle == muscle,
                     showCheckmark: false,
-                    onSelected: (_) => setState(() => _selectedMuscle = muscle),
+                    onSelected: (_) => setState(() {
+                      _selectedMuscle = muscle;
+                      _selectedAnatomyId = null;
+                    }),
                     selectedColor: AppColors.of(context).primary,
                     backgroundColor: AppColors.of(context).surfaceHigh,
                     side: BorderSide.none,
                   ),
                 );
               },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    key: const Key('anatomy_picker_open'),
+                    onPressed: _chooseAnatomicalMuscle,
+                    icon: const Icon(Icons.account_tree_outlined),
+                    label: Text(
+                      _selectedAnatomyId == null
+                          ? 'Explorar músculos por región'
+                          : MuscleTaxonomyV1.byId[_selectedAnatomyId]?.labelEs ??
+                              'Explorar músculos',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+                if (_selectedAnatomyId != null)
+                  IconButton(
+                    key: const Key('anatomy_picker_reset'),
+                    tooltip: 'Quitar filtro anatómico',
+                    onPressed: () =>
+                        setState(() => _selectedAnatomyId = null),
+                    icon: const Icon(Icons.close),
+                  ),
+              ],
             ),
           ),
           Padding(
@@ -226,7 +281,9 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                     child: Text(
                       _favoritesOnly
                           ? 'Aún no tienes favoritos con estos filtros'
-                          : 'No se encontraron ejercicios',
+                          : _selectedAnatomyId != null
+                               ? 'Todavía no hay ejercicios clasificados para este músculo. Los nombres antiguos no se asignan sin verificar.'
+                               : 'No se encontraron ejercicios',
                       textAlign: TextAlign.center,
                       style: AppTypography.bodyLarge.copyWith(
                         color: AppColors.of(context).textSecondary,
