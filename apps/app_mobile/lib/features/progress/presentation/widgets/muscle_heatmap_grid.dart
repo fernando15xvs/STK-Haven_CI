@@ -1,4 +1,5 @@
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:gym_tracker/features/progress/presentation/pages/anatomy_audit_page.dart';
 import 'package:core/features/progress/application/muscle_balance_calculator.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
@@ -46,6 +47,20 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
         const SizedBox(height: 5),
         const Text(
           'Distribución de trabajo registrado, no una medición de crecimiento muscular ni de recuperación.',
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            key: const ValueKey('open_anatomy_audit'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const AnatomyAuditPage(),
+              ),
+            ),
+            icon: const Icon(Icons.fact_check_outlined),
+            label: const Text('Revisar clasificación del historial'),
+          ),
         ),
         const SizedBox(height: 14),
         SingleChildScrollView(
