@@ -140,8 +140,8 @@ class MuscleTaxonomyV1 {
     MuscleNode(id: 'm_semitendinosus', parentId: 'mg_hamstrings', labelEs: 'Semitendinoso', anatomicalName: 'Semitendinosus', type: MuscleNodeType.muscle, aliases: ['semitendinoso'], crossListedUnder: const []),
     MuscleNode(id: 'm_semimembranosus', parentId: 'mg_hamstrings', labelEs: 'Semimembranoso', anatomicalName: 'Semimembranosus', type: MuscleNodeType.muscle, aliases: ['semimembranoso'], crossListedUnder: const []),
     MuscleNode(id: 'm_sartorius', parentId: 'mg_thighs', labelEs: 'Sartorio', anatomicalName: 'Sartorius', type: MuscleNodeType.muscle, aliases: ['sartorio'], crossListedUnder: const []),
-    MuscleNode(id: 'mg_lower_leg', parentId: 'mg_lower_body', labelEs: 'Pierna inferior', anatomicalName: 'Lower leg', type: MuscleNodeType.group, aliases: ['pierna inferior', 'gemelos', 'pantorrillas', 'pantorrilla'], crossListedUnder: const []),
-    MuscleNode(id: 'mg_calf', parentId: 'mg_lower_leg', labelEs: 'Tríceps sural', anatomicalName: 'Triceps surae', type: MuscleNodeType.group, aliases: ['triceps sural', 'calves'], crossListedUnder: const []),
+    MuscleNode(id: 'mg_lower_leg', parentId: 'mg_lower_body', labelEs: 'Pierna inferior', anatomicalName: 'Lower leg', type: MuscleNodeType.group, aliases: ['pierna inferior'], crossListedUnder: const []),
+    MuscleNode(id: 'mg_calf', parentId: 'mg_lower_leg', labelEs: 'Tríceps sural', anatomicalName: 'Triceps surae', type: MuscleNodeType.group, aliases: ['triceps sural', 'pantorrillas', 'pantorrilla', 'gemelos', 'calves'], crossListedUnder: const []),
     MuscleNode(id: 'm_gastrocnemius', parentId: 'mg_calf', labelEs: 'Gastrocnemio', anatomicalName: 'Gastrocnemius', type: MuscleNodeType.muscle, aliases: ['gastrocnemio', 'gemelo'], crossListedUnder: const []),
     MuscleNode(id: 'reg_gastrocnemius_medial', parentId: 'm_gastrocnemius', labelEs: 'Gastrocnemio medial', anatomicalName: 'Medial head of gastrocnemius', type: MuscleNodeType.region, aliases: ['gemelo medial', 'gastrocnemio medial'], crossListedUnder: const []),
     MuscleNode(id: 'reg_gastrocnemius_lateral', parentId: 'm_gastrocnemius', labelEs: 'Gastrocnemio lateral', anatomicalName: 'Lateral head of gastrocnemius', type: MuscleNodeType.region, aliases: ['gemelo lateral', 'gastrocnemio lateral'], crossListedUnder: const []),
@@ -188,7 +188,7 @@ class MuscleTaxonomyV1 {
         map.putIfAbsent(key, () => <String>{}).add(node.id);
       }
     }
-    return Map.unmodifiable({
+    return Map<String, List<String>>.unmodifiable({
       for (final entry in map.entries)
         entry.key: List<String>.unmodifiable(entry.value),
     });
