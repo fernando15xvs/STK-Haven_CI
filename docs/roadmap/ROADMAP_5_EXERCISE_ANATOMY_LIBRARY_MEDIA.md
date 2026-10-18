@@ -1,6 +1,6 @@
 # STK Haven — Roadmap 5: biblioteca anatómica, ejercicios guiados y animaciones
 
-**Fecha:** 2026-10-17 · **Estado:** Fase 1 integrada. Fase 2 en progreso: proyección canónica de frecuencia, volumen y balance integrada sin modificar datos persistidos; auditoría de datos reales, respaldo, UI y pruebas físicas pendientes.
+**Fecha:** 2026-10-17 · **Estado:** Fase 1 integrada. Fase 2 en progreso: proyección canónica, auditoría local de lectura y aclaraciones de Plan/Progreso; respaldo de datos reales, revisión ejercicio por ejercicio y pruebas físicas pendientes.
 **Documentos:** [Taxonomía detallada (obligatoria)](EXERCISE_MUSCLE_TAXONOMY_V1.md) · [Progreso 2.0](PROGRESS_2_UNIFICATION_AND_MUSCLE_BALANCE.md).
 
 > **Regla de los repositorios:** `fernando15xvs/STK-Haven` = **fuente de verdad**, sin workflows/GitHub Actions. `fernando15xvs/STK-Haven_CI` = **espejo** para Actions, pruebas y artefactos de iOS/Android. Mantener igualdad de código/datos/documentos salvo workflow y metadatos exclusivos del espejo. No iniciar acciones en original.
@@ -121,16 +121,16 @@
 
 | Fase | Estado | Evidencia |
 |---|---|---|
-| 0. Auditoría preliminar y documentos | **Parcial** | Auditoría de fuentes actuales; esta especificación y taxonomía creadas |
+| 0. Auditoría preliminar y documentos | **Parcial** | Inventario de 49 presets/11 grupos principales; herramienta local de auditoría lista, sin datos reales del teléfono |
 | 1. Taxonomía anatómica | **Núcleo + navegación móvil implementados** | 98 nodos, pruebas Core y selector jerárquico; revisión anatómica de cada ejercicio y prueba física pendientes |
-| 2. Migración/estadísticas/planes | **Parcial: proyección de informes entregada** | Frecuencia, volumen y balance usan IDs canónicos de lectura, PR #34, CI #369; no se ejecutó migración persistente ni respaldo de datos reales |
+| 2. Migración/estadísticas/planes | **Parcial: informes y auditoría de lectura** | Proyección de frecuencia/volumen/balance, auditoría de etiquetas y referencias históricas; ninguna migración persistente ni copia física realizada |
 | 3. Biblioteca ampliada | **Pendiente** | Se mantienen los 49 presets actuales |
 | 4. Animaciones y ficha | **Pendiente** | No se ha distribuido nuevo media |
 | 5. Editor personalizado guiado | **Pendiente** | No modificado |
-| 6. Integración visual | **Pendiente** | No modificado |
-| 7. CI y pruebas físicas | **Parcial** | CI #363/#364 y #365 en espejo aprobados; pruebas físicas/manuales pendientes |
+| 6. Integración visual | **Parcial** | Plan y Progreso muestran unidades y etiquetas antiguas por clasificar; ficha técnica y atribución por ejercicio pendientes |
+| 7. CI y pruebas físicas | **Parcial** | PR #35 con pruebas automáticas y layout 320 px; pruebas físicas/manuales pendientes |
 
-**Próximo paso recomendado:** Fase 0 (inventario completo y clasificador seguro) → Fase 1 (IDs/alias canónicos). No empezar a poblar cientos de ejercicios ni medios hasta asegurar que la clasificación y el historial son seguros.
+**Próximo paso recomendado:** inventario anonimizado de datos reales, respaldo comprobado y diseño de migración reversible; revisar roles biomecánicos de cada ejercicio antes de poblar cientos de ejercicios o sus medios.
 
 ### Entrega 1 — Catálogo anatómico base y compatibilidad (17–18 oct 2026)
 
@@ -166,7 +166,22 @@
 - [x] Fuente original y espejo CI sincronizados por SHA de archivos compartidos, sin workflows en original.
 - [ ] Auditoría con fixture anonimizado procedente de los datos históricos reales del dispositivo; respaldo verificado y restore/rollback antes de cualquier migración persistente.
 - [ ] Completar atribuciones de participantes por ejercicio (principal, secundario, énfasis, estabilizador, confianza) e integrar detalle técnico en Plan y Progreso; no asumir que el catálogo histórico tiene especificidad que todavía no se ha curado.
-- [ ] Aclarar rótulos visuales de sesiones/semana vs series efectivas/semana vs volumen externo; corregir el botón `Nuevo plan` en pantallas pequeñas.
+- [x] Aclarar rótulos visuales de sesiones/semana vs series efectivas/semana vs volumen externo; trasladar `Nuevo plan` al AppBar para que no tape el volumen.
 - [ ] Pruebas físicas Android/iPhone, tamaños pequeños, contrastes y accesibilidad.
 
 **Decisión de seguridad:** no se limpiaron entrenamientos, no se ejecutó migración sobre Hive o Supabase, no se reescribieron snapshots y no se creó respaldo del teléfono. La equivalencia por categorías en reportes es una vista reversible; los valores crudos históricos se preservan tal cual.
+
+### Entrega 4 — Fase 2 / auditoría local y comunicación visual (18 oct 2026)
+
+- [x] `ExerciseAnatomyAudit.inspect` examina **sin modificar** etiquetas principales, secundarias, snapshots históricos y referencias de rutina, incluso cuando el catálogo ya no contiene el ejercicio.
+- [x] Cada hallazgo conserva etiqueta original, fuente, número de apariciones y categoría segura si existe. Las etiquetas compuestas sin atribución verificable quedan separadas de las categorías generales.
+- [x] Inventario de código actual: **49 presets**, **11 etiquetas primarias** principales; no equivale a inventario de entrenamientos reales del dispositivo.
+- [x] En Plan: acción `Nuevo plan` movida al AppBar, evitando superposición de la tarjeta de volumen a 320 px; explicación de sesiones/semana vs. series efectivas/semana vs. volumen externo kg·rep. Porcentajes de volumen no representan ganancia muscular.
+- [x] En Progreso: categorías históricas no resolubles indican `por clasificar`, permanecen visibles y no se mezclan artificialmente con un músculo concreto.
+- [x] Tests automatizados de auditoría y widgets a 320 px, incluyendo ejercicios eliminados y etiquetas compuestas.
+- [x] [PR #35](https://github.com/fernando15xvs/STK-Haven_CI/pull/35); [CI #373](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39155435681) **6/6 exitosos**, fusionado en el espejo y archivos compartidos sincronizados por SHA con el original.
+- [ ] La auditoría todavía **no** lee datos del dispositivo; falta fixture anonimizado desde un respaldo real, verificar restauración y migración opcional idempotente/reversible.
+- [ ] La clasificación biomecánica fina de cada ejercicio y el detalle de participación anatómica individual continúan pendientes; no inferir que una categoría general equivale a una porción.
+- [ ] Pruebas de Android/iPhone físico, tamaños de fuente ampliados, VoiceOver/TalkBack y contraste antes de declarar validación para producción.
+
+**Garantía de alcance:** esta entrega no borra, resetea, exporta ni modifica Hive, Supabase, rutinas, entrenamientos, series, PRs o favoritos. La auditoría solo produce un reporte en memoria de los datos que se le entreguen.
