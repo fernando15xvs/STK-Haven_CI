@@ -113,12 +113,15 @@ class ExerciseLibraryFilter {
     return exercises.where((exercise) {
       final definition = CuratedExerciseCatalog.byId[exercise.id];
       final profile = CuratedExerciseCatalog.anatomyFor(exercise.id);
+      final anatomyNames = profile == null
+          ? ''
+          : [profile.primaryId, ...profile.emphasisIds, ...profile.secondaryIds]
+              .map((id) => MuscleTaxonomyV1.byId[id]?.labelEs ?? '')
+              .join(' ');
       final searchable = _normalize(
         '${exercise.name} ${exercise.muscleGroup} ${exercise.equipment} '
         '${definition?.aliases.join(' ') ?? ''} '
-        '${definition?.movementPattern ?? ''} '
-        '${profile == null ? '' : [profile.primaryId, ...profile.emphasisIds, '
-        '...profile.secondaryIds].map((id) => MuscleTaxonomyV1.byId[id]?.labelEs ?? '').join(' ')}',
+        '${definition?.movementPattern ?? ''} $anatomyNames',
       );
       final matchesQuery =
           normalizedQuery.isEmpty || searchable.contains(normalizedQuery);
@@ -151,6 +154,7 @@ class ExerciseLibraryFilter {
         .replaceAll('í', 'i')
         .replaceAll('ó', 'o')
         .replaceAll('ú', 'u')
-        .replaceAll('ü', 'u');
+        .replaceAll('ü', 'u')
+        .replaceAll('ñ', 'n');
   }
 }
