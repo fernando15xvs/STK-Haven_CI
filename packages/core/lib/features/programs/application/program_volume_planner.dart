@@ -1,4 +1,5 @@
 import 'package:core/domain/models/routine.dart';
+import 'package:core/features/exercises/application/canonical_muscle_projection.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
@@ -6,6 +7,7 @@ import 'package:core/features/workout/application/exercise_performance_memory.da
 
 class ProgramMuscleVolume {
   final String muscleGroup;
+  final String? canonicalGroupId;
   final double plannedVolume;
   final double performedVolume;
   final int plannedWorkingSets;
@@ -13,6 +15,7 @@ class ProgramMuscleVolume {
 
   const ProgramMuscleVolume({
     required this.muscleGroup,
+    this.canonicalGroupId,
     required this.plannedVolume,
     required this.performedVolume,
     required this.plannedWorkingSets,
@@ -39,6 +42,15 @@ class ProgramVolumePlanner {
     };
 
     final muscleGroups = <String>{};
+    final labels = <String, String>{};
+    final groupIds = <String, String?>{};
+    String? groupKey(String? raw) {
+      final projection = CanonicalMuscleProjector.resolve(raw ?? '');
+      if (projection == null) return null;
+      labels.putIfAbsent(projection.key, () => projection.label);
+      groupIds.putIfAbsent(projection.key, () => projection.reportGroupId);
+      return projection.key;
+    }
     final plannedVolume = <String, double>{};
     final performedVolume = <String, double>{};
     final plannedSets = <String, int>{};
@@ -63,7 +75,7 @@ class ProgramVolumePlanner {
       final routine = routineMap[session.routineId];
       if (routine == null) continue;
       for (final target in routine.exercises) {
-        final group = muscleGroupByExerciseId[target.exerciseId]?.trim();
+        final group = groupKey(muscleGroupByExerciseId[target.exerciseId]);
         if (group == null || group.isEmpty) continue;
         muscleGroups.add(group);
         plannedSets[group] = (plannedSets[group] ?? 0) + target.targetSets;
@@ -87,9 +99,9 @@ class ProgramVolumePlanner {
         continue;
       }
       for (final exercise in session.exercises) {
-        final group = exercise.muscleGroupSnapshot.trim().isNotEmpty
-            ? exercise.muscleGroupSnapshot.trim()
-            : muscleGroupByExerciseId[exercise.exerciseId]?.trim();
+        final group = groupKey(exercise.muscleGroupSnapshot.trim().isNotEmpty
+            ? exercise.muscleGroupSnapshot
+            : muscleGroupByExerciseId[exercise.exerciseId]);
         if (group == null || group.isEmpty) continue;
         muscleGroups.add(group);
         for (final set in exercise.sets) {
@@ -104,7 +116,8 @@ class ProgramVolumePlanner {
     final result = muscleGroups
         .map(
           (group) => ProgramMuscleVolume(
-            muscleGroup: group,
+            muscleGroup: labels[group] ?? group,
+            canonicalGroupId: groupIds[group],
             plannedVolume: plannedVolume[group] ?? 0,
             performedVolume: performedVolume[group] ?? 0,
             plannedWorkingSets: plannedSets[group] ?? 0,

@@ -1,10 +1,13 @@
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/features/exercises/application/canonical_muscle_projection.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 
 class ProgramMuscleFrequency {
   final String muscleGroup;
+  /// Stable reporting ID, null when legacy data is unresolved.
+  final String? canonicalGroupId;
 
   /// Sessions in which this muscle participates, either as primary or
   /// secondary. Multiple exercises in the same session count only once.
@@ -16,6 +19,7 @@ class ProgramMuscleFrequency {
 
   const ProgramMuscleFrequency({
     required this.muscleGroup,
+    this.canonicalGroupId,
     required this.totalSessions,
     required this.directSessions,
   });
@@ -47,6 +51,7 @@ class ProgramMuscleFrequencyPlanner {
     );
 
     final displayNameByKey = <String, String>{};
+    final groupIdByKey = <String, String?>{};
     final totalByKey = <String, int>{};
     final directByKey = <String, int>{};
 
@@ -63,8 +68,10 @@ class ProgramMuscleFrequencyPlanner {
 
         final primary = exercise.muscleGroup.trim();
         if (primary.isNotEmpty) {
-          final key = _key(primary);
-          displayNameByKey.putIfAbsent(key, () => primary);
+          final projected = CanonicalMuscleProjector.resolve(primary)!;
+          final key = projected.key;
+          displayNameByKey.putIfAbsent(key, () => projected.label);
+          groupIdByKey.putIfAbsent(key, () => projected.reportGroupId);
           sessionDirect.add(key);
           sessionTotal.add(key);
         }
@@ -72,8 +79,10 @@ class ProgramMuscleFrequencyPlanner {
         for (final secondaryRaw in exercise.secondaryMuscles) {
           final secondary = secondaryRaw.trim();
           if (secondary.isEmpty) continue;
-          final key = _key(secondary);
-          displayNameByKey.putIfAbsent(key, () => secondary);
+          final projected = CanonicalMuscleProjector.resolve(secondary)!;
+          final key = projected.key;
+          displayNameByKey.putIfAbsent(key, () => projected.label);
+          groupIdByKey.putIfAbsent(key, () => projected.reportGroupId);
           sessionTotal.add(key);
         }
       }
@@ -90,6 +99,7 @@ class ProgramMuscleFrequencyPlanner {
         .map(
           (entry) => ProgramMuscleFrequency(
             muscleGroup: displayNameByKey[entry.key] ?? entry.key,
+            canonicalGroupId: groupIdByKey[entry.key],
             totalSessions: entry.value,
             directSessions: directByKey[entry.key] ?? 0,
           ),
@@ -104,5 +114,4 @@ class ProgramMuscleFrequencyPlanner {
     return result;
   }
 
-  static String _key(String value) => value.trim().toLowerCase();
 }

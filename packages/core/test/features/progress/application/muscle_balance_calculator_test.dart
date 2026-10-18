@@ -146,7 +146,7 @@ void main() {
     expect(muscle(report, 'Tríceps').directSets, 0);
     expect(muscle(report, 'Tríceps').estimatedSecondarySets, 2.5);
     expect(muscle(report, 'Pecho').estimatedSecondarySets, 0);
-    expect(muscle(report, 'Antebrazo').estimatedSecondarySets, 0.5);
+    expect(muscle(report, 'Antebrazos').estimatedSecondarySets, 0.5);
   });
 
   test('compares only two complete Monday-Sunday weeks', () {
