@@ -1,6 +1,6 @@
 # STK Haven — Roadmap 5: biblioteca anatómica, ejercicios guiados y animaciones
 
-**Fecha:** 2026-10-17 · **Estado:** planificación aprobada por solicitud del usuario; implementación pendiente.
+**Fecha:** 2026-10-17 · **Estado:** Fase 1, catálogo anatómico de lectura y pruebas integrado. Navegación visual y migración pendientes.
 **Documentos:** [Taxonomía detallada (obligatoria)](EXERCISE_MUSCLE_TAXONOMY_V1.md) · [Progreso 2.0](PROGRESS_2_UNIFICATION_AND_MUSCLE_BALANCE.md).
 
 > **Regla de los repositorios:** `fernando15xvs/STK-Haven` = **fuente de verdad**, sin workflows/GitHub Actions. `fernando15xvs/STK-Haven_CI` = **espejo** para Actions, pruebas y artefactos de iOS/Android. Mantener igualdad de código/datos/documentos salvo workflow y metadatos exclusivos del espejo. No iniciar acciones en original.
@@ -19,24 +19,24 @@
 
 ## 1. Catálogo muscular canónico y estable — prioridad máxima
 
-- [ ] Crear `MuscleTaxonomyV1` con IDs estables, alias en español/inglés, parentesco, tipo (`group/muscle/region`), nombre técnico y traducciones.
-- [ ] Cubrir **pecho**: porción clavicular (superior), esternocostal (medio) y fascículos inferiores/abdominales (inferior) del pectoral mayor; pectoral menor; serrato anterior con rol de cintura escapular.
-- [ ] Cubrir **hombro**: deltoide anterior, lateral y posterior individualizados; supraespinoso, infraespinoso, redondo menor, subescapular, redondo mayor.
-- [ ] Cubrir **espalda**: dorsal ancho, romboides mayor/menor, trapecio superior/medio/inferior, elevador de la escápula, erectores espinales, multífidos, cuadrado lumbar.
-- [ ] Cubrir **brazos**: bíceps cabeza larga/corta, braquial, braquiorradial; tríceps cabeza larga/lateral/medial; flexores y extensores/pronadores del antebrazo.
-- [ ] Cubrir **glúteos y cadera**: glúteo mayor/medio/menor, tensor de la fascia lata, flexores de cadera, aductores mayor/largo/corto, grácil, pectíneo y rotadores profundos.
-- [ ] Cubrir **cuádriceps**: recto femoral, vasto lateral, medial e intermedio.
-- [ ] Cubrir **isquiotibiales**: bíceps femoral cabeza larga/corta, semitendinoso, semimembranoso; diferenciar funciones de cada cabeza.
-- [ ] Cubrir **pierna inferior**: gastrocnemio cabeza medial/lateral, sóleo, tibial anterior y otros grupos de tobillo/pie definidos en taxonomía.
-- [ ] Cubrir **abdomen completo**: recto abdominal (énfasis superior/inferior), oblicuo externo, oblicuo interno, transverso abdominal, musculatura profunda del tronco, diafragma y suelo pélvico como función, sin inventar series de hipertrofia.
+- [x] Crear `MuscleTaxonomyV1` con IDs estables, alias en español/inglés, parentesco, tipo (`group/muscle/region`), nombre técnico y traducciones.
+- [x] Cubrir **pecho**: porción clavicular (superior), esternocostal (medio) y fascículos inferiores/abdominales (inferior) del pectoral mayor; pectoral menor; serrato anterior con rol de cintura escapular.
+- [x] Cubrir **hombro**: deltoide anterior, lateral y posterior individualizados; supraespinoso, infraespinoso, redondo menor, subescapular, redondo mayor.
+- [x] Cubrir **espalda**: dorsal ancho, romboides mayor/menor, trapecio superior/medio/inferior, elevador de la escápula, erectores espinales, multífidos, cuadrado lumbar.
+- [x] Cubrir **brazos**: bíceps cabeza larga/corta, braquial, braquiorradial; tríceps cabeza larga/lateral/medial; flexores y extensores/pronadores del antebrazo.
+- [x] Cubrir **glúteos y cadera**: glúteo mayor/medio/menor, tensor de la fascia lata, flexores de cadera, aductores mayor/largo/corto, grácil, pectíneo y rotadores profundos.
+- [x] Cubrir **cuádriceps**: recto femoral, vasto lateral, medial e intermedio.
+- [x] Cubrir **isquiotibiales**: bíceps femoral cabeza larga/corta, semitendinoso, semimembranoso; diferenciar funciones de cada cabeza.
+- [x] Cubrir **pierna inferior**: gastrocnemio cabeza medial/lateral, sóleo, tibial anterior y otros grupos de tobillo/pie definidos en taxonomía.
+- [x] Cubrir **abdomen completo**: recto abdominal (énfasis superior/inferior), oblicuo externo, oblicuo interno, transverso abdominal, musculatura profunda del tronco, diafragma y suelo pélvico como función, sin inventar series de hipertrofia.
 - [ ] Añadir navegación jerárquica (por ejemplo: `Piernas > Isquiotibiales > Semitendinoso`) con **categorías generales no contables**.
-- [ ] Pruebas de unicidad de IDs, alias, tildes, mayúsculas, plurales, sinónimos y pertenencia a categorías; manejo de regiones funcionales con evidencia insuficiente.
+- [x] Pruebas de unicidad de IDs, alias, tildes, mayúsculas, plurales, sinónimos y pertenencia a categorías; manejo de regiones funcionales con evidencia insuficiente.
 
 **Criterio no negociable:** «pecho superior/medio/inferior», cabeza del bíceps y «abdomen superior/inferior» no significan aislamiento anatómico garantizado. Registrar músculo y, cuando corresponda, **énfasis** separado. Una serie no cuenta tres veces al agregar al pecho completo.
 
 ## 2. Migración segura y corrección de estadísticas/planes
 
-- [ ] Implementar resolutor puro `LegacyMuscleAliasResolver` (versión de taxonomía) con resultado `exact`, `byExerciseContext`, `ambiguous` o `unknown`.
+- [x] Implementar resolutor puro `MuscleTaxonomyV1.resolveLegacy` (versión de taxonomía) con resultado `exact`, `byExerciseContext`, `ambiguous` o `unknown`.
 - [ ] Mantener estables `exercise.id`, IDs de rutinas, entrenamiento, series, PRs, favoritos, referencias de Coach Pro y backups. **No reescribir a ciegas** `WorkoutExercise.muscleGroupSnapshot`.
 - [ ] Mapear «Hombro/Hombros» solo a categoría general cuando se ignore el movimiento; «Hombro anterior» sí a deltoide anterior; diferenciar dorsal de espalda y no convertir «Piernas» en cuádriceps.
 - [ ] Dividir etiquetas combinadas («tríceps y hombro», «glúteos y isquios») en participaciones **solo cuando el ejercicio permita determinar los roles**; caso ambiguo queda como «por clasificar» sin datos inventados.
@@ -44,7 +44,7 @@
 - [ ] Distinguir trabajo directo, secundario estimado, énfasis regional y estabilizador; indicar método y confianza; no mostrar un porcentaje de crecimiento muscular a partir de `kg·rep`.
 - [ ] En Plan de entrenamiento, usar etiquetas coherentes: **sesiones/semana** vs **series efectivas/semana** vs **volumen externo kg·reps**. Resumen por categorías, detalle técnico expandible.
 - [ ] Corregir `Nuevo plan` flotante para no ocultar «Volumen de esta semana» en pantallas pequeñas; probar SafeArea y último elemento visible.
-- [ ] Probar migración **idempotente**, rollback de clasificación, legado desconocido, historial creado antes/después del catálogo, suplementos? **No**; únicamente datos de entrenamiento, backups y preferencias.
+- [ ] Probar migración **idempotente**, rollback de clasificación, legado desconocido, historial creado antes/después del catálogo, copias de seguridad y preferencias de entrenamiento.
 - [ ] Verificar que un registro antiguo con nombre ambiguo permanece visible y no cambia artificialmente sus estadísticas ni su progreso.
 
 ## 3. Biblioteca base amplia y utilizable sin crear ejercicios
@@ -122,8 +122,8 @@
 | Fase | Estado | Evidencia |
 |---|---|---|
 | 0. Auditoría preliminar y documentos | **Parcial** | Auditoría de fuentes actuales; esta especificación y taxonomía creadas |
-| 1. Taxonomía anatómica | **Pendiente** | Sin implementación |
-| 2. Migración/estadísticas/planes | **Pendiente** | Sin migraciones aplicadas |
+| 1. Taxonomía anatómica | **Núcleo implementado** | 98 nodos y pruebas Core; UI jerárquica y revisión anatómica final pendientes |
+| 2. Migración/estadísticas/planes | **Parcial** | Resolutor puro implementado; ninguna migración ni actualización de estadísticas aplicada |
 | 3. Biblioteca ampliada | **Pendiente** | Se mantienen los 49 presets actuales |
 | 4. Animaciones y ficha | **Pendiente** | No se ha distribuido nuevo media |
 | 5. Editor personalizado guiado | **Pendiente** | No modificado |
@@ -131,3 +131,14 @@
 | 7. CI y pruebas físicas | **Pendiente** | No iniciadas para este roadmap |
 
 **Próximo paso recomendado:** Fase 0 (inventario completo y clasificador seguro) → Fase 1 (IDs/alias canónicos). No empezar a poblar cientos de ejercicios ni medios hasta asegurar que la clasificación y el historial son seguros.
+
+### Entrega 1 — Catálogo anatómico base y compatibilidad (17–18 oct 2026)
+
+- [x] 98 nodos con IDs estables: 32 categorías, 46 músculos, 20 regiones, 390 claves de búsqueda/alias sin colisiones, incluido serrato anterior y complejo abdominal.
+- [x] 49 ejercicios preinstalados validados frente a la resolución conservadora de etiquetas primarias y secundarias.
+- [x] Nombres ambiguos como «Hombros», «Espalda», «Piernas» y etiquetas combinadas permanecen sin asignación muscular específica hasta revisión.
+- [x] Pruebas del paquete Core, análisis Flutter, móvil, iOS, Android, Supabase/Edge en [CI #39095901308](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39095901308), **6/6 trabajos exitosos**. [PR #32](https://github.com/fernando15xvs/STK-Haven_CI/pull/32) fusionado.
+- [x] `STK-Haven` original conserva su función de fuente de verdad y carece de workflows; cambios replicados en el espejo.
+- [ ] Integración en Plan/Progreso, selección visual, migración con respaldo y pruebas físicas; no se ha alterado el historial existente ni generado una copia de seguridad del teléfono.
+
+**Siguiente tarea:** conectar un lector de IDs canónicos, sin escritura destructiva, al cálculo de frecuencias y volumen de Plan de entrenamiento, probar datos ambiguos antes de cambiar su interfaz y mantener snapshots originales.
