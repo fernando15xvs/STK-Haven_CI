@@ -98,6 +98,14 @@ void main() {
     await tester.ensureVisible(find.byKey(const ValueKey('muscle_indirect_toggle')));
     await tester.tap(find.byKey(const ValueKey('muscle_indirect_toggle')));
     await tester.pumpAndSettle();
+    // The ambiguous historical row sorts before Pecho; verify it before
+    // moving down the lazy list so the test does not scroll past it.
+    await tester.scrollUntilVisible(
+      find.text('Glúteos e isquios · por clasificar'), 120,
+    );
+    expect(find.text('Glúteos e isquios · por clasificar'), findsOneWidget);
+    await tester.ensureVisible(find.text('Glúteos e isquios · por clasificar'));
+    await tester.pumpAndSettle();
     // ListView lazily creates cards below the fold at 320 logical pixels.
     await tester.scrollUntilVisible(find.text('Pecho'), 120);
     await tester.ensureVisible(find.text('Pecho'));
@@ -111,10 +119,6 @@ void main() {
     expect(find.textContaining('Indirecto estimado: 0.5'), findsWidgets);
     await tester.scrollUntilVisible(find.text('Piernas'), 120);
     expect(find.text('Piernas'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Glúteos e isquios · por clasificar'), 120,
-    );
-    expect(find.text('Glúteos e isquios · por clasificar'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
