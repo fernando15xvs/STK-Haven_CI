@@ -83,7 +83,7 @@ class CanonicalMuscleProjector {
     String? groupId;
     if (nodeId != null && MuscleTaxonomyV1.byId.containsKey(nodeId)) {
       final ancestors = <String>{};
-      var current = nodeId;
+      String? current = nodeId;
       while (current != null && ancestors.add(current)) {
         current = MuscleTaxonomyV1.byId[current]?.parentId;
       }
