@@ -95,7 +95,13 @@ void main() {
     expect(find.textContaining('Hay etiquetas antiguas por clasificar'),
         findsOneWidget);
     expect(find.textContaining('Indirecto estimado:'), findsNothing);
-    await tester.ensureVisible(find.byKey(const ValueKey('muscle_indirect_toggle')));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('muscle_indirect_toggle')), 120,
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('muscle_indirect_toggle')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('muscle_indirect_toggle')));
     await tester.pumpAndSettle();
     // The ambiguous historical row sorts before Pecho; verify it before
