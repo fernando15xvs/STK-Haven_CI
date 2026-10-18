@@ -4,6 +4,8 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/core/constants/curated_exercise_catalog.dart';
+import 'package:core/core/constants/muscle_taxonomy_v1.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
 import 'package:intl/intl.dart';
@@ -20,6 +22,15 @@ class ExerciseDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final definition = CuratedExerciseCatalog.byId[exercise.id];
+    final profile = CuratedExerciseCatalog.anatomyFor(exercise.id);
+    final emphasis = profile == null
+        ? <String>[]
+        : [
+            for (final id in profile.emphasisIds)
+              if (MuscleTaxonomyV1.byId[id] != null)
+                MuscleTaxonomyV1.byId[id]!.labelEs,
+          ];
     final settings = ref.watch(settingsProvider);
     final allPRs = ref.watch(personalRecordRepositoryProvider).getAllPRs();
     final history = ref.watch(workoutHistoryProvider);
@@ -88,6 +99,17 @@ class ExerciseDetailPage extends ConsumerWidget {
                 ),
               if (exercise.equipment.isNotEmpty)
                 _buildPill(context, Icons.build, 'Equipo', exercise.equipment),
+              if (definition != null) ...[
+                _buildPill(context, Icons.tune, 'Patrón',
+                    definition.movementCategory.labelEs),
+                _buildPill(context, Icons.layers_outlined, 'Tipo',
+                    definition.mechanics.labelEs),
+                _buildPill(context, Icons.school_outlined, 'Nivel orientativo',
+                    definition.difficulty),
+              ],
+              if (emphasis.isNotEmpty)
+                _buildPill(context, Icons.track_changes_outlined,
+                    'Énfasis, no aislamiento', emphasis.join(', ')),
             ],
           ),
 

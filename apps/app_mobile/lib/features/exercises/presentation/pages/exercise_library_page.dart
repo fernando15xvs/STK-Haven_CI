@@ -14,6 +14,7 @@ import 'package:core/features/workout/application/workout_history_index.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/custom_exercise_editor_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detail_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/widgets/muscle_hierarchy_picker.dart';
+import 'package:gym_tracker/features/exercises/presentation/widgets/advanced_exercise_filter_sheet.dart';
 
 class ExerciseLibraryPage extends ConsumerStatefulWidget {
   final bool isSelectionMode;
@@ -32,6 +33,8 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
   String _selectedEquipment = ExerciseLibraryFilter.allOption;
   ExerciseLateralityFilter _laterality = ExerciseLateralityFilter.all;
   bool _favoritesOnly = false;
+  AdvancedExerciseFilterSelection _advanced =
+      const AdvancedExerciseFilterSelection();
 
   static const _muscles = [
     'Todos',
@@ -58,6 +61,20 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
       _selectedAnatomyId = result.isEmpty ? null : result;
       _selectedMuscle = ExerciseLibraryFilter.allOption;
     });
+  }
+
+  Future<void> _chooseAdvancedFilters() async {
+    final result = await showModalBottomSheet<AdvancedExerciseFilterSelection>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.84,
+        child: AdvancedExerciseFilterSheet(initialSelection: _advanced),
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() => _advanced = result);
   }
 
   Future<void> _openCustomEditor([dynamic exercise]) async {
@@ -88,6 +105,10 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
       anatomyId: _selectedAnatomyId,
       equipment: _selectedEquipment,
       laterality: _laterality,
+      movementCategory: _advanced.movementCategory,
+      mechanics: _advanced.mechanics,
+      difficulty: _advanced.difficulty,
+      bodyweightOnly: _advanced.bodyweightOnly,
       favoriteIds: favoriteIds,
       favoritesOnly: _favoritesOnly,
     );
@@ -274,6 +295,20 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
               ],
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                key: const Key('open_advanced_exercise_filters'),
+                onPressed: _chooseAdvancedFilters,
+                icon: const Icon(Icons.tune_outlined),
+                label: Text(_advanced.activeCount == 0
+                    ? 'Filtros avanzados'
+                    : 'Filtros avanzados (${_advanced.activeCount})'),
+              ),
+            ),
+          ),
           const SizedBox(height: 4),
           Expanded(
             child: filteredExercises.isEmpty
@@ -283,7 +318,9 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                           ? 'Aún no tienes favoritos con estos filtros'
                           : _selectedAnatomyId != null
                                ? 'Todavía no hay ejercicios clasificados para este músculo. Los nombres antiguos no se asignan sin verificar.'
-                               : 'No se encontraron ejercicios',
+                               : _advanced.activeCount > 0
+                                   ? 'Sin resultados con estos filtros. Los ejercicios sin metadatos avanzados no se asignan automáticamente.'
+                                   : 'No se encontraron ejercicios',
                       textAlign: TextAlign.center,
                       style: AppTypography.bodyLarge.copyWith(
                         color: AppColors.of(context).textSecondary,

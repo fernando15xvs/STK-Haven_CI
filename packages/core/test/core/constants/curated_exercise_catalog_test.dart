@@ -147,4 +147,89 @@ void main() {
     }
     expect(presetExercises.map((exercise) => exercise.id).toList(), ids);
   });
+
+  test('technical facets are complete and levels have actual alternatives', () {
+    final categories = <ExerciseMovementCategory>{};
+    final types = <ExerciseMechanics>{};
+    final levels = <String>{};
+    for (final entry in CuratedExerciseCatalog.entries) {
+      categories.add(entry.movementCategory);
+      types.add(entry.mechanics);
+      levels.add(entry.difficulty);
+      expect(entry.movementCategory.labelEs.trim(), isNotEmpty);
+      expect(entry.mechanics.labelEs.trim(), isNotEmpty);
+    }
+    expect(categories.toSet(), ExerciseMovementCategory.values.toSet());
+    expect(types.toSet(), ExerciseMechanics.values.toSet());
+    expect(levels, {'Principiante', 'Intermedio', 'Avanzado'});
+    expect(CuratedExerciseCatalog.byId['exv2_flat_machine_press']!.difficulty,
+        'Principiante');
+    expect(CuratedExerciseCatalog.byId['exv2_front_squat']!.difficulty,
+        'Intermedio');
+    expect(CuratedExerciseCatalog.byId['exv2_nordic_curl']!.difficulty,
+        'Avanzado');
+  });
+
+  test('advanced facets combine safely with muscle/equipment and favorites', () {
+    final all = presetExercises;
+    final presses = ExerciseLibraryFilter.apply(
+      exercises: all,
+      movementCategory: ExerciseMovementCategory.horizontalPush,
+      mechanics: ExerciseMechanics.compound,
+      difficulty: 'Principiante',
+      equipment: 'Máquina',
+    );
+    expect(presses.map((e) => e.id),
+        contains('exv2_flat_machine_press'));
+    expect(presses.every(
+        (e) => CuratedExerciseCatalog.byId[e.id]!.difficulty == 'Principiante'),
+        true);
+
+    final shoulders = ExerciseLibraryFilter.apply(
+      exercises: all,
+      anatomyId: 'reg_deltoid_lateral',
+      movementCategory: ExerciseMovementCategory.shoulder,
+      mechanics: ExerciseMechanics.isolation,
+      equipment: 'Mancuernas',
+    );
+    expect(shoulders.map((e) => e.id),
+        contains('exv2_seated_db_lateral_raise'));
+    // Historical records aren't assigned fabricated difficulty or mechanics.
+    expect(shoulders.map((e) => e.id), isNot(contains('ex_lateral_raises')));
+
+    final stable = ExerciseLibraryFilter.apply(
+      exercises: all,
+      movementCategory: ExerciseMovementCategory.core,
+      mechanics: ExerciseMechanics.stability,
+      bodyweightOnly: true,
+      favoritesOnly: true,
+      favoriteIds: {'exv2_high_plank', 'exv2_flat_machine_press'},
+    );
+    expect(stable.map((e) => e.id).toList(), ['exv2_high_plank']);
+
+    final old = all.firstWhere((e) => e.id == 'ex_bench_press');
+    expect(ExerciseLibraryFilter.apply(
+      exercises: [old],
+      movementCategory: ExerciseMovementCategory.horizontalPush,
+    ), isEmpty);
+    expect(ExerciseLibraryFilter.apply(exercises: [old]), hasLength(1));
+  });
+
+  test('faceted offline filtering is repeatable without data writes', () {
+    final ids = [for (final e in presetExercises) e.id];
+    for (var i = 0; i < 180; i++) {
+      final hits = ExerciseLibraryFilter.apply(
+        exercises: presetExercises,
+        movementCategory: ExerciseMovementCategory.values[
+            i % ExerciseMovementCategory.values.length],
+        mechanics: ExerciseMechanics.values[
+            i % ExerciseMechanics.values.length],
+        difficulty: const ['Principiante', 'Intermedio', 'Avanzado'][i % 3],
+        bodyweightOnly: i.isEven,
+      );
+      expect(hits.every((e) => CuratedExerciseCatalog.byId[e.id] != null),
+          true);
+    }
+    expect([for (final e in presetExercises) e.id], ids);
+  });
 }

@@ -104,6 +104,10 @@ class ExerciseLibraryFilter {
     String? anatomyId,
     String equipment = allOption,
     ExerciseLateralityFilter laterality = ExerciseLateralityFilter.all,
+    ExerciseMovementCategory? movementCategory,
+    ExerciseMechanics? mechanics,
+    String difficulty = allOption,
+    bool bodyweightOnly = false,
     Set<String> favoriteIds = const <String>{},
     bool favoritesOnly = false,
   }) {
@@ -140,8 +144,23 @@ class ExerciseLibraryFilter {
       };
       final matchesFavorite =
           !favoritesOnly || favoriteIds.contains(exercise.id);
+      // No guessing facets for old presets or personal exercises. They remain
+      // present in the unfiltered library; specific advanced facets require
+      // curated per-exercise metadata.
+      final matchesPattern =
+          movementCategory == null || definition?.movementCategory == movementCategory;
+      final matchesMechanics =
+          mechanics == null || definition?.mechanics == mechanics;
+      final matchesDifficulty = difficulty == allOption ||
+          definition?.difficulty == difficulty;
+      final matchesBodyweight = !bodyweightOnly ||
+          _normalize(exercise.equipment) == _normalize('Peso corporal');
 
-      return matchesQuery &&
+      return matchesPattern &&
+          matchesMechanics &&
+          matchesDifficulty &&
+          matchesBodyweight &&
+          matchesQuery &&
           matchesMuscle(exercise, muscle) &&
           (anatomyId == null ||
               MuscleHierarchyBrowser.matchesExercise(exercise, anatomyId)) &&
