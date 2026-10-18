@@ -1,6 +1,6 @@
 # STK Haven — Roadmap 5: biblioteca anatómica, ejercicios guiados y animaciones
 
-**Fecha:** 2026-10-17 · **Estado:** Fase 1 integrada. Fase 2 en progreso: proyección canónica, auditoría local de lectura y aclaraciones de Plan/Progreso; respaldo de datos reales, revisión ejercicio por ejercicio y pruebas físicas pendientes.
+**Fecha:** 2026-10-17 · **Estado:** Fase 1 integrada. Fase 2 en progreso: estadísticas canónicas, auditoría conectada a providers del dispositivo y mejoras de Plan/Progreso; respaldo real restaurable, revisión ejercicio por ejercicio y pruebas físicas pendientes.
 **Documentos:** [Taxonomía detallada (obligatoria)](EXERCISE_MUSCLE_TAXONOMY_V1.md) · [Progreso 2.0](PROGRESS_2_UNIFICATION_AND_MUSCLE_BALANCE.md).
 
 > **Regla de los repositorios:** `fernando15xvs/STK-Haven` = **fuente de verdad**, sin workflows/GitHub Actions. `fernando15xvs/STK-Haven_CI` = **espejo** para Actions, pruebas y artefactos de iOS/Android. Mantener igualdad de código/datos/documentos salvo workflow y metadatos exclusivos del espejo. No iniciar acciones en original.
@@ -123,11 +123,11 @@
 |---|---|---|
 | 0. Auditoría preliminar y documentos | **Parcial** | Inventario de 49 presets/11 grupos principales; herramienta local de auditoría lista, sin datos reales del teléfono |
 | 1. Taxonomía anatómica | **Núcleo + navegación móvil implementados** | 98 nodos, pruebas Core y selector jerárquico; revisión anatómica de cada ejercicio y prueba física pendientes |
-| 2. Migración/estadísticas/planes | **Parcial: informes y auditoría de lectura** | Proyección de frecuencia/volumen/balance, auditoría de etiquetas y referencias históricas; ninguna migración persistente ni copia física realizada |
+| 2. Migración/estadísticas/planes | **Parcial: auditoría real disponible en UI** | Reportes canónicos y pantalla local leyendo catálogo, rutinas e historial; no se ejecutó migración persistente ni se creó/validó copia del teléfono |
 | 3. Biblioteca ampliada | **Pendiente** | Se mantienen los 49 presets actuales |
 | 4. Animaciones y ficha | **Pendiente** | No se ha distribuido nuevo media |
 | 5. Editor personalizado guiado | **Pendiente** | No modificado |
-| 6. Integración visual | **Parcial** | Plan y Progreso muestran unidades y etiquetas antiguas por clasificar; ficha técnica y atribución por ejercicio pendientes |
+| 6. Integración visual | **Parcial** | Plan y Progreso aclaran unidades; Revisión anatómica accesible desde Balance muscular. Ficha técnica y atribuciones específicas pendientes |
 | 7. CI y pruebas físicas | **Parcial** | PR #35 con pruebas automáticas y layout 320 px; pruebas físicas/manuales pendientes |
 
 **Próximo paso recomendado:** inventario anonimizado de datos reales, respaldo comprobado y diseño de migración reversible; revisar roles biomecánicos de cada ejercicio antes de poblar cientos de ejercicios o sus medios.
@@ -180,8 +180,23 @@
 - [x] En Progreso: categorías históricas no resolubles indican `por clasificar`, permanecen visibles y no se mezclan artificialmente con un músculo concreto.
 - [x] Tests automatizados de auditoría y widgets a 320 px, incluyendo ejercicios eliminados y etiquetas compuestas.
 - [x] [PR #35](https://github.com/fernando15xvs/STK-Haven_CI/pull/35); [CI #373](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39155435681) **6/6 exitosos**, fusionado en el espejo y archivos compartidos sincronizados por SHA con el original.
-- [ ] La auditoría todavía **no** lee datos del dispositivo; falta fixture anonimizado desde un respaldo real, verificar restauración y migración opcional idempotente/reversible.
+- [x] La pantalla de auditoría **puede leer en la app** los providers reales de catálogo, rutinas e historial en el dispositivo, sin escribir cambios.
+- [ ] Falta ejecutar/verificar esa auditoría en el teléfono real del usuario, obtener un fixture anonimizado desde un respaldo real, verificar restauración y diseñar una migración opcional idempotente/reversible.
 - [ ] La clasificación biomecánica fina de cada ejercicio y el detalle de participación anatómica individual continúan pendientes; no inferir que una categoría general equivale a una porción.
 - [ ] Pruebas de Android/iPhone físico, tamaños de fuente ampliados, VoiceOver/TalkBack y contraste antes de declarar validación para producción.
 
 **Garantía de alcance:** esta entrega no borra, resetea, exporta ni modifica Hive, Supabase, rutinas, entrenamientos, series, PRs o favoritos. La auditoría solo produce un reporte en memoria de los datos que se le entreguen.
+
+### Entrega 5 — Fase 2 / auditoría conectada al dispositivo (18 oct 2026)
+
+- [x] Añadida pantalla `Revisión anatómica` desde `Progreso > Balance muscular > Revisar clasificación del historial`.
+- [x] La pantalla invoca `ExerciseAnatomyAudit.inspect` con `exerciseListProvider`, `routineListProvider` y `workoutHistoryProvider`. Analiza el catálogo, las referencias en rutinas y los snapshots cargados de sesiones históricas **solo al abrir la pantalla**.
+- [x] Vista legible a 320 px con total de ejercicios, referencias, entradas históricas y ocurrencias sin asignar, además de etiquetas originales agrupadas por fuente. Distingue correctamente etiquetas generales válidas de combinaciones irresolubles, sin atribuir automáticamente series a una porción.
+- [x] Se señalan **cantidades**, no identificadores internos, de referencias históricas a ejercicios que el catálogo actual no contiene. No se asume pérdida de un entrenamiento.
+- [x] Acceso directo a `Datos y sincronización` para **crear una copia local manual**, con advertencia explícita de que restaurar reemplaza datos. Esta pantalla no crea ni verifica respaldos ni realiza restauraciones.
+- [x] Pruebas móviles 320 px con datos simulados: apertura desde Progreso, secuencias históricas, secundarios ambiguos, explicación y acceso a datos y sincronización.
+- [x] [PR #36](https://github.com/fernando15xvs/STK-Haven_CI/pull/36) fusionado; [CI #377](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39159169981) **6/6 verde**, con Core, móvil, Android, iOS, Supabase y Edge. Cambios replicados a `STK-Haven` y paridad SHA comprobada.
+- [ ] La app del usuario aún debe instalar esta versión y ejecutar la auditoría local; no hay acceso remoto en este proyecto al historial de su teléfono y no se puede declarar que esté limpio.
+- [ ] Validación de exportación/restauración de una copia real y rollback, revisión biomecánica específica de los presets, pruebas físicas de accesibilidad y tamaño de letra.
+
+**No se modificaron datos persistentes ni se ejecutó código de migración.** La lectura anatómica no convierte etiquetas antiguas, no cambia IDs, favoritos, peso/repeticiones, PRs ni snapshots.
