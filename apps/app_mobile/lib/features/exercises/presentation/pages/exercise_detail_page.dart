@@ -115,7 +115,11 @@ class ExerciseDetailPage extends ConsumerWidget {
           ),
 
           const SizedBox(height: AppSpacing.xxl),
-          ExerciseDemonstrationCard(exercise: exercise),
+          ExerciseDemonstrationCard(
+            exercise: exercise,
+            reduceMotion: settings.reduceMotion ||
+                settings.performanceMode == PerformanceMode.savings,
+          ),
           const SizedBox(height: AppSpacing.xxl),
 
           // Progress Section
