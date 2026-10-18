@@ -100,6 +100,8 @@ void main() {
     await tester.pumpAndSettle();
     // ListView lazily creates cards below the fold at 320 logical pixels.
     await tester.scrollUntilVisible(find.text('Pecho'), 120);
+    await tester.ensureVisible(find.text('Pecho'));
+    await tester.pumpAndSettle();
     expect(find.text('Pecho'), findsOneWidget);
     await tester.tap(find.text('Pecho'));
     await tester.pumpAndSettle();
