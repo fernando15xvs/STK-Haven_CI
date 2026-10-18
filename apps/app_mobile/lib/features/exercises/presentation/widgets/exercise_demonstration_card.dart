@@ -7,11 +7,13 @@ import 'package:flutter/material.dart';
 class ExerciseDemonstrationCard extends StatefulWidget {
   final Exercise exercise;
   final bool compact;
+  final bool reduceMotion;
 
   const ExerciseDemonstrationCard({
     super.key,
     required this.exercise,
     this.compact = false,
+    this.reduceMotion = false,
   });
 
   @override
@@ -27,7 +29,8 @@ class _ExerciseDemonstrationCardState
   Widget build(BuildContext context) {
     final guide = ExerciseDemonstrationLibrary.guideFor(widget.exercise);
     final media = ExerciseDemonstrationLibrary.mediaFor(widget.exercise);
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context) ||
+        widget.reduceMotion;
     final showGif = media != null &&
         media.format == ExerciseMediaFormat.gif &&
         !reduceMotion &&
