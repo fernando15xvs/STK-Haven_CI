@@ -1,35 +1,36 @@
-# STK Haven — Fase 4: medios de ejercicios y guías específicas
+# STK Haven — Fase 4: animaciones Lottie y guías de ejercicios
 
-**18 de octubre de 2026 — Primera entrega de Fase 4.**
+**18 de octubre de 2026 — Decisión corregida:** priorizar **Lottie JSON vectorial** frente a GIFs, por tamaño, fluidez y control de reproducción. El roadmap original ya decía «No usar GIF pesado por defecto»; la primera entrega de Fase 4 había introducido por error una ruta de GIF. Este documento la sustituye.
 
-## Alcance incorporado
+## Estrategia de medios
 
-- `ExerciseDemonstrationLibrary`: 43 guías con tres pasos propios de cada ejercicio (preparación, ejecución, precaución). Los otros ejercicios curados reciben texto a partir de su definición particular; los personalizados mantienen sus propias instrucciones.
-- `ExerciseDemonstrationCard`: ficha que prioriza la técnica sobre las estadísticas; tiene espacio para GIF específico y permite pausar/reproducir. Si el recurso no está disponible, falla de forma segura a texto, sin ilustraciones de otro ejercicio.
-- `ExerciseLibraryPage` selección: vista previa de técnica con `Volver` y `Seleccionar ejercicio`; nunca se añade una selección al cancelar.
-- Preferencias `reduceMotion` y ahorro del usuario: no reproducir movimiento, especialmente en dispositivos de menor capacidad.
-- `approvedMedia` está vacío **intencionalmente**. No se presentan vídeos ni GIFs como si estuvieran implementados.
+- **Primera opción: Lottie** (JSON vectorial, offline y empaquetado) para un movimiento exacto que pueda representarse con calidad anatómica y biomecánica suficiente. Cada demostración corresponde a un ID de ejercicio, equipo, lateralidad y variante específicos.
+- **Poster PNG/WebP** como alternativa estática, con los mismos permisos de distribución y una guía textual accesible.
+- **Vídeo corto optimizado (opcional futuro)** únicamente cuando un movimiento humano complejo no pueda representarse fielmente en Lottie. Evaluar tamaño y rendimiento antes de habilitarlo; no implementar automáticamente.
+- **No se admitirán GIFs** de ejercicios en el registro de medios. Evitar descargas remotas, animaciones genéricas o mostrar variantes diferentes de la elegida.
 
-## Validación indispensable ANTES de incorporar un GIF
+## Implementación actual
 
-1. **Movimiento exacto**: vincular a un único `Exercise.id`. Verificar variante, máquina/barra/mancuerna, bilateral/unilateral y recorrido visual. Un GIF genérico de sentadilla no equivale automáticamente a sentadilla hack ni a sentadilla frontal.
-2. **Derechos documentados**: autorización escrita para almacenar, empaquetar, redistribuir **comercialmente**, utilizar offline, modificar si fuera necesario y mostrar en una app pública. Guardar autor, enlace, alcance, vigencia y condiciones. GitHub público o licencia MIT de **código** no concede permisos sobre las imágenes de terceros.
-3. **Revisión de técnica**: contrastar movimiento con las tres indicaciones de la ficha; un entrenador cualificado debe aprobar la animación, el punto de vista y posibles advertencias.
-4. **Archivo local verificado**: GIF optimizado y/o poster en `apps/app_mobile/assets/exercise_media/`; darlo de alta en `pubspec.yaml` solo cuando existan archivos. Registrar metadatos en `ExerciseDemonstrationLibrary.approvedMedia`.
-5. **Accesibilidad**: texto alternativo equivalente en guía, respeto por `SettingsState.reduceMotion`, posibilidad de pausar, sin destellos; bajo consumo, pruebas sin conexión y fallback cuando el recurso no abra.
-6. **Mediciones**: comparar APK/IPA antes y después, memoria de decodificación y duración de carga; no descargar recursos multimedia al iniciar la app.
+- `ExerciseDemonstrationLibrary`: 43 guías detalladas con preparación, ejecución y errores. Los demás presets reciben su propia técnica, y los ejercicios personalizados mantienen sus instrucciones.
+- `ExerciseDemonstrationCard`: reproduce `Lottie.asset` (versión Flutter compatible fijada en `pubspec.yaml`) solo si existe un medio autorizado; pausar/reanudar, `FrameRate.composition`, fallback textual ante fallos.
+- `MediaQuery.disableAnimationsOf`, `SettingsState.reduceMotion` y modo ahorro impiden reproducir movimiento. La ficha conserva los tres pasos incluso sin medios.
+- `approvedMedia` permanece **vacío**. Todavía no hay ninguna animación producida/contratada/revisada. No afirmar lo contrario.
+- El paquete Lottie utiliza una licencia propia distinta de los derechos de autor de **cada archivo de animación**. Una dependencia de software de código abierto no autoriza a redistribuir animaciones ajenas.
 
-### Guía de permisos
+## Validación ANTES de incorporar el primer recurso Lottie
 
-- `distributionPermission` debe documentar un derecho real verificable; no basta rellenar un texto arbitrario. El diccionario actual se deja vacío hasta revisión humana de derechos.
-- Las colecciones de GIFs de ExerciseDB v1 republicadas por terceros indican reservas de copyright y restricciones a redistribución/comercialización; **no** se incorporarán por simple copia desde GitHub.
-- Los vídeos externos deben venir de fuentes autorizadas por los titulares. No introducir URLs remotas arbitrarias en presets.
-- Una captura de referencia facilitada por el usuario no concede permiso de copiar sus animaciones.
+1. **Correspondencia exacta:** vincular a `Exercise.id`; verificar ejecución visual, perspectiva, agarre, equipo y variante. Una elevación lateral no puede ilustrar una elevación frontal.
+2. **Derechos trazables:** permiso escrito, fuente, autor, condiciones comerciales, modificación, distribución offline, vigencia y atribución; excluir assets extraídos de apps ajenas o copiados de imágenes de referencia.
+3. **Revisión técnica:** un entrenador o especialista comprueba recorrido, control corporal y que ninguna trayectoria visual cause errores.
+4. **Formato y peso:** preferir formas vectoriales simples, sin imágenes pesadas incrustadas en JSON; comprimir y medir tanto tamaño empaquetado como CPU/RAM/frecuencia de dibujo.
+5. **Manifest local:** almacenar archivos únicamente dentro de `apps/app_mobile/assets/exercise_media/`, declararlos en `pubspec.yaml` cuando existan físicamente, y registrarlos en `approvedMedia` con autor/permiso/atribución. Solo formatos `.json`, `.png` y `.webp`.
+6. **Accesibilidad:** modo de movimiento reducido, pausa, guías equivalentes, contraste, lector de pantalla, sin destellos y fallback offline sin bloquear la app.
+7. **Cobertura:** empezar por 30–40 ejercicios comunes (press de banca, jalones, remo, elevaciones, sentadilla, peso muerto rumano, curl femoral, hip thrust y core); ampliar gradualmente solo cuando el recurso real coincida con el movimiento.
 
-### Lo que sigue pendiente
+## Pendiente
 
-- Primera tanda de 30–40 GIFs **reales** y licenciados con correspondencia exacta.
-- Posters accesibles y reproducción offline bajo todas las preferencias de movimiento/ahorro.
-- Revisión clínica/biomecánica externa y pruebas en dispositivos físicos al cierre del roadmap, antes de producción.
+- Producir/revisar derechos y anatomía de animaciones específicas, cargar recursos locales reales y medir peso final de Android/iOS.
+- Opcionalmente evaluar MP4/WebM optimizado para técnicas imposibles de representar con precisión en Lottie.
+- Pruebas físicas y de restauración reservadas para QA final del roadmap, antes de producción.
 
-**Persistencia:** este bloque no modifica `Exercise`, `HiveExercise`, snapshots, PRs, rutinas, favoritos, pesos, descansos ni registros. Los medios viven en un registro independiente.
+**Persistencia:** no se modifican `Exercise`, `HiveExercise`, sesiones, series, récords, favoritos, preferencias ni registros históricos. Los medios usan IDs independientes y guías de solo lectura.

@@ -1,6 +1,6 @@
 # STK Haven — Roadmap 5: biblioteca anatómica, ejercicios guiados y animaciones
 
-**Fecha:** 2026-10-17 · **Estado:** Fases 1 y 2 (informes y auditoría no destructiva) integradas parcialmente; Fase 3: **229 presets (49 originales + 180 nuevos)**, anatomía/búsqueda y filtros avanzados de patrón, nivel, tipo y peso corporal. Restan curaduría biomecánica experta y GIFs con licencia; la Fase 4 ya dispone de guías, vista previa y contrato de medios con fallback seguro, y el QA físico permanece al final.
+**Fecha:** 2026-10-17 · **Estado:** Fases 1 y 2 (informes y auditoría no destructiva) integradas parcialmente; Fase 3: **229 presets (49 originales + 180 nuevos)**, anatomía/búsqueda y filtros avanzados de patrón, nivel, tipo y peso corporal. Restan curaduría biomecánica experta y animaciones Lottie originales o licenciadas; la Fase 4 ya dispone de guías, vista previa y contrato de medios con fallback seguro, y el QA físico permanece al final.
 **Documentos:** [Taxonomía detallada (obligatoria)](EXERCISE_MUSCLE_TAXONOMY_V1.md) · [Progreso 2.0](PROGRESS_2_UNIFICATION_AND_MUSCLE_BALANCE.md).
 
 > **Regla de los repositorios:** `fernando15xvs/STK-Haven` = **fuente de verdad**, sin workflows/GitHub Actions. `fernando15xvs/STK-Haven_CI` = **espejo** para Actions, pruebas y artefactos de iOS/Android. Mantener igualdad de código/datos/documentos salvo workflow y metadatos exclusivos del espejo. No iniciar acciones en original.
@@ -67,11 +67,11 @@
 
 **Objetivo:** al seleccionar un ejercicio —desde biblioteca, rutina y sesión— mostrar una demostración **que se mueva**, con nota técnica clara, sin obligar a buscar fuera de la app.
 
-- [ ] Elegir tecnología final entre video corto MP4/WebM/HEVC según plataforma, Lottie/vector o secuencia optimizada; medir tamaño, calidad, CPU, baterías y soporte iOS/Android. No usar GIF pesado por defecto.
+- [ ] Tecnología acordada: **Lottie JSON vectorial como opción principal**; PNG/WebP para poster sin movimiento y solo evaluar vídeo corto optimizado cuando Lottie no pueda representar la técnica con exactitud. **No usar GIFs.** Medir peso, CPU, batería y soporte iOS/Android.
 - [ ] Definir manifiesto `exerciseMedia` con `exerciseId`, licencia verificable, atribución, fuente, versión, vista anterior/lateral, poster offline, duración y peso.
 - [ ] Obtener o producir demostraciones **originales o licenciadas con derechos compatibles**, documentando permisos de distribución. La captura de referencia **no concede permiso** para copiar su animación.
 - [ ] Primera tanda de **30–40 ejercicios comunes** con animación validada (press banca, jalón, remo, elevaciones, sentadilla, RDL, curl femoral, hip thrust, crunch, etc.).
-- [x] Evitar recursos equivocados mediante registro por ID y fallback honesto a instrucciones cuando falta GIF. La ampliación de animaciones reales continúa pendiente.
+- [x] Evitar recursos equivocados mediante registro por ID y fallback honesto a instrucciones cuando falta Lottie. La ampliación de animaciones reales continúa pendiente.
 - [ ] En detalle: loop automático **silencioso**, pausar/reanudar, velocidad razonable, vistas disponibles, zoom si tiene sentido, descripción breve por pasos, colocación, rango, respiración opcional y errores frecuentes.
 - [ ] Mostrar músculo principal, secundarios, énfasis y estabilizadores con nombre técnico/coloquial; explicar por qué el movimiento se etiqueta así.
 - [ ] Garantizar `reducir animaciones`, modo ahorro y reproducción sin conexión para recursos empaquetados; cargas diferidas, caché acotada y textos accesibles.
@@ -125,7 +125,7 @@
 | 1. Taxonomía anatómica | **Núcleo + navegación móvil implementados** | 98 nodos, pruebas Core y selector jerárquico; revisión anatómica de cada ejercicio y prueba física pendientes |
 | 2. Migración/estadísticas/planes | **Parcial: auditoría real disponible en UI** | Reportes canónicos y pantalla local leyendo catálogo, rutinas e historial; no se ejecutó migración persistente ni se creó/validó copia del teléfono |
 | 3. Biblioteca ampliada | **Base y filtros avanzados integrados; cierre parcial** | 229 presets; 180 con patrón/nivel/mecánica, 13 categorías; falta revisión biomecánica externa, manifest multimedia y QA física |
-| 4. Animaciones y ficha | **Parcial: guías y reproductor preparados** | 43 guías detalladas, vista previa de selección y componente de medios; 0 GIFs aprobados/distribuidos hasta verificar derechos y técnica |
+| 4. Animaciones y ficha | **Parcial: guías y reproductor preparados** | 43 guías detalladas, vista previa de selección y componente de medios; 0 Lotties aprobados/distribuidos hasta verificar derechos y técnica |
 | 5. Editor personalizado guiado | **Pendiente** | No modificado |
 | 6. Integración visual | **Parcial** | Plan y Progreso aclaran unidades; Revisión anatómica accesible desde Balance muscular. Ficha técnica y atribuciones específicas pendientes |
 | 7. CI y pruebas físicas | **Parcial** | PR #35 con pruebas automáticas y layout 320 px; pruebas físicas/manuales pendientes |
@@ -209,7 +209,7 @@
 - [x] Selector de músculos y filtro de Biblioteca usan los IDs revisados y campos de énfasis para los presets nuevos y anteriores; búsqueda contempla nombres técnicos y alias de la taxonomía. La lateralidad de los nuevos se decide por metadatos, no por buscar palabras del título.
 - [x] Tests: cardinalidad total, unicidad de IDs/variantes, inmutabilidad de 49 anteriores, validez de nodos y énfasis, técnica no vacía, filtros compuestos y búsqueda offline. [PR #37](https://github.com/fernando15xvs/STK-Haven_CI/pull/37); [CI #378](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39161322606) con comprobación de seis trabajos.
 - [ ] Completar revisión externa de niveles y seguridad, estabilizadores y advertencias verificadas, curaduría de posibles variantes duplicadas entre los 49 y auditoría biomecánica experta. Los filtros por patrón/nivel ya están implementados; con 229 entradas todavía no se ha realizado una prueba de carga de 250+.
-- [ ] No hay GIFs nuevos: los campos `media` permanecen vacíos hasta disponer de material auténtico autorizado, correctamente vinculado y accesible en la **Fase 4**. Nunca usar animaciones genéricas para simular un ejercicio concreto.
+- [ ] No hay animaciones Lottie nuevas: los campos `media` permanecen vacíos hasta disponer de material auténtico autorizado, correctamente vinculado y accesible en la **Fase 4**. Nunca usar animaciones genéricas para simular un ejercicio concreto.
 - [ ] QA de dispositivo físico, restauración de copia de seguridad y validación end-to-end continúan programados para el final del roadmap, antes de producción.
 
 **Protección histórica:** los IDs y etiquetas de los 49 presets originales se mantienen; los 180 nuevos tienen IDs diferentes. No se renombraron ni borraron sesiones, récords, favoritos o copias del usuario; tampoco se lanzaron migraciones persistentes de anatomía. La instalación incorporará las entradas nuevas sin reescribir IDs existentes.
@@ -229,13 +229,22 @@
 ### Entrega 8 — Fase 4 / guías específicas y reproducción segura (18 oct 2026)
 
 - [x] Nueva `ExerciseDemonstrationLibrary`: **43 guías específicas** de preparación, ejecución y precauciones. Para otros presets se conserva el texto técnico propio del catálogo, nunca se deduce una técnica concreta de un grupo ambiguo. Los ejercicios personalizados mantienen íntegramente sus instrucciones.
-- [x] `ExerciseDemonstrationCard` situado antes de las estadísticas de `ExerciseDetailPage`: espacio de media, guía paso a paso y fallback offline claro cuando falta vídeo/GIF; el recurso es exclusivamente del ID verificado.
+- [x] `ExerciseDemonstrationCard` situado antes de las estadísticas de `ExerciseDetailPage`: espacio de media, guía paso a paso y fallback offline claro cuando falta Lottie/poster; el recurso es exclusivamente del ID verificado.
 - [x] En `ExerciseLibraryPage` modo selección: ventana previa a añadir a la rutina, `Volver` cancela y `Añadir` confirma. La selección deja intactos los registros anteriores.
-- [x] Preferencia de movimiento reducido, modo ahorro y `MediaQuery.disableAnimationsOf`: se suprime GIF animado; el botón pausar/reproducir solo se presenta si realmente existe GIF aprobado.
+- [x] Preferencia de movimiento reducido, modo ahorro y `MediaQuery.disableAnimationsOf`: se suprime animación vectorial; el botón pausar/reproducir solo se presenta si realmente existe Lottie aprobado.
 - [x] `VerifiedExerciseMedia` necesita ID exacto, ruta de asset, titular, permiso y atribución. `approvedMedia` continúa **vacío**: no se han adquirido permisos ni se incluyen GIFs o fotos ajenos.
 - [x] Política en `docs/roadmap/PHASE_4_MEDIA_POLICY_AND_GUIDES.md`: licencia de reproducción/redistribución comercial, correspondencia biomecánica por variante, revisión técnica, pruebas offline, respeto a preferencias y tamaño binario.
 - [x] Tests automatizados: guías para 229 presets, no uso de media falsa, custom/historial intactos, vista previa de selección a 320px, reducción de movimiento y fallback. [PR #39](https://github.com/fernando15xvs/STK-Haven_CI/pull/39), [CI #383](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39166541049), 6/6 aprobados tras correcciones en pantallas estrechas.
-- [ ] Obtener/producir y revisar una primera tanda de **30–40 GIFs reales y autorizados**, optimizarlos y asociarlos a sus IDs. No generar movimiento genérico que pretenda representar una variante distinta.
+- [ ] Obtener/producir y revisar una primera tanda de **30–40 Lotties JSON reales y autorizados**, optimizarlos y asociarlos a sus IDs. No generar movimiento genérico que pretenda representar una variante distinta.
 - [ ] Probar la reproducción real, pausas, resolución, tamaño APK, modo ahorro, lectores de pantalla y equipos físicos en el QA final.
 
-**Garantía histórica:** no se cambió el modelo persistido `Exercise`, no se reescribieron datos Hive/Supabase, sesiones, rutinas, récords ni favoritos. No se agregaron GIFs de terceros con licencias inciertas.
+**Garantía histórica:** no se cambió el modelo persistido `Exercise`, no se reescribieron datos Hive/Supabase, sesiones, rutinas, récords ni favoritos. No se agregaron medios de terceros con licencias inciertas.
+
+### Corrección de formato — Lottie antes que GIF (18 oct 2026)
+
+- [x] Se corrigió un desvío de la entrega 8: **Lottie JSON vectorial** es el formato prioritario de animación en la Fase 4, por eficiencia y reproducción controlable. El roadmap original ya advertía `No usar GIF pesado por defecto`. GIF queda excluido del registro de medios.
+- [x] `ExerciseMediaFormat` y `ExerciseDemonstrationCard` dejan de admitir/reproducir GIFs; se prepara `Lottie.asset` y posters PNG/WebP con control de pausa, `FrameRate.composition`, fallback offline y reducción de movimiento.
+- [x] Dependencia compatible con SDK fijada en `lottie: 3.3.3`. No se reintroducen recursos de celebración de autoría incierta eliminados previamente durante la auditoría de licencias del Roadmap 3.
+- [x] Se revisó `docs/roadmap/PHASE_4_MEDIA_POLICY_AND_GUIDES.md` y la cobertura de pruebas para la decisión Lottie-first.
+- [ ] Los recursos Lottie del catálogo siguen **sin entregar**: producirlos/licenciarlos, validar correspondencia biomecánica por ID, medir RAM/CPU/APK/IPA y agregarlos en una etapa de assets posterior. Un vector tampoco es automáticamente liviano si incorpora imágenes grandes.
+- [ ] Usar solo vídeos comprimidos en casos justificados cuando la fidelidad del movimiento humano no se logre con Lottie. No presentar GIFs como alternativa.

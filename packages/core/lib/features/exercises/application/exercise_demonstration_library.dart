@@ -16,7 +16,10 @@ class ExerciseTechniqueGuide {
 
 /// Media may only be shown after exercise-level movement and usage rights
 /// are documented. A valid source URL alone is NOT a commercial license.
-enum ExerciseMediaFormat { gif, poster }
+/// Lottie JSON is the default animation format. Poster is the static fallback.
+/// Heavy GIFs are intentionally unsupported; videos require a separate,
+/// measured, rights-reviewed implementation if vector motion is inaccurate.
+enum ExerciseMediaFormat { lottie, poster }
 
 class VerifiedExerciseMedia {
   final String exerciseId;
@@ -49,6 +52,11 @@ class ExerciseDemonstrationLibrary {
         verified.exerciseId != exercise.id ||
         verified.assetPath.isEmpty ||
         !verified.assetPath.startsWith('assets/exercise_media/') ||
+        !(verified.format == ExerciseMediaFormat.lottie &&
+              verified.assetPath.endsWith('.json') ||
+          verified.format == ExerciseMediaFormat.poster &&
+              (verified.assetPath.endsWith('.png') ||
+               verified.assetPath.endsWith('.webp'))) ||
         verified.distributionPermission.trim().isEmpty ||
         verified.copyrightHolder.trim().isEmpty ||
         verified.attribution.trim().isEmpty) {
