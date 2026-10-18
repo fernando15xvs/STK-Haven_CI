@@ -1,6 +1,6 @@
 # STK Haven — Roadmap 5: biblioteca anatómica, ejercicios guiados y animaciones
 
-**Fecha:** 2026-10-17 · **Estado:** Fase 1, catálogo anatómico de lectura y pruebas integrado. Navegación visual y migración pendientes.
+**Fecha:** 2026-10-17 · **Estado:** Fase 1 (núcleo anatómico y selector jerárquico móvil) implementada; migración, biblioteca extendida, medios y validación física pendientes.
 **Documentos:** [Taxonomía detallada (obligatoria)](EXERCISE_MUSCLE_TAXONOMY_V1.md) · [Progreso 2.0](PROGRESS_2_UNIFICATION_AND_MUSCLE_BALANCE.md).
 
 > **Regla de los repositorios:** `fernando15xvs/STK-Haven` = **fuente de verdad**, sin workflows/GitHub Actions. `fernando15xvs/STK-Haven_CI` = **espejo** para Actions, pruebas y artefactos de iOS/Android. Mantener igualdad de código/datos/documentos salvo workflow y metadatos exclusivos del espejo. No iniciar acciones en original.
@@ -29,7 +29,7 @@
 - [x] Cubrir **isquiotibiales**: bíceps femoral cabeza larga/corta, semitendinoso, semimembranoso; diferenciar funciones de cada cabeza.
 - [x] Cubrir **pierna inferior**: gastrocnemio cabeza medial/lateral, sóleo, tibial anterior y otros grupos de tobillo/pie definidos en taxonomía.
 - [x] Cubrir **abdomen completo**: recto abdominal (énfasis superior/inferior), oblicuo externo, oblicuo interno, transverso abdominal, musculatura profunda del tronco, diafragma y suelo pélvico como función, sin inventar series de hipertrofia.
-- [ ] Añadir navegación jerárquica (por ejemplo: `Piernas > Isquiotibiales > Semitendinoso`) con **categorías generales no contables**.
+- [x] Añadir navegación jerárquica móvil (por ejemplo: `Piernas > Isquiotibiales > Semitendinoso`) con **categorías generales no contables**, selección de ID y filtrado no destructivo.
 - [x] Pruebas de unicidad de IDs, alias, tildes, mayúsculas, plurales, sinónimos y pertenencia a categorías; manejo de regiones funcionales con evidencia insuficiente.
 
 **Criterio no negociable:** «pecho superior/medio/inferior», cabeza del bíceps y «abdomen superior/inferior» no significan aislamiento anatómico garantizado. Registrar músculo y, cuando corresponda, **énfasis** separado. Una serie no cuenta tres veces al agregar al pecho completo.
@@ -122,13 +122,13 @@
 | Fase | Estado | Evidencia |
 |---|---|---|
 | 0. Auditoría preliminar y documentos | **Parcial** | Auditoría de fuentes actuales; esta especificación y taxonomía creadas |
-| 1. Taxonomía anatómica | **Núcleo implementado** | 98 nodos y pruebas Core; UI jerárquica y revisión anatómica final pendientes |
+| 1. Taxonomía anatómica | **Núcleo + navegación móvil implementados** | 98 nodos, pruebas Core y selector jerárquico; revisión anatómica de cada ejercicio y prueba física pendientes |
 | 2. Migración/estadísticas/planes | **Parcial** | Resolutor puro implementado; ninguna migración ni actualización de estadísticas aplicada |
 | 3. Biblioteca ampliada | **Pendiente** | Se mantienen los 49 presets actuales |
 | 4. Animaciones y ficha | **Pendiente** | No se ha distribuido nuevo media |
 | 5. Editor personalizado guiado | **Pendiente** | No modificado |
 | 6. Integración visual | **Pendiente** | No modificado |
-| 7. CI y pruebas físicas | **Pendiente** | No iniciadas para este roadmap |
+| 7. CI y pruebas físicas | **Parcial** | CI #363/#364 y #365 en espejo aprobados; pruebas físicas/manuales pendientes |
 
 **Próximo paso recomendado:** Fase 0 (inventario completo y clasificador seguro) → Fase 1 (IDs/alias canónicos). No empezar a poblar cientos de ejercicios ni medios hasta asegurar que la clasificación y el historial son seguros.
 
@@ -139,6 +139,18 @@
 - [x] Nombres ambiguos como «Hombros», «Espalda», «Piernas» y etiquetas combinadas permanecen sin asignación muscular específica hasta revisión.
 - [x] Pruebas del paquete Core, análisis Flutter, móvil, iOS, Android, Supabase/Edge en [CI #39095901308](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39095901308), **6/6 trabajos exitosos**. [PR #32](https://github.com/fernando15xvs/STK-Haven_CI/pull/32) fusionado.
 - [x] `STK-Haven` original conserva su función de fuente de verdad y carece de workflows; cambios replicados en el espejo.
-- [ ] Integración en Plan/Progreso, selección visual, migración con respaldo y pruebas físicas; no se ha alterado el historial existente ni generado una copia de seguridad del teléfono.
+- [ ] Integración en Plan/Progreso, migración con respaldo y pruebas físicas; la selección visual móvil básica está disponible. No se ha alterado el historial existente ni generado una copia de seguridad del teléfono.
 
 **Siguiente tarea:** conectar un lector de IDs canónicos, sin escritura destructiva, al cálculo de frecuencias y volumen de Plan de entrenamiento, probar datos ambiguos antes de cambiar su interfaz y mantener snapshots originales.
+
+### Entrega 2 — Selector jerárquico móvil (18 oct 2026)
+
+- [x] Navegación de tres raíces (Tren superior, Tren inferior y Core) hacia grupos, músculos y regiones con ID estable; distingue categoría y énfasis regional.
+- [x] Desde Biblioteca y selección de ejercicios, explorar la jerarquía por niveles, seleccionar un músculo, ver el filtro activo y limpiarlo.
+- [x] Filtrado de lectura conservador por etiquetas primarias/secundarias; nombres generales o combinados no se convierten en una estructura anatómica arbitraria.
+- [x] Pruebas Core: rutas y cross-listing de serrato, exclusión de ambiguos, filtros combinados y conservación inmutable de etiquetas.
+- [x] Pruebas móviles: navegación y selección modal por identificador, separación de deltoide anterior/lateral/posterior.
+- [x] CI en espejo: [run #365, 6/6](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/39143311681), [PR #33](https://github.com/fernando15xvs/STK-Haven_CI/pull/33), integrado y sincronizado con repositorio original.
+- [ ] Revisión biomecánica por ejercicio, pruebas físicas, integración Plan/Progreso y migración de datos; tareas posteriores a la base de Fase 1.
+
+**Límite de esta entrega:** navegar toda la anatomía no implica que los 49 presets históricos estén clasificados a nivel de fascículos. El filtro no inventa objetivos de un movimiento y puede mostrar vacío para porciones que aún no tienen ejercicios revisados. Esto se resolverá en fases 2–3.
