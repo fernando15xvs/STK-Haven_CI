@@ -1,4 +1,5 @@
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/core/constants/curated_exercise_catalog.dart';
 
 final List<Exercise> presetExercises = [
   // PECHO
@@ -408,4 +409,6 @@ final List<Exercise> presetExercises = [
     equipment: 'Peso corporal',
     instructions: 'Eleva los hombros del suelo contrayendo el abdomen.',
   ),
+  // Fase 3: solo se añaden IDs nuevos. Los 49 anteriores permanecen intactos.
+  ...CuratedExerciseCatalog.entries.map((definition) => definition.toExercise()),
 ];

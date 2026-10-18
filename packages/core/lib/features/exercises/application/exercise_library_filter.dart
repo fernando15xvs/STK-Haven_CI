@@ -1,4 +1,6 @@
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/core/constants/muscle_taxonomy_v1.dart';
+import 'package:core/core/constants/curated_exercise_catalog.dart';
 import 'package:core/features/exercises/application/muscle_hierarchy_browser.dart';
 
 enum ExerciseLateralityFilter { all, unilateral, bilateral }
@@ -17,6 +19,8 @@ class ExerciseLibraryFilter {
   }
 
   static bool isUnilateral(Exercise exercise) {
+    final definition = CuratedExerciseCatalog.byId[exercise.id];
+    if (definition != null) return definition.unilateral;
     final text = _normalize(
       '${exercise.name} ${exercise.instructions}',
     );
@@ -37,6 +41,31 @@ class ExerciseLibraryFilter {
 
   static bool matchesMuscle(Exercise exercise, String muscle) {
     if (muscle == allOption) return true;
+    const categories = <String, String>{
+      'Pecho': 'mg_chest',
+      'Espalda': 'mg_back',
+      'Piernas': 'mg_lower_body',
+      'Hombros': 'mg_shoulders',
+      'Brazos': 'mg_arms',
+      'Core': 'mg_core',
+    };
+    final profile = CuratedExerciseCatalog.anatomyFor(exercise.id);
+    if (profile != null) {
+      final targetId = categories[muscle];
+      if (targetId != null) {
+        return [
+          profile.primaryId,
+          ...profile.secondaryIds,
+          ...profile.emphasisIds,
+        ].any((id) => MuscleTaxonomyV1.belongsToGroup(id, targetId));
+      }
+      final node = MuscleTaxonomyV1.resolveLegacy(muscle).nodeId;
+      if (node != null) {
+        return [
+          profile.primaryId, ...profile.secondaryIds, ...profile.emphasisIds,
+        ].any((id) => id == node);
+      }
+    }
     final value = _normalize(exercise.muscleGroup);
     switch (muscle) {
       case 'Pecho':
@@ -82,8 +111,22 @@ class ExerciseLibraryFilter {
     final normalizedEquipment = _normalize(equipment);
 
     return exercises.where((exercise) {
+      final definition = CuratedExerciseCatalog.byId[exercise.id];
+      final profile = CuratedExerciseCatalog.anatomyFor(exercise.id);
+      final anatomyNames = profile == null
+          ? ''
+          : [profile.primaryId, ...profile.emphasisIds, ...profile.secondaryIds]
+              .map((id) {
+                final node = MuscleTaxonomyV1.byId[id];
+                return node == null
+                    ? ''
+                    : [node.labelEs, node.anatomicalName, ...node.aliases]
+                        .join(' ');
+              }).join(' ');
       final searchable = _normalize(
-        '${exercise.name} ${exercise.muscleGroup} ${exercise.equipment}',
+        '${exercise.name} ${exercise.muscleGroup} ${exercise.equipment} '
+        '${definition?.aliases.join(' ') ?? ''} '
+        '${definition?.movementPattern ?? ''} $anatomyNames',
       );
       final matchesQuery =
           normalizedQuery.isEmpty || searchable.contains(normalizedQuery);
@@ -116,6 +159,7 @@ class ExerciseLibraryFilter {
         .replaceAll('í', 'i')
         .replaceAll('ó', 'o')
         .replaceAll('ú', 'u')
-        .replaceAll('ü', 'u');
+        .replaceAll('ü', 'u')
+        .replaceAll('ñ', 'n');
   }
 }
