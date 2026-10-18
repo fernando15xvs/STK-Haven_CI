@@ -15,12 +15,14 @@ class _Programs extends TrainingProgramListNotifier {
   @override
   List<TrainingProgram> build() {
     final now = DateTime.now();
+    final monday = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday - DateTime.monday));
     return [
       TrainingProgram(
         id: 'p', name: 'Programa semanal',
         routineIds: const ['r'],
-        createdAt: now,
-        startedAt: now.subtract(const Duration(days: 1)),
+        createdAt: monday,
+        startedAt: monday,
         scheduleMode: ProgramScheduleMode.continuous,
         targetSessionsPerWeek: 1,
         trainingWeekdays: const {DateTime.monday},
