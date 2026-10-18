@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:core/core/constants/muscle_taxonomy_v1.dart';
+import 'package:core/domain/models/exercise.dart';
+import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_demonstration_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
@@ -77,6 +79,67 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
     setState(() => _advanced = result);
   }
 
+  Future<void> _previewAndSelect(Exercise exercise) async {
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => FractionallySizedBox(
+        heightFactor: 0.88,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Text(
+                exercise.name,
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                key: const Key('exercise_selection_preview'),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: ExerciseDemonstrationCard(
+                  exercise: exercise,
+                  compact: true,
+                  reduceMotion: ref.read(settingsProvider).reduceMotion,
+                ),
+              ),
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        key: const Key('exercise_preview_cancel'),
+                        onPressed: () => Navigator.pop(sheetContext, false),
+                        child: const Text('Volver'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        key: const Key('exercise_preview_add'),
+                        onPressed: () => Navigator.pop(sheetContext, true),
+                        child: const Text('Añadir'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    Navigator.of(context).pop(exercise);
+  }
+
   Future<void> _openCustomEditor([dynamic exercise]) async {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
@@ -122,6 +185,8 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
         title: Text(
           widget.isSelectionMode ? 'Seleccionar Ejercicio' : 'Biblioteca',
           style: AppTypography.headlineMedium,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         elevation: 0,
         backgroundColor: AppColors.of(context).background,
@@ -242,57 +307,75 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-            child: Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    initialValue: equipmentOptions.contains(_selectedEquipment)
-                        ? _selectedEquipment
-                        : ExerciseLibraryFilter.allOption,
-                    decoration: const InputDecoration(
-                      labelText: 'Equipo',
-                      isDense: true,
-                    ),
-                    items: equipmentOptions
-                        .map(
-                          (item) =>
-                              DropdownMenuItem(value: item, child: Text(item)),
-                        )
-                        .toList(),
-                    onChanged: (value) => setState(
-                      () => _selectedEquipment =
-                          value ?? ExerciseLibraryFilter.allOption,
-                    ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final equipment = DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: equipmentOptions.contains(_selectedEquipment)
+                      ? _selectedEquipment
+                      : ExerciseLibraryFilter.allOption,
+                  decoration: const InputDecoration(
+                    labelText: 'Equipo',
+                    isDense: true,
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: DropdownButtonFormField<ExerciseLateralityFilter>(
-                    initialValue: _laterality,
-                    decoration: const InputDecoration(
-                      labelText: 'Ejecución',
-                      isDense: true,
+                  items: [
+                    for (final item in equipmentOptions)
+                      DropdownMenuItem<String>(
+                        value: item,
+                        child: Text(item,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
+                  onChanged: (value) => setState(
+                    () => _selectedEquipment =
+                        value ?? ExerciseLibraryFilter.allOption,
+                  ),
+                );
+                final laterality =
+                    DropdownButtonFormField<ExerciseLateralityFilter>(
+                  isExpanded: true,
+                  initialValue: _laterality,
+                  decoration: const InputDecoration(
+                    labelText: 'Ejecución',
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: ExerciseLateralityFilter.all,
+                      child: Text('Todos'),
                     ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: ExerciseLateralityFilter.all,
-                        child: Text('Todos'),
-                      ),
-                      DropdownMenuItem(
-                        value: ExerciseLateralityFilter.unilateral,
-                        child: Text('Unilateral'),
-                      ),
-                      DropdownMenuItem(
-                        value: ExerciseLateralityFilter.bilateral,
-                        child: Text('Bilateral'),
-                      ),
+                    DropdownMenuItem(
+                      value: ExerciseLateralityFilter.unilateral,
+                      child: Text('Unilateral'),
+                    ),
+                    DropdownMenuItem(
+                      value: ExerciseLateralityFilter.bilateral,
+                      child: Text('Bilateral'),
+                    ),
+                  ],
+                  onChanged: (value) => setState(
+                    () => _laterality =
+                        value ?? ExerciseLateralityFilter.all,
+                  ),
+                );
+                if (constraints.maxWidth < 350) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      equipment,
+                      const SizedBox(height: 8),
+                      laterality,
                     ],
-                    onChanged: (value) => setState(
-                      () => _laterality = value ?? ExerciseLateralityFilter.all,
-                    ),
-                  ),
-                ),
-              ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: equipment),
+                    const SizedBox(width: 10),
+                    Expanded(child: laterality),
+                  ],
+                );
+              },
             ),
           ),
           Padding(
@@ -350,7 +433,7 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                         padding: const EdgeInsets.all(12),
                         onTap: () {
                           if (widget.isSelectionMode) {
-                            Navigator.pop(context, exercise);
+                            _previewAndSelect(exercise);
                           } else {
                             Navigator.push(
                               context,
