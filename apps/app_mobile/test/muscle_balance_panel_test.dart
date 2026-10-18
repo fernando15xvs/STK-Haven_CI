@@ -95,9 +95,9 @@ void main() {
     expect(find.textContaining('Hay etiquetas antiguas por clasificar'),
         findsOneWidget);
     expect(find.textContaining('Indirecto estimado:'), findsNothing);
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('muscle_indirect_toggle')), 120,
-    );
+    // Move the vertical list, not the nested horizontal period selector.
+    await tester.drag(find.byType(ListView).first, const Offset(0, -240));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(
       find.byKey(const ValueKey('muscle_indirect_toggle')),
     );
