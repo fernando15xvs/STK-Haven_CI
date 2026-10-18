@@ -4,7 +4,6 @@ import 'package:core/domain/models/training_program.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/exercises/application/canonical_muscle_projection.dart';
 import 'package:core/features/programs/application/program_muscle_frequency_planner.dart';
-import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_volume_planner.dart';
 import 'package:core/features/progress/application/muscle_balance_calculator.dart';
 import 'package:flutter_test/flutter_test.dart';
