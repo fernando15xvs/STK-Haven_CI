@@ -116,8 +116,13 @@ class ExerciseLibraryFilter {
       final anatomyNames = profile == null
           ? ''
           : [profile.primaryId, ...profile.emphasisIds, ...profile.secondaryIds]
-              .map((id) => MuscleTaxonomyV1.byId[id]?.labelEs ?? '')
-              .join(' ');
+              .map((id) {
+                final node = MuscleTaxonomyV1.byId[id];
+                return node == null
+                    ? ''
+                    : [node.labelEs, node.anatomicalName, ...node.aliases]
+                        .join(' ');
+              }).join(' ');
       final searchable = _normalize(
         '${exercise.name} ${exercise.muscleGroup} ${exercise.equipment} '
         '${definition?.aliases.join(' ') ?? ''} '
