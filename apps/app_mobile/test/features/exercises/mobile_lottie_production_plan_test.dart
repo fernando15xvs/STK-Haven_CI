@@ -28,6 +28,26 @@ void main() {
     'exv2_arnold_press',
     'exv2_seated_db_lateral_raise',
     'exv2_single_arm_rear_cable_fly',
+    'exv2_scapular_pushup',
+    'ex_barbell_curl',
+    'ex_hammer_curl',
+    'ex_tricep_pushdown',
+    'exv2_ez_bar_curl',
+    'exv2_rope_pushdown',
+    'exv2_rope_hammer_curl',
+    'ex_leg_press',
+    'ex_leg_extension',
+    'ex_leg_curl',
+    'ex_hip_thrust',
+    'ex_rdl',
+    'exv2_front_squat',
+    'exv2_goblet_squat',
+    'exv2_db_rdl',
+    'exv2_machine_hip_thrust',
+    'exv2_nordic_curl',
+    'ex_calf_raise',
+    'ex_crunch',
+    'exv2_pallof_press',
   };
 
   test('229 exercise IDs appear exactly once in four planned mobile batches',
@@ -81,11 +101,11 @@ void main() {
       }
     }
     expect(count, 229);
-    expect(draftIds, hasLength(20));
+    expect(draftIds, hasLength(40));
     expect(batches.first['target'], 40);
     expect((batches.first['items'] as List<dynamic>)
         .where((entry) => (entry as Map<String, dynamic>)['status'] == 'draft')
-        .length, 20);
+        .length, 40);
     expect(allIds, presetExercises.map((e) => e.id).toSet());
     expect((manifest['batches'] as List<dynamic>)
         .expand((batch) => (batch as Map<String, dynamic>)['items'] as List<dynamic>)
@@ -169,6 +189,22 @@ void main() {
     }
   });
 
+  test('first full batch is 40 drafts, never approved or bundled', () {
+    final manifest = jsonDecode(File(manifestPath).readAsStringSync())
+        as Map<String, dynamic>;
+    final batches = manifest['batches'] as List<dynamic>;
+    final batchOne = batches.first as Map<String, dynamic>;
+    final items = (batchOne['items'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    expect(items, hasLength(40));
+    expect(items.every((item) => item['status'] == 'draft'), isTrue);
+    expect(items.every((item) => item['approved'] == false), isTrue);
+    expect(items.map((item) => item['id']).toSet(), draftIds);
+    expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
+    expect(File('pubspec.yaml').readAsStringSync(),
+        isNot(contains('assets/exercise_media/lottie/')));
+  });
+
   test('draft compositions are specific to their exercise and perspective', () {
     final manifest = jsonDecode(File(manifestPath).readAsStringSync())
         as Map<String, dynamic>;
@@ -179,7 +215,7 @@ void main() {
         .cast<Map<String, dynamic>>()
         .where((item) => item['status'] == 'draft')
         .toList();
-    expect(staged.length, 20);
+    expect(staged.length, 40);
     expect(staged.map((item) => item['id']).toSet(), draftIds);
     final uniqueCompositions = <String>{};
     for (final entry in staged) {
