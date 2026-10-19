@@ -2323,180 +2323,380 @@
           "name": "Patada de glúteo en máquina",
           "family": "hipControl",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_machine_glute_kickback.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Patada de glúteo guiada en máquina con tronco apoyado y pierna que retrocede",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_captains_chair_raise",
           "name": "Elevación de rodillas en silla romana",
           "family": "core",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_captains_chair_raise.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Elevación de rodillas con antebrazos en silla romana y torso estable",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_behind_body_cable_lateral",
           "name": "Elevación lateral en polea desde atrás",
           "family": "shoulder",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_behind_body_cable_lateral.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Elevación lateral unilateral con cable desde detrás del cuerpo",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_incline_pushup",
           "name": "Flexiones con manos elevadas",
           "family": "horizontalPush",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_incline_pushup.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Flexiones con manos sobre banco elevado y plancha corporal",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_unilateral_leg_press",
           "name": "Prensa unilateral",
           "family": "squatLunge",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_unilateral_leg_press.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Prensa de piernas con un solo pie empujando plataforma horizontal",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_leg_press_calf_raise",
           "name": "Gemelos en prensa",
           "family": "ankle",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_leg_press_calf_raise.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Gemelos en prensa con rodillas estables y movimiento de tobillos",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_db_shrug",
           "name": "Encogimientos con mancuernas",
           "family": "scapular",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_db_shrug.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Encogimientos escapulares con dos mancuernas y brazos extendidos",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_hammer_supination",
           "name": "Supinación de antebrazo con martillo",
           "family": "gripCarry",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_hammer_supination.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Supinación de antebrazo con martillo y codo apoyado",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_single_leg_rdl",
           "name": "Peso muerto rumano unilateral",
           "family": "hipHinge",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_single_leg_rdl.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Peso muerto rumano unilateral con bisagra de cadera y pierna posterior extendida",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_supine_pulldown",
           "name": "Jalón supino cerrado",
           "family": "verticalPull",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_supine_pulldown.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Jalón al pecho con agarre supino cerrado, barra delante de la cara",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_lying_leg_curl_unilateral",
           "name": "Curl femoral acostado unilateral",
           "family": "kneeFlexion",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_lying_leg_curl_unilateral.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Curl femoral unilateral en banco prono con rodillo tobillo",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_inverted_row",
           "name": "Remo invertido en barra",
           "family": "horizontalPull",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_inverted_row.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Remo invertido con talones apoyados y pecho asciende a barra",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_high_pulley_fly",
           "name": "Fly en Polea Alta",
           "family": "Pecho",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_high_pulley_fly.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Aperturas para pecho con poleas altas y cierre convergente",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_machine_dips",
           "name": "Fondos en Máquina",
           "family": "Tríceps",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_machine_dips.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Fondos en máquina sentada, palancas empujadas por extensión de codos",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_standing_cable_curl",
           "name": "Curl de bíceps con barra en polea",
           "family": "arms",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_standing_cable_curl.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Curl con barra recta en polea baja y codos estables",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_stepback_cable_glute",
           "name": "Extensión de cadera de pie con polea",
           "family": "hipControl",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_stepback_cable_glute.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Extensión de cadera con polea y paso atrás de una pierna",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_decline_crunch",
           "name": "Crunch en banco declinado",
           "family": "core",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_decline_crunch.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Crunch en banco declinado, pies sujetos y flexión abdominal",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_front_plate_raise",
           "name": "Elevación frontal con disco",
           "family": "shoulder",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_front_plate_raise.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Elevación frontal de disco hasta la altura del hombro",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_decline_pushup",
           "name": "Flexiones con pies elevados",
           "family": "horizontalPush",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_decline_pushup.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Flexiones con pies sobre banco elevado y manos ancladas en suelo",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_step_up",
           "name": "Subida a banco con mancuernas",
           "family": "squatLunge",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_step_up.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Subida a banco con mancuernas apoyando pie entero sobre step",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_donkey_calf_raise",

@@ -140,6 +140,26 @@ void main() {
     'ex_neutral_pulldown',
     'ex_cable_rear_delt',
     'exv2_incline_alternating_curl',
+    'exv2_machine_glute_kickback',
+    'exv2_captains_chair_raise',
+    'exv2_behind_body_cable_lateral',
+    'exv2_incline_pushup',
+    'exv2_unilateral_leg_press',
+    'exv2_leg_press_calf_raise',
+    'exv2_db_shrug',
+    'exv2_hammer_supination',
+    'exv2_single_leg_rdl',
+    'exv2_supine_pulldown',
+    'exv2_lying_leg_curl_unilateral',
+    'exv2_inverted_row',
+    'ex_high_pulley_fly',
+    'ex_machine_dips',
+    'exv2_standing_cable_curl',
+    'exv2_stepback_cable_glute',
+    'exv2_decline_crunch',
+    'exv2_front_plate_raise',
+    'exv2_decline_pushup',
+    'exv2_step_up',
   };
 
   test('229 exercise IDs appear exactly once in four planned mobile batches',
@@ -193,7 +213,7 @@ void main() {
       }
     }
     expect(count, 229);
-    expect(draftIds, hasLength(120));
+    expect(draftIds, hasLength(140));
     expect(batches.first['target'], 40);
     expect((batches.first['items'] as List<dynamic>)
         .where((entry) => (entry as Map<String, dynamic>)['status'] == 'draft')
@@ -267,7 +287,7 @@ void main() {
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
   });
 
-  test('all 120 drafts parse in the mobile Lottie 3.3.3 decoder', () async {
+  test('all 140 drafts parse in the mobile Lottie 3.3.3 decoder', () async {
     for (final id in draftIds) {
       final bytes = File('assets/exercise_media/lottie/$id.json')
           .readAsBytesSync();
@@ -490,7 +510,8 @@ void main() {
     final firstTwenty = lot3.take(20);
     expect(firstTwenty.every((entry) => entry['status'] == 'draft' &&
         entry['approved'] == false), isTrue);
-    expect(lot3.skip(20).every((entry) => entry['status'] == 'pending'),
+    expect(lot3.skip(20).take(20).every((entry) => entry['status'] == 'draft') &&
+        lot3.skip(40).every((entry) => entry['status'] == 'pending'),
         isTrue);
     expect(draftIds.containsAll(firstTwenty.map((entry) => entry['id'])),
         isTrue);
@@ -498,6 +519,31 @@ void main() {
       final path = entry['assetPath'] as String;
       expect(path, startsWith('assets/exercise_media/lottie/'));
       expect(File(path).existsSync(), isTrue, reason: entry['id'] as String);
+    }
+    expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
+  });
+
+  test('lot 3 next 20 exercise-specific Lottie variants are drafts', () {
+    final manifest = jsonDecode(File(manifestPath).readAsStringSync())
+        as Map<String, dynamic>;
+    final lot3 = ((manifest['batches'] as List<dynamic>)[2]['items']
+        as List<dynamic>).cast<Map<String, dynamic>>();
+    final secondTwenty = lot3.skip(20).take(20);
+    expect(secondTwenty.length, 20);
+    expect(secondTwenty.every((entry) =>
+        entry['status'] == 'draft' && entry['approved'] == false), isTrue);
+    expect(lot3.skip(40).every((entry) => entry['status'] == 'pending'), isTrue);
+    expect(draftIds.containsAll(secondTwenty.map((entry) => entry['id'])),
+        isTrue);
+    final compositions = <String>{};
+    for (final entry in secondTwenty) {
+      final path = entry['assetPath'] as String;
+      final json = jsonDecode(File(path).readAsStringSync())
+          as Map<String, dynamic>;
+      expect(json['nm'], contains(' / ${entry['id']} / '));
+      expect(json['assets'], isEmpty);
+      expect(compositions.add(jsonEncode(json['layers'])), isTrue,
+          reason: 'A different exercise requires its own composition');
     }
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
   });
@@ -528,7 +574,7 @@ void main() {
         .cast<Map<String, dynamic>>()
         .where((item) => item['status'] == 'draft')
         .toList();
-    expect(staged.length, 120);
+    expect(staged.length, 140);
     expect(staged.map((item) => item['id']).toSet(), draftIds);
     final uniqueCompositions = <String>{};
     for (final entry in staged) {
