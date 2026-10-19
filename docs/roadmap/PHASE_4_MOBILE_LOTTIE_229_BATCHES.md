@@ -1,7 +1,7 @@
 # STK Haven — Plan de producción Lottie 229/229 (exclusivo iOS y Android)
 
 **Fecha:** 18 de octubre de 2026  
-**Estado:** cobertura exacta fijada. **Borradores vectoriales originales: 3/229; aprobados y distribuidos: 0/229.**
+**Estado:** cobertura fijada. **Borradores vectoriales originales: 10/229 (10/40 del lote 1); aprobados y distribuidos: 0/229.**
 
 ## Plataforma y alcance (decisión del usuario)
 
@@ -12,15 +12,24 @@
 - **Sin cambios de historial:** ni modelos persistidos, series, PRs, rutinas, favoritos ni respaldos deben alterarse para incorporar recursos.
 - **No confundir plan con implementación:** los nombres de archivos son destinos previstos, no archivos ya creados. Ninguna fila está aprobada y `approvedMedia` seguirá vacío hasta existir material válido.
 
-## Inicio de producción — 18 de octubre de 2026
+## Inicio de producción — primer hito de 10 borradores
 
-Tres **borradores Lottie originales** versionados exclusivamente en `apps/app_mobile/assets/exercise_media/lottie/`:
+Diez composiciones Lottie JSON vectoriales **originales y distintas** en `apps/app_mobile/assets/exercise_media/lottie/` (solo iOS/Android):
 
-- `ex_bench_press.json`: vista lateral del press de banca.
-- `ex_lat_pulldown.json`: vista frontal del jalón al pecho.
-- `ex_lateral_raises.json`: vista frontal de elevaciones laterales.
+- `ex_bench_press.json` — Press de banca · lateral.
+- `ex_incline_db_press.json` — Press inclinado con mancuernas · lateral.
+- `exv2_flat_db_press.json` — Press plano con mancuernas · lateral.
+- `ex_lat_pulldown.json` — Jalón al pecho · frontal.
+- `ex_pullups.json` — Dominadas · frontal.
+- `ex_barbell_row.json` — Remo con barra · lateral.
+- `ex_cable_row.json` — Remo en polea baja · lateral.
+- `ex_ohp.json` — Press militar · frontal.
+- `ex_lateral_raises.json` — Elevaciones laterales · frontal.
+- `ex_squat.json` — Sentadilla con barra · lateral.
 
-Son JSON vectoriales con movimiento distinto y sin imágenes incrustadas. **No están aprobados ni distribuidos:** permanecen fuera de `approvedMedia` y del `pubspec.yaml` móvil. Falta revisión biomecánica, visual, de derechos, accesibilidad y pruebas físicas en iOS y Android. Los tres figuran como `draft` con `approved: false` en el manifiesto; los otros 226 permanecen `pending`.
+Todas incluyen keyframes de movimiento sin imágenes raster incrustadas, identificador propio y vista específica. Son **borradores de producción, no demostraciones biomecánicas aprobadas**. Revisar perspectiva, postura, agarre, recorrido, coherencia de equipo, visualización real en dispositivos y accesibilidad.
+
+El manifiesto registra exactamente 10 `draft` con `approved: false` y 219 `pending`. `approvedMedia` permanece vacío, y la carpeta de animaciones **no** está declarada como recurso en `pubspec.yaml`: ninguna se distribuye todavía a usuarios. Las pruebas físicas siguen reservadas al cierre del roadmap, pero ninguna será aprobada sin revisión técnica y tests oportunos.
 
 ## Pipeline para cada ejercicio
 
@@ -38,7 +47,7 @@ Son JSON vectoriales con movimiento distinto y sin imágenes incrustadas. **No e
 
 | Lote | Ejercicios | Acumulado | Plataforma | Estado |
 |---|---:|---:|---|---|
-| 1 · movimientos esenciales | 40 | 40/229 | iOS + Android | 3 borradores, 0 aprobados |
+| 1 · movimientos esenciales | 40 | 40/229 | iOS + Android | 10 borradores, 0 aprobados |
 | 2 · variantes frecuentes | 60 | 100/229 | iOS + Android | 0 aprobados |
 | 3 · ampliación anatómica | 70 | 170/229 | iOS + Android | 0 aprobados |
 | 4 · restantes y cobertura completa | 59 | 229/229 | iOS + Android | 0 aprobados |
@@ -46,20 +55,20 @@ Son JSON vectoriales con movimiento distinto y sin imágenes incrustadas. **No e
 ### Lote 1 — 40 ejercicios
 
 - [ ] 01. `ex_bench_press` — Press de Banca · **borrador Lottie (sin aprobación)**
-- [ ] 02. `ex_incline_db_press` — Press Inclinado c/M
-- [ ] 03. `exv2_flat_db_press` — Press plano con mancuernas
+- [ ] 02. `ex_incline_db_press` — Press Inclinado c/M · **borrador Lottie (sin aprobación)**
+- [ ] 03. `exv2_flat_db_press` — Press plano con mancuernas · **borrador Lottie (sin aprobación)**
 - [ ] 04. `exv2_incline_barbell_press` — Press inclinado con barra 30°
 - [ ] 05. `exv2_flat_machine_press` — Press horizontal guiado en máquina
 - [ ] 06. `exv2_pushup` — Flexiones de brazos
 - [ ] 07. `ex_lat_pulldown` — Jalón al Pecho · **borrador Lottie (sin aprobación)**
-- [ ] 08. `ex_pullups` — Dominadas
-- [ ] 09. `ex_barbell_row` — Remo con Barra
-- [ ] 10. `ex_cable_row` — Remo en Polea Baja
+- [ ] 08. `ex_pullups` — Dominadas · **borrador Lottie (sin aprobación)**
+- [ ] 09. `ex_barbell_row` — Remo con Barra · **borrador Lottie (sin aprobación)**
+- [ ] 10. `ex_cable_row` — Remo en Polea Baja · **borrador Lottie (sin aprobación)**
 - [ ] 11. `exv2_single_arm_pulldown` — Jalón unilateral de rodillas
 - [ ] 12. `exv2_chest_supported_db_row` — Remo con apoyo de pecho y mancuernas
 - [ ] 13. `exv2_single_arm_db_row` — Remo unilateral con mancuerna en banco
 - [ ] 14. `ex_face_pull` — Face Pull
-- [ ] 15. `ex_ohp` — Press Militar
+- [ ] 15. `ex_ohp` — Press Militar · **borrador Lottie (sin aprobación)**
 - [ ] 16. `ex_lateral_raises` — Elevaciones Laterales · **borrador Lottie (sin aprobación)**
 - [ ] 17. `exv2_arnold_press` — Press Arnold con mancuernas
 - [ ] 18. `exv2_seated_db_lateral_raise` — Elevación lateral sentado
@@ -71,7 +80,7 @@ Son JSON vectoriales con movimiento distinto y sin imágenes incrustadas. **No e
 - [ ] 24. `exv2_ez_bar_curl` — Curl con barra EZ
 - [ ] 25. `exv2_rope_pushdown` — Extensión tríceps con cuerda en polea
 - [ ] 26. `exv2_rope_hammer_curl` — Curl martillo con cuerda
-- [ ] 27. `ex_squat` — Sentadilla Libre
+- [ ] 27. `ex_squat` — Sentadilla Libre · **borrador Lottie (sin aprobación)**
 - [ ] 28. `ex_leg_press` — Prensa Inclinada
 - [ ] 29. `ex_leg_extension` — Extensiones de Cuádriceps
 - [ ] 30. `ex_leg_curl` — Curl Femoral
