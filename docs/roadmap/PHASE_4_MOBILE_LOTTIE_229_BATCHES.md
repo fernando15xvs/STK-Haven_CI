@@ -1,7 +1,7 @@
 # STK Haven — Plan de producción Lottie 229/229 (exclusivo iOS y Android)
 
 **Fecha:** 18 de octubre de 2026  
-**Estado:** cobertura fijada. **Borradores vectoriales originales: 140/229 (40/40 del lote 1, 60/60 del lote 2 y 40/70 del lote 3); aprobados y distribuidos: 0/229.**
+**Estado:** cobertura fijada. **Borradores vectoriales originales: 170/229 (40/40 del lote 1, 60/60 del lote 2 y 70/70 del lote 3); aprobados y distribuidos: 0/229.**
 
 ## Plataforma y alcance (decisión del usuario)
 
@@ -441,6 +441,43 @@ Segundo grupo de variantes propias del tercer lote; la postura, el equipo y la t
 - `exv2_decline_pushup.json` · lateral — Flexiones con pies sobre banco elevado y manos ancladas en suelo.
 - `exv2_step_up.json` · lateral — Subida a banco con mancuernas apoyando pie entero sobre step.
 
+## Lote 3 completo — 70/70 borradores vectoriales para móvil
+
+Se produjeron las últimas 30 composiciones del lote 3, una por cada ID estable. Las posturas, las herramientas y los movimientos se modelaron por variante, incluidas las posiciones isométricas (suspensión pasiva y pinza de discos), donde el bucle representa cambios sutiles en vez de una repetición inexistente. **No es una aprobación técnica:** el cumplimiento biomecánico, claridad visual, derechos documentados y ensayos físicos siguen pendientes.
+
+- `exv2_donkey_calf_raise.json` · lateral — Gemelo tipo burro con cadera flexionada y talón en ascenso.
+- `exv2_cable_shrug.json` · frontal — Encogimiento de hombros con cable bajo y codos extendidos.
+- `exv2_farmer_carry.json` · frontal — Paseo del granjero con cargas bilaterales y marcha controlada.
+- `exv2_smith_rdl.json` · lateral — Bisagra de cadera con barra Smith próxima a tibias.
+- `exv2_straight_arm_pulldown.json` · lateral — Jalón de brazos casi rectos desde polea alta hacia muslos.
+- `exv2_seated_leg_curl_unilateral.json` · lateral — Curl de isquios sentado con una sola tibia activa.
+- `exv2_high_cable_curl.json` · frontal — Curl de bíceps bilateral con poleas altas.
+- `exv2_frog_pumps.json` · lateral — Puente de glúteos en suelo con plantas juntas y rodillas abiertas.
+- `exv2_weighted_crunch.json` · lateral — Crunch supino con disco en pecho y pelvis fija.
+- `exv2_front_cable_raise.json` · lateral — Elevación frontal a una mano desde polea baja.
+- `exv2_flat_db_fly.json` · lateral — Aperturas en banco plano con mancuernas y codos suaves.
+- `exv2_reverse_lunge.json` · lateral — Zancada atrás con mancuernas y torso alto.
+- `exv2_bent_knee_calf_raise.json` · lateral — Gemelo con rodilla flexionada y talón que asciende.
+- `exv2_prone_y_raise.json` · frontal — Elevación de brazos en Y sobre banco inclinado.
+- `exv2_dead_hang.json` · frontal — Suspensión pasiva isométrica con manos ancladas a barra.
+- `exv2_stiff_leg_deadlift.json` · lateral — Peso muerto de piernas semirrígidas con espalda neutra.
+- `exv2_machine_pullover.json` · lateral — Pullover en máquina sentado con trayectoria guiada del hombro.
+- `exv2_concentration_curl.json` · frontal — Curl de concentración con codo apoyado en muslo.
+- `exv2_side_lying_hip_abduction.json` · frontal — Abducción de pierna superior acostado de lado.
+- `exv2_dead_bug.json` · frontal — Dead bug con extensiones contralaterales y pelvis estable.
+- `exv2_incline_rear_delt_fly.json` · frontal — Aperturas de deltoides posterior sobre banco inclinado.
+- `exv2_low_to_high_fly.json` · frontal — Aperturas en polea baja hacia pecho superior.
+- `exv2_walking_lunge.json` · lateral — Zancadas caminando con mancuernas y paso alterno.
+- `exv2_single_leg_seated_calf.json` · lateral — Elevación unilateral de sóleo sentado con rodilla flexionada.
+- `exv2_prone_t_raise.json` · frontal — Elevación de brazos en T sobre banco inclinado.
+- `exv2_plate_pinch.json` · frontal — Sujeción isométrica de disco mediante pinza de dedos.
+- `exv2_sumo_deadlift.json` · frontal — Peso muerto sumo con pies abiertos y barra próxima al cuerpo.
+- `exv2_db_pullover.json` · lateral — Pullover tumbado con mancuerna desde atrás de cabeza.
+- `exv2_supinated_single_cable_curl.json` · lateral — Curl unilateral supino en polea baja.
+- `exv2_cable_hip_abduction.json` · frontal — Abducción unilateral de cadera con cable bajo en tobillo.
+
+**Estado acumulado:** 170/229 composiciones en borrador (74,2 %). Restan 59/59 del lote 4. `approvedMedia` sigue vacío y estos assets no se distribuyen en `pubspec.yaml`.
+
 ## Reglas para detener una animación antes de aprobarla
 
 - El dibujo no refleja correctamente el ejercicio, la trayectoria o su equipo.
@@ -452,6 +489,6 @@ Segundo grupo de variantes propias del tercer lote; la postura, el equipo y la t
 
 ## Estado y seguimiento
 
-- **Producción actual:** 140 borradores de 229 objetivos (40 + 60 + 40), 89 aún pendientes; 0 Lotties aprobados o distribuidos.
-- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 tiene 60/60 borradores terminados** y **el lote 3 tiene 40/70 borradores** y continúa pendiente la revisión visual/biomecánica de cada composición. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
+- **Producción actual:** 170 borradores de 229 objetivos (40 + 60 + 70), 59 aún pendientes; 0 Lotties aprobados o distribuidos.
+- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 tiene 60/60 borradores terminados** y **el lote 3 tiene 70/70 borradores terminados** y continúa pendiente la revisión visual/biomecánica de cada composición. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
 - **Restricción permanente de alcance:** `apps/app_mobile` iOS/Android únicamente, ningún cambio multimedia a `apps/app_web`.
