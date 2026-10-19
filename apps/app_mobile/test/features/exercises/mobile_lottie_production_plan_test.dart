@@ -6,6 +6,17 @@ import 'package:core/features/exercises/application/exercise_demonstration_libra
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lottie/lottie.dart';
 
+Iterable<Map<String, dynamic>> _allShapes(List<dynamic> shapes) sync* {
+  for (final raw in shapes) {
+    final item = raw as Map<String, dynamic>;
+    if (item['ty'] == 'gr') {
+      yield* _allShapes(item['it'] as List<dynamic>);
+    } else {
+      yield item;
+    }
+  }
+}
+
 void main() {
   final manifestPath = 'tool/exercise_lottie_batches.json';
   const draftIds = <String>{
@@ -131,7 +142,8 @@ void main() {
       final layers = json['layers'] as List<dynamic>;
       expect(layers.length, greaterThan(10));
       final animatedShapes = layers.where((layer) {
-        final shapes = (layer as Map<String, dynamic>)['shapes'] as List<dynamic>;
+        final shapes = _allShapes(
+            (layer as Map<String, dynamic>)['shapes'] as List<dynamic>);
         return shapes.any((shape) {
           final item = shape as Map<String, dynamic>;
           if (item['ty'] != 'sh') return false;
@@ -140,8 +152,8 @@ void main() {
       }).length;
       expect(animatedShapes, greaterThanOrEqualTo(3), reason: id);
       for (final layer in layers) {
-        final shapes = (layer as Map<String, dynamic>)['shapes']
-            as List<dynamic>;
+        final shapes = _allShapes((layer as Map<String, dynamic>)['shapes']
+            as List<dynamic>);
         for (final shape in shapes) {
           final item = shape as Map<String, dynamic>;
           if (item['ty'] != 'sh') continue;
@@ -157,6 +169,15 @@ void main() {
               reason: 'Loop ending must not jump at reset: $id');
         }
       }
+      for (final rawLayer in layers) {
+        final layer = rawLayer as Map<String, dynamic>;
+        final top = layer['shapes'] as List<dynamic>;
+        expect(top, hasLength(1), reason: id);
+        final group = top.single as Map<String, dynamic>;
+        expect(group['ty'], 'gr', reason: id);
+        final contents = group['it'] as List<dynamic>;
+        expect(contents.last['ty'], 'tr', reason: id);
+      }
       expect(json['nm'], contains(id));
     }
     // Drafts must remain outside shipped Flutter bundles until reviewed.
@@ -164,45 +185,6 @@ void main() {
     expect(File('pubspec.yaml').readAsStringSync(),
         isNot(contains('assets/exercise_media/lottie/')));
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
-  });
-
-  test('diagnose canonical Lottie group and color decoding', () async {
-    final original = jsonDecode(
-      File('assets/exercise_media/lottie/ex_bench_press.json')
-        .readAsStringSync()) as Map<String, dynamic>;
-    final layer = (original['layers'] as List<dynamic>).first
-        as Map<String, dynamic>;
-    final shapes = (layer['shapes'] as List<dynamic>)
-        .cast<Map<String, dynamic>>();
-    final color = (shapes[1]['c'] as Map<String, dynamic>)['k'];
-    expect(color, isA<List<dynamic>>());
-    expect((color as List<dynamic>).length, 4);
-    // Use only in this diagnostic: group the existing vector elements.
-    final transforms = <String, dynamic>{
-      'ty': 'tr', 'nm': 'Transform',
-      'p': {'a': 0, 'k': [0, 0]},
-      'a': {'a': 0, 'k': [0, 0]},
-      's': {'a': 0, 'k': [100, 100]},
-      'r': {'a': 0, 'k': 0},
-      'o': {'a': 0, 'k': 100},
-      'sk': {'a': 0, 'k': 0},
-      'sa': {'a': 0, 'k': 0},
-    };
-    for (final rawLayer in original['layers'] as List<dynamic>) {
-      final entry = rawLayer as Map<String, dynamic>;
-      final its = (entry['shapes'] as List<dynamic>).toList();
-      entry['shapes'] = <dynamic>[
-        {'ty': 'gr', 'nm': 'Diagnostic group', 'it':
-          <dynamic>[...its, transforms]},
-      ];
-    }
-    try {
-      final grouped = await LottieComposition.fromBytes(
-        utf8.encode(jsonEncode(original)));
-      print('DIAGNOSTIC_GROUP_PARSE_OK ${grouped.duration}');
-    } catch (error) {
-      print('DIAGNOSTIC_GROUP_PARSE_ERROR: $error');
-    }
   });
 
   test('all 40 drafts parse in the mobile Lottie 3.3.3 decoder', () async {
@@ -233,7 +215,7 @@ void main() {
           expect(keys[2]['s'], equals(keys[3]['s']), reason: id);
           movingElements++;
         }
-        for (final rawShape in layer['shapes'] as List<dynamic>) {
+        for (final rawShape in _allShapes(layer['shapes'] as List<dynamic>)) {
           final shape = rawShape as Map<String, dynamic>;
           if (shape['ty'] != 'sh') continue;
           final value = shape['ks'] as Map<String, dynamic>;
