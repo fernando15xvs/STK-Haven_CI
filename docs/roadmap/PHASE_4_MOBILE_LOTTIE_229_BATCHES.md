@@ -1,7 +1,7 @@
 # STK Haven — Plan de producción Lottie 229/229 (exclusivo iOS y Android)
 
 **Fecha:** 18 de octubre de 2026  
-**Estado:** cobertura fijada. **Borradores vectoriales originales: 100/229 (40/40 del lote 1 y 60/60 del lote 2); aprobados y distribuidos: 0/229.**
+**Estado:** cobertura fijada. **Borradores vectoriales originales: 120/229 (40/40 del lote 1, 60/60 del lote 2 y 20/70 del lote 3); aprobados y distribuidos: 0/229.**
 
 ## Plataforma y alcance (decisión del usuario)
 
@@ -389,6 +389,33 @@ Se añadieron 20 composiciones originales adicionales a las 40 ya existentes del
 
 La validez del JSON y las comprobaciones automatizadas **no sustituyen una revisión técnica del movimiento**; cada recurso continúa con `approved: false` hasta inspección biomecánica, revisión visual y pruebas físicas.
 
+## Lote 3 — primeras 20 composiciones en borrador (iOS/Android)
+
+Se crearon 20 representaciones vectoriales diferentes para los primeros 20 IDs del lote 3. Cada una describe su equipo, postura y recorrido, pero **su técnica aún no ha sido aprobada por revisión biomecánica ni por inspección física**. Por ello no se distribuye ninguna en `pubspec.yaml` ni se agrega a `approvedMedia`.
+
+- `ex_standing_leg_curl.json` · lateral — Curl femoral de pie: muslo estable, tobillo asciende hacia glúteo sobre rodillo.
+- `exv2_bayesian_curl.json` · lateral — Curl bayesiano unilateral: cable bajo por detrás, flexión de codo sin balancear.
+- `exv2_cable_glute_kickback.json` · lateral — Patada de glúteo polea baja: cadera extiende pierna hacia atrás y tronco queda fijo.
+- `exv2_hanging_knee_raise.json` · frontal — Elevación de rodillas colgado: ambas rodillas se acercan al abdomen.
+- `exv2_lean_away_lateral_raise.json` · frontal — Elevación lateral inclinada: brazo libre eleva carga lateral con polea.
+- `exv2_decline_db_press.json` · lateral — Press declinado con mancuernas: cabeza baja, dos cargas ascienden desde pecho.
+- `exv2_horizontal_leg_press.json` · lateral — Prensa horizontal: rodillas extienden empujando plataforma vertical.
+- `exv2_single_leg_db_calf.json` · frontal — Gemelo unilateral con mancuerna: talón asciende sobre step con antepié apoyado.
+- `exv2_barbell_shrug.json` · frontal — Encogimiento con barra: hombros se elevan sin flexionar brazos.
+- `exv2_hammer_pronation.json` · frontal — Pronación de antebrazo con martillo: mano gira con codo fijo en mesa.
+- `exv2_good_morning.json` · lateral — Buenos días con barra: bisagra de cadera e inclinación de torso.
+- `exv2_wide_pulldown.json` · frontal — Jalón al pecho con agarre amplio: barra desciende delante de la cabeza.
+- `exv2_cable_leg_curl.json` · lateral — Curl femoral de pie polea: tobillera conectada a cable bajo.
+- `exv2_low_cable_single_arm_row.json` · lateral — Remo unilateral sentado a polea baja: codo retrocede con torso estable.
+- `ex_hammer_press.json` · lateral — Press Hammer de pecho: palanca guiada empuja manillar al frente.
+- `ex_french_press.json` · lateral — Press francés tumbado: codos flexionan y barra EZ desciende cerca de cabeza.
+- `ex_unilateral_scott_hammer.json` · lateral — Curl martillo Scott unilateral: brazo sobre banco predicador.
+- `ex_neutral_pulldown.json` · frontal — Jalón al pecho agarre neutro: manillares paralelos descienden delante de torso.
+- `ex_cable_rear_delt.json` · frontal — Apertura posterior en polea: codos casi extendidos abren brazos hacia lados.
+- `exv2_incline_alternating_curl.json` · lateral — Curl alterno inclinado: un antebrazo se flexiona con espalda sobre banco.
+
+Estado actual de Fase 4: **120 borradores / 229 objetivos; 0 aprobados**. La licencia y revisión editorial de cada ilustración se deben registrar antes de su aprobación.
+
 ## Reglas para detener una animación antes de aprobarla
 
 - El dibujo no refleja correctamente el ejercicio, la trayectoria o su equipo.
@@ -400,6 +427,6 @@ La validez del JSON y las comprobaciones automatizadas **no sustituyen una revis
 
 ## Estado y seguimiento
 
-- **Producción actual:** 100 borradores de 229 objetivos (40 + 60), 129 aún pendientes; 0 Lotties aprobados o distribuidos.
-- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 tiene 60/60 borradores terminados** y continúa pendiente la revisión visual/biomecánica de cada composición. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
+- **Producción actual:** 120 borradores de 229 objetivos (40 + 60 + 20), 109 aún pendientes; 0 Lotties aprobados o distribuidos.
+- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 tiene 60/60 borradores terminados** y **el lote 3 tiene 20/70 borradores** y continúa pendiente la revisión visual/biomecánica de cada composición. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
 - **Restricción permanente de alcance:** `apps/app_mobile` iOS/Android únicamente, ningún cambio multimedia a `apps/app_web`.
