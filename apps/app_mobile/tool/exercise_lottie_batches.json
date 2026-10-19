@@ -1173,90 +1173,190 @@
           "name": "Abductor en Máquina",
           "family": "Glúteos",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_abductor.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Abducción de caderas bilateral sentado, rodillas separadas contra almohadillas",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_adductor",
           "name": "Aductor en Máquina",
           "family": "Piernas",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_adductor.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Aducción de caderas bilateral sentado, almohadillas viajan hacia el centro",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_preacher_machine_curl",
           "name": "Curl Scott en máquina",
           "family": "arms",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_preacher_machine_curl.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Curl Scott guiado mediante palanca de máquina con codo sobre pad",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_smith_hip_thrust",
           "name": "Hip thrust en Smith",
           "family": "hipControl",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_smith_hip_thrust.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Extensión de cadera con espalda en banco y barra guiada Smith",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_machine_crunch",
           "name": "Crunch sentado en máquina",
           "family": "core",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_machine_crunch.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Crunch sentado guiado por palanca con flexión controlada del tronco",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_landmine_shoulder_press",
           "name": "Press de hombro en landmine",
           "family": "shoulder",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_landmine_shoulder_press.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Press unilateral inclinado con barra anclada en el suelo",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_incline_machine_press",
           "name": "Press inclinado convergente en máquina",
           "family": "horizontalPush",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_incline_machine_press.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Press de pecho inclinado desde asiento con palanca de máquina",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_hack_squat",
           "name": "Sentadilla hack en máquina",
           "family": "squatLunge",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_hack_squat.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Sentadilla hack deslizando respaldo por riel inclinado",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_seated_calf_raise",
           "name": "Sóleo sentado en máquina",
           "family": "ankle",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_seated_calf_raise.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Sóleo sentado con pad sobre muslo y talón elevándose",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_scapular_row",
           "name": "Remo escapular con pecho apoyado",
           "family": "scapular",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_scapular_row.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Remo de retracción escapular con pecho sobre soporte y codos extendidos",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_reverse_wrist_curl",
