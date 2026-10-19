@@ -1,7 +1,7 @@
 # STK Haven — Plan de producción Lottie 229/229 (exclusivo iOS y Android)
 
 **Fecha:** 18 de octubre de 2026  
-**Estado:** cobertura fijada. **Borradores vectoriales originales: 20/229 (20/40 del lote 1); aprobados y distribuidos: 0/229.**
+**Estado:** cobertura fijada. **Borradores vectoriales originales: 40/229 (40/40 del lote 1); aprobados y distribuidos: 0/229.**
 
 ## Plataforma y alcance (decisión del usuario)
 
@@ -12,9 +12,9 @@
 - **Sin cambios de historial:** ni modelos persistidos, series, PRs, rutinas, favoritos ni respaldos deben alterarse para incorporar recursos.
 - **No confundir plan con implementación:** los nombres de archivos son destinos previstos, no archivos ya creados. Ninguna fila está aprobada y `approvedMedia` seguirá vacío hasta existir material válido.
 
-## Producción en marcha — primeros 20 borradores
+## Producción de borradores — lote 1 completo (40/40)
 
-Veinte composiciones Lottie JSON vectoriales **originales y distintas** en `apps/app_mobile/assets/exercise_media/lottie/` (solo iOS/Android):
+Cuarenta composiciones Lottie JSON vectoriales **originales y distintas** en `apps/app_mobile/assets/exercise_media/lottie/` (solo iOS/Android):
 
 - `ex_bench_press.json` — Press de banca · lateral.
 - `ex_incline_db_press.json` — Press inclinado con mancuernas · lateral.
@@ -36,10 +36,30 @@ Veinte composiciones Lottie JSON vectoriales **originales y distintas** en `apps
 - `exv2_arnold_press.json` — Press Arnold sentado: brazos y cargas desde frente hasta arriba · vista frontal.
 - `exv2_seated_db_lateral_raise.json` — Elevaciones laterales con ambas mancuernas, sentado en banco · vista frontal.
 - `exv2_single_arm_rear_cable_fly.json` — Apertura posterior unilateral en polea con brazo libre estabilizado · vista frontal.
+- `exv2_scapular_pushup.json` — Flexión escapular en plancha, sin flexionar los codos · vista lateral.
+- `ex_barbell_curl.json` — Curl de bíceps con barra recta · vista frontal.
+- `ex_hammer_curl.json` — Curl con dos mancuernas en agarre neutro · vista frontal.
+- `ex_tricep_pushdown.json` — Extensión de codos en polea alta con barra · vista frontal.
+- `exv2_ez_bar_curl.json` — Curl con barra EZ y agarres angulados · vista frontal.
+- `exv2_rope_pushdown.json` — Extensión de tríceps con cuerda en polea alta · vista frontal.
+- `exv2_rope_hammer_curl.json` — Curl martillo con cuerda en polea baja · vista frontal.
+- `ex_leg_press.json` — Prensa inclinada de piernas en máquina · vista lateral.
+- `ex_leg_extension.json` — Extensión de rodilla sentado en máquina · vista lateral.
+- `ex_leg_curl.json` — Curl femoral tumbado con rodillo · vista lateral.
+- `ex_hip_thrust.json` — Elevación de cadera apoyada sobre banco · vista lateral.
+- `ex_rdl.json` — Bisagra de cadera con barra · vista lateral.
+- `exv2_front_squat.json` — Sentadilla frontal con barra en rack · vista frontal.
+- `exv2_goblet_squat.json` — Sentadilla goblet con carga frente al pecho · vista frontal.
+- `exv2_db_rdl.json` — Bisagra de cadera con dos mancuernas · vista lateral.
+- `exv2_machine_hip_thrust.json` — Elevación de cadera en máquina · vista lateral.
+- `exv2_nordic_curl.json` — Curl nórdico asistido con tobillos sujetos · vista lateral.
+- `ex_calf_raise.json` — Elevación de talones de pie sobre plataforma · vista lateral.
+- `ex_crunch.json` — Flexión abdominal de tronco en colchoneta · vista lateral.
+- `exv2_pallof_press.json` — Press antirotación con polea lateral · vista frontal.
 
 Todas incluyen keyframes de movimiento sin imágenes raster incrustadas, identificador propio y vista específica. Son **borradores de producción, no demostraciones biomecánicas aprobadas**. Revisar perspectiva, postura, agarre, recorrido, coherencia de equipo, visualización real en dispositivos y accesibilidad.
 
-El manifiesto registra exactamente 20 `draft` con `approved: false` y 209 `pending`. `approvedMedia` permanece vacío, y la carpeta de animaciones **no** está declarada como recurso en `pubspec.yaml`: ninguna se distribuye todavía a usuarios. Las pruebas físicas siguen reservadas al cierre del roadmap, pero ninguna será aprobada sin revisión técnica y tests oportunos.
+El manifiesto registra exactamente 40 `draft` con `approved: false` y 189 `pending`. `approvedMedia` permanece vacío, y la carpeta de animaciones **no** está declarada como recurso en `pubspec.yaml`: ninguna se distribuye todavía a usuarios. Las pruebas físicas siguen reservadas al cierre del roadmap, pero ninguna será aprobada sin revisión técnica y tests oportunos.
 
 ## Pipeline para cada ejercicio
 
@@ -57,7 +77,7 @@ El manifiesto registra exactamente 20 `draft` con `approved: false` y 209 `pendi
 
 | Lote | Ejercicios | Acumulado | Plataforma | Estado |
 |---|---:|---:|---|---|
-| 1 · movimientos esenciales | 40 | 40/229 | iOS + Android | 20 borradores, 0 aprobados |
+| 1 · movimientos esenciales | 40 | 40/229 | iOS + Android | 40 borradores, 0 aprobados |
 | 2 · variantes frecuentes | 60 | 100/229 | iOS + Android | 0 aprobados |
 | 3 · ampliación anatómica | 70 | 170/229 | iOS + Android | 0 aprobados |
 | 4 · restantes y cobertura completa | 59 | 229/229 | iOS + Android | 0 aprobados |
@@ -83,27 +103,27 @@ El manifiesto registra exactamente 20 `draft` con `approved: false` y 209 `pendi
 - [ ] 17. `exv2_arnold_press` — Press Arnold con mancuernas · **borrador Lottie (sin aprobación)**
 - [ ] 18. `exv2_seated_db_lateral_raise` — Elevación lateral sentado · **borrador Lottie (sin aprobación)**
 - [ ] 19. `exv2_single_arm_rear_cable_fly` — Elevación posterior unilateral en polea · **borrador Lottie (sin aprobación)**
-- [ ] 20. `exv2_scapular_pushup` — Flexiones escapulares
-- [ ] 21. `ex_barbell_curl` — Curl con Barra
-- [ ] 22. `ex_hammer_curl` — Curl Martillo
-- [ ] 23. `ex_tricep_pushdown` — Extensiones de Tríceps
-- [ ] 24. `exv2_ez_bar_curl` — Curl con barra EZ
-- [ ] 25. `exv2_rope_pushdown` — Extensión tríceps con cuerda en polea
-- [ ] 26. `exv2_rope_hammer_curl` — Curl martillo con cuerda
+- [ ] 20. `exv2_scapular_pushup` — Flexiones escapulares · **borrador Lottie (sin aprobación)**
+- [ ] 21. `ex_barbell_curl` — Curl con Barra · **borrador Lottie (sin aprobación)**
+- [ ] 22. `ex_hammer_curl` — Curl Martillo · **borrador Lottie (sin aprobación)**
+- [ ] 23. `ex_tricep_pushdown` — Extensiones de Tríceps · **borrador Lottie (sin aprobación)**
+- [ ] 24. `exv2_ez_bar_curl` — Curl con barra EZ · **borrador Lottie (sin aprobación)**
+- [ ] 25. `exv2_rope_pushdown` — Extensión tríceps con cuerda en polea · **borrador Lottie (sin aprobación)**
+- [ ] 26. `exv2_rope_hammer_curl` — Curl martillo con cuerda · **borrador Lottie (sin aprobación)**
 - [ ] 27. `ex_squat` — Sentadilla Libre · **borrador Lottie (sin aprobación)**
-- [ ] 28. `ex_leg_press` — Prensa Inclinada
-- [ ] 29. `ex_leg_extension` — Extensiones de Cuádriceps
-- [ ] 30. `ex_leg_curl` — Curl Femoral
-- [ ] 31. `ex_hip_thrust` — Hip Thrust
-- [ ] 32. `ex_rdl` — Peso Muerto Rumano
-- [ ] 33. `exv2_front_squat` — Sentadilla frontal con barra
-- [ ] 34. `exv2_goblet_squat` — Sentadilla goblet
-- [ ] 35. `exv2_db_rdl` — Peso muerto rumano con mancuernas
-- [ ] 36. `exv2_machine_hip_thrust` — Hip thrust en máquina
-- [ ] 37. `exv2_nordic_curl` — Curl nórdico asistido
-- [ ] 38. `ex_calf_raise` — Elevación de Gemelos
-- [ ] 39. `ex_crunch` — Crunches
-- [ ] 40. `exv2_pallof_press` — Press Pallof en polea
+- [ ] 28. `ex_leg_press` — Prensa Inclinada · **borrador Lottie (sin aprobación)**
+- [ ] 29. `ex_leg_extension` — Extensiones de Cuádriceps · **borrador Lottie (sin aprobación)**
+- [ ] 30. `ex_leg_curl` — Curl Femoral · **borrador Lottie (sin aprobación)**
+- [ ] 31. `ex_hip_thrust` — Hip Thrust · **borrador Lottie (sin aprobación)**
+- [ ] 32. `ex_rdl` — Peso Muerto Rumano · **borrador Lottie (sin aprobación)**
+- [ ] 33. `exv2_front_squat` — Sentadilla frontal con barra · **borrador Lottie (sin aprobación)**
+- [ ] 34. `exv2_goblet_squat` — Sentadilla goblet · **borrador Lottie (sin aprobación)**
+- [ ] 35. `exv2_db_rdl` — Peso muerto rumano con mancuernas · **borrador Lottie (sin aprobación)**
+- [ ] 36. `exv2_machine_hip_thrust` — Hip thrust en máquina · **borrador Lottie (sin aprobación)**
+- [ ] 37. `exv2_nordic_curl` — Curl nórdico asistido · **borrador Lottie (sin aprobación)**
+- [ ] 38. `ex_calf_raise` — Elevación de Gemelos · **borrador Lottie (sin aprobación)**
+- [ ] 39. `ex_crunch` — Crunches · **borrador Lottie (sin aprobación)**
+- [ ] 40. `exv2_pallof_press` — Press Pallof en polea · **borrador Lottie (sin aprobación)**
 
 ### Lote 2 — 60 ejercicios
 
@@ -314,6 +334,6 @@ El manifiesto registra exactamente 20 `draft` con `approved: false` y 209 `pendi
 
 ## Estado y seguimiento
 
-- **Producción actual:** 20 borradores de 229 objetivos; 0 Lotties aprobados o distribuidos.
-- **Hitos de borradores:** 10/40 y 20/40 alcanzados. Siguiente: 40/40 del lote 1. Las revisiones biomecánicas, los derechos, los ensayos de reproducción y la aprobación final siguen pendientes; no marcar un lote como terminado con recursos falsos.
+- **Producción actual:** 40 borradores de 229 objetivos; 0 Lotties aprobados o distribuidos.
+- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. Siguiente producción: lote 2 (60 variantes). Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
 - **Restricción permanente de alcance:** `apps/app_mobile` iOS/Android únicamente, ningún cambio multimedia a `apps/app_web`.
