@@ -145,7 +145,7 @@ void main() {
         final shapes = _allShapes(
             (layer as Map<String, dynamic>)['shapes'] as List<dynamic>);
         return shapes.any((shape) {
-          final item = shape as Map<String, dynamic>;
+          final item = shape;
           if (item['ty'] != 'sh') return false;
           return (item['ks'] as Map<String, dynamic>)['a'] == 1;
         });
@@ -187,6 +187,30 @@ void main() {
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
   });
 
+  test('diagnose grouped Lottie JSON parser compatibility', () async {
+    final json = jsonDecode(
+        File('assets/exercise_media/lottie/ex_bench_press.json')
+          .readAsStringSync()) as Map<String, dynamic>;
+    Future<void> attempt(String label, Map<String, dynamic> j) async {
+      try {
+        final parsed = await LottieComposition.fromBytes(
+          utf8.encode(jsonEncode(j)));
+        print('LOTTIE_FORMAT_OK $label ${parsed.duration}');
+      } catch (error) {
+        print('LOTTIE_FORMAT_ERROR $label: $error');
+      }
+    }
+    await attempt('original-group', json);
+    final layers = json['layers'] as List<dynamic>;
+    for (final raw in layers) {
+      final group = (raw['shapes'] as List<dynamic>).single
+          as Map<String, dynamic>;
+      group.remove('np');
+      group['nm'] = 'Diagnostic group';
+    }
+    await attempt('without-np', json);
+  });
+
   test('all 40 drafts parse in the mobile Lottie 3.3.3 decoder', () async {
     for (final id in draftIds) {
       final bytes = File('assets/exercise_media/lottie/$id.json')
@@ -216,7 +240,7 @@ void main() {
           movingElements++;
         }
         for (final rawShape in _allShapes(layer['shapes'] as List<dynamic>)) {
-          final shape = rawShape as Map<String, dynamic>;
+          final shape = rawShape;
           if (shape['ty'] != 'sh') continue;
           final value = shape['ks'] as Map<String, dynamic>;
           if (value['a'] != 1) continue;
