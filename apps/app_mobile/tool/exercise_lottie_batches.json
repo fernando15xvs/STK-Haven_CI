@@ -983,90 +983,190 @@
           "name": "Dominadas supinas",
           "family": "verticalPull",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_chinup.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Dominada con agarre supino, recorrido vertical y posición de antebrazos",
+          "origin": "STK Haven: ilustración vectorial programática original; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_glute_ham_raise",
           "name": "Elevación glúteo-isquios en banco GHD",
           "family": "kneeFlexion",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_glute_ham_raise.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Elevación de torso en GHD con rodillas sobre apoyo y tobillos fijados",
+          "origin": "STK Haven: ilustración vectorial programática original; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_chest_supported_machine_row",
           "name": "Remo convergente con apoyo de pecho",
           "family": "horizontalPull",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_chest_supported_machine_row.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Remo en máquina con apoyo de pecho, palancas convergentes",
+          "origin": "STK Haven: ilustración vectorial programática original; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_chest_flyes",
           "name": "Aperturas en Máquina",
           "family": "Pecho",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_chest_flyes.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Aperturas de pecho en máquina sentada, cierre de brazos horizontal",
+          "origin": "STK Haven: ilustración vectorial programática original; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_overhead_tricep",
           "name": "Extensión Sobre la Cabeza",
           "family": "Tríceps",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_overhead_tricep.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Extensión de tríceps por encima de la cabeza con una mancuerna",
+          "origin": "STK Haven: ilustración vectorial programática original; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_db_curl",
           "name": "Curl Alterno c/M",
           "family": "Bíceps",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_db_curl.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Curl alterno unilateral con mancuerna y brazo contrario en reposo",
+          "origin": "STK Haven: ilustración vectorial programática original; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_kelso_shrugs",
           "name": "Kelso Shrugs",
           "family": "Espalda",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_kelso_shrugs.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Kelso Shrugs pecho sobre banco inclinado con elevación escapular",
+          "origin": "STK Haven: ilustración vectorial programática original; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_db_shoulder_press",
           "name": "Press de Hombros c/M",
           "family": "Hombros",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_db_shoulder_press.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Press sentado con mancuernas independientes",
+          "origin": "STK Haven: ilustración vectorial programática original; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_lying_leg_curl",
           "name": "Curl Femoral Acostado",
           "family": "Isquios",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_lying_leg_curl.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Curl femoral tumbado en máquina con rodillo y torre",
+          "origin": "STK Haven: ilustración vectorial programática original; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_bulgarian_split_squat",
           "name": "Sentadilla Búlgara",
           "family": "Cuádriceps",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_bulgarian_split_squat.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Sentadilla búlgara con pie posterior sobre banco y mancuernas",
+          "origin": "STK Haven: ilustración vectorial programática original; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_abductor",
