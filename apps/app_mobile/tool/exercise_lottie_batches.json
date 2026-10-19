@@ -793,90 +793,190 @@
           "name": "Curl Scott con barra EZ",
           "family": "arms",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_preacher_bar_curl.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Curl Scott con barra EZ y apoyo en banco inclinado",
+          "origin": "STK Haven: ilustración vectorial original propia; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_barbell_glute_bridge",
           "name": "Puente de glúteos con barra desde el suelo",
           "family": "hipControl",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_barbell_glute_bridge.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Puente de glúteos con barra apoyando espalda en el suelo",
+          "origin": "STK Haven: ilustración vectorial original propia; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_cable_crunch",
           "name": "Crunch abdominal arrodillado en polea",
           "family": "core",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_cable_crunch.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Crunch arrodillado en polea alta",
+          "origin": "STK Haven: ilustración vectorial original propia; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_seated_barbell_ohp",
           "name": "Press militar sentado con barra",
           "family": "shoulder",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_seated_barbell_ohp.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Press militar sentado con barra y respaldo",
+          "origin": "STK Haven: ilustración vectorial original propia; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_incline_smith_press",
           "name": "Press inclinado en Smith",
           "family": "horizontalPush",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_incline_smith_press.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Press inclinado con barra guiada Smith",
+          "origin": "STK Haven: ilustración vectorial original propia; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_smith_squat",
           "name": "Sentadilla en Smith",
           "family": "squatLunge",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_smith_squat.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Sentadilla en riel Smith",
+          "origin": "STK Haven: ilustración vectorial original propia; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_standing_calf_raise",
           "name": "Gemelos de pie en máquina",
           "family": "ankle",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_standing_calf_raise.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Elevación de talones de pie en máquina",
+          "origin": "STK Haven: ilustración vectorial original propia; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_band_pull_apart",
           "name": "Aperturas de banda a la altura del pecho",
           "family": "scapular",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_band_pull_apart.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Apertura horizontal de banda elástica",
+          "origin": "STK Haven: ilustración vectorial original propia; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_wrist_curl_seated",
           "name": "Curl de muñeca supino sentado",
           "family": "gripCarry",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_wrist_curl_seated.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Flexión de muñeca supina con antebrazo apoyado",
+          "origin": "STK Haven: ilustración vectorial original propia; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_roman_chair_back_extension",
           "name": "Extensiones de espalda en banco romano",
           "family": "hipHinge",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_roman_chair_back_extension.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Extensiones de espalda en banco romano",
+          "origin": "STK Haven: ilustración vectorial original propia; sin material de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_chinup",
