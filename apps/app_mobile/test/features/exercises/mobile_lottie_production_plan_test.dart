@@ -166,6 +166,45 @@ void main() {
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
   });
 
+  test('diagnose canonical Lottie group and color decoding', () async {
+    final original = jsonDecode(
+      File('assets/exercise_media/lottie/ex_bench_press.json')
+        .readAsStringSync()) as Map<String, dynamic>;
+    final layer = (original['layers'] as List<dynamic>).first
+        as Map<String, dynamic>;
+    final shapes = (layer['shapes'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    final color = (shapes[1]['c'] as Map<String, dynamic>)['k'];
+    expect(color, isA<List<dynamic>>());
+    expect((color as List<dynamic>).length, 4);
+    // Use only in this diagnostic: group the existing vector elements.
+    final transforms = <String, dynamic>{
+      'ty': 'tr', 'nm': 'Transform',
+      'p': {'a': 0, 'k': [0, 0]},
+      'a': {'a': 0, 'k': [0, 0]},
+      's': {'a': 0, 'k': [100, 100]},
+      'r': {'a': 0, 'k': 0},
+      'o': {'a': 0, 'k': 100},
+      'sk': {'a': 0, 'k': 0},
+      'sa': {'a': 0, 'k': 0},
+    };
+    for (final rawLayer in original['layers'] as List<dynamic>) {
+      final entry = rawLayer as Map<String, dynamic>;
+      final its = (entry['shapes'] as List<dynamic>).toList();
+      entry['shapes'] = <dynamic>[
+        {'ty': 'gr', 'nm': 'Diagnostic group', 'it':
+          <dynamic>[...its, transforms]},
+      ];
+    }
+    try {
+      final grouped = await LottieComposition.fromBytes(
+        utf8.encode(jsonEncode(original)));
+      print('DIAGNOSTIC_GROUP_PARSE_OK ${grouped.duration}');
+    } catch (error) {
+      print('DIAGNOSTIC_GROUP_PARSE_ERROR: $error');
+    }
+  });
+
   test('all 40 drafts parse in the mobile Lottie 3.3.3 decoder', () async {
     for (final id in draftIds) {
       final bytes = File('assets/exercise_media/lottie/$id.json')
