@@ -61,6 +61,21 @@ Todas incluyen keyframes de movimiento sin imágenes raster incrustadas, identif
 
 El manifiesto registra exactamente 40 `draft` con `approved: false` y 189 `pending`. `approvedMedia` permanece vacío, y la carpeta de animaciones **no** está declarada como recurso en `pubspec.yaml`: ninguna se distribuye todavía a usuarios. Las pruebas físicas siguen reservadas al cierre del roadmap, pero ninguna será aprobada sin revisión técnica y tests oportunos.
 
+## Corrección de compatibilidad del decodificador móvil
+
+El CI #392 detectó un problema real de formato en los 40 primeros JSON: los
+elementos vectoriales `sh`/`st`/`el`/`fl` estaban en el nivel superior de
+`layers[].shapes[]`, y Lottie 3.3.3 no los abría. Se comprobó en CI #393
+que el mismo recurso de press de banca sí se decodificaba al encerrar cada
+conjunto vectorial en `ty: gr` con `it` y transformación `ty: tr`.
+
+Las 40 composiciones del lote 1 se han normalizado a esta estructura.
+El test `mobile_lottie_production_plan_test.dart` exige la estructura agrupada
+y decodifica **cada archivo mediante `LottieComposition.fromBytes`**.
+La compilación iOS/Android, la verificación biomecánica y los ensayos físicos
+siguen siendo requisitos de publicación. **Ningún recurso se aprueba por el
+simple hecho de que el decodificador lo abra.**
+
 ## Pipeline para cada ejercicio
 
 1. Diseñar un storyboard y una figura/rig propio adaptado a ese movimiento y su equipo (barra, mancuernas, polea, máquina, banda o corporal).
