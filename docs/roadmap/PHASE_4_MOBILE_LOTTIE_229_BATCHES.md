@@ -1,7 +1,7 @@
 # STK Haven — Plan de producción Lottie 229/229 (exclusivo iOS y Android)
 
 **Fecha:** 18 de octubre de 2026  
-**Estado:** cobertura fijada. **Borradores vectoriales originales: 60/229 (40/40 del lote 1 y 20/60 del lote 2); aprobados y distribuidos: 0/229.**
+**Estado:** cobertura fijada. **Borradores vectoriales originales: 70/229 (40/40 del lote 1 y 30/60 del lote 2); aprobados y distribuidos: 0/229.**
 
 ## Plataforma y alcance (decisión del usuario)
 
@@ -76,14 +76,17 @@ La compilación iOS/Android, la verificación biomecánica y los ensayos físico
 siguen siendo requisitos de publicación. **Ningún recurso se aprueba por el
 simple hecho de que el decodificador lo abra.**
 
-### Continuación del lote 2 — 20/60 borradores
+### Continuación del lote 2 — 30/60 borradores
 
-Se han creado 20 composiciones originales de variantes de agarre, soporte,
-máquina, ejecución unilateral y posiciones corporales. Sus archivos usan
-grupos vectoriales compatibles con Lottie y recorridos de keyframes individuales.
+Se han creado 30 composiciones originales de variantes de agarre, soporte,
+máquina, ejecución unilateral y posiciones corporales. Las diez más recientes
+son abductor y aductor en máquina, curl Scott en máquina, hip thrust Smith,
+crunch en máquina, press landmine, press inclinado en máquina, sentadilla hack,
+gemelos sentado y remo escapular. Todos poseen ID propio, grupo vectorial
+y keyframes específicos de la variante.
 
 El CI #396 comprobó con el decodificador Flutter los primeros 50 borradores
-(pruebas móviles y Analyze/Core en verde); el test se amplió a los 60 actuales
+(pruebas móviles y Analyze/Core en verde); el test se amplió a los 70 borradores actuales
 y requiere una nueva ejecución CI. Las pruebas reales en dispositivos,
 la revisión biomecánica y la accesibilidad continúan pendientes.
 
@@ -107,7 +110,7 @@ superar todas las puertas de revisión y tener medios correctos.
 | Lote | Ejercicios | Acumulado | Plataforma | Estado |
 |---|---:|---:|---|---|
 | 1 · movimientos esenciales | 40 | 40/229 | iOS + Android | 40 borradores, 0 aprobados |
-| 2 · variantes frecuentes | 60 | 100/229 | iOS + Android | 20 borradores, 0 aprobados |
+| 2 · variantes frecuentes | 60 | 100/229 | iOS + Android | 30 borradores, 0 aprobados |
 | 3 · ampliación anatómica | 70 | 170/229 | iOS + Android | 0 aprobados |
 | 4 · restantes y cobertura completa | 59 | 229/229 | iOS + Android | 0 aprobados |
 
@@ -176,16 +179,16 @@ superar todas las puertas de revisión y tener medios correctos.
 - [ ] 18. `ex_db_shoulder_press` — Press de Hombros c/M · **borrador Lottie (sin aprobación)**
 - [ ] 19. `ex_lying_leg_curl` — Curl Femoral Acostado · **borrador Lottie (sin aprobación)**
 - [ ] 20. `ex_bulgarian_split_squat` — Sentadilla Búlgara · **borrador Lottie (sin aprobación)**
-- [ ] 21. `ex_abductor` — Abductor en Máquina
-- [ ] 22. `ex_adductor` — Aductor en Máquina
-- [ ] 23. `exv2_preacher_machine_curl` — Curl Scott en máquina
-- [ ] 24. `exv2_smith_hip_thrust` — Hip thrust en Smith
-- [ ] 25. `exv2_machine_crunch` — Crunch sentado en máquina
-- [ ] 26. `exv2_landmine_shoulder_press` — Press de hombro en landmine
-- [ ] 27. `exv2_incline_machine_press` — Press inclinado convergente en máquina
-- [ ] 28. `exv2_hack_squat` — Sentadilla hack en máquina
-- [ ] 29. `exv2_seated_calf_raise` — Sóleo sentado en máquina
-- [ ] 30. `exv2_scapular_row` — Remo escapular con pecho apoyado
+- [ ] 21. `ex_abductor` — Abductor en Máquina · **borrador Lottie (sin aprobación)**
+- [ ] 22. `ex_adductor` — Aductor en Máquina · **borrador Lottie (sin aprobación)**
+- [ ] 23. `exv2_preacher_machine_curl` — Curl Scott en máquina · **borrador Lottie (sin aprobación)**
+- [ ] 24. `exv2_smith_hip_thrust` — Hip thrust en Smith · **borrador Lottie (sin aprobación)**
+- [ ] 25. `exv2_machine_crunch` — Crunch sentado en máquina · **borrador Lottie (sin aprobación)**
+- [ ] 26. `exv2_landmine_shoulder_press` — Press de hombro en landmine · **borrador Lottie (sin aprobación)**
+- [ ] 27. `exv2_incline_machine_press` — Press inclinado convergente en máquina · **borrador Lottie (sin aprobación)**
+- [ ] 28. `exv2_hack_squat` — Sentadilla hack en máquina · **borrador Lottie (sin aprobación)**
+- [ ] 29. `exv2_seated_calf_raise` — Sóleo sentado en máquina · **borrador Lottie (sin aprobación)**
+- [ ] 30. `exv2_scapular_row` — Remo escapular con pecho apoyado · **borrador Lottie (sin aprobación)**
 - [ ] 31. `exv2_reverse_wrist_curl` — Curl inverso de muñeca sentado
 - [ ] 32. `exv2_cable_pullthrough` — Pull through en polea
 - [ ] 33. `exv2_assisted_pullup` — Dominadas asistidas en máquina
@@ -363,6 +366,6 @@ superar todas las puertas de revisión y tener medios correctos.
 
 ## Estado y seguimiento
 
-- **Producción actual:** 60 borradores de 229 objetivos (40 + 20), 169 aún pendientes; 0 Lotties aprobados o distribuidos.
-- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 está en 20/60** y continúa con otras 40 variantes pendientes. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
+- **Producción actual:** 70 borradores de 229 objetivos (40 + 30), 159 aún pendientes; 0 Lotties aprobados o distribuidos.
+- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 está en 30/60** y continúa con otras 30 variantes pendientes. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
 - **Restricción permanente de alcance:** `apps/app_mobile` iOS/Android únicamente, ningún cambio multimedia a `apps/app_web`.
