@@ -18,6 +18,16 @@ void main() {
     'ex_cable_row',
     'ex_ohp',
     'ex_squat',
+    'exv2_incline_barbell_press',
+    'exv2_flat_machine_press',
+    'exv2_pushup',
+    'exv2_single_arm_pulldown',
+    'exv2_chest_supported_db_row',
+    'exv2_single_arm_db_row',
+    'ex_face_pull',
+    'exv2_arnold_press',
+    'exv2_seated_db_lateral_raise',
+    'exv2_single_arm_rear_cable_fly',
   };
 
   test('229 exercise IDs appear exactly once in four planned mobile batches',
@@ -71,11 +81,11 @@ void main() {
       }
     }
     expect(count, 229);
-    expect(draftIds, hasLength(10));
+    expect(draftIds, hasLength(20));
     expect(batches.first['target'], 40);
     expect((batches.first['items'] as List<dynamic>)
         .where((entry) => (entry as Map<String, dynamic>)['status'] == 'draft')
-        .length, 10);
+        .length, 20);
     expect(allIds, presetExercises.map((e) => e.id).toSet());
     expect((manifest['batches'] as List<dynamic>)
         .expand((batch) => (batch as Map<String, dynamic>)['items'] as List<dynamic>)
@@ -138,7 +148,7 @@ void main() {
         .cast<Map<String, dynamic>>()
         .where((item) => item['status'] == 'draft')
         .toList();
-    expect(staged.length, 10);
+    expect(staged.length, 20);
     expect(staged.map((item) => item['id']).toSet(), draftIds);
     final uniqueCompositions = <String>{};
     for (final entry in staged) {
