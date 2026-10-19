@@ -60,6 +60,16 @@ void main() {
     'ex_calf_raise',
     'ex_crunch',
     'exv2_pallof_press',
+    'exv2_preacher_bar_curl',
+    'exv2_barbell_glute_bridge',
+    'exv2_cable_crunch',
+    'exv2_seated_barbell_ohp',
+    'exv2_incline_smith_press',
+    'exv2_smith_squat',
+    'exv2_standing_calf_raise',
+    'exv2_band_pull_apart',
+    'exv2_wrist_curl_seated',
+    'exv2_roman_chair_back_extension',
   };
 
   test('229 exercise IDs appear exactly once in four planned mobile batches',
@@ -113,7 +123,7 @@ void main() {
       }
     }
     expect(count, 229);
-    expect(draftIds, hasLength(40));
+    expect(draftIds, hasLength(50));
     expect(batches.first['target'], 40);
     expect((batches.first['items'] as List<dynamic>)
         .where((entry) => (entry as Map<String, dynamic>)['status'] == 'draft')
@@ -155,7 +165,7 @@ void main() {
         final shapes = _allShapes((layer as Map<String, dynamic>)['shapes']
             as List<dynamic>);
         for (final shape in shapes) {
-          final item = shape as Map<String, dynamic>;
+          final item = shape;
           if (item['ty'] != 'sh') continue;
           final ks = item['ks'] as Map<String, dynamic>;
           if (ks['a'] != 1) continue;
@@ -187,39 +197,58 @@ void main() {
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
   });
 
-  test('diagnose grouped Lottie JSON parser compatibility', () async {
-    final json = jsonDecode(
-        File('assets/exercise_media/lottie/ex_bench_press.json')
-          .readAsStringSync()) as Map<String, dynamic>;
-    Future<void> attempt(String label, Map<String, dynamic> j) async {
-      try {
-        final parsed = await LottieComposition.fromBytes(
-          utf8.encode(jsonEncode(j)));
-        print('LOTTIE_FORMAT_OK $label ${parsed.duration}');
-      } catch (error) {
-        print('LOTTIE_FORMAT_ERROR $label: $error');
-      }
-    }
-    await attempt('original-group', json);
-    final layers = json['layers'] as List<dynamic>;
-    for (final raw in layers) {
-      final group = (raw['shapes'] as List<dynamic>).single
-          as Map<String, dynamic>;
-      group.remove('np');
-      group['nm'] = 'Diagnostic group';
-    }
-    await attempt('without-np', json);
-  });
-
-  test('all 40 drafts parse in the mobile Lottie 3.3.3 decoder', () async {
+  test('all 50 drafts parse in the mobile Lottie 3.3.3 decoder', () async {
     for (final id in draftIds) {
       final bytes = File('assets/exercise_media/lottie/$id.json')
           .readAsBytesSync();
-      final composition = await LottieComposition.fromBytes(bytes);
+      LottieComposition composition;
+      try {
+        composition = await LottieComposition.fromBytes(bytes);
+      } catch (error) {
+        fail('Lottie parser rejected $id: $error');
+      }
       expect(composition.duration, greaterThan(Duration.zero), reason: id);
       expect(composition.bounds.width, 512, reason: id);
       expect(composition.bounds.height, 512, reason: id);
     }
+  });
+
+  test('draft color values use Lottie-compatible normalized RGBA vectors', () {
+    for (final id in draftIds) {
+      final json = jsonDecode(
+          File('assets/exercise_media/lottie/$id.json').readAsStringSync())
+          as Map<String, dynamic>;
+      for (final rawLayer in json['layers'] as List<dynamic>) {
+        final layer = rawLayer as Map<String, dynamic>;
+        for (final shape in _allShapes(layer['shapes'] as List<dynamic>)) {
+          if (shape['ty'] != 'st' && shape['ty'] != 'fl') continue;
+          final color = shape['c'] as Map<String, dynamic>;
+          expect(color['a'], 0, reason: '$id: ${layer['nm']}');
+          final rgba = color['k'];
+          expect(rgba, isA<List<dynamic>>(),
+              reason: '$id: ${layer['nm']} has malformed color');
+          final channels = rgba as List<dynamic>;
+          expect(channels, hasLength(4), reason: id);
+          for (final channel in channels) {
+            expect(channel, isA<num>(), reason: id);
+            expect(channel as num, inInclusiveRange(0, 1), reason: id);
+          }
+        }
+      }
+    }
+  });
+
+  test('batch 2 first 10 variants have their own unpublished assets', () {
+    final manifest = jsonDecode(File(manifestPath).readAsStringSync())
+        as Map<String, dynamic>;
+    final batches = manifest['batches'] as List<dynamic>;
+    final lot2 = (batches[1]['items'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
+    expect(lot2.take(10).every((entry) => entry['status'] == 'draft'),
+        isTrue);
+    expect(lot2.skip(10).every((entry) => entry['status'] == 'pending'),
+        isTrue);
+    expect(lot2.where((entry) => entry['approved'] == true), isEmpty);
   });
 
   test('draft animations use bounded keyframes and continuous loops', () {
@@ -288,7 +317,7 @@ void main() {
     expect(items, hasLength(40));
     expect(items.every((item) => item['status'] == 'draft'), isTrue);
     expect(items.every((item) => item['approved'] == false), isTrue);
-    expect(items.map((item) => item['id']).toSet(), draftIds);
+    expect(draftIds.containsAll(items.map((item) => item['id'])), isTrue);
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
     expect(File('pubspec.yaml').readAsStringSync(),
         isNot(contains('assets/exercise_media/lottie/')));
@@ -304,7 +333,7 @@ void main() {
         .cast<Map<String, dynamic>>()
         .where((item) => item['status'] == 'draft')
         .toList();
-    expect(staged.length, 40);
+    expect(staged.length, 50);
     expect(staged.map((item) => item['id']).toSet(), draftIds);
     final uniqueCompositions = <String>{};
     for (final entry in staged) {
