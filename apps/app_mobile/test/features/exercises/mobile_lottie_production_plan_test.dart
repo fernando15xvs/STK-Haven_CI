@@ -165,6 +165,38 @@ void main() {
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
   });
 
+  test('draft animations use bounded keyframes and continuous loops', () {
+    for (final id in draftIds) {
+      final json = jsonDecode(
+          File('assets/exercise_media/lottie/$id.json').readAsStringSync())
+          as Map<String, dynamic>;
+      var movingElements = 0;
+      for (final rawLayer in json['layers'] as List<dynamic>) {
+        final layer = rawLayer as Map<String, dynamic>;
+        final transform = layer['ks'] as Map<String, dynamic>;
+        final position = transform['p'] as Map<String, dynamic>;
+        if (position['a'] == 1) {
+          final keys = position['k'] as List<dynamic>;
+          expect(keys.map((k) => k['t']).toList(), [0, 30, 60, 90]);
+          expect(keys[0]['s'], equals(keys[2]['s']), reason: id);
+          expect(keys[2]['s'], equals(keys[3]['s']), reason: id);
+          movingElements++;
+        }
+        for (final rawShape in layer['shapes'] as List<dynamic>) {
+          final shape = rawShape as Map<String, dynamic>;
+          if (shape['ty'] != 'sh') continue;
+          final value = shape['ks'] as Map<String, dynamic>;
+          if (value['a'] != 1) continue;
+          final keys = value['k'] as List<dynamic>;
+          expect(keys[0]['s'], equals(keys[2]['s']), reason: id);
+          expect(keys[2]['s'], equals(keys[3]['s']), reason: id);
+          movingElements++;
+        }
+      }
+      expect(movingElements, greaterThanOrEqualTo(3), reason: id);
+    }
+  });
+
   test('new cable, machine and unilateral variants stay separate by ID', () {
     const expected = <String>{
       'exv2_incline_barbell_press',
