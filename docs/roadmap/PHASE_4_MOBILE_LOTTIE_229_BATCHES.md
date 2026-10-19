@@ -1,7 +1,7 @@
 # STK Haven — Plan de producción Lottie 229/229 (exclusivo iOS y Android)
 
 **Fecha:** 18 de octubre de 2026  
-**Estado:** cobertura fijada. **Borradores vectoriales originales: 10/229 (10/40 del lote 1); aprobados y distribuidos: 0/229.**
+**Estado:** cobertura fijada. **Borradores vectoriales originales: 20/229 (20/40 del lote 1); aprobados y distribuidos: 0/229.**
 
 ## Plataforma y alcance (decisión del usuario)
 
@@ -12,9 +12,9 @@
 - **Sin cambios de historial:** ni modelos persistidos, series, PRs, rutinas, favoritos ni respaldos deben alterarse para incorporar recursos.
 - **No confundir plan con implementación:** los nombres de archivos son destinos previstos, no archivos ya creados. Ninguna fila está aprobada y `approvedMedia` seguirá vacío hasta existir material válido.
 
-## Inicio de producción — primer hito de 10 borradores
+## Producción en marcha — primeros 20 borradores
 
-Diez composiciones Lottie JSON vectoriales **originales y distintas** en `apps/app_mobile/assets/exercise_media/lottie/` (solo iOS/Android):
+Veinte composiciones Lottie JSON vectoriales **originales y distintas** en `apps/app_mobile/assets/exercise_media/lottie/` (solo iOS/Android):
 
 - `ex_bench_press.json` — Press de banca · lateral.
 - `ex_incline_db_press.json` — Press inclinado con mancuernas · lateral.
@@ -26,10 +26,20 @@ Diez composiciones Lottie JSON vectoriales **originales y distintas** en `apps/a
 - `ex_ohp.json` — Press militar · frontal.
 - `ex_lateral_raises.json` — Elevaciones laterales · frontal.
 - `ex_squat.json` — Sentadilla con barra · lateral.
+- `exv2_incline_barbell_press.json` — Press inclinado con barra a 30°; movimiento de barra en eje vertical · vista lateral.
+- `exv2_flat_machine_press.json` — Press de pecho sentado en máquina: brazo, palanca y manillar · vista lateral.
+- `exv2_pushup.json` — Flexiones: plancha, codos y descenso del torso con manos ancladas · vista lateral.
+- `exv2_single_arm_pulldown.json` — Jalón unilateral arrodillado: mano de trabajo, polea y cable · vista lateral.
+- `exv2_chest_supported_db_row.json` — Remo con pecho apoyado en banco inclinado y dos mancuernas · vista lateral.
+- `exv2_single_arm_db_row.json` — Remo unilateral con mano apoyada en banco y mancuerna libre · vista lateral.
+- `ex_face_pull.json` — Face Pull bilateral en cuerda: codos abiertos hacia rostro · vista frontal.
+- `exv2_arnold_press.json` — Press Arnold sentado: brazos y cargas desde frente hasta arriba · vista frontal.
+- `exv2_seated_db_lateral_raise.json` — Elevaciones laterales con ambas mancuernas, sentado en banco · vista frontal.
+- `exv2_single_arm_rear_cable_fly.json` — Apertura posterior unilateral en polea con brazo libre estabilizado · vista frontal.
 
 Todas incluyen keyframes de movimiento sin imágenes raster incrustadas, identificador propio y vista específica. Son **borradores de producción, no demostraciones biomecánicas aprobadas**. Revisar perspectiva, postura, agarre, recorrido, coherencia de equipo, visualización real en dispositivos y accesibilidad.
 
-El manifiesto registra exactamente 10 `draft` con `approved: false` y 219 `pending`. `approvedMedia` permanece vacío, y la carpeta de animaciones **no** está declarada como recurso en `pubspec.yaml`: ninguna se distribuye todavía a usuarios. Las pruebas físicas siguen reservadas al cierre del roadmap, pero ninguna será aprobada sin revisión técnica y tests oportunos.
+El manifiesto registra exactamente 20 `draft` con `approved: false` y 209 `pending`. `approvedMedia` permanece vacío, y la carpeta de animaciones **no** está declarada como recurso en `pubspec.yaml`: ninguna se distribuye todavía a usuarios. Las pruebas físicas siguen reservadas al cierre del roadmap, pero ninguna será aprobada sin revisión técnica y tests oportunos.
 
 ## Pipeline para cada ejercicio
 
@@ -47,7 +57,7 @@ El manifiesto registra exactamente 10 `draft` con `approved: false` y 219 `pendi
 
 | Lote | Ejercicios | Acumulado | Plataforma | Estado |
 |---|---:|---:|---|---|
-| 1 · movimientos esenciales | 40 | 40/229 | iOS + Android | 10 borradores, 0 aprobados |
+| 1 · movimientos esenciales | 40 | 40/229 | iOS + Android | 20 borradores, 0 aprobados |
 | 2 · variantes frecuentes | 60 | 100/229 | iOS + Android | 0 aprobados |
 | 3 · ampliación anatómica | 70 | 170/229 | iOS + Android | 0 aprobados |
 | 4 · restantes y cobertura completa | 59 | 229/229 | iOS + Android | 0 aprobados |
@@ -57,22 +67,22 @@ El manifiesto registra exactamente 10 `draft` con `approved: false` y 219 `pendi
 - [ ] 01. `ex_bench_press` — Press de Banca · **borrador Lottie (sin aprobación)**
 - [ ] 02. `ex_incline_db_press` — Press Inclinado c/M · **borrador Lottie (sin aprobación)**
 - [ ] 03. `exv2_flat_db_press` — Press plano con mancuernas · **borrador Lottie (sin aprobación)**
-- [ ] 04. `exv2_incline_barbell_press` — Press inclinado con barra 30°
-- [ ] 05. `exv2_flat_machine_press` — Press horizontal guiado en máquina
-- [ ] 06. `exv2_pushup` — Flexiones de brazos
+- [ ] 04. `exv2_incline_barbell_press` — Press inclinado con barra 30° · **borrador Lottie (sin aprobación)**
+- [ ] 05. `exv2_flat_machine_press` — Press horizontal guiado en máquina · **borrador Lottie (sin aprobación)**
+- [ ] 06. `exv2_pushup` — Flexiones de brazos · **borrador Lottie (sin aprobación)**
 - [ ] 07. `ex_lat_pulldown` — Jalón al Pecho · **borrador Lottie (sin aprobación)**
 - [ ] 08. `ex_pullups` — Dominadas · **borrador Lottie (sin aprobación)**
 - [ ] 09. `ex_barbell_row` — Remo con Barra · **borrador Lottie (sin aprobación)**
 - [ ] 10. `ex_cable_row` — Remo en Polea Baja · **borrador Lottie (sin aprobación)**
-- [ ] 11. `exv2_single_arm_pulldown` — Jalón unilateral de rodillas
-- [ ] 12. `exv2_chest_supported_db_row` — Remo con apoyo de pecho y mancuernas
-- [ ] 13. `exv2_single_arm_db_row` — Remo unilateral con mancuerna en banco
-- [ ] 14. `ex_face_pull` — Face Pull
+- [ ] 11. `exv2_single_arm_pulldown` — Jalón unilateral de rodillas · **borrador Lottie (sin aprobación)**
+- [ ] 12. `exv2_chest_supported_db_row` — Remo con apoyo de pecho y mancuernas · **borrador Lottie (sin aprobación)**
+- [ ] 13. `exv2_single_arm_db_row` — Remo unilateral con mancuerna en banco · **borrador Lottie (sin aprobación)**
+- [ ] 14. `ex_face_pull` — Face Pull · **borrador Lottie (sin aprobación)**
 - [ ] 15. `ex_ohp` — Press Militar · **borrador Lottie (sin aprobación)**
 - [ ] 16. `ex_lateral_raises` — Elevaciones Laterales · **borrador Lottie (sin aprobación)**
-- [ ] 17. `exv2_arnold_press` — Press Arnold con mancuernas
-- [ ] 18. `exv2_seated_db_lateral_raise` — Elevación lateral sentado
-- [ ] 19. `exv2_single_arm_rear_cable_fly` — Elevación posterior unilateral en polea
+- [ ] 17. `exv2_arnold_press` — Press Arnold con mancuernas · **borrador Lottie (sin aprobación)**
+- [ ] 18. `exv2_seated_db_lateral_raise` — Elevación lateral sentado · **borrador Lottie (sin aprobación)**
+- [ ] 19. `exv2_single_arm_rear_cable_fly` — Elevación posterior unilateral en polea · **borrador Lottie (sin aprobación)**
 - [ ] 20. `exv2_scapular_pushup` — Flexiones escapulares
 - [ ] 21. `ex_barbell_curl` — Curl con Barra
 - [ ] 22. `ex_hammer_curl` — Curl Martillo
@@ -304,6 +314,6 @@ El manifiesto registra exactamente 10 `draft` con `approved: false` y 219 `pendi
 
 ## Estado y seguimiento
 
-- **Producción actual:** 0 Lotties listos; 229 programados.
-- **Primer hito:** producir y revisar 10 de los 40 del lote 1, luego 20 y finalmente 40; no marcar un lote como finalizado con recursos falsos.
+- **Producción actual:** 20 borradores de 229 objetivos; 0 Lotties aprobados o distribuidos.
+- **Hitos de borradores:** 10/40 y 20/40 alcanzados. Siguiente: 40/40 del lote 1. Las revisiones biomecánicas, los derechos, los ensayos de reproducción y la aprobación final siguen pendientes; no marcar un lote como terminado con recursos falsos.
 - **Restricción permanente de alcance:** `apps/app_mobile` iOS/Android únicamente, ningún cambio multimedia a `apps/app_web`.
