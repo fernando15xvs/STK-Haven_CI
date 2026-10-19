@@ -173,7 +173,7 @@ void main() {
       }
     }
     expect(count, 229);
-    expect(draftIds, hasLength(80));
+    expect(draftIds, hasLength(100));
     expect(batches.first['target'], 40);
     expect((batches.first['items'] as List<dynamic>)
         .where((entry) => (entry as Map<String, dynamic>)['status'] == 'draft')
