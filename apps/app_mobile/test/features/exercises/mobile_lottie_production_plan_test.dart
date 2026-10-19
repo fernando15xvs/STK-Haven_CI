@@ -128,6 +128,37 @@ void main() {
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
   });
 
+  test('draft compositions are specific to their exercise and perspective', () {
+    final manifest = jsonDecode(File(manifestPath).readAsStringSync())
+        as Map<String, dynamic>;
+    final batches = manifest['batches'] as List<dynamic>;
+    final items = batches.expand((batch) =>
+        (batch as Map<String, dynamic>)['items'] as List<dynamic>);
+    final staged = items
+        .cast<Map<String, dynamic>>()
+        .where((item) => item['status'] == 'draft')
+        .toList();
+    expect(staged.length, 10);
+    expect(staged.map((item) => item['id']).toSet(), draftIds);
+    final uniqueCompositions = <String>{};
+    for (final entry in staged) {
+      final id = entry['id'] as String;
+      final view = entry['view'] as String;
+      final json = jsonDecode(
+          File(entry['assetPath'] as String).readAsStringSync())
+          as Map<String, dynamic>;
+      expect(json['nm'], contains(' / $id / $view / '));
+      expect(uniqueCompositions.add(jsonEncode(json['layers'])), isTrue,
+          reason: 'Different exercise variants need different animations');
+      for (final layer in json['layers'] as List<dynamic>) {
+        final item = layer as Map<String, dynamic>;
+        expect(item['ty'], 4, reason: 'Only vector shape layers');
+        expect(item['nm'], isNotEmpty);
+      }
+      expect(entry['approved'], isFalse);
+    }
+  });
+
   test('Lottie code and dependencies are mobile-only, not the web app', () {
     final mobile = File('pubspec.yaml').readAsStringSync();
     final web = File('../app_web/pubspec.yaml').readAsStringSync();
