@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:core/core/constants/preset_exercises.dart';
 import 'package:core/features/exercises/application/exercise_demonstration_library.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lottie/lottie.dart';
 
 void main() {
   final manifestPath = 'tool/exercise_lottie_batches.json';
@@ -163,6 +164,17 @@ void main() {
     expect(File('pubspec.yaml').readAsStringSync(),
         isNot(contains('assets/exercise_media/lottie/')));
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
+  });
+
+  test('all 40 drafts parse in the mobile Lottie 3.3.3 decoder', () async {
+    for (final id in draftIds) {
+      final bytes = File('assets/exercise_media/lottie/$id.json')
+          .readAsBytesSync();
+      final composition = await LottieComposition.fromBytes(bytes);
+      expect(composition.duration, greaterThan(Duration.zero), reason: id);
+      expect(composition.bounds.width, 512, reason: id);
+      expect(composition.bounds.height, 512, reason: id);
+    }
   });
 
   test('draft animations use bounded keyframes and continuous loops', () {
