@@ -248,3 +248,13 @@
 - [x] Se revisó `docs/roadmap/PHASE_4_MEDIA_POLICY_AND_GUIDES.md` y la cobertura de pruebas para la decisión Lottie-first.
 - [ ] Los recursos Lottie del catálogo siguen **sin entregar**: producirlos/licenciarlos, validar correspondencia biomecánica por ID, medir RAM/CPU/APK/IPA y agregarlos en una etapa de assets posterior. Un vector tampoco es automáticamente liviano si incorpora imágenes grandes.
 - [ ] Usar solo vídeos comprimidos en casos justificados cuando la fidelidad del movimiento humano no se logre con Lottie. No presentar GIFs como alternativa.
+
+### Entrega 9 — Producción Lottie exclusivamente móvil / inventario 229 (18 oct 2026)
+
+- [x] La indicación del usuario restringe **todas las animaciones de ejercicios** a **iOS y Android** mediante `apps/app_mobile`. No implementar reproductor, dependencia Lottie ni assets multimedia de ejercicios en `apps/app_web`.
+- [x] Inventario exacto: **229 IDs de ejercicios existentes**, sin inventar o duplicar variantes; 49 históricos `ex_*` y 180 nuevos `exv2_*`, enumerados en cuatro lotes de **40, 60, 70 y 59**.
+- [x] Checklist completo en `docs/roadmap/PHASE_4_MOBILE_LOTTIE_229_BATCHES.md`, con estado pendiente por ID; seguimiento estructurado en `apps/app_mobile/tool/exercise_lottie_batches.json`.
+- [x] Prueba automatizada en **paquete móvil** comprueba que los 229 IDs corresponden exactamente a `presetExercises`, que cada ejercicio aparece una vez, que las rutas son exclusivas de assets móviles, que no existe ningún recurso declarado aprobado y que `apps/app_web/pubspec.yaml` no depende de Lottie.
+- [ ] **Animaciones realmente producidas y aprobadas: 0/229**. No confundir el plan ni el manifiesto con archivos Lottie existentes. Se producirán y revisarán por lotes pequeños, con coincidencia biomecánica exacta y derechos de distribución comercial verificados; los primeros 10, luego 20 y 40 del lote 1.
+- [ ] Si una variante humana no puede mostrarse con fidelidad vectorial, considerar un vídeo corto comprimido **solo en móvil**, sin GIFs y sin trasladarlo a la versión web.
+- [ ] Las pruebas físicas de iOS/Android y la restauración de respaldos permanecen para el cierre general del roadmap; Flutter Analyze y CI del espejo deben seguir validándose en cada entrega.
