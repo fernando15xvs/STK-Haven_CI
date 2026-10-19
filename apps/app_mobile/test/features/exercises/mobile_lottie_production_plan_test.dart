@@ -8,7 +8,16 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   final manifestPath = 'tool/exercise_lottie_batches.json';
   const draftIds = <String>{
-    'ex_bench_press', 'ex_lat_pulldown', 'ex_lateral_raises',
+    'ex_bench_press',
+    'ex_lat_pulldown',
+    'ex_lateral_raises',
+    'ex_incline_db_press',
+    'exv2_flat_db_press',
+    'ex_pullups',
+    'ex_barbell_row',
+    'ex_cable_row',
+    'ex_ohp',
+    'ex_squat',
   };
 
   test('229 exercise IDs appear exactly once in four planned mobile batches',
@@ -62,7 +71,16 @@ void main() {
       }
     }
     expect(count, 229);
+    expect(draftIds, hasLength(10));
+    expect(batches.first['target'], 40);
+    expect((batches.first['items'] as List<dynamic>)
+        .where((entry) => (entry as Map<String, dynamic>)['status'] == 'draft')
+        .length, 10);
     expect(allIds, presetExercises.map((e) => e.id).toSet());
+    expect((manifest['batches'] as List<dynamic>)
+        .expand((batch) => (batch as Map<String, dynamic>)['items'] as List<dynamic>)
+        .where((entry) => (entry as Map<String, dynamic>)['approved'] == true),
+        isEmpty);
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
   });
 
@@ -103,6 +121,7 @@ void main() {
       }
       expect(json['nm'], contains(id));
     }
+    // Drafts must remain outside shipped Flutter bundles until reviewed.
     // Unreviewed drafts must not be included in a distributed app bundle.
     expect(File('pubspec.yaml').readAsStringSync(),
         isNot(contains('assets/exercise_media/lottie/')));
