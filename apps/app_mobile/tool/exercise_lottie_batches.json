@@ -42,18 +42,38 @@
           "name": "Press Inclinado c/M",
           "family": "Pecho",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_incline_db_press.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Press inclinado con mancuernas, banco diagonal y trayectoria de brazos individual",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_flat_db_press",
           "name": "Press plano con mancuernas",
           "family": "horizontalPush",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_flat_db_press.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Press plano con dos mancuernas y antebrazos diferenciados",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_incline_barbell_press",
@@ -106,27 +126,57 @@
           "name": "Dominadas",
           "family": "Espalda",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_pullups.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Dominada desde colgado: cuerpo vertical se eleva respecto de barra",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_barbell_row",
           "name": "Remo con Barra",
           "family": "Espalda",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_barbell_row.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Remo con barra con torso inclinado y carga hacia el tronco",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_cable_row",
           "name": "Remo en Polea Baja",
           "family": "Espalda",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_cable_row.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Remo sentado con agarre y cable de polea",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_single_arm_pulldown",
@@ -169,9 +219,19 @@
           "name": "Press Militar",
           "family": "Hombros",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_ohp.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Press militar con barra desde hombros hasta encima de la cabeza",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_lateral_raises",
@@ -287,9 +347,19 @@
           "name": "Sentadilla Libre",
           "family": "Cuádriceps",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_squat.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Sentadilla con barra, flexión de caderas y rodillas",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_leg_press",
