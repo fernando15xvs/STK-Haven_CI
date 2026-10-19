@@ -1,7 +1,7 @@
 # STK Haven — Plan de producción Lottie 229/229 (exclusivo iOS y Android)
 
 **Fecha:** 18 de octubre de 2026  
-**Estado:** cobertura fijada. **Borradores vectoriales originales: 80/229 (40/40 del lote 1 y 40/60 del lote 2); aprobados y distribuidos: 0/229.**
+**Estado:** cobertura fijada. **Borradores vectoriales originales: 100/229 (40/40 del lote 1 y 60/60 del lote 2); aprobados y distribuidos: 0/229.**
 
 ## Plataforma y alcance (decisión del usuario)
 
@@ -164,66 +164,66 @@ superar todas las puertas de revisión y tener medios correctos.
 
 ### Lote 2 — 60 ejercicios
 
-- [ ] 01. `exv2_preacher_bar_curl` — Curl Scott con barra EZ · **borrador Lottie (sin aprobación)**
-- [ ] 02. `exv2_barbell_glute_bridge` — Puente de glúteos con barra desde el suelo · **borrador Lottie (sin aprobación)**
-- [ ] 03. `exv2_cable_crunch` — Crunch abdominal arrodillado en polea · **borrador Lottie (sin aprobación)**
-- [ ] 04. `exv2_seated_barbell_ohp` — Press militar sentado con barra · **borrador Lottie (sin aprobación)**
-- [ ] 05. `exv2_incline_smith_press` — Press inclinado en Smith · **borrador Lottie (sin aprobación)**
-- [ ] 06. `exv2_smith_squat` — Sentadilla en Smith · **borrador Lottie (sin aprobación)**
-- [ ] 07. `exv2_standing_calf_raise` — Gemelos de pie en máquina · **borrador Lottie (sin aprobación)**
-- [ ] 08. `exv2_band_pull_apart` — Aperturas de banda a la altura del pecho · **borrador Lottie (sin aprobación)**
-- [ ] 09. `exv2_wrist_curl_seated` — Curl de muñeca supino sentado · **borrador Lottie (sin aprobación)**
-- [ ] 10. `exv2_roman_chair_back_extension` — Extensiones de espalda en banco romano · **borrador Lottie (sin aprobación)**
-- [ ] 11. `exv2_chinup` — Dominadas supinas · **borrador Lottie (sin aprobación)**
-- [ ] 12. `exv2_glute_ham_raise` — Elevación glúteo-isquios en banco GHD · **borrador Lottie (sin aprobación)**
-- [ ] 13. `exv2_chest_supported_machine_row` — Remo convergente con apoyo de pecho · **borrador Lottie (sin aprobación)**
-- [ ] 14. `ex_chest_flyes` — Aperturas en Máquina · **borrador Lottie (sin aprobación)**
-- [ ] 15. `ex_overhead_tricep` — Extensión Sobre la Cabeza · **borrador Lottie (sin aprobación)**
-- [ ] 16. `ex_db_curl` — Curl Alterno c/M · **borrador Lottie (sin aprobación)**
-- [ ] 17. `ex_kelso_shrugs` — Kelso Shrugs · **borrador Lottie (sin aprobación)**
-- [ ] 18. `ex_db_shoulder_press` — Press de Hombros c/M · **borrador Lottie (sin aprobación)**
-- [ ] 19. `ex_lying_leg_curl` — Curl Femoral Acostado · **borrador Lottie (sin aprobación)**
-- [ ] 20. `ex_bulgarian_split_squat` — Sentadilla Búlgara · **borrador Lottie (sin aprobación)**
-- [ ] 21. `ex_abductor` — Abductor en Máquina · **borrador Lottie (sin aprobación)**
-- [ ] 22. `ex_adductor` — Aductor en Máquina · **borrador Lottie (sin aprobación)**
-- [ ] 23. `exv2_preacher_machine_curl` — Curl Scott en máquina · **borrador Lottie (sin aprobación)**
-- [ ] 24. `exv2_smith_hip_thrust` — Hip thrust en Smith · **borrador Lottie (sin aprobación)**
-- [ ] 25. `exv2_machine_crunch` — Crunch sentado en máquina · **borrador Lottie (sin aprobación)**
-- [ ] 26. `exv2_landmine_shoulder_press` — Press de hombro en landmine · **borrador Lottie (sin aprobación)**
-- [ ] 27. `exv2_incline_machine_press` — Press inclinado convergente en máquina · **borrador Lottie (sin aprobación)**
-- [ ] 28. `exv2_hack_squat` — Sentadilla hack en máquina · **borrador Lottie (sin aprobación)**
-- [ ] 29. `exv2_seated_calf_raise` — Sóleo sentado en máquina · **borrador Lottie (sin aprobación)**
-- [ ] 30. `exv2_scapular_row` — Remo escapular con pecho apoyado · **borrador Lottie (sin aprobación)**
-- [ ] 31. `exv2_reverse_wrist_curl` — Curl inverso de muñeca sentado · **borrador Lottie (sin aprobación)**
-- [ ] 32. `exv2_cable_pullthrough` — Pull through en polea · **borrador Lottie (sin aprobación)**
-- [ ] 33. `exv2_assisted_pullup` — Dominadas asistidas en máquina · **borrador Lottie (sin aprobación)**
-- [ ] 34. `exv2_swiss_ball_leg_curl` — Curl femoral con fitball · **borrador Lottie (sin aprobación)**
-- [ ] 35. `exv2_meadows_row` — Remo Meadows a un brazo · **borrador Lottie (sin aprobación)**
-- [ ] 36. `ex_cable_crossover` — Cruces en Polea · **borrador Lottie (sin aprobación)**
-- [ ] 37. `ex_dips` — Fondos en Paralelas · **borrador Lottie (sin aprobación)**
-- [ ] 38. `ex_incline_db_curl` — Curl Inclinado 65° · **borrador Lottie (sin aprobación)**
-- [ ] 39. `ex_machine_unilateral_row` — Remo Unilateral Máquina · **borrador Lottie (sin aprobación)**
-- [ ] 40. `ex_reverse_pec_deck` — Pájaros en Máquina · **borrador Lottie (sin aprobación)**
-- [ ] 41. `ex_seated_leg_curl` — Curl Femoral Sentado
-- [ ] 42. `ex_pendulum_squat` — Sentadilla Pendular
-- [ ] 43. `exv2_spider_curl` — Curl araña con mancuernas
-- [ ] 44. `exv2_single_leg_hip_thrust` — Hip thrust unilateral
-- [ ] 45. `exv2_reverse_crunch` — Crunch inverso en colchoneta
-- [ ] 46. `exv2_machine_shoulder_press` — Press de hombro en máquina convergente
-- [ ] 47. `exv2_decline_barbell_press` — Press declinado con barra
-- [ ] 48. `exv2_belt_squat` — Sentadilla con cinturón lastrado
-- [ ] 49. `exv2_smith_calf_raise` — Gemelos de pie en Smith
-- [ ] 50. `exv2_cable_scapular_retraction` — Retracción escapular en polea
-- [ ] 51. `exv2_wrist_roller` — Rodillo de muñeca
-- [ ] 52. `exv2_reverse_hyper` — Extensión inversa de cadera en banco
-- [ ] 53. `exv2_band_pullup` — Dominadas asistidas con banda
-- [ ] 54. `exv2_slider_leg_curl` — Curl femoral deslizando talones
-- [ ] 55. `exv2_landmine_row` — Remo landmine bilateral
-- [ ] 56. `ex_peck_deck` — Peck Deck
-- [ ] 57. `ex_v_bar_pushdown` — Extensiones con Barra V
-- [ ] 58. `ex_low_pulley_curl` — Curl en Polea Baja
-- [ ] 59. `ex_t_bar_row` — Remo en T
-- [ ] 60. `ex_machine_lateral_raises` — Elevaciones Laterales M.
+- [x] 01. `exv2_preacher_bar_curl` — Curl Scott con barra EZ · **borrador Lottie (sin aprobación)**
+- [x] 02. `exv2_barbell_glute_bridge` — Puente de glúteos con barra desde el suelo · **borrador Lottie (sin aprobación)**
+- [x] 03. `exv2_cable_crunch` — Crunch abdominal arrodillado en polea · **borrador Lottie (sin aprobación)**
+- [x] 04. `exv2_seated_barbell_ohp` — Press militar sentado con barra · **borrador Lottie (sin aprobación)**
+- [x] 05. `exv2_incline_smith_press` — Press inclinado en Smith · **borrador Lottie (sin aprobación)**
+- [x] 06. `exv2_smith_squat` — Sentadilla en Smith · **borrador Lottie (sin aprobación)**
+- [x] 07. `exv2_standing_calf_raise` — Gemelos de pie en máquina · **borrador Lottie (sin aprobación)**
+- [x] 08. `exv2_band_pull_apart` — Aperturas de banda a la altura del pecho · **borrador Lottie (sin aprobación)**
+- [x] 09. `exv2_wrist_curl_seated` — Curl de muñeca supino sentado · **borrador Lottie (sin aprobación)**
+- [x] 10. `exv2_roman_chair_back_extension` — Extensiones de espalda en banco romano · **borrador Lottie (sin aprobación)**
+- [x] 11. `exv2_chinup` — Dominadas supinas · **borrador Lottie (sin aprobación)**
+- [x] 12. `exv2_glute_ham_raise` — Elevación glúteo-isquios en banco GHD · **borrador Lottie (sin aprobación)**
+- [x] 13. `exv2_chest_supported_machine_row` — Remo convergente con apoyo de pecho · **borrador Lottie (sin aprobación)**
+- [x] 14. `ex_chest_flyes` — Aperturas en Máquina · **borrador Lottie (sin aprobación)**
+- [x] 15. `ex_overhead_tricep` — Extensión Sobre la Cabeza · **borrador Lottie (sin aprobación)**
+- [x] 16. `ex_db_curl` — Curl Alterno c/M · **borrador Lottie (sin aprobación)**
+- [x] 17. `ex_kelso_shrugs` — Kelso Shrugs · **borrador Lottie (sin aprobación)**
+- [x] 18. `ex_db_shoulder_press` — Press de Hombros c/M · **borrador Lottie (sin aprobación)**
+- [x] 19. `ex_lying_leg_curl` — Curl Femoral Acostado · **borrador Lottie (sin aprobación)**
+- [x] 20. `ex_bulgarian_split_squat` — Sentadilla Búlgara · **borrador Lottie (sin aprobación)**
+- [x] 21. `ex_abductor` — Abductor en Máquina · **borrador Lottie (sin aprobación)**
+- [x] 22. `ex_adductor` — Aductor en Máquina · **borrador Lottie (sin aprobación)**
+- [x] 23. `exv2_preacher_machine_curl` — Curl Scott en máquina · **borrador Lottie (sin aprobación)**
+- [x] 24. `exv2_smith_hip_thrust` — Hip thrust en Smith · **borrador Lottie (sin aprobación)**
+- [x] 25. `exv2_machine_crunch` — Crunch sentado en máquina · **borrador Lottie (sin aprobación)**
+- [x] 26. `exv2_landmine_shoulder_press` — Press de hombro en landmine · **borrador Lottie (sin aprobación)**
+- [x] 27. `exv2_incline_machine_press` — Press inclinado convergente en máquina · **borrador Lottie (sin aprobación)**
+- [x] 28. `exv2_hack_squat` — Sentadilla hack en máquina · **borrador Lottie (sin aprobación)**
+- [x] 29. `exv2_seated_calf_raise` — Sóleo sentado en máquina · **borrador Lottie (sin aprobación)**
+- [x] 30. `exv2_scapular_row` — Remo escapular con pecho apoyado · **borrador Lottie (sin aprobación)**
+- [x] 31. `exv2_reverse_wrist_curl` — Curl inverso de muñeca sentado · **borrador Lottie (sin aprobación)**
+- [x] 32. `exv2_cable_pullthrough` — Pull through en polea · **borrador Lottie (sin aprobación)**
+- [x] 33. `exv2_assisted_pullup` — Dominadas asistidas en máquina · **borrador Lottie (sin aprobación)**
+- [x] 34. `exv2_swiss_ball_leg_curl` — Curl femoral con fitball · **borrador Lottie (sin aprobación)**
+- [x] 35. `exv2_meadows_row` — Remo Meadows a un brazo · **borrador Lottie (sin aprobación)**
+- [x] 36. `ex_cable_crossover` — Cruces en Polea · **borrador Lottie (sin aprobación)**
+- [x] 37. `ex_dips` — Fondos en Paralelas · **borrador Lottie (sin aprobación)**
+- [x] 38. `ex_incline_db_curl` — Curl Inclinado 65° · **borrador Lottie (sin aprobación)**
+- [x] 39. `ex_machine_unilateral_row` — Remo Unilateral Máquina · **borrador Lottie (sin aprobación)**
+- [x] 40. `ex_reverse_pec_deck` — Pájaros en Máquina · **borrador Lottie (sin aprobación)**
+- [x] 41. `ex_seated_leg_curl` — Curl Femoral Sentado
+- [x] 42. `ex_pendulum_squat` — Sentadilla Pendular
+- [x] 43. `exv2_spider_curl` — Curl araña con mancuernas
+- [x] 44. `exv2_single_leg_hip_thrust` — Hip thrust unilateral
+- [x] 45. `exv2_reverse_crunch` — Crunch inverso en colchoneta
+- [x] 46. `exv2_machine_shoulder_press` — Press de hombro en máquina convergente
+- [x] 47. `exv2_decline_barbell_press` — Press declinado con barra
+- [x] 48. `exv2_belt_squat` — Sentadilla con cinturón lastrado
+- [x] 49. `exv2_smith_calf_raise` — Gemelos de pie en Smith
+- [x] 50. `exv2_cable_scapular_retraction` — Retracción escapular en polea
+- [x] 51. `exv2_wrist_roller` — Rodillo de muñeca
+- [x] 52. `exv2_reverse_hyper` — Extensión inversa de cadera en banco
+- [x] 53. `exv2_band_pullup` — Dominadas asistidas con banda
+- [x] 54. `exv2_slider_leg_curl` — Curl femoral deslizando talones
+- [x] 55. `exv2_landmine_row` — Remo landmine bilateral
+- [x] 56. `ex_peck_deck` — Peck Deck
+- [x] 57. `ex_v_bar_pushdown` — Extensiones con Barra V
+- [x] 58. `ex_low_pulley_curl` — Curl en Polea Baja
+- [x] 59. `ex_t_bar_row` — Remo en T
+- [x] 60. `ex_machine_lateral_raises` — Elevaciones Laterales M.
 
 ### Lote 3 — 70 ejercicios
 
@@ -360,6 +360,33 @@ superar todas las puertas de revisión y tener medios correctos.
 - [ ] 58. `exv2_seated_knee_raise` — Elevación de rodillas sentado
 - [ ] 59. `exv2_triceps_machine_extension` — Extensión de tríceps en máquina sentado
 
+## Producción de borradores — lote 2 completo (60/60)
+
+Se añadieron 20 composiciones originales adicionales a las 40 ya existentes del lote 2 (100 borradores en total). Se trata exclusivamente de borradores vectoriales no aprobados, sin assets empaquetados en la app.
+
+- `ex_seated_leg_curl.json` — Muslos apoyados en asiento; flexión de rodilla desplaza rodillo tibial hacia atrás.
+- `ex_pendulum_squat.json` — Sentadilla pendular con espalda soportada y pies en plataforma: desciende cadera y flexiona rodillas.
+- `exv2_spider_curl.json` — Curl araña: pecho apoyado en banco inclinado y brazo colgando, flexiona solo antebrazo.
+- `exv2_single_leg_hip_thrust.json` — Hip thrust unilateral con espalda alta en banco, pie de apoyo fijo y pierna contraria elevada.
+- `exv2_reverse_crunch.json` — Crunch inverso en suelo: acercar pelvis hacia tórax sin balancear piernas.
+- `exv2_machine_shoulder_press.json` — Press de hombros en máquina convergente: manillares ascienden guiados desde los hombros.
+- `exv2_decline_barbell_press.json` — Press declinado con barra: apoyo cabeza más bajo que cadera, barra sobre el pecho y recorrido vertical controlado.
+- `exv2_belt_squat.json` — Sentadilla con cinturón de carga suspendida; torso erguido y cadera desciende con pies fijos.
+- `exv2_smith_calf_raise.json` — Elevación de talones en Smith con barra sobre trapecios, rodillas casi extendidas y puntas apoyadas.
+- `exv2_cable_scapular_retraction.json` — Retracción escapular en polea con codos casi extendidos: omóplatos retroceden sin flexión de codos significativa.
+- `exv2_wrist_roller.json` — Rodillo de muñeca a la altura de brazos extendidos, giro alternado del cilindro y cuerda con pesa.
+- `exv2_reverse_hyper.json` — Hiperextensión inversa en banco: pelvis apoyada y piernas ascienden mediante extensión de cadera.
+- `exv2_band_pullup.json` — Dominadas asistidas con banda anclada a barra superior y extendida hasta el pie de apoyo.
+- `exv2_slider_leg_curl.json` — Curl femoral con deslizadores: tumbado supino, eleva caderas y acerca talones con deslizamiento.
+- `exv2_landmine_row.json` — Remo landmine bilateral: bisagra de cadera y tirón del manillar desde abajo hacia torso.
+- `ex_peck_deck.json` — Pec deck: brazos apoyados en almohadillas, convergen delante del pecho sin extender codos.
+- `ex_v_bar_pushdown.json` — Tríceps con manillar V en polea alta: codos pegados al torso y extensión de antebrazos.
+- `ex_low_pulley_curl.json` — Curl en polea baja: codos casi inmóviles, manos suben y barra mantiene tensión de cable.
+- `ex_t_bar_row.json` — Remo con barra T: tronco inclinado, escápulas estables y extremos cargados ascienden hacia abdomen.
+- `ex_machine_lateral_raises.json` — Elevación lateral en máquina sentado: almohadillas empujadas por codos sin subir trapecios.
+
+La validez del JSON y las comprobaciones automatizadas **no sustituyen una revisión técnica del movimiento**; cada recurso continúa con `approved: false` hasta inspección biomecánica, revisión visual y pruebas físicas.
+
 ## Reglas para detener una animación antes de aprobarla
 
 - El dibujo no refleja correctamente el ejercicio, la trayectoria o su equipo.
@@ -371,6 +398,6 @@ superar todas las puertas de revisión y tener medios correctos.
 
 ## Estado y seguimiento
 
-- **Producción actual:** 80 borradores de 229 objetivos (40 + 40), 149 aún pendientes; 0 Lotties aprobados o distribuidos.
-- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 está en 40/60** y continúa con otras 20 variantes pendientes. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
+- **Producción actual:** 100 borradores de 229 objetivos (40 + 60), 129 aún pendientes; 0 Lotties aprobados o distribuidos.
+- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 tiene 60/60 borradores terminados** y continúa pendiente la revisión visual/biomecánica de cada composición. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
 - **Restricción permanente de alcance:** `apps/app_mobile` iOS/Android únicamente, ningún cambio multimedia a `apps/app_web`.
