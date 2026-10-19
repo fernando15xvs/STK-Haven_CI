@@ -1,7 +1,7 @@
 # STK Haven — Plan de producción Lottie 229/229 (exclusivo iOS y Android)
 
 **Fecha:** 18 de octubre de 2026  
-**Estado:** plan de producción y cobertura exacta fijados. **Animaciones producidas y aprobadas: 0/229.**
+**Estado:** cobertura exacta fijada. **Borradores vectoriales originales: 3/229; aprobados y distribuidos: 0/229.**
 
 ## Plataforma y alcance (decisión del usuario)
 
@@ -11,6 +11,16 @@
 - **Sin GIFs:** Lottie JSON vectorial de primera elección. Si la técnica no puede representarse correctamente en vector, revisar caso por caso una alternativa optimizada **solo móvil**.
 - **Sin cambios de historial:** ni modelos persistidos, series, PRs, rutinas, favoritos ni respaldos deben alterarse para incorporar recursos.
 - **No confundir plan con implementación:** los nombres de archivos son destinos previstos, no archivos ya creados. Ninguna fila está aprobada y `approvedMedia` seguirá vacío hasta existir material válido.
+
+## Inicio de producción — 18 de octubre de 2026
+
+Tres **borradores Lottie originales** versionados exclusivamente en `apps/app_mobile/assets/exercise_media/lottie/`:
+
+- `ex_bench_press.json`: vista lateral del press de banca.
+- `ex_lat_pulldown.json`: vista frontal del jalón al pecho.
+- `ex_lateral_raises.json`: vista frontal de elevaciones laterales.
+
+Son JSON vectoriales con movimiento distinto y sin imágenes incrustadas. **No están aprobados ni distribuidos:** permanecen fuera de `approvedMedia` y del `pubspec.yaml` móvil. Falta revisión biomecánica, visual, de derechos, accesibilidad y pruebas físicas en iOS y Android. Los tres figuran como `draft` con `approved: false` en el manifiesto; los otros 226 permanecen `pending`.
 
 ## Pipeline para cada ejercicio
 
@@ -28,20 +38,20 @@
 
 | Lote | Ejercicios | Acumulado | Plataforma | Estado |
 |---|---:|---:|---|---|
-| 1 · movimientos esenciales | 40 | 40/229 | iOS + Android | 0 aprobados |
+| 1 · movimientos esenciales | 40 | 40/229 | iOS + Android | 3 borradores, 0 aprobados |
 | 2 · variantes frecuentes | 60 | 100/229 | iOS + Android | 0 aprobados |
 | 3 · ampliación anatómica | 70 | 170/229 | iOS + Android | 0 aprobados |
 | 4 · restantes y cobertura completa | 59 | 229/229 | iOS + Android | 0 aprobados |
 
 ### Lote 1 — 40 ejercicios
 
-- [ ] 01. `ex_bench_press` — Press de Banca
+- [ ] 01. `ex_bench_press` — Press de Banca · **borrador Lottie (sin aprobación)**
 - [ ] 02. `ex_incline_db_press` — Press Inclinado c/M
 - [ ] 03. `exv2_flat_db_press` — Press plano con mancuernas
 - [ ] 04. `exv2_incline_barbell_press` — Press inclinado con barra 30°
 - [ ] 05. `exv2_flat_machine_press` — Press horizontal guiado en máquina
 - [ ] 06. `exv2_pushup` — Flexiones de brazos
-- [ ] 07. `ex_lat_pulldown` — Jalón al Pecho
+- [ ] 07. `ex_lat_pulldown` — Jalón al Pecho · **borrador Lottie (sin aprobación)**
 - [ ] 08. `ex_pullups` — Dominadas
 - [ ] 09. `ex_barbell_row` — Remo con Barra
 - [ ] 10. `ex_cable_row` — Remo en Polea Baja
@@ -50,7 +60,7 @@
 - [ ] 13. `exv2_single_arm_db_row` — Remo unilateral con mancuerna en banco
 - [ ] 14. `ex_face_pull` — Face Pull
 - [ ] 15. `ex_ohp` — Press Militar
-- [ ] 16. `ex_lateral_raises` — Elevaciones Laterales
+- [ ] 16. `ex_lateral_raises` — Elevaciones Laterales · **borrador Lottie (sin aprobación)**
 - [ ] 17. `exv2_arnold_press` — Press Arnold con mancuernas
 - [ ] 18. `exv2_seated_db_lateral_raise` — Elevación lateral sentado
 - [ ] 19. `exv2_single_arm_rear_cable_fly` — Elevación posterior unilateral en polea
