@@ -7,6 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final manifestPath = 'tool/exercise_lottie_batches.json';
+  const draftIds = <String>{
+    'ex_bench_press', 'ex_lat_pulldown', 'ex_lateral_raises',
+  };
 
   test('229 exercise IDs appear exactly once in four planned mobile batches',
       () {
@@ -42,7 +45,15 @@ void main() {
         expect(entry['name'], isNotEmpty);
         expect(entry['family'], isNotEmpty);
         expect(entry['mediaFormat'], 'lottie');
-        expect(entry['status'], 'pending');
+        if (draftIds.contains(id)) {
+          expect(entry['status'], 'draft');
+          expect(entry['view'], anyOf('frontal', 'lateral'));
+          expect(entry['origin'], contains('STK Haven'));
+          final review = entry['review'] as Map<String, dynamic>;
+          expect(review.values, everyElement(isFalse));
+        } else {
+          expect(entry['status'], 'pending');
+        }
         expect(entry['approved'], isFalse);
         final path = entry['assetPath'] as String;
         expect(path, 'assets/exercise_media/lottie/$id.json');
@@ -52,6 +63,35 @@ void main() {
     }
     expect(count, 229);
     expect(allIds, presetExercises.map((e) => e.id).toSet());
+    expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
+  });
+
+  test('first vector drafts contain movement without embedded images', () {
+    for (final id in draftIds) {
+      final file = File('assets/exercise_media/lottie/$id.json');
+      expect(file.existsSync(), isTrue, reason: id);
+      final json = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+      expect(json['fr'], 30);
+      expect(json['w'], 512);
+      expect(json['h'], 512);
+      expect(json['op'], 90);
+      expect(json['assets'], isEmpty);
+      final layers = json['layers'] as List<dynamic>;
+      expect(layers.length, greaterThan(10));
+      final animatedShapes = layers.where((layer) {
+        final shapes = (layer as Map<String, dynamic>)['shapes'] as List<dynamic>;
+        return shapes.any((shape) {
+          final item = shape as Map<String, dynamic>;
+          if (item['ty'] != 'sh') return false;
+          return (item['ks'] as Map<String, dynamic>)['a'] == 1;
+        });
+      }).length;
+      expect(animatedShapes, greaterThanOrEqualTo(3), reason: id);
+      expect(json['nm'], contains(id));
+    }
+    // Unreviewed drafts must not be included in a distributed app bundle.
+    expect(File('pubspec.yaml').readAsStringSync(),
+        isNot(contains('assets/exercise_media/lottie/')));
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
   });
 
