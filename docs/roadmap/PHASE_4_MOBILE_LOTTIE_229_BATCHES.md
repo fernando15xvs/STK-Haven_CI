@@ -1,7 +1,7 @@
 # STK Haven — Plan de producción Lottie 229/229 (exclusivo iOS y Android)
 
 **Fecha:** 18 de octubre de 2026  
-**Estado:** cobertura fijada. **Borradores vectoriales originales: 70/229 (40/40 del lote 1 y 30/60 del lote 2); aprobados y distribuidos: 0/229.**
+**Estado:** cobertura fijada. **Borradores vectoriales originales: 80/229 (40/40 del lote 1 y 40/60 del lote 2); aprobados y distribuidos: 0/229.**
 
 ## Plataforma y alcance (decisión del usuario)
 
@@ -76,17 +76,22 @@ La compilación iOS/Android, la verificación biomecánica y los ensayos físico
 siguen siendo requisitos de publicación. **Ningún recurso se aprueba por el
 simple hecho de que el decodificador lo abra.**
 
-### Continuación del lote 2 — 30/60 borradores
+### Continuación del lote 2 — 40/60 borradores
 
-Se han creado 30 composiciones originales de variantes de agarre, soporte,
+Se han creado 40 composiciones originales de variantes de agarre, soporte,
 máquina, ejecución unilateral y posiciones corporales. Las diez más recientes
 son abductor y aductor en máquina, curl Scott en máquina, hip thrust Smith,
 crunch en máquina, press landmine, press inclinado en máquina, sentadilla hack,
 gemelos sentado y remo escapular. Todos poseen ID propio, grupo vectorial
 y keyframes específicos de la variante.
 
+El siguiente grupo de diez incluye curl inverso de muñeca, pull-through,
+dominadas asistidas, curl con fitball, Meadows row, cruce de poleas, fondos,
+curl inclinado, remo unilateral y reverse pec deck. Son borradores de técnica,
+no dibujos validados biomecánicamente.
+
 El CI #396 comprobó con el decodificador Flutter los primeros 50 borradores
-(pruebas móviles y Analyze/Core en verde); el test se amplió a los 70 borradores actuales
+(pruebas móviles y Analyze/Core en verde); el test se amplió a los 80 borradores actuales
 y requiere una nueva ejecución CI. Las pruebas reales en dispositivos,
 la revisión biomecánica y la accesibilidad continúan pendientes.
 
@@ -110,7 +115,7 @@ superar todas las puertas de revisión y tener medios correctos.
 | Lote | Ejercicios | Acumulado | Plataforma | Estado |
 |---|---:|---:|---|---|
 | 1 · movimientos esenciales | 40 | 40/229 | iOS + Android | 40 borradores, 0 aprobados |
-| 2 · variantes frecuentes | 60 | 100/229 | iOS + Android | 30 borradores, 0 aprobados |
+| 2 · variantes frecuentes | 60 | 100/229 | iOS + Android | 40 borradores, 0 aprobados |
 | 3 · ampliación anatómica | 70 | 170/229 | iOS + Android | 0 aprobados |
 | 4 · restantes y cobertura completa | 59 | 229/229 | iOS + Android | 0 aprobados |
 
@@ -189,16 +194,16 @@ superar todas las puertas de revisión y tener medios correctos.
 - [ ] 28. `exv2_hack_squat` — Sentadilla hack en máquina · **borrador Lottie (sin aprobación)**
 - [ ] 29. `exv2_seated_calf_raise` — Sóleo sentado en máquina · **borrador Lottie (sin aprobación)**
 - [ ] 30. `exv2_scapular_row` — Remo escapular con pecho apoyado · **borrador Lottie (sin aprobación)**
-- [ ] 31. `exv2_reverse_wrist_curl` — Curl inverso de muñeca sentado
-- [ ] 32. `exv2_cable_pullthrough` — Pull through en polea
-- [ ] 33. `exv2_assisted_pullup` — Dominadas asistidas en máquina
-- [ ] 34. `exv2_swiss_ball_leg_curl` — Curl femoral con fitball
-- [ ] 35. `exv2_meadows_row` — Remo Meadows a un brazo
-- [ ] 36. `ex_cable_crossover` — Cruces en Polea
-- [ ] 37. `ex_dips` — Fondos en Paralelas
-- [ ] 38. `ex_incline_db_curl` — Curl Inclinado 65°
-- [ ] 39. `ex_machine_unilateral_row` — Remo Unilateral Máquina
-- [ ] 40. `ex_reverse_pec_deck` — Pájaros en Máquina
+- [ ] 31. `exv2_reverse_wrist_curl` — Curl inverso de muñeca sentado · **borrador Lottie (sin aprobación)**
+- [ ] 32. `exv2_cable_pullthrough` — Pull through en polea · **borrador Lottie (sin aprobación)**
+- [ ] 33. `exv2_assisted_pullup` — Dominadas asistidas en máquina · **borrador Lottie (sin aprobación)**
+- [ ] 34. `exv2_swiss_ball_leg_curl` — Curl femoral con fitball · **borrador Lottie (sin aprobación)**
+- [ ] 35. `exv2_meadows_row` — Remo Meadows a un brazo · **borrador Lottie (sin aprobación)**
+- [ ] 36. `ex_cable_crossover` — Cruces en Polea · **borrador Lottie (sin aprobación)**
+- [ ] 37. `ex_dips` — Fondos en Paralelas · **borrador Lottie (sin aprobación)**
+- [ ] 38. `ex_incline_db_curl` — Curl Inclinado 65° · **borrador Lottie (sin aprobación)**
+- [ ] 39. `ex_machine_unilateral_row` — Remo Unilateral Máquina · **borrador Lottie (sin aprobación)**
+- [ ] 40. `ex_reverse_pec_deck` — Pájaros en Máquina · **borrador Lottie (sin aprobación)**
 - [ ] 41. `ex_seated_leg_curl` — Curl Femoral Sentado
 - [ ] 42. `ex_pendulum_squat` — Sentadilla Pendular
 - [ ] 43. `exv2_spider_curl` — Curl araña con mancuernas
@@ -366,6 +371,6 @@ superar todas las puertas de revisión y tener medios correctos.
 
 ## Estado y seguimiento
 
-- **Producción actual:** 70 borradores de 229 objetivos (40 + 30), 159 aún pendientes; 0 Lotties aprobados o distribuidos.
-- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 está en 30/60** y continúa con otras 30 variantes pendientes. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
+- **Producción actual:** 80 borradores de 229 objetivos (40 + 40), 149 aún pendientes; 0 Lotties aprobados o distribuidos.
+- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 está en 40/60** y continúa con otras 20 variantes pendientes. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
 - **Restricción permanente de alcance:** `apps/app_mobile` iOS/Android únicamente, ningún cambio multimedia a `apps/app_web`.
