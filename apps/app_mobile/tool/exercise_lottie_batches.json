@@ -23,9 +23,19 @@
           "name": "Press de Banca",
           "family": "Pecho",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_bench_press.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Barra sobre pecho: flexión y extensión de codos",
+          "origin": "STK Haven: ilustración vectorial original, sin imágenes de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_incline_db_press",
@@ -77,9 +87,19 @@
           "name": "Jalón al Pecho",
           "family": "Espalda",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_lat_pulldown.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Jalón delante del pecho con polea y brazos",
+          "origin": "STK Haven: ilustración vectorial original, sin imágenes de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_pullups",
@@ -158,9 +178,19 @@
           "name": "Elevaciones Laterales",
           "family": "Hombros",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_lateral_raises.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Elevación bilateral de mancuernas",
+          "origin": "STK Haven: ilustración vectorial original, sin imágenes de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_arnold_press",
