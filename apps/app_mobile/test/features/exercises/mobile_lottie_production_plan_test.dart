@@ -104,6 +104,9 @@ void main() {
       expect(json['h'], 512);
       expect(json['op'], 90);
       expect(json['assets'], isEmpty);
+      expect(file.lengthSync(), lessThan(120000), reason: id);
+      expect(file.readAsStringSync().toLowerCase(),
+          isNot(contains('.gif')), reason: id);
       final layers = json['layers'] as List<dynamic>;
       expect(layers.length, greaterThan(10));
       final animatedShapes = layers.where((layer) {
@@ -127,6 +130,10 @@ void main() {
           expect(keys.map((key) => key['t']).toList(), [0, 30, 60, 90]);
           expect(jsonEncode(keys[0]['s']),
               isNot(jsonEncode(keys[1]['s'])), reason: id);
+          expect(keys[0]['s'], equals(keys[2]['s']),
+              reason: 'Draft must return to the same loop frame: $id');
+          expect(keys[2]['s'], equals(keys[3]['s']),
+              reason: 'Loop ending must not jump at reset: $id');
         }
       }
       expect(json['nm'], contains(id));
@@ -136,6 +143,30 @@ void main() {
     expect(File('pubspec.yaml').readAsStringSync(),
         isNot(contains('assets/exercise_media/lottie/')));
     expect(ExerciseDemonstrationLibrary.approvedMedia, isEmpty);
+  });
+
+  test('new cable, machine and unilateral variants stay separate by ID', () {
+    const expected = <String>{
+      'exv2_incline_barbell_press',
+      'exv2_flat_machine_press',
+      'exv2_pushup',
+      'exv2_single_arm_pulldown',
+      'exv2_chest_supported_db_row',
+      'exv2_single_arm_db_row',
+      'ex_face_pull',
+      'exv2_arnold_press',
+      'exv2_seated_db_lateral_raise',
+      'exv2_single_arm_rear_cable_fly',
+    };
+    expect(draftIds.containsAll(expected), isTrue);
+    expect(expected.length, 10);
+    for (final id in expected) {
+      final json = jsonDecode(
+          File('assets/exercise_media/lottie/$id.json').readAsStringSync())
+          as Map<String, dynamic>;
+      expect(json['nm'], contains(id));
+      expect(json['assets'], isEmpty);
+    }
   });
 
   test('draft compositions are specific to their exercise and perspective', () {
