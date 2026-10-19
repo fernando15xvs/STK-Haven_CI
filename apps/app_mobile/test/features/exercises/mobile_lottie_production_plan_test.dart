@@ -87,6 +87,20 @@ void main() {
         });
       }).length;
       expect(animatedShapes, greaterThanOrEqualTo(3), reason: id);
+      for (final layer in layers) {
+        final shapes = (layer as Map<String, dynamic>)['shapes']
+            as List<dynamic>;
+        for (final shape in shapes) {
+          final item = shape as Map<String, dynamic>;
+          if (item['ty'] != 'sh') continue;
+          final ks = item['ks'] as Map<String, dynamic>;
+          if (ks['a'] != 1) continue;
+          final keys = ks['k'] as List<dynamic>;
+          expect(keys.map((key) => key['t']).toList(), [0, 30, 60, 90]);
+          expect(jsonEncode(keys[0]['s']),
+              isNot(jsonEncode(keys[1]['s'])), reason: id);
+        }
+      }
       expect(json['nm'], contains(id));
     }
     // Unreviewed drafts must not be included in a distributed app bundle.
