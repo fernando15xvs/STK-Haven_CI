@@ -80,27 +80,57 @@
           "name": "Press inclinado con barra 30°",
           "family": "horizontalPush",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_incline_barbell_press.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Press inclinado con barra a 30°; movimiento de barra en eje vertical",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_flat_machine_press",
           "name": "Press horizontal guiado en máquina",
           "family": "horizontalPush",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_flat_machine_press.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Press de pecho sentado en máquina: brazo, palanca y manillar",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_pushup",
           "name": "Flexiones de brazos",
           "family": "horizontalPush",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_pushup.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Flexiones: plancha, codos y descenso del torso con manos ancladas",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_lat_pulldown",
@@ -183,36 +213,76 @@
           "name": "Jalón unilateral de rodillas",
           "family": "verticalPull",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_single_arm_pulldown.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Jalón unilateral arrodillado: mano de trabajo, polea y cable",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_chest_supported_db_row",
           "name": "Remo con apoyo de pecho y mancuernas",
           "family": "horizontalPull",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_chest_supported_db_row.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Remo con pecho apoyado en banco inclinado y dos mancuernas",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_single_arm_db_row",
           "name": "Remo unilateral con mancuerna en banco",
           "family": "horizontalPull",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_single_arm_db_row.json",
-          "approved": false
+          "approved": false,
+          "view": "lateral",
+          "draftNote": "Remo unilateral con mano apoyada en banco y mancuerna libre",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_face_pull",
           "name": "Face Pull",
           "family": "Espalda",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/ex_face_pull.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Face Pull bilateral en cuerda: codos abiertos hacia rostro",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "ex_ohp",
@@ -257,27 +327,57 @@
           "name": "Press Arnold con mancuernas",
           "family": "shoulder",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_arnold_press.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Press Arnold sentado: brazos y cargas desde frente hasta arriba",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_seated_db_lateral_raise",
           "name": "Elevación lateral sentado",
           "family": "shoulder",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_seated_db_lateral_raise.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Elevaciones laterales con ambas mancuernas, sentado en banco",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_single_arm_rear_cable_fly",
           "name": "Elevación posterior unilateral en polea",
           "family": "shoulder",
           "mediaFormat": "lottie",
-          "status": "pending",
+          "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_single_arm_rear_cable_fly.json",
-          "approved": false
+          "approved": false,
+          "view": "frontal",
+          "draftNote": "Apertura posterior unilateral en polea con brazo libre estabilizado",
+          "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
+          "review": {
+            "biomechanics": false,
+            "licenseDocumentation": false,
+            "renderingIos": false,
+            "renderingAndroid": false,
+            "accessibility": false
+          }
         },
         {
           "id": "exv2_scapular_pushup",
