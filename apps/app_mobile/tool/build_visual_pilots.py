@@ -60,7 +60,7 @@ def pose(exercise, frame):
         ankle, knee = (268, 428), (281, 349)
         wrist = lerp((315, 370), (263, 296), q)
         elbow = ik(shoulder, wrist, 61, 59, 1)
-        neck, head = (323, 238), (341, 218)
+        neck, head = (331, 233), (341, 218)
         bar = wrist
     else:
         hip = lerp((273, 249), (218, 351), q)

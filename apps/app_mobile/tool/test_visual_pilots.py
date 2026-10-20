@@ -47,6 +47,8 @@ class VisualPilotsTest(unittest.TestCase):
             for frame in range(121):
                 p=b.pose(id,frame)
                 self.assertEqual(p['ankle'],initial['ankle'])
+                if id == b.IDS[1]:
+                    self.assertLess(math.dist(p['neck'],p['head']),20)
                 if id != b.IDS[2]:
                     self.assertEqual(p['hip'],initial['hip'])
                     self.assertEqual(p['shoulder'],initial['shoulder'])
