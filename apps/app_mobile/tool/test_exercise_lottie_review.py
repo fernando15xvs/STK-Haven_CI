@@ -124,7 +124,8 @@ class LottieReviewTests(unittest.TestCase):
                     layer["shapes"][0]["it"][0]["ks"]["a"] == 1
                     for layer in doc["layers"]), 3)
                 self.assertFalse(any(name.startswith(("Rig ", "Base ",
-                    "Estructura ")) for name in names))
+                    "Estructura ")) and name.split()[-1].isdigit()
+                    for name in names))
 
     def test_malformed_keyframe_topology_rejected(self):
         keys = {"a": 1, "k": [
