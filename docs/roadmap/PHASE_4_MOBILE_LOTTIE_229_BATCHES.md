@@ -546,6 +546,14 @@ Los 59 presets finales ahora tienen un JSON Lottie vectorial original específic
 
 **Cobertura total de borradores: 229/229. Animaciones aprobadas/distribuidas: 0/229.**
 
+## Auditoría visual y geométrica pendiente de aprobación
+
+El auditor sin dependencias Python `apps/app_mobile/tool/exercise_lottie_review.py` genera `summary.json`, `review_matrix.csv` (229 filas) y `storyboards/<ID>.svg`: cinco poses esquemáticas por ejercicio para revisión humana. Los SVG son **material de QA interno**, no assets del paquete Flutter ni implementaciones en la web.
+
+El job `Mobile tests` del espejo público produce el paquete temporal `stk-haven-lottie-review-229` en GitHub Actions. Los SVG interpolan aproximadamente los trazos de los Lottie; **no representan el render nativo exacto**, ni certifican técnica. El auditor exige 229 IDs únicos, archivos de tamaño válido, metadatos correctos, ausencia de imágenes incrustadas y estado de aprobación bloqueado.
+
+**Pendiente:** revisión visual de cada lámina y reproducción, especialista en biomecánica, validación física en iPhone y Android, accesibilidad, `reduceMotion`, fallbacks, licencia y firma por ID. Los 229 campos de aprobación siguen sin marcar y `approvedMedia` permanece vacío. Si el movimiento no es claramente fiel al ejercicio, se rechaza aunque pase las pruebas.
+
 ## Reglas para detener una animación antes de aprobarla
 
 - El dibujo no refleja correctamente el ejercicio, la trayectoria o su equipo.

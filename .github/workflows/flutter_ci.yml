@@ -119,6 +119,19 @@ jobs:
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
+      - name: Unit tests for offline Lottie reviewer
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool -p 'test_exercise_lottie_review.py'
+      - name: Audit 229 drafts and create offline SVG review sheets
+        working-directory: apps/app_mobile
+        run: python3 tool/exercise_lottie_review.py --output build/lottie_review
+      - name: Upload internal Lottie review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-lottie-review-229
+          path: apps/app_mobile/build/lottie_review/
+          retention-days: 7
+          if-no-files-found: error
 
   android:
     name: Android artifacts
