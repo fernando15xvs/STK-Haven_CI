@@ -127,6 +127,56 @@ class LottieReviewTests(unittest.TestCase):
                     "Estructura ")) and name.split()[-1].isdigit()
                     for name in names))
 
+    def test_high_risk_technical_qa_six_variants_remain_unapproved(self):
+        expected = {
+            "exv2_sissy_squat_assisted": [
+                "Mano fija agarre poste", "Tibia se proyecta con rodilla hacia delante",
+                "Torso reposa en línea inclinada sin colapsar lumbar"],
+            "exv2_copenhagen_short": [
+                "Rodilla superior apoyada sobre banco",
+                "Pierna inferior libre en aducción", "Codo de apoyo debajo del hombro"],
+            "exv2_copenhagen_long": [
+                "Tobillo superior sobre banco palanca larga",
+                "Pierna inferior aduce sin girar pelvis",
+                "Banco bajo contacto tobillo lejos del cuerpo"],
+            "exv2_scapular_pushup": [
+                "Manos fijas al suelo",
+                "Escápulas protracción sin flexionar codos",
+                "Pelvis no rota ni se eleva"],
+            "exv2_nordic_curl": [
+                "Rodillas contacto no se trasladan",
+                "Tobillos sujetos en anclaje",
+                "Tronco desciende en bloque"],
+            "exv2_lying_leg_curl_unilateral": [
+                "Pierna no activa extendida",
+                "Pivote de rodilla unilateral",
+                "Pantorrilla única flexiona a glúteo"],
+        }
+        manifest = json.loads((self.root / "tool/exercise_lottie_batches.json")
+                              .read_text(encoding="utf-8"))
+        items = {item["id"]: item for batch in manifest["batches"]
+                 for item in batch["items"]}
+        self.assertEqual(len(expected), 6)
+        for ex_id, landmarks in expected.items():
+            with self.subTest(exercise=ex_id):
+                doc = json.loads((self.root /
+                    f"assets/exercise_media/lottie/{ex_id}.json")
+                    .read_text(encoding="utf-8"))
+                item = items[ex_id]
+                self.assertEqual(item["status"], "draft")
+                self.assertIs(item["approved"], False)
+                self.assertTrue(all(v is False for v in item["review"].values()))
+                self.assertEqual(item["view"], "lateral")
+                self.assertIn(f" / {ex_id} / lateral / ", doc["nm"])
+                names = {layer["nm"] for layer in doc["layers"]}
+                self.assertTrue(set(landmarks).issubset(names))
+                self.assertGreaterEqual(
+                    sum(layer["shapes"][0]["it"][0]["ks"]["a"] == 1
+                        for layer in doc["layers"]), 3)
+                self.assertFalse(any(name.startswith(("Rig ", "Base ",
+                    "Estructura ")) and name.split()[-1].isdigit()
+                    for name in names))
+
     def test_malformed_keyframe_topology_rejected(self):
         keys = {"a": 1, "k": [
             {"t": 0, "s": [{"v": [[1, 2], [3, 4]]}],

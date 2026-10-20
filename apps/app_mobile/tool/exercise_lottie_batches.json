@@ -388,7 +388,7 @@
           "assetPath": "assets/exercise_media/lottie/exv2_scapular_pushup.json",
           "approved": false,
           "view": "lateral",
-          "draftNote": "Flexión escapular en plancha, sin flexionar los codos",
+          "draftNote": "Boceto flexión escapular en plancha alta: codos sin flexionar, manos fijas y excursión localizada en escápulas; no aprobado",
           "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
           "review": {
             "biomechanics": false,
@@ -711,7 +711,7 @@
           "assetPath": "assets/exercise_media/lottie/exv2_nordic_curl.json",
           "approved": false,
           "view": "lateral",
-          "draftNote": "Curl nórdico asistido con tobillos sujetos",
+          "draftNote": "Boceto nórdico: rodillas y tobillos fijos, torso-pelvis como bloque durante descenso con manos de asistencia; no aprobado",
           "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
           "review": {
             "biomechanics": false,
@@ -2517,7 +2517,7 @@
           "assetPath": "assets/exercise_media/lottie/exv2_lying_leg_curl_unilateral.json",
           "approved": false,
           "view": "lateral",
-          "draftNote": "Curl femoral unilateral en banco prono con rodillo tobillo",
+          "draftNote": "Boceto curl femoral prono unilateral: un muslo y rodilla estables, solo una pantorrilla se flexiona contra rodillo; no aprobado",
           "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
           "review": {
             "biomechanics": false,
@@ -3344,7 +3344,7 @@
           "assetPath": "assets/exercise_media/lottie/exv2_sissy_squat_assisted.json",
           "approved": false,
           "view": "lateral",
-          "draftNote": "Representación vectorial original en lateral de Sentadilla sissy asistida; equipo y recorrido específicos en revisión técnica, no autorizado para distribución",
+          "draftNote": "Boceto técnico de sentadilla sissy asistida: agarradera fija, talones anclados y rodillas adelante sin doblar tronco en cadera; requiere inspección biomecánica",
           "origin": "STK Haven: ilustración vectorial programática original; sin recursos gráficos de terceros",
           "review": {
             "biomechanics": false,
@@ -4123,7 +4123,7 @@
           "assetPath": "assets/exercise_media/lottie/exv2_copenhagen_short.json",
           "approved": false,
           "view": "lateral",
-          "draftNote": "Representación vectorial original en lateral de Plancha Copenhagen de palanca corta; equipo y recorrido específicos en revisión técnica, no autorizado para distribución",
+          "draftNote": "Boceto de Copenhagen palanca corta: rodilla superior sobre banco, antebrazo bajo hombro y pierna inferior que asciende; no aprobado",
           "origin": "STK Haven: ilustración vectorial programática original; sin recursos gráficos de terceros",
           "review": {
             "biomechanics": false,
@@ -4199,7 +4199,7 @@
           "assetPath": "assets/exercise_media/lottie/exv2_copenhagen_long.json",
           "approved": false,
           "view": "lateral",
-          "draftNote": "Representación vectorial original en lateral de Plancha Copenhagen de palanca larga; equipo y recorrido específicos en revisión técnica, no autorizado para distribución",
+          "draftNote": "Boceto de Copenhagen palanca larga: tobillo superior apoyado en banco con pierna extendida, aducción de pierna inferior; no aprobado",
           "origin": "STK Haven: ilustración vectorial programática original; sin recursos gráficos de terceros",
           "review": {
             "biomechanics": false,

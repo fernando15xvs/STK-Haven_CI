@@ -47,6 +47,26 @@ Se encontraron seis composiciones con interpretaciones dudosas: cuadrupedia no l
 
 **Estado:** seis borradores correctivos preparados para una segunda inspección; no se aprueba ninguna ilustración automáticamente. En especial, los movimientos de rotación externa y antirotación requieren experto en técnica y observación de animación continua, no solo los paneles SVG. Las restantes 213 láminas todavía deben inspeccionarse.
 
+
+## Tercera pasada: seis ejercicios de alto riesgo corregidos como esquemas
+
+Continúa el proceso de QA provisional en **seis ejercicios ya incluidos en las 16 inspecciones anteriores**, por lo que la cantidad inspeccionada sigue siendo 16/229 y no se contabilizan como seis revisiones adicionales. Esta pasada actualiza el arte de trabajo, no supone aprobación biomecánica:
+
+- `exv2_sissy_squat_assisted`: se distingue apoyo fijo con la mano, proyección de rodillas y tronco sin bisagra en cadera.
+- `exv2_copenhagen_short`: rodilla superior sobre banco y pierna inferior en aducción.
+- `exv2_copenhagen_long`: tobillo de pierna superior en banco, palanca larga y pierna inferior en aducción.
+- `exv2_scapular_pushup`: flexión escapular sin flexión de codos, manos y pies apoyados.
+- `exv2_nordic_curl`: anclaje de tobillos y movimiento desde rodillas con tronco-pelvis en bloque.
+- `exv2_lying_leg_curl_unilateral`: rodillo sobre tobillo de una pierna, segunda pierna diferenciada y pivote de rodilla.
+
+Se añaden pruebas de regresión para las seis geometrías etiquetadas. **Total de composiciones redibujadas a partir de los primeros bocetos: 15/229**; quedan **214 sin ese redibujo particular** y **213 pendientes de inspección visual individual**. Los 229 siguen siendo ilustraciones esquemáticas de diagnóstico, no personajes anatómicamente ilustrados ni videos.
+
+### Apariencia objetivo en la versión final
+
+El aspecto de los storyboards actuales no es la meta: se necesita arte vectorial **con figura anatómica humana legible** (silueta de torso, brazos, cadera, rodillas, manos y pies diferenciados, idealmente rellenos y sombreados discretos), equipamiento reconocible, trayectorias y puntos de apoyo precisos, secuencia de fase concéntrica/excéntrica y vistas consistentes. Una animación simple de palitos que supera JSON o parser **no se vuelve más realista automáticamente** en Flutter: debe sustituirse o mejorar sus vectores; para casos imposibles con Lottie, considerar un recurso optimizado de calidad equivalente que no sea GIF.
+
+**Puerta de calidad visual:** no convertir ningún `draft` en aprobado solo por técnica de exportación. Se deben valorar manualmente comprensión del ejercicio en los primeros 3 segundos, coherencia corporal a lo largo del movimiento, anatomía/biomecánica verificables y funcionamiento en Flutter nativo. La aplicación sigue en desarrollo personal, por lo que la revisión puede hacerse progresivamente sin publicar activos deficientes.
+
 ## Protocolo de revisión por ejercicio
 
 1. Verificar equipo, agarres, cadera, columna, articulaciones, dirección del movimiento, amplitud, alternancia y diferencias unilateral/bilateral con un especialista técnico.
