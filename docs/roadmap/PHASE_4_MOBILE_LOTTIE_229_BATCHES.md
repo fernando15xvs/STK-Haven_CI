@@ -1,7 +1,7 @@
 # STK Haven — Plan de producción Lottie 229/229 (exclusivo iOS y Android)
 
 **Fecha:** 18 de octubre de 2026  
-**Estado:** cobertura fijada. **Borradores vectoriales originales: 170/229 (40/40 del lote 1, 60/60 del lote 2 y 70/70 del lote 3); aprobados y distribuidos: 0/229.**
+**Estado:** cobertura fijada. **Borradores vectoriales originales: 229/229 (lotes 1–4 completos como borradores: 40 + 60 + 70 + 59); aprobados y distribuidos: 0/229.**
 
 ## Plataforma y alcance (decisión del usuario)
 
@@ -476,7 +476,75 @@ Se produjeron las últimas 30 composiciones del lote 3, una por cada ID estable.
 - `exv2_supinated_single_cable_curl.json` · lateral — Curl unilateral supino en polea baja.
 - `exv2_cable_hip_abduction.json` · frontal — Abducción unilateral de cadera con cable bajo en tobillo.
 
-**Estado acumulado:** 170/229 composiciones en borrador (74,2 %). Restan 59/59 del lote 4. `approvedMedia` sigue vacío y estos assets no se distribuyen en `pubspec.yaml`.
+**Estado acumulado:** 229/229 composiciones en borrador (100 % de cobertura documental, 0 aprobadas). El lote 4 está creado, pendiente de validación técnica. `approvedMedia` sigue vacío y estos assets no se distribuyen en `pubspec.yaml`.
+
+## Lote 4 completo — 59/59 borradores exclusivos de iOS/Android
+
+Los 59 presets finales ahora tienen un JSON Lottie vectorial original específico del ejercicio: coordenadas y trayectorias independientes, equipos y posiciones de partida adaptados. Cada recurso usa lienzo 512 × 512, 30 fps, 90 cuadros, sin imágenes internas, sin GIF y bucle retornando al cuadro inicial. Las posturas estáticas representan como máximo respiración o pequeños ajustes, no repeticiones inexistentes.
+
+**Advertencia de calidad:** son ilustraciones vectoriales programáticas **en fase de borrador**; pasar un decodificador o tener distinta geometría **no demuestra** biomecánica correcta, claridad comparable a video ni aceptación comercial. Cada una requiere examen biomecánico individual, comprobación visual de posturas/equipo, derechos de distribución, pruebas en iPhone y Android, accesibilidad, reducción de movimiento y fallback offline. Ningún asset está autorizado para publicación ni añadido al bundle de Flutter.
+
+- `exv2_bird_dog.json` · lateral — Bird dog cuadrupedia (borrador sin aprobar).
+- `exv2_bent_over_rear_delt_raise.json` · lateral — Elevación posterior inclinado de pie (borrador sin aprobar).
+- `exv2_mid_cable_fly.json` · frontal — Aperturas en polea a altura media (borrador sin aprobar).
+- `exv2_sissy_squat_assisted.json` · lateral — Sentadilla sissy asistida (borrador sin aprobar).
+- `exv2_tibialis_wall_raise.json` · lateral — Elevación de puntas contra pared (borrador sin aprobar).
+- `exv2_wall_slide.json` · frontal — Deslizamiento de brazos en pared (borrador sin aprobar).
+- `exv2_suitcase_carry.json` · frontal — Paseo con peso a un lado (borrador sin aprobar).
+- `exv2_kettlebell_swing.json` · lateral — Balanceo de pesa rusa (borrador sin aprobar).
+- `exv2_neutral_machine_pulldown.json` · frontal — Jalón neutro convergente en máquina (borrador sin aprobar).
+- `exv2_cross_body_hammer_curl.json` · frontal — Curl martillo cruzado (borrador sin aprobar).
+- `exv2_band_lateral_walk.json` · frontal — Caminata lateral con minibanda (borrador sin aprobar).
+- `exv2_hollow_hold.json` · lateral — Hollow hold (borrador sin aprobar).
+- `exv2_wide_rope_face_pull.json` · frontal — Face pull con cuerda y rotación externa (borrador sin aprobar).
+- `exv2_unilateral_cable_press.json` · lateral — Press de pecho unilateral en polea (borrador sin aprobar).
+- `exv2_spanish_squat.json` · lateral — Sentadilla española con banda (borrador sin aprobar).
+- `exv2_tibialis_machine.json` · lateral — Tibial anterior en máquina (borrador sin aprobar).
+- `exv2_serratus_punch.json` · lateral — Golpe de serrato con mancuerna tumbado (borrador sin aprobar).
+- `exv2_reverse_ez_curl.json` · frontal — Curl inverso con barra EZ (borrador sin aprobar).
+- `exv2_monster_walk.json` · frontal — Caminata diagonal con minibanda (borrador sin aprobar).
+- `exv2_ab_wheel_rollout.json` · lateral — Rueda abdominal desde rodillas (borrador sin aprobar).
+- `exv2_cable_external_rotation.json` · frontal — Rotación externa de hombro en polea (borrador sin aprobar).
+- `exv2_close_grip_bench.json` · lateral — Press banca agarre cerrado (borrador sin aprobar).
+- `exv2_leg_extension_unilateral.json` · lateral — Extensión de cuádriceps unilateral (borrador sin aprobar).
+- `exv2_band_dorsiflexion.json` · lateral — Dorsiflexión con banda elástica (borrador sin aprobar).
+- `exv2_serratus_cable_punch.json` · lateral — Empuje de serrato unilateral en polea (borrador sin aprobar).
+- `exv2_preacher_hammer_curl.json` · lateral — Curl martillo Scott bilateral (borrador sin aprobar).
+- `exv2_standing_machine_abduction.json` · frontal — Abducción de cadera de pie en máquina (borrador sin aprobar).
+- `exv2_forearm_plank.json` · lateral — Plancha sobre antebrazos (borrador sin aprobar).
+- `exv2_band_external_rotation.json` · frontal — Rotación externa con banda (borrador sin aprobar).
+- `exv2_diamond_pushup.json` · lateral — Flexión diamante (borrador sin aprobar).
+- `exv2_sumo_goblet_squat.json` · frontal — Sentadilla sumo con mancuerna (borrador sin aprobar).
+- `exv2_straight_bar_pushdown.json` · frontal — Extensión tríceps con barra recta (borrador sin aprobar).
+- `exv2_clamshell.json` · lateral — Clamshell con minibanda (borrador sin aprobar).
+- `exv2_high_plank.json` · lateral — Plancha alta (borrador sin aprobar).
+- `exv2_side_lying_external_rotation.json` · lateral — Rotación externa tumbado de lado (borrador sin aprobar).
+- `exv2_reverse_grip_pushdown.json` · frontal — Extensión tríceps agarre supino en polea (borrador sin aprobar).
+- `exv2_cable_hip_adduction.json` · frontal — Aducción unilateral de cadera en polea (borrador sin aprobar).
+- `exv2_band_pallof.json` · frontal — Press Pallof con banda (borrador sin aprobar).
+- `exv2_cable_internal_rotation.json` · frontal — Rotación interna de hombro en polea (borrador sin aprobar).
+- `exv2_single_arm_pushdown.json` · lateral — Extensión tríceps unilateral en polea (borrador sin aprobar).
+- `exv2_side_lying_adduction.json` · lateral — Aducción lateral acostado (borrador sin aprobar).
+- `exv2_side_plank.json` · lateral — Plancha lateral (borrador sin aprobar).
+- `exv2_band_internal_rotation.json` · frontal — Rotación interna con banda (borrador sin aprobar).
+- `exv2_overhead_rope_triceps.json` · lateral — Extensión tríceps sobre cabeza con cuerda (borrador sin aprobar).
+- `exv2_copenhagen_short.json` · lateral — Plancha Copenhagen de palanca corta (borrador sin aprobar).
+- `exv2_side_plank_hip_lift.json` · lateral — Elevación de cadera en plancha lateral (borrador sin aprobar).
+- `exv2_scaption_raise.json` · frontal — Elevación escapular en plano de escápula (borrador sin aprobar).
+- `exv2_one_arm_overhead_cable.json` · lateral — Extensión tríceps overhead unilateral en polea (borrador sin aprobar).
+- `exv2_copenhagen_long.json` · lateral — Plancha Copenhagen de palanca larga (borrador sin aprobar).
+- `exv2_cable_woodchop_high_low.json` · frontal — Woodchopper en polea alta a baja (borrador sin aprobar).
+- `exv2_single_db_overhead_triceps.json` · lateral — Extensión tríceps overhead con mancuerna a una mano (borrador sin aprobar).
+- `exv2_standing_cable_knee_drive.json` · lateral — Elevación de rodilla con polea (borrador sin aprobar).
+- `exv2_cable_woodchop_low_high.json` · frontal — Woodchopper en polea baja a alta (borrador sin aprobar).
+- `exv2_lying_db_triceps.json` · lateral — Press francés tumbado con mancuernas (borrador sin aprobar).
+- `exv2_band_marching.json` · frontal — Marcha contra minibanda (borrador sin aprobar).
+- `exv2_russian_twist.json` · frontal — Giro ruso sentado sin carga (borrador sin aprobar).
+- `exv2_kickback_db.json` · lateral — Patada de tríceps con mancuerna (borrador sin aprobar).
+- `exv2_seated_knee_raise.json` · lateral — Elevación de rodillas sentado (borrador sin aprobar).
+- `exv2_triceps_machine_extension.json` · lateral — Extensión de tríceps en máquina sentado (borrador sin aprobar).
+
+**Cobertura total de borradores: 229/229. Animaciones aprobadas/distribuidas: 0/229.**
 
 ## Reglas para detener una animación antes de aprobarla
 
@@ -489,6 +557,6 @@ Se produjeron las últimas 30 composiciones del lote 3, una por cada ID estable.
 
 ## Estado y seguimiento
 
-- **Producción actual:** 170 borradores de 229 objetivos (40 + 60 + 70), 59 aún pendientes; 0 Lotties aprobados o distribuidos.
-- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 tiene 60/60 borradores terminados** y **el lote 3 tiene 70/70 borradores terminados** y continúa pendiente la revisión visual/biomecánica de cada composición. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
+- **Producción actual:** 229 borradores de 229 objetivos (40 + 60 + 70 + 59), 0 pendientes de creación; 0 Lotties aprobados o distribuidos.
+- **Hitos de borradores:** 10/40, 20/40 y 40/40 alcanzados para el lote 1. **El lote 1 está completo solo como borrador**, no como recurso listo para la app. **El lote 2 tiene 60/60 borradores terminados** y **el lote 3 tiene 70/70 y el lote 4 tiene 59/59 borradores terminados** y continúa pendiente la revisión visual/biomecánica de cada composición. Restan revisión biomecánica/visual, derechos, ensayos de reproducción, accesibilidad y aprobación antes de empaquetar. No confundir un JSON existente con una animación lista para distribuir.
 - **Restricción permanente de alcance:** `apps/app_mobile` iOS/Android únicamente, ningún cambio multimedia a `apps/app_web`.
