@@ -53,7 +53,7 @@ def pose(exercise, frame):
         ankle, knee = (385, 428), (366, 355)
         wrist = lerp((195, 185), (230, 286), q)
         elbow = ik(shoulder, wrist, 60, 59, 1)
-        head, neck = (151, 299), (172, 303)
+        head, neck = (151, 307), (172, 303)
         bar = wrist
     elif exercise == IDS[1]:
         hip, shoulder = (216, 317), (305, 252)

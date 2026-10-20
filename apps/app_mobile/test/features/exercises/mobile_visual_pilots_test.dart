@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:core/core/theme/appearance_theme.dart';
+import 'package:core/core/theme/app_palette.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -43,6 +44,7 @@ void main() {
   Widget host(String id, AppAccent accent, Brightness brightness,
       {double? progress, bool reduce = false}) {
     return MaterialApp(
+      themeAnimationDuration: Duration.zero,
       theme: AppearanceTheme.build(AppearanceSettings(accent: accent), brightness),
       home: MediaQuery(
         data: MediaQueryData(disableAnimations: reduce),
@@ -74,12 +76,22 @@ void main() {
       image.dispose();
       // More than a flat panel must have been painted by the actual Lottie renderer.
       var nonBackground = 0;
+      var accentPixels = 0;
+      final accent = AppColors.of(tester.element(find.byType(VisualPilotPreview)))
+          .primary.toARGB32();
       for (var i = 0; i < raw.length; i += 4) {
         if (raw[i] != raw[0] || raw[i + 1] != raw[1] || raw[i + 2] != raw[2]) {
           nonBackground++;
         }
+        if (raw[i] == ((accent >> 16) & 255) &&
+            raw[i + 1] == ((accent >> 8) & 255) &&
+            raw[i + 2] == (accent & 255)) {
+          accentPixels++;
+        }
       }
       expect(nonBackground, greaterThan(5000));
+      expect(accentPixels, greaterThan(100),
+          reason: 'The resolved STK accent must paint the clothing');
       return raw;
     }))!;
   }
