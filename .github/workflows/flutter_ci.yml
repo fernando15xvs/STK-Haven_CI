@@ -119,6 +119,21 @@ jobs:
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
+      - name: Test visual pilot geometry and reproducibility
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool -p 'test_visual_pilots.py'
+      - name: Build visual pilot review viewer
+        working-directory: apps/app_mobile
+        run: python3 tool/build_visual_pilots.py --output build/visual_pilots
+      - name: Upload visual pilot rendering evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-visual-pilots
+          path: |
+            apps/app_mobile/build/visual_pilots/
+            apps/app_mobile/build/visual_pilots_flutter/
+          retention-days: 14
+          if-no-files-found: error
       - name: Unit tests for offline Lottie reviewer
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool -p 'test_exercise_lottie_review.py'
@@ -240,3 +255,4 @@ jobs:
             apps/app_mobile/build/ios_personal_test/STK-Haven-unsigned.ipa.sha256
           retention-days: 7
           if-no-files-found: error
+

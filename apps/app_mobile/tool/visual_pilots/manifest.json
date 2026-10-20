@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "status": "visual_candidate",
+  "approved": false,
+  "enabled": false,
+  "origin": "Original STK Haven vector paths; no third-party media",
+  "review": {
+    "visualApproval": false,
+    "biomechanics": false,
+    "iosDevice": false,
+    "androidDevice": false,
+    "devicePerformance": false
+  },
+  "items": [
+    {
+      "id": "ex_bench_press",
+      "name": "Press de banca",
+      "bytes": 117941,
+      "frames": 120,
+      "fps": 30
+    },
+    {
+      "id": "ex_barbell_row",
+      "name": "Remo con barra",
+      "bytes": 112048,
+      "frames": 120,
+      "fps": 30
+    },
+    {
+      "id": "ex_squat",
+      "name": "Sentadilla libre",
+      "bytes": 215615,
+      "frames": 120,
+      "fps": 30
+    }
+  ]
+}
