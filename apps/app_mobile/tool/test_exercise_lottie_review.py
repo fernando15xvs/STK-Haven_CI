@@ -78,6 +78,54 @@ class LottieReviewTests(unittest.TestCase):
                                                     "Estructura "))
                                      for name in layer_names))
 
+    def test_second_visual_qa_group_has_six_distinct_anatomical_landmarks(self):
+        requirements = {
+            "exv2_bird_dog": {"view": "lateral", "landmarks": [
+                "Mano de apoyo siempre fija", "Muslo pierna libre se extiende atrás",
+                "Húmero contralateral se proyecta adelante"]},
+            "exv2_side_plank": {"view": "lateral", "landmarks": [
+                "Pie superior apilado", "Codo de apoyo debajo hombro",
+                "Cintura activa respira sin bajar pelvis"]},
+            "exv2_incline_rear_delt_fly": {"view": "lateral", "landmarks": [
+                "Banco inclinado acolchado en diagonal",
+                "Pecho realmente apoyado en banco", "Mancuerna mano cercana"]},
+            "exv2_cable_external_rotation": {"view": "frontal", "landmarks": [
+                "Codo estabilizado a 90 grados",
+                "Antebrazo rota hacia fuera sin trasladar codo",
+                "Cable sigue agarre desde polea"]},
+            "exv2_dead_bug": {"view": "lateral", "landmarks": [
+                "Colchoneta supina", "Pelvis en apoyo de suelo",
+                "Brazo opuesto alcanza arriba",
+                "Muslo contralateral extiende pierna"]},
+            "exv2_band_pallof": {"view": "lateral", "landmarks": [
+                "Cadera cuadrada estable", "Banda elástica lateral gana tensión",
+                "Antebrazos empujan desde esternón"]},
+        }
+        manifest = json.loads((self.root / "tool/exercise_lottie_batches.json")
+                              .read_text(encoding="utf-8"))
+        manifest_items = {item["id"]: item
+                          for batch in manifest["batches"]
+                          for item in batch["items"]}
+        self.assertEqual(len(requirements), 6)
+        for ex_id, config in requirements.items():
+            with self.subTest(exercise=ex_id):
+                doc = json.loads((self.root /
+                    f"assets/exercise_media/lottie/{ex_id}.json")
+                    .read_text(encoding="utf-8"))
+                item = manifest_items[ex_id]
+                self.assertEqual(item["view"], config["view"])
+                self.assertEqual(item["status"], "draft")
+                self.assertIs(item["approved"], False)
+                self.assertTrue(all(not v for v in item["review"].values()))
+                self.assertIn(f" / {ex_id} / {config['view']} / ", doc["nm"])
+                names = {layer["nm"] for layer in doc["layers"]}
+                self.assertTrue(set(config["landmarks"]).issubset(names))
+                self.assertGreaterEqual(sum(
+                    layer["shapes"][0]["it"][0]["ks"]["a"] == 1
+                    for layer in doc["layers"]), 3)
+                self.assertFalse(any(name.startswith(("Rig ", "Base ",
+                    "Estructura ")) for name in names))
+
     def test_malformed_keyframe_topology_rejected(self):
         keys = {"a": 1, "k": [
             {"t": 0, "s": [{"v": [[1, 2], [3, 4]]}],

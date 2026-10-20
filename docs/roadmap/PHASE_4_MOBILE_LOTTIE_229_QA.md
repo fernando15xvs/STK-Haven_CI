@@ -36,7 +36,16 @@ El 20 de octubre de 2026 se inspeccionaron **ocho láminas SVG**, tomando las ci
 | `exv2_incline_rear_delt_fly` | Banco inclinado y apoyo del pecho poco evidentes en proyección frontal | Pendiente de rediseño y evaluación |
 | `exv2_side_plank` | La silueta lateral confunde plancha lateral con plancha general | Pendiente de rediseño y evaluación |
 
-Las modificaciones mencionadas son **borradores correctivos**, no aprobaciones: cualquier error de biomecánica, equipamiento o comprensión en el render de Flutter debe corregirse de nuevo. El resto de 221 láminas sigue sin inspección visual individual.
+Las modificaciones mencionadas son **borradores correctivos**, no aprobaciones: cualquier error de biomecánica, equipamiento o comprensión en el render de Flutter debe corregirse de nuevo. Después de una segunda selección de 12 láminas (cuatro repetidas de la primera selección), se han visto **16 ejercicios distintos** de forma provisional. Otros **213** siguen sin inspección visual individual. Esta revisión es esquemática y no constituye conformidad biomecánica.
+
+
+## Segunda inspección visual de doce candidatas — seis bocetos corregidos
+
+Se compararon los fotogramas 0 y 30 de 12 láminas adicionales; cuatro correspondían a la primera muestra. Por tanto son **16 ejercicios distintos inspeccionados provisionalmente**. Entre los nuevos: `exv2_nordic_curl`, `exv2_dead_bug`, `exv2_sissy_squat_assisted`, `exv2_copenhagen_short`, `exv2_copenhagen_long`, `exv2_band_pallof`, `exv2_scapular_pushup` y `exv2_lying_leg_curl_unilateral`.
+
+Se encontraron seis composiciones con interpretaciones dudosas: cuadrupedia no legible (`bird_dog`), apoyo lateral no diferenciado (`side_plank`), banco inclinado oculto (`incline_rear_delt_fly`), plano de rotación del hombro (`cable_external_rotation`), orientación de tumbado (`dead_bug`) y extensión contra resistencia antirotación (`band_pallof`). Se redibujaron para mostrar apoyos, agarres, equipo y articulaciones más claramente y se añadieron verificaciones automatizadas de presencia de elementos anatómicos diferenciados. Cambiaron a **vista lateral** los casos `dead_bug`, `incline_rear_delt_fly` y `band_pallof`, junto con el manifiesto, para representar mejor el movimiento.
+
+**Estado:** seis borradores correctivos preparados para una segunda inspección; no se aprueba ninguna ilustración automáticamente. En especial, los movimientos de rotación externa y antirotación requieren experto en técnica y observación de animación continua, no solo los paneles SVG. Las restantes 213 láminas todavía deben inspeccionarse.
 
 ## Protocolo de revisión por ejercicio
 

@@ -3067,8 +3067,8 @@
           "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_dead_bug.json",
           "approved": false,
-          "view": "frontal",
-          "draftNote": "Dead bug con extensiones contralaterales y pelvis estable",
+          "view": "lateral",
+          "draftNote": "Supino sobre colchoneta, pelvis estable y alcance contralateral brazo-pierna, no silueta de pie; pendiente de revisión",
           "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
           "review": {
             "biomechanics": false,
@@ -3086,8 +3086,8 @@
           "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_incline_rear_delt_fly.json",
           "approved": false,
-          "view": "frontal",
-          "draftNote": "Aperturas de deltoides posterior sobre banco inclinado",
+          "view": "lateral",
+          "draftNote": "Pecho apoyado en banco realmente inclinado, brazos abren con mancuernas en dos planos visibles; boceto pendiente de biomecánica",
           "origin": "STK Haven: ilustración vectorial programática original; sin medios de terceros",
           "review": {
             "biomechanics": false,
@@ -3287,7 +3287,7 @@
           "assetPath": "assets/exercise_media/lottie/exv2_bird_dog.json",
           "approved": false,
           "view": "lateral",
-          "draftNote": "Representación vectorial original en lateral de Bird dog cuadrupedia; equipo y recorrido específicos en revisión técnica, no autorizado para distribución",
+          "draftNote": "Cuadrupedia con una mano y rodilla de apoyo constantes, extensión contralateral con pelvis estable; segundo boceto para QA",
           "origin": "STK Haven: ilustración vectorial programática original; sin recursos gráficos de terceros",
           "review": {
             "biomechanics": false,
@@ -3667,7 +3667,7 @@
           "assetPath": "assets/exercise_media/lottie/exv2_cable_external_rotation.json",
           "approved": false,
           "view": "frontal",
-          "draftNote": "Representación vectorial original en frontal de Rotación externa de hombro en polea; equipo y recorrido específicos en revisión técnica, no autorizado para distribución",
+          "draftNote": "Codo adosado al costado y pivote de rotación externa de antebrazo vinculado a polea lateral; pendiente de revisión",
           "origin": "STK Haven: ilustración vectorial programática original; sin recursos gráficos de terceros",
           "review": {
             "biomechanics": false,
@@ -3989,8 +3989,8 @@
           "status": "draft",
           "assetPath": "assets/exercise_media/lottie/exv2_band_pallof.json",
           "approved": false,
-          "view": "frontal",
-          "draftNote": "Representación vectorial original en frontal de Press Pallof con banda; equipo y recorrido específicos en revisión técnica, no autorizado para distribución",
+          "view": "lateral",
+          "draftNote": "Press Pallof lateral en banda con manos que avanzan desde esternón, pelvis y hombros resistiendo la rotación; pendiente de revisión",
           "origin": "STK Haven: ilustración vectorial programática original; sin recursos gráficos de terceros",
           "review": {
             "biomechanics": false,
@@ -4066,7 +4066,7 @@
           "assetPath": "assets/exercise_media/lottie/exv2_side_plank.json",
           "approved": false,
           "view": "lateral",
-          "draftNote": "Representación vectorial original en lateral de Plancha lateral; equipo y recorrido específicos en revisión técnica, no autorizado para distribución",
+          "draftNote": "Plancha lateral con pies apilados, codo bajo hombro y cadera elevada; solo micro-movimiento respiratorio isométrico",
           "origin": "STK Haven: ilustración vectorial programática original; sin recursos gráficos de terceros",
           "review": {
             "biomechanics": false,
