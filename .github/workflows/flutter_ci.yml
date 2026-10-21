@@ -165,6 +165,15 @@ jobs:
       - name: Verify master rest-pose invariant, 11 muscle regions and separate scapular controls
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_character.py'
+      - name: Generate 55-joint master v2 anatomical relief + eight inactive correctives
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_surface_v2.py
+          --input build/cc0_master_character/stk_haven_master_55_unapproved.glb
+          --output build/cc0_master_surface_v2
+      - name: Audit master v2 mesh/rig parity, no face inversions, and 8 unilateral shape keys
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_surface_v2.py'
       - name: Retarget three CC0 exercises to full GLB and mobile LOD
         working-directory: apps/app_mobile
         run: >-
@@ -232,6 +241,7 @@ jobs:
             apps/app_mobile/build/cc0_model_stage/
             apps/app_mobile/build/cc0_53bone_retarget/
             apps/app_mobile/build/cc0_master_character/
+            apps/app_mobile/build/cc0_master_surface_v2/
             apps/app_mobile/build/cc0_flutter_review/
             apps/app_mobile/build/cc0_video_comparison/mp4/
           retention-days: 14
