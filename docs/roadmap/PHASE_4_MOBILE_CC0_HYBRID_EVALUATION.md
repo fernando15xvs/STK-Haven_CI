@@ -48,3 +48,11 @@ en Android e iPhone físicos.
 
 Fuente privada STK-Haven; espejo público STK-Haven_CI, PR #43. Nada en
 apps/app_web, historial ni Supabase. 229 draft / 0 approved / 0 enabled.
+
+## Descarga real comprobada por CI #433
+- Archivo CC0 en artefacto `stk-haven-visual-pilots`, 4.994.640 bytes.
+- SHA-256 inmovilizado en el registro de fuentes:
+  `7135e03b6259e970458deff3e0458610914d7c35164cae12611101361e4a5749`.
+- 53 huesos, 55 nodos, 1 malla, 1 material y **0 animaciones**.
+- Se guardó el asset **solo en artefactos de QA, no en la app**. Cualquier cambio futuro de bytes bloquea el stage y requiere revisión de procedencia.
+- Los vídeos MP4 experimentales siguen representando el GLB geométrico v3.2, no este cuerpo CC0; hace falta retargeting antes de comparar calidad final.

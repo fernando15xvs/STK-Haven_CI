@@ -23,6 +23,8 @@ class LicenseTest(unittest.TestCase):
         registry=json.loads(stage.REGISTRY.read_text(encoding="utf8"))
         self.assertEqual(registry["chosen_source"],stage.SELECTED)
         chosen=stage.selected()
+        self.assertEqual(chosen["sha256"],
+            "7135e03b6259e970458deff3e0458610914d7c35164cae12611101361e4a5749")
         self.assertEqual(chosen["license"],"CC0-1.0")
         self.assertTrue(chosen["commercial_allowed"])
         self.assertTrue(chosen["redistribution_allowed"])
@@ -41,7 +43,10 @@ class LicenseTest(unittest.TestCase):
     def test_network_download_is_never_used_during_unit_tests(self):
         import tempfile
         with tempfile.TemporaryDirectory() as tmp:
-            record=stage.stage(fake_glb(),Path(tmp))
+            # Fake GLB must not match the pinned real 53-bone model SHA.
+            fixture_license=dict(stage.selected())
+            fixture_license["sha256"]=None
+            record=stage.stage(fake_glb(),Path(tmp),fixture_license)
             self.assertFalse(record["approved"])
             self.assertFalse(record["enabled"])
             self.assertFalse(record["movementRetargeted"])
