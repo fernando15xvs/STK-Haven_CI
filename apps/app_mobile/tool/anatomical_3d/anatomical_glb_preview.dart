@@ -9,10 +9,13 @@ import 'anatomical_glb_staging.dart';
 class AnatomicalGlbPreview extends StatefulWidget {
   const AnatomicalGlbPreview({
     super.key,required this.scene,this.progress,this.dimension=360,
+    this.highlightRegions=const <String>{},
   });
   final GlbSkinnedScene scene;
   final double? progress;
   final double dimension;
+  /// Exercise-specific muscles for offline preview. No production routing.
+  final Set<String> highlightRegions;
   static GlbSkinnedScene decode(Uint8List bytes) => GlbSkinnedScene.decode(bytes);
   @override
   State<AnatomicalGlbPreview> createState()=>_AnatomicalGlbPreviewState();
@@ -57,7 +60,8 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
   Widget build(BuildContext context){
     final palette=AppColors.of(context);
     final dark=Theme.of(context).brightness==Brightness.dark;
-    final materials=AnatomicalGlbStaging.themeMaterials(context);
+    final materials=AnatomicalGlbStaging.themeMasterRegions(context,
+        highlightedRegions:widget.highlightRegions);
     return Column(mainAxisSize:MainAxisSize.min,children:[
       Semantics(
         label:widget.scene.id+
@@ -80,7 +84,9 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                 final still=widget.progress!=null||
                     MediaQuery.disableAnimationsOf(context)||!_playing;
                 final depthSlices=still?6:1;
-                final key=[tick,depthSlices,_orbit,palette.primary.toARGB32(),
+                final regions=widget.highlightRegions.toList()..sort();
+                final key=[tick,depthSlices,_orbit,regions.join(','),
+                  palette.primary.toARGB32(),
                   palette.surface.toARGB32(),widget.dimension,dark,
                   widget.scene.id].join(':');
                 if(_cached==null||_cacheKey!=key){
