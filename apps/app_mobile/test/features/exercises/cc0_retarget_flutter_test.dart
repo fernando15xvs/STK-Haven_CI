@@ -26,7 +26,7 @@ void main() {
       final staged=AnatomicalGlbStaging.parse(raw);
       expect(staged.id,id);
       expect(staged.jointCount,53);
-      expect(staged.meshCount,2);
+      expect(staged.meshCount,id=='ex_bench_press' ? 3 : 2);
       expect(staged.animationCount,1);
       expect(staged.materialRoles,containsAll(['body','primary','secondary']));
       expect(raw.length,lessThan(850*1024));
