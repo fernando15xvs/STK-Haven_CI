@@ -73,7 +73,7 @@ def add_scapular_controls(glb):
         clav_local=tuple(glb.nodes[clav].get("translation",(0,0,0)))
         sign=1 if side=="l" else -1
         # Inside scapular plane: posterior and lateral to the upper thorax.
-        pivot_local=(sign*.105,.235,.047)
+        pivot_local=(sign*.095,.210,-.105)
         control=len(glb.nodes)
         glb.nodes.append({"name":"stk_scapula_control_"+side,
                           "translation":list(pivot_local),
