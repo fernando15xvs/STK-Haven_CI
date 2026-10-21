@@ -116,12 +116,18 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Build unapproved anatomical v2 candidates
+        working-directory: apps/app_mobile
+        run: python3 tool/build_anatomical_v2.py --output build/anatomical_v2
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
       - name: Test visual pilot geometry and reproducibility
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool -p 'test_visual_pilots.py'
+      - name: Test anatomical v2 candidate generation
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool -p 'test_anatomical_v2.py'
       - name: Build visual pilot review viewer
         working-directory: apps/app_mobile
         run: python3 tool/build_visual_pilots.py --output build/visual_pilots
@@ -132,6 +138,7 @@ jobs:
           path: |
             apps/app_mobile/build/visual_pilots/
             apps/app_mobile/build/visual_pilots_flutter/
+            apps/app_mobile/build/anatomical_v2/
           retention-days: 14
           if-no-files-found: error
       - name: Unit tests for offline Lottie reviewer

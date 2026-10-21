@@ -83,6 +83,11 @@ class _VisualPilotPreviewState extends State<VisualPilotPreview>
                 fit: BoxFit.contain,
                 frameRate: FrameRate.composition,
                 delegates: LottieDelegates(values: [
+                  ValueDelegate.color(const ['**', 'color_targetPrimary'],
+                      value: palette.primary),
+                  ValueDelegate.color(const ['**', 'color_targetSecondary'],
+                      value: Color.alphaBlend(
+                          Colors.white.withValues(alpha: .35), palette.primary)),
                   ValueDelegate.color(const ['**', 'color_kit'],
                       value: palette.primary),
                   ValueDelegate.color(const ['**', 'color_kitShade'],

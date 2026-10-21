@@ -64,3 +64,7 @@ Solo `apps/app_mobile`, documentos y QA; **no modificar `apps/app_web`**, IDs,
 historial de entrenamientos ni datos en Supabase. Fuente principal privada
 `fernando15xvs/STK-Haven`; espejo `fernando15xvs/STK-Haven_CI` solo para CI,
 en rama `feat/mobile-lottie-batch1-drafts-20261018` y PR público #43.
+
+## Actualización de implementación experimental
+
+Se añadió `tool/build_anatomical_v2.py` para generar 3 **candidatos anatómicos vectoriales 2.5D** con músculos primarios/secundarios separados, cuerpo gris y delegados dinámicos Flutter. La salida reproducible vive en `build/anatomical_v2`, no entra al bundle y se publica como artefacto de CI para revisión. **Importante:** esta experimentación no alcanza el acabado 3D realista de la imagen aprobada; no confundir ingeniería funcional con aprobación artística. Los 229 borradores siguen sin habilitar y siguen pendientes QA visual, biomecánico y físico.
