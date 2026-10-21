@@ -17,6 +17,11 @@ class V3 {
   V3 get unit=>length<1e-9?const V3(0,1,0):this*(1/length);
   V3 mix(V3 b,double t)=>this*(1-t)+b*t;
   bool get finite=>x.isFinite&&y.isFinite&&z.isFinite;
+  @override
+  bool operator ==(Object other)=>other is V3&&
+      x==other.x&&y==other.y&&z==other.z;
+  @override
+  int get hashCode=>Object.hash(x,y,z);
 }
 enum Exercise3d {
   bench('ex_bench_press','Press de banca'),
