@@ -36,7 +36,8 @@ void main() {
               child: VisualPilotPreview(
                 composition: compositions[id]!,
                 exerciseName: id,
-                progress: .5,
+                // The raised/initial pose keeps the chest/back out of plate occlusion.
+                progress: 0,
               ),
             )),
           ));
