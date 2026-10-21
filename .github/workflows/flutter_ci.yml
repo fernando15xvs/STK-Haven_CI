@@ -158,6 +158,9 @@ jobs:
       - name: Test 53-bone CC0 retargeting, provenance and skin weights
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_retarget_cc0.py'
+      - name: Audit bench support and three pose constraints at 81 samples
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_cc0_posture.py'
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
