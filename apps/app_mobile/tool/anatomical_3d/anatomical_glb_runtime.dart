@@ -276,7 +276,7 @@ class GlbSkinnedScene {
       }
       instances.add(_Instance(ni,primitives,node.skin!=null));
     }
-    if(vertices>12500||triangles>25000||instances.isEmpty) {
+    if(vertices>30000||triangles>25000||instances.isEmpty) {
       throw const FormatException('GLB vertex budget exceeded');
     }
     return GlbSkinnedScene._(staging.id,raw.length,parsedNodes,parents,inverse,

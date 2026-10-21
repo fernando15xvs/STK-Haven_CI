@@ -37,7 +37,7 @@ void main() {
     for(final id in ids){
       final scene=scenes[id]!;
       expect(scene.vertexCount,greaterThan(3000));
-      expect(scene.vertexCount,lessThan(12500));
+      expect(scene.vertexCount,lessThan(30000));
       expect(scene.triangleCount,greaterThan(8000));
       expect(scene.triangleCount,lessThan(25000));
       final a=scene.frame(0,const Size(320,320),const {});
