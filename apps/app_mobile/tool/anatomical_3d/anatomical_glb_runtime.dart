@@ -144,7 +144,8 @@ class GlbSkinnedScene {
       final a=accessors[i],count=a['count'] as int;
       final type=a['type'] as String;
       final expected={1:'SCALAR',3:'VEC3',4:'VEC4',16:'MAT4'}[dim];
-      if(type!=expected||count<1||count>25000||a.containsKey('sparse')) {
+      if(type!=expected||count<1||
+          count>(integer&&dim==1?75000:25000)||a.containsKey('sparse')) {
         throw const FormatException('Unsupported glTF accessor');
       }
       final component=a['componentType'] as int;
