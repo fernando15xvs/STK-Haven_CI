@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+from functools import lru_cache
 import struct
 from pathlib import Path
 
@@ -264,39 +265,140 @@ def materials():
        for key,rgba in colors.items()]
 
 
-def quat_sequence(name,t,exercise):
-    q=phase(t/4)
-    if name=='pelvis':
-        return qx(-PI/2 if exercise==IDS[0] else .94 + .03*q if exercise==IDS[1] else .18*q)
-    if name.startswith('upper_arm_'):
-        sign=-1 if name.endswith('L') else 1
-        return qz(sign*(.75-.12*q) if exercise==IDS[0] else
-                  sign*(.16+.39*q) if exercise==IDS[1] else sign*1.02)
-    if name.startswith('forearm_'):
-        sign=-1 if name.endswith('L') else 1
-        return qz(sign*(.10+.93*q) if exercise==IDS[0] else
-                  sign*(.18+.94*q) if exercise==IDS[1] else sign*(-.25))
-    if name.startswith('thigh_'):
-        return qx(1.15 if exercise==IDS[0] else .12 if exercise==IDS[1] else -.84*q)
-    if name.startswith('shin_'):
-        return qx(-.73 if exercise==IDS[0] else .04 if exercise==IDS[1] else 1.45*q)
-    if name.startswith('foot_'):
-        return qx(0. if exercise==IDS[0] else -.09 if exercise==IDS[1] else -.62*q)
-    return (0,0,0,1)
-
-
-def bar_translation(exercise,t):
-    q=phase(t/4)
-    if exercise==IDS[0]:return (0,1.50-.33*q,-.43+.06*q)
-    if exercise==IDS[1]:return (0,.63+.42*q,.54-.09*q)
-    return (0,1.60-.42*q,-.19-.11*q)
-
+# Constraints for the three internal GLB candidates. Numerical fit != biomechanics.
+def _sub(a,b):return tuple(a[i]-b[i] for i in range(3))
+def _add(a,b):return tuple(a[i]+b[i] for i in range(3))
+def _mul(a,s):return tuple(v*s for v in a)
+def _dot(a,b):return sum(x*y for x,y in zip(a,b))
+def _cross(a,b):return (a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0])
+def _unit(a):
+    mag=math.sqrt(_dot(a,a))
+    if mag<1e-9:raise ValueError('Zero IK direction')
+    return _mul(a,1/mag)
+def _qmul(a,b):
+    x,y,z,w=a; X,Y,Z,W=b
+    return (w*X+x*W+y*Z-z*Y,w*Y-x*Z+y*W+z*X,
+            w*Z+x*Y-y*X+z*W,w*W-x*X-y*Y-z*Z)
+def _qinv(q):return (-q[0],-q[1],-q[2],q[3])
+def _qrot(q,v):
+    cross1=_cross(q[:3],v)
+    t=_mul(cross1,2)
+    return _add(v,_add(_mul(t,q[3]),_cross(q[:3],t)))
+def _qalign(a,b):
+    a=_unit(a);b=_unit(b)
+    q=(*_cross(a,b),1+_dot(a,b))
+    if q[3]<1e-8:
+        pole=(1,0,0) if abs(a[0])<.8 else (0,1,0)
+        return (*_unit(_cross(a,pole)),0)
+    length=math.sqrt(sum(v*v for v in q))
+    return tuple(v/length for v in q)
+def _root_quaternion(exercise,t):
+    phase_value=phase(t/4)
+    if exercise==IDS[0]:return qx(-PI/2)
+    if exercise==IDS[1]:return qx(1.06)
+    return qx(.17*phase_value)
 
 def root_translation(exercise,t):
     q=phase(t/4)
     if exercise==IDS[0]:return (0,.94,0)
-    if exercise==IDS[1]:return (0,1.00,0)
-    return (0,1.00-.42*q,-.18*q)
+    if exercise==IDS[1]:return (0,.965,0)
+    return (0,.97-.40*q,-.15*q)
+
+def bar_translation(exercise,t):
+    q=phase(t/4)
+    if exercise==IDS[0]:return (0,1.34-.30*q,-.40+.03*q)
+    if exercise==IDS[1]:return (0,.71+.34*q,.64-.13*q)
+    # Rack the bar above/behind the shoulder line, following the torso.
+    origin=root_translation(exercise,t)
+    angle=.17*q
+    return (0,origin[1]+.51*math.cos(angle)+.07,
+               origin[2]+.51*math.sin(angle)-.13)
+
+def _leg_ik(exercise,t,side):
+    root=_root_quaternion(exercise,t)
+    hip=_add(root_translation(exercise,t),
+        _qrot(root,_sub(BIND['thigh_'+side],BIND['pelvis'])))
+    sign=-1 if side=='L' else 1
+    foot_z=(.205 if exercise==IDS[0] else .12 if exercise==IDS[1] else .08)
+    target=(sign*.18,.11,foot_z)
+    first=_sub(BIND['shin_'+side],BIND['thigh_'+side])
+    second=_sub(BIND['foot_'+side],BIND['shin_'+side])
+    l1=math.hypot(first[1],first[2]);l2=math.hypot(second[1],second[2])
+    delta=_sub(target,hip);dist=math.hypot(delta[1],delta[2])
+    if not abs(l1-l2)<dist<l1+l2:
+        raise ValueError(f'Unreachable {exercise} leg at {t}: {dist:.4f}')
+    uy,uz=delta[1]/dist,delta[2]/dist
+    along=(l1*l1-l2*l2+dist*dist)/(2*dist)
+    offset=math.sqrt(max(0,l1*l1-along*along))
+    # Knee pole in front of hip (+Z), rather than below/behind the foot.
+    knee=(hip[0],hip[1]+uy*along+uz*offset,
+          hip[2]+uz*along-uy*offset)
+    upper_angle=(math.atan2(knee[2]-hip[2],knee[1]-hip[1])-
+                 math.atan2(first[2],first[1]))
+    lower_angle=(math.atan2(target[2]-knee[2],target[1]-knee[1])-
+                 math.atan2(second[2],second[1]))
+    root_angle=(-PI/2 if exercise==IDS[0] else 1.06 if exercise==IDS[1]
+                else .17*phase(t/4))
+    return (qx(upper_angle-root_angle),qx(lower_angle-upper_angle),
+            qx(-lower_angle))
+
+def _arm_ik(exercise,t,side):
+    root=_root_quaternion(exercise,t)
+    shoulder=_add(root_translation(exercise,t),
+        _qrot(root,_sub(BIND['upper_arm_'+side],BIND['pelvis'])))
+    sign=-1 if side=='L' else 1
+    bar=bar_translation(exercise,t)
+    grip=(sign*(.65 if exercise==IDS[2] else .60),bar[1],bar[2])
+    upper=_sub(BIND['forearm_'+side],BIND['upper_arm_'+side])
+    lower=_sub(BIND['hand_'+side],BIND['forearm_'+side])
+    l1=math.sqrt(_dot(upper,upper));l2=math.sqrt(_dot(lower,lower))
+    displacement=_sub(grip,shoulder)
+    d=math.sqrt(_dot(displacement,displacement))
+    if not abs(l1-l2)<d<l1+l2:
+        raise ValueError(f'Unreachable {exercise} hand at {t}: {d:.4f}')
+    axis=_unit(displacement)
+    along=(l1*l1-l2*l2+d*d)/(2*d)
+    height=math.sqrt(max(0,l1*l1-along*along))
+    pole=(sign*.35,-.18,
+          .55 if exercise==IDS[0] else -.65 if exercise==IDS[1] else -.45)
+    projected=_sub(pole,_mul(axis,_dot(pole,axis)))
+    elbow=_add(shoulder,_add(_mul(axis,along),_mul(_unit(projected),height)))
+    q_upper=_qalign(upper,_qrot(_qinv(root),_sub(elbow,shoulder)))
+    q_fore=_qalign(lower,_qrot(_qinv(q_upper),
+                              _qrot(_qinv(root),_sub(grip,elbow))))
+    return q_upper,q_fore
+
+@lru_cache(maxsize=512)
+def _solved_kinematics(exercise,t):
+    out={'pelvis':_root_quaternion(exercise,t)}
+    for side in SIDES:
+        th,sh,foot=_leg_ik(exercise,t,side)
+        out[f'thigh_{side}']=th
+        out[f'shin_{side}']=sh
+        out[f'foot_{side}']=foot
+        arm,forearm=_arm_ik(exercise,t,side)
+        out[f'upper_arm_{side}']=arm
+        out[f'forearm_{side}']=forearm
+    return out
+
+def quat_sequence(name,t,exercise):
+    return _solved_kinematics(exercise,t).get(name,(0,0,0,1))
+
+def sample_world_joints(exercise,t):
+    """Ground-truth forward kinematics of the exported armature at keyframes."""
+    world={}; rotations={}
+    for name,parent,absolute in BONES:
+        local=quat_sequence(name,t,exercise)
+        if parent is None:
+            xyz=root_translation(exercise,t)
+            orientation=local
+        else:
+            origin=BIND[parent]
+            xyz=_add(world[parent],_qrot(rotations[parent],_sub(absolute,origin)))
+            orientation=_qmul(rotations[parent],local)
+        world[name]=xyz
+        rotations[name]=orientation
+    return world
 
 
 def make_glb(exercise):
