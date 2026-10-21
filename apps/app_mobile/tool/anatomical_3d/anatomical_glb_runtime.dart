@@ -329,6 +329,14 @@ class GlbSkinnedScene {
         if(mat<0||mat>=materials.length)throw const FormatException('Material');
         final name=materials[mat]['name'] as String;
         if(!name.startsWith('STK_'))throw const FormatException('Material namespace');
+        // The master has 11 independent semantic region groups; expose
+        // distinct Flutter theme keys without altering the CC0 source mesh.
+        final region=master ? ((p['extras'] as Map)['stkMuscleRegion'] as String?) : null;
+        if(master && (region==null||region.isEmpty)) {
+          throw const FormatException('Master region label absent');
+        }
+        final displayMaterial=master && region!='body'
+            ? 'STK_REGION_$region' : name;
         // Multiple anatomical regions reference one shared POSITION accessor.
         // Re-counting it per region incorrectly rejects otherwise small GLBs.
         if(countedStreams.add((ni,attrs['POSITION'] as int))){
@@ -344,7 +352,7 @@ class GlbSkinnedScene {
           throw const FormatException('Incomplete master corrective morphs');
         }
         primitives.add(_Primitive(pos,normals,jointRows,weightRows,
-            indices,name,skinned,morphs:morphs));
+            indices,displayMaterial,skinned,morphs:morphs));
       }
       instances.add(_Instance(ni,primitives,node.skin!=null));
     }
@@ -472,7 +480,10 @@ class GlbSkinnedScene {
           projected=(positions:positions,shades:shades,depth:meanDepth);
           poseCache[key]=projected;
         }
-        final base=theme[prim.material]??_fallback(prim.material,dark);
+        final base=theme[prim.material] ??
+            (prim.material.startsWith('STK_REGION_')
+             ? (dark?const Color(0xFFE5E9EE):const Color(0xFFBBC3CD))
+             : _fallback(prim.material,dark));
         final colors=projected.shades
             .map((s)=>Color.lerp(Colors.black,base,s)!)
             .toList(growable:false);
