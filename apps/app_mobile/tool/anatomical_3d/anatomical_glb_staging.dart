@@ -23,6 +23,14 @@ class AnatomicalGlbStaging {
     'ex_barbell_row',
     'ex_squat',
   };
+  /// Exact region IDs emitted by the CC0 master surface; not inferred anatomy.
+  static const masterRegionNames = <String>{
+    'pectoralis_major', 'anterior_deltoid', 'posterior_deltoid',
+    'triceps_brachii', 'latissimus_dorsi', 'rhomboids',
+    'middle_trapezius', 'quadriceps_femoris', 'gluteus_maximus',
+    'hamstrings', 'adductor_magnus',
+  };
+
   static const maxByteLength = 850 * 1024;
 
   final String id;
@@ -114,5 +122,28 @@ class AnatomicalGlbStaging {
       'STK_BODY': dark ? const Color(0xFFC5CBD3) : const Color(0xFF9099A4),
       'STK_MUSCLE': dark ? const Color(0xFFE5E9EE) : const Color(0xFFBBC3CD),
     };
+  }
+
+  /// Only the chosen muscles use the user's actual accent (8 light/dark
+  /// theme combinations per mode). Does not mutate the CC0 mesh or the GLB.
+  /// Unknown labels are ignored rather than becoming arbitrary material IDs.
+  static Map<String, Color> themeMasterRegions(BuildContext context, {
+    Set<String> highlightedRegions = const <String>{},
+  }) {
+    final palette = AppColors.of(context);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final result = themeMaterials(context);
+    final rest = dark ? const Color(0xFFB7C2CE) : const Color(0xFF86929E);
+    final selectedBase = dark
+        ? const Color(0xFFE5E9EE) : const Color(0xFFBBC3CD);
+    for (final name in masterRegionNames) {
+      result['STK_REGION_$name'] = highlightedRegions.contains(name)
+          ? Color.alphaBlend(
+              palette.primary.withValues(alpha: dark ? .74 : .67),
+              selectedBase,
+            )
+          : rest;
+    }
+    return result;
   }
 }
