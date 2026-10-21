@@ -68,6 +68,27 @@ void main() {
     }
   });
 
+  test('Static six-layer depth ordering keeps complete mesh coverage', () {
+    for (final scene in scenes.values) {
+      final fast=scene.frame(2,const Size(320,320),const {});
+      final refined=scene.frame(2,const Size(320,320),const {},
+          depthSlices:6);
+      expect(fast.finite,true);
+      expect(refined.finite,true);
+      expect(refined.parts.length,greaterThanOrEqualTo(fast.parts.length));
+      final originalIndices=fast.parts.fold<int>(
+          0,(sum,part)=>sum+part.indices.length);
+      final refinedIndices=refined.parts.fold<int>(
+          0,(sum,part)=>sum+part.indices.length);
+      expect(refinedIndices,originalIndices);
+      expect(refinedIndices,scene.triangleCount*3);
+      for(var i=1;i<refined.parts.length;i++) {
+        expect(refined.parts[i-1].depth,
+            greaterThanOrEqualTo(refined.parts[i].depth));
+      }
+    }
+  });
+
   testWidgets('V6 renders real GLB previews in light and dark themes',
       (tester) async {
     for (final pattern in ['unilateral_reach_left', 'squat_articulation']) {
@@ -77,7 +98,7 @@ void main() {
         final frame = scenes[pattern]!.frame(
           2, const Size(320, 320),
           {'STK_REGION_pectoralis_major': const Color(0xFF2962FF)},
-          dark: dark,
+          dark: dark, depthSlices: 6,
         );
         await tester.pumpWidget(MaterialApp(
           home: Scaffold(
