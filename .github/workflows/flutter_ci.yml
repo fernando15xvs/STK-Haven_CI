@@ -131,9 +131,33 @@ jobs:
       - name: Test GLB grip, stance and motion contacts
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_kinematic_contact.py'
+      - name: Audit CC0 model staging rules without network
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_cc0_humanoid.py'
+      - name: Test H264 encoder from synthetic fixtures
+        working-directory: apps/app_mobile
+        run: |
+          command -v ffmpeg
+          command -v ffprobe
+          python3 -m unittest discover -s tool/anatomical_3d -p 'test_video_comparison.py'
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
+      - name: Render 192 GLB video frames using Flutter QA
+        working-directory: apps/app_mobile
+        run: flutter test --dart-define=STK_CAPTURE_VIDEO_PILOTS=true test/features/exercises/anatomical_video_capture_test.dart
+      - name: Encode three offline MP4 review candidates
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/encode_video_comparison.py
+          --frames build/video_comparison/frames
+          --glb build/anatomical_3d_glb
+          --output build/video_comparison/mp4
+      - name: Try CC0 rigged base download for model-only QA
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/stage_cc0_humanoid.py
+          --download --optional --output build/cc0_model_stage
       - name: Test visual pilot geometry and reproducibility
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool -p 'test_visual_pilots.py'
@@ -154,6 +178,8 @@ jobs:
             apps/app_mobile/build/rigged_anatomy_flutter/
             apps/app_mobile/build/anatomical_3d_glb/
             apps/app_mobile/build/anatomical_glb_flutter/
+            apps/app_mobile/build/video_comparison/mp4/
+            apps/app_mobile/build/cc0_model_stage/
           retention-days: 14
           if-no-files-found: error
       - name: Unit tests for offline Lottie reviewer
