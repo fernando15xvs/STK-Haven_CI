@@ -147,6 +147,7 @@ jobs:
             apps/app_mobile/build/anatomical_v2/
             apps/app_mobile/build/rigged_anatomy_flutter/
             apps/app_mobile/build/anatomical_3d_glb/
+            apps/app_mobile/build/anatomical_glb_flutter/
           retention-days: 14
           if-no-files-found: error
       - name: Unit tests for offline Lottie reviewer
