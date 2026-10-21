@@ -21,7 +21,7 @@ class VideoComparisonTest(unittest.TestCase):
                 target.mkdir(parents=True)
                 subprocess.run(["ffmpeg","-loglevel","error","-y",
                     "-f","lavfi","-i","color=c=blue:s=320x320:r=16:d=4",
-                    "-frames:v","64",str(target/"frame_%03d.png")],check=True)
+                    "-frames:v","64","-start_number","0",str(target/"frame_%03d.png")],check=True)
                 (glbs/(exercise+".glb")).write_bytes(b"glTF"*100)
             report=exporter.encode(frames,directory/"videos",glbs)
             self.assertEqual(report["catalogCount"],229)
