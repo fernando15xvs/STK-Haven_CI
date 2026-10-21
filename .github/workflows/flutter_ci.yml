@@ -119,6 +119,12 @@ jobs:
       - name: Build unapproved anatomical v2 candidates
         working-directory: apps/app_mobile
         run: python3 tool/build_anatomical_v2.py --output build/anatomical_v2
+      - name: Generate skinned GLB v3 candidates (unapproved)
+        working-directory: apps/app_mobile
+        run: python3 tool/anatomical_3d/build_anatomical_glb.py --output build/anatomical_3d_glb
+      - name: Test glTF 2.0 rig, skinning and animation
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_anatomical_glb.py'
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
@@ -140,6 +146,7 @@ jobs:
             apps/app_mobile/build/visual_pilots_flutter/
             apps/app_mobile/build/anatomical_v2/
             apps/app_mobile/build/rigged_anatomy_flutter/
+            apps/app_mobile/build/anatomical_3d_glb/
           retention-days: 14
           if-no-files-found: error
       - name: Unit tests for offline Lottie reviewer
