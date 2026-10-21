@@ -41,6 +41,7 @@ void main() {
             )),
           ));
           await tester.pump();
+          await tester.runAsync(() async {
           final boundary = tester.renderObject<RenderRepaintBoundary>(
               find.byKey(const Key('pilot_canvas')));
           final image = await boundary.toImage(pixelRatio: 1);
@@ -65,6 +66,7 @@ void main() {
               brightness.name + '-' + accent.name + '.png')
               .writeAsBytesSync(png.buffer.asUint8List());
           image.dispose();
+          });
           expect(tester.takeException(), isNull);
         }
       }
