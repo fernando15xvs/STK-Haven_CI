@@ -75,13 +75,18 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                 // 24 Hz model update; Flutter composites the cached triangles.
                 final p=widget.progress??_clock.value;
                 final tick=(p*widget.scene.durationSeconds*24).floor();
-                final key=[tick,_orbit,palette.primary.toARGB32(),
+                // Extra depth ordering only for paused/static QA frames.
+                // Animated preview keeps the original low-draw-call path.
+                final still=widget.progress!=null||
+                    MediaQuery.disableAnimationsOf(context)||!_playing;
+                final depthSlices=still?6:1;
+                final key=[tick,depthSlices,_orbit,palette.primary.toARGB32(),
                   palette.surface.toARGB32(),widget.dimension,dark,
                   widget.scene.id].join(':');
                 if(_cached==null||_cacheKey!=key){
                   _cached=widget.scene.frame(tick/24,
                     Size(widget.dimension,widget.dimension),materials,
-                    dark:dark,orbit:_orbit);
+                    dark:dark,orbit:_orbit,depthSlices:depthSlices);
                   _cacheKey=key;
                 }
                 return CustomPaint(painter:GlbSkinnedPainter(
