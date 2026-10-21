@@ -134,6 +134,10 @@ jobs:
       - name: Audit CC0 model staging rules without network
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_cc0_humanoid.py'
+      - name: Install FFmpeg for experimental offline video QA
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
       - name: Test H264 encoder from synthetic fixtures
         working-directory: apps/app_mobile
         run: |
