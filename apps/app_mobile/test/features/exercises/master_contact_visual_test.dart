@@ -57,7 +57,7 @@ void main() {
           child:RepaintBoundary(key:const Key('contact_preview'),
              child:SizedBox(width:320,height:320,
                 child:CustomPaint(painter:GlbSkinnedPainter(
-                  frame,background)))))));
+                  frame,background))))))));
         await tester.pump();
         await tester.runAsync(() async {
           final bound=tester.renderObject<RenderRepaintBoundary>(
