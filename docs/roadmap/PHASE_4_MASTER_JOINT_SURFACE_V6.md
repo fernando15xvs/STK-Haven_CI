@@ -28,3 +28,10 @@ Genera `stk_master_v6_joint_surface_review.glb` y `joint_surface_v6_report.json`
 - `AnatomicalGlbPreview` habilita **6 capas solo al pausar, mostrar un fotograma fijo o con movimiento reducido**. Mientras el personaje está animándose usa `depthSlices:1`: evita multiplicar llamadas de dibujo por cada actualización. El modo visual es experimental y no es un renderizador GPU glTF ni un búfer Z por píxel.
 - Validaciones nuevas en `test/features/exercises/glb_depth_slicer_test.dart`: profundidad, orden de capas, cobertura de índices, buffers compartidos y entradas inválidas. La prueba v6 sobre GLB real comprueba los siete patrones y produce capturas claras/oscuras con seis capas.
 - El catálogo de **229 ejercicios continúa sin medios anatómicos aprobados**. La versión 6.1 no añade `pubspec.yaml`, no crea pantallas de producción, no modifica `apps/app_web`, Supabase, Coach Pro ni historial. Antes de activar un motor definitivo deben medirse FPS, memoria, batería, oclusión real y calidad muscular en dispositivos físicos.
+
+## v6.2 — resaltado muscular basado en los ocho acentos
+
+- `AnatomicalGlbStaging.masterRegionNames` restringe los materiales a **11 regiones documentadas** del CC0 master, sin inventar mapas anatómicos ni aceptar nombres desconocidos.
+- `AnatomicalGlbStaging.themeMasterRegions()` asigna colores atenuados a las regiones no seleccionadas y el acento temático a las seleccionadas, conservando `STK_BODY` y la paleta Flutter. `AnatomicalGlbPreview(highlightRegions: ...)` es un control **opt-in** de revisión offline; el modo animado conserva el camino rápido.
+- La prueba `master_muscle_palette_test.dart` recorre las **8 variantes AppAccent × 2 brillos** y verifica 11 nombres, identidad del color de selección, separación visual entre regiones y rechazo de etiquetas desconocidas. Esto no significa que 229 movimientos tengan clasificación de músculo activo o modelo final.
+- En el CI del repositorio público se ejecutan automáticamente estos tests Flutter por el paso ya existente `flutter test`. La anotación anatómica experta, render GPU, evaluación térmica y rendimiento en teléfonos físicos siguen pendientes.
