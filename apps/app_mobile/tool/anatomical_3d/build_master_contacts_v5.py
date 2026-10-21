@@ -7,7 +7,7 @@ explicit wrist targets in upper-body patterns. A separate moving bar proxy
 illustrates bilateral overhead grip; not bundled with the body in production.
 No biomechanical certification, motor control model, collisions or release.
 """
-import argparse,copy,hashlib,json,math
+import argparse,copy,hashlib,json,math,struct
 from pathlib import Path
 from retarget_cc0_glb import (GLB,add,sub,mul,dot,norm,unit,
                               qrot,qconj,qmul,qbetween,qnorm,qx)
@@ -18,6 +18,14 @@ PATTERNS=('overhead_reach_bilateral','unilateral_reach_left',
     'unilateral_reach_right','bilateral_elbow_curl','hip_hinge',
     'squat_articulation','split_lunge_left')
 SOURCE_SHA='7135e03b6259e970458deff3e0458610914d7c35164cae12611101361e4a5749'
+
+# glTF v2 surface target order, no clinical angle or growth inference.
+CORRECTIVES=(('scapular_elevation','stk_scapula_control',6.,.85),
+             ('elbow_flexion','lowerarm',90.,.95),
+             ('hip_flexion','thigh',60.,.80),
+             ('knee_flexion','calf',90.,.85))
+MORPH_NAMES=tuple(kind+'_'+side for kind,_,_,_ in CORRECTIVES
+                  for side in SIDES)
 
 def smooth(t):
     t=max(0.,min(1.,t))
@@ -45,6 +53,13 @@ def rotate_local_x(glb,local,name,angle):
     joint=glb.by_name[name]
     origin,rotation=rest(glb,joint)
     local[joint]=(origin,qnorm(qmul(rotation,qx(angle))))
+
+def rotate_local_z(glb,local,name,angle):
+    """Preview clavicle-parent pivot; not a separate anatomical scapula skin."""
+    joint=glb.by_name[name]
+    origin,rotation=rest(glb,joint)
+    turn=(0.,0.,math.sin(angle*.5),math.cos(angle*.5))
+    local[joint]=(origin,qnorm(qmul(rotation,turn)))
 
 def two_link(glb,local,upper,middle,tip,target,pole):
     """Analytic 3D IK, minimal quaternion swing, exact fingertip/foot target."""
@@ -120,6 +135,14 @@ def pose(glb,kind,seconds):
         active=SIDES
         if kind=='unilateral_reach_left':active=('l',)
         if kind=='unilateral_reach_right':active=('r',)
+        # Activate independent shoulder-girdle controls BEFORE solving IK.
+        # A restrained 6-degree preview excursion keeps wrists on targets.
+        # Not a biomechanically certified scapulohumeral rhythm.
+        if kind=='overhead_reach_bilateral' or kind.startswith('unilateral_reach'):
+            for side in active:
+                signed=1. if side=='l' else -1.
+                rotate_local_z(glb,local,'stk_scapula_control_'+side,
+                               signed*math.radians(6.)*p)
         for side in active:
             _,hand=targets(glb,kind,side,p)
             root=glb.restpos[glb.by_name['upperarm_'+side]]
@@ -131,6 +154,36 @@ def pose(glb,kind,seconds):
             contact['targets']['hand_'+side]=hand
     return local,contact
 
+def corrective_weights(glb,current,neutral):
+    """Drive eight surface correctives from actual solved-joint excursions."""
+    result={}
+    for kind,bone,full_degrees,amplitude in CORRECTIVES:
+        for side in SIDES:
+            name=kind+'_'+side
+            node=glb.by_name[bone+'_'+side]
+            fallback=rest(glb,node)
+            before=qnorm(neutral.get(node,fallback)[1])
+            after=qnorm(current.get(node,fallback)[1])
+            alignment=min(1.,abs(dot(before,after)))
+            degrees=math.degrees(2*math.acos(alignment))
+            result[name]=round(amplitude*smooth(min(1.,degrees/full_degrees)),7)
+    return result
+
+def rewrite_weight_accessor(glb,index,values):
+    """Overwrite v4's exact 41x8 SCALAR buffer instead of duplicating bytes."""
+    accessor=glb.doc['accessors'][index]
+    view=glb.doc['bufferViews'][accessor['bufferView']]
+    count=len(values)
+    if (accessor.get('type')!='SCALAR' or accessor.get('componentType')!=5126 or
+        accessor.get('count')!=count or view.get('buffer')!=0 or
+        'byteStride' in view or view['byteLength']<count*4 or
+        not all(math.isfinite(v) and 0.<=v<=1. for v in values)):
+        raise ValueError('Invalid glTF corrective buffer')
+    offset=view.get('byteOffset',0)+accessor.get('byteOffset',0)
+    if offset<0 or offset+4*count>len(glb.binary):
+        raise ValueError('Corrective buffer out of bounds')
+    struct.pack_into('<'+str(count)+'f',glb.binary,offset,*values)
+
 def pack_motion(raw):
     glb=GLB(raw,expected_sha=None)
     doc=glb.doc;extra=doc.get('extras',{})
@@ -141,6 +194,9 @@ def pack_motion(raw):
         raise ValueError('Must derive from audited, disabled master v4')
     clips={clip['extras']['pattern']:clip for clip in doc['animations']}
     if set(clips)!=set(PATTERNS):raise ValueError('Unexpected movement templates')
+    if tuple(doc['meshes'][0]['extras']['targetNames'])!=MORPH_NAMES:
+        raise ValueError('Unexpected glTF corrective target order')
+    rewritten=set()
     times=[i/10 for i in range(FRAMES)]
     time_accessor=glb.append(times,1,'SCALAR')
     newclips=[];reports={}
@@ -171,6 +227,15 @@ def pack_motion(raw):
         source=clips[kind]
         weights=next(c for c in source['channels'] if c['target']['path']=='weights')
         old=source['samplers'][weights['sampler']]
+        output_index=old['output']
+        if output_index in rewritten:
+            raise ValueError('Shared corrective sampler would corrupt another clip')
+        rewritten.add(output_index)
+        zero=samples[0][0]
+        weight_samples=[corrective_weights(glb,local,zero)
+                        for local,_ in samples]
+        rewrite_weight_accessor(glb,output_index,
+            [frame[name] for frame in weight_samples for name in MORPH_NAMES])
         si=len(samplers)
         samplers.append(copy.deepcopy(old))
         channels.append({'sampler':si,'target':copy.deepcopy(weights['target'])})
@@ -178,6 +243,12 @@ def pack_motion(raw):
                 'footPlants':kind in ('hip_hinge','squat_articulation','split_lunge_left'),
                 'equipmentGrip':kind=='overhead_reach_bilateral',
                 'contactIsAnalyticAtKeys':True,
+                'correctivesLinkedToSolvedIK':True,
+                'correctiveDriverVersion':2,
+                'morphPeakWeights':{name:max(frame[name] for frame in weight_samples)
+                                    for name in MORPH_NAMES},
+                'scapularGirdlePreviewDegrees':6 if 'reach' in kind else 0,
+                'scapularGeometryIndependentlySculpted':False,
                 'certifiedBiomechanics':False,'approved':False,'enabled':False}
         for _,sample in samples:
             for group in ('feet','hands'):
@@ -192,10 +263,12 @@ def pack_motion(raw):
                biomechanicsReviewed=False,approved=False)})
     doc['animations']=newclips
     doc['extras']=dict(extra,masterContactVersion=5,
+        masterCorrectiveDriverVersion=2,
         approved=False,enabled=False,contactReviewOnly=True,
         status='geometric_end_effector_constraints_not_coach_certified')
     profile={'version':5,'sourceV4Sha256':hashlib.sha256(raw).hexdigest(),
        'jointCount':55,'clipCount':7,'morphTargetCount':8,
+       'correctiveDriverVersion':2,'correctivesRecomputedFromIK':True,
        'catalogCount':229,'approved':False,'enabled':False,
        'patterns':reports,
        'limits':['Contacts exact at sampled keys, interpolate and verify between',
