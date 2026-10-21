@@ -406,7 +406,7 @@ class GlbSkinnedScene {
   /// Geometry and skin data are cached, only joints and projections vary.
   GlbDrawFrame frame(double elapsed,Size size,Map<String,Color> theme,
       {bool dark=true,double orbit=0,bool applyMorphs=true,
-       int depthSlices=1}) {
+       int depthSlices=1,bool poseNormals=false}) {
     if(depthSlices<1||depthSlices>8) {
       throw RangeError.range(depthSlices,1,8,'depthSlices');
     }
@@ -445,6 +445,9 @@ class GlbSkinnedScene {
         var projected=poseCache[key];
         if(projected==null) {
           final positions=<Offset>[],shades=<double>[],depths=<double>[];
+          // The animated fast path does not allocate these geometry streams.
+          final surface=poseNormals?<V3>[]:null;
+          final sourceNormals=poseNormals?<V3>[]:null;
           var meanDepth=0.0;
           for(var index=0;index<prim.positions.length;index++) {
             var position=prim.positions[index];
@@ -472,6 +475,8 @@ class GlbSkinnedScene {
               position=world[instance.node].point(position);
               normal=world[instance.node].direction(normal).unit;
             }
+            surface?.add(position);
+            sourceNormals?.add(normal);
             final ray=position-eye;
             final depth=math.max(.6,ray.dot(forward));
             meanDepth+=depth;
@@ -481,6 +486,19 @@ class GlbSkinnedScene {
                size.height*.55-ray.dot(up)*scale));
             shades.add((.51+.45*math.max(0.0,normal.dot(light)))
                .clamp(.39,1.0));
+          }
+          if(surface!=null && sourceNormals!=null) {
+            // All semantic CC0 muscle regions share one skinned stream.
+            // Aggregate their faces before calculating any surface normals.
+            final faceGroups=instance.primitives
+                .where((p)=>identical(p.positions,prim.positions))
+                .map((p)=>p.indices);
+            final recomputed=GlbPoseNormalBuilder.build(
+                surface,faceGroups,sourceNormals);
+            for(var i=0;i<recomputed.length;i++) {
+              shades[i]=(.51+.45*math.max(0.0,recomputed[i].dot(light)))
+                  .clamp(.39,1.0);
+            }
           }
           meanDepth/=positions.length;
           projected=(positions:positions,shades:shades,depths:depths,
@@ -534,6 +552,53 @@ class GlbDrawPart {
 /// Review-only coarse triangle-depth ordering; no extra skinning or vertices.
 /// Uses the same cached positions/colors for each grouped index list.
 /// DO NOT enable on animated playback until profiled on physical devices.
+/// Review-only area-weighted normals of the *posed*, morphed world mesh.
+/// Seam-adjacent semantic muscle regions share all triangle face normals.
+/// No per-pixel lighting and no GPU shader; keep OFF during animation.
+class GlbPoseNormalBuilder {
+  static List<V3> build(List<V3> positions,
+      Iterable<List<int>> faceGroups,List<V3> fallback) {
+    if(positions.length!=fallback.length||positions.isEmpty||
+       positions.length>30000) {
+      throw const FormatException('Invalid posed normal stream');
+    }
+    final accumulated=List<V3>.filled(
+        positions.length,const V3(0,0,0));
+    var faces=0;
+    for(final group in faceGroups) {
+      if(group.length%3!=0) {
+        throw const FormatException('Invalid posed triangle list');
+      }
+      for(var at=0;at<group.length;at+=3) {
+        final a=group[at],b=group[at+1],c=group[at+2];
+        if(a<0||b<0||c<0||a>=positions.length||
+           b>=positions.length||c>=positions.length) {
+          throw const FormatException('Posed triangle index out of bounds');
+        }
+        faces++;
+        if(faces>25000)throw const FormatException('Too many posed faces');
+        final face=(positions[b]-positions[a])
+            .cross(positions[c]-positions[a]);
+        if(!face.finite) {
+          throw const FormatException('Non-finite posed triangle');
+        }
+        if(face.length<1e-12)continue;
+        accumulated[a]=accumulated[a]+face;
+        accumulated[b]=accumulated[b]+face;
+        accumulated[c]=accumulated[c]+face;
+      }
+    }
+    return List<V3>.generate(positions.length,(index) {
+      final n=accumulated[index],prior=fallback[index];
+      if(!prior.finite)throw const FormatException('Invalid fallback normal');
+      if(n.length<1e-10)return prior.unit;
+      final normal=n.unit;
+      // Resolve imported triangle winding against the skinned base normal.
+      return normal.dot(prior)<0 ? normal*(-1) : normal;
+    },growable:false);
+  }
+}
+
 class GlbDepthSlicer {
   static List<GlbDrawPart> split(List<GlbDrawPart> parts,int layers) {
     if(layers<1||layers>8)throw RangeError.range(layers,1,8,'layers');
