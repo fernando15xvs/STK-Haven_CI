@@ -20,13 +20,13 @@ def command(args):
         raise RuntimeError(f"Command failed ({run.returncode}): {' '.join(args)}\n{run.stderr[-1800:]}")
     return run.stdout
 
-def encode(input_dir, output_dir, glb_dir, crf=24):
+def encode(input_dir, output_dir, glb_dir, crf=24, suffix='', source_label='existing_v3_2_procedural_glb_not_cc0_human'):
     source = pathlib.Path(input_dir)
     out = pathlib.Path(output_dir)
     glbs = pathlib.Path(glb_dir)
     out.mkdir(parents=True,exist_ok=True)
     report = {"status":"experimental_comparison_only",
-              "source":"existing_v3_2_procedural_glb_not_cc0_human",
+              "source":source_label,
               "fps":FPS,"seconds":4,"dimensions":[320,320],
               "theme":"dark_blue_baked_in_video",
               "colorVariation":"GLB runtime supports dynamic accents; MP4 does NOT",
@@ -38,7 +38,7 @@ def encode(input_dir, output_dir, glb_dir, crf=24):
         if len(frames)!=FRAME_COUNT or [p.name for p in frames] != [
             f"frame_{n:03d}.png" for n in range(FRAME_COUNT)]:
             raise ValueError(f"Missing/duplicated real Flutter frames for {exercise}")
-        original=glbs/(exercise+".glb")
+        original=glbs/(exercise+suffix+".glb")
         if not original.is_file():
             raise FileNotFoundError(original)
         mp4=out/(exercise+".mp4")
@@ -75,5 +75,7 @@ if __name__=="__main__":
     p.add_argument("--frames",type=pathlib.Path,required=True)
     p.add_argument("--glb",type=pathlib.Path,required=True)
     p.add_argument("--output",type=pathlib.Path,required=True)
+    p.add_argument("--glb-suffix",default="",help="e.g. _mobile_lod for CC0 optimized assets")
+    p.add_argument("--source-label",default="existing_v3_2_procedural_glb_not_cc0_human")
     args=p.parse_args()
-    print(json.dumps(encode(args.frames,args.output,args.glb),indent=2))
+    print(json.dumps(encode(args.frames,args.output,args.glb,suffix=args.glb_suffix,source_label=args.source_label),indent=2))

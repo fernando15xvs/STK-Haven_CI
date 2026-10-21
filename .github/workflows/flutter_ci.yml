@@ -171,6 +171,18 @@ jobs:
           --frames build/video_comparison/frames
           --glb build/anatomical_3d_glb
           --output build/video_comparison/mp4
+      - name: Capture three REAL CC0 53-bone LOD cycles for MP4 comparison
+        working-directory: apps/app_mobile
+        run: flutter test --dart-define=STK_CAPTURE_CC0_VIDEO=true test/features/exercises/cc0_video_capture_test.dart
+      - name: Encode the same 53-bone CC0 GLB animation as H264 MP4
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/encode_video_comparison.py
+          --frames build/cc0_video_comparison/frames
+          --glb build/cc0_53bone_retarget
+          --glb-suffix _mobile_lod
+          --source-label real_53_joint_CC0_humanoid_mobile_lod
+          --output build/cc0_video_comparison/mp4
       - name: Test visual pilot geometry and reproducibility
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool -p 'test_visual_pilots.py'
@@ -195,6 +207,7 @@ jobs:
             apps/app_mobile/build/cc0_model_stage/
             apps/app_mobile/build/cc0_53bone_retarget/
             apps/app_mobile/build/cc0_flutter_review/
+            apps/app_mobile/build/cc0_video_comparison/mp4/
           retention-days: 14
           if-no-files-found: error
       - name: Unit tests for offline Lottie reviewer
