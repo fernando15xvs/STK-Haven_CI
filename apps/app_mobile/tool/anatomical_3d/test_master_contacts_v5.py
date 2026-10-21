@@ -54,13 +54,52 @@ class ContactTests(unittest.TestCase):
         self.assertEqual(self.report['catalogCount'],229)
         self.assertFalse(b['extras']['approved'])
         self.assertFalse(b['extras']['enabled'])
+        self.assertEqual(b['extras']['masterCorrectiveDriverVersion'],2)
+        self.assertTrue(self.report['correctivesRecomputedFromIK'])
         for old,new in zip(a['animations'],b['animations']):
             x=next(c for c in old['channels'] if c['target']['path']=='weights')
             y=next(c for c in new['channels'] if c['target']['path']=='weights')
             sx=old['samplers'][x['sampler']]
             sy=new['samplers'][y['sampler']]
-            self.assertEqual(self.original.accessor(sx['output']),
-                             self.rig.accessor(sy['output']))
+            self.assertEqual(sx['output'],sy['output'])
+            self.assertEqual(len(self.rig.accessor(sy['output'])),41*8)
+            self.assertEqual(self.original.accessor(sx['input']),
+                             self.rig.accessor(sy['input']))
+
+    def test_corrective_drivers_follow_ik_and_unilateral_independence(self):
+        self.assertEqual(len(solver.MORPH_NAMES),8)
+        for clip in self.rig.doc['animations']:
+            kind=clip['extras']['pattern']
+            channel=next(c for c in clip['channels']
+                         if c['target']['path']=='weights')
+            sampler=clip['samplers'][channel['sampler']]
+            stored=[v[0] for v in self.rig.accessor(sampler['output'])]
+            self.assertEqual(len(stored),41*8)
+            self.assertTrue(all(0<=v<=1 and math.isfinite(v) for v in stored))
+            samples=[solver.pose(self.original,kind,k/10)[0]
+                     for k in range(41)]
+            zero=samples[0]
+            predicted=[solver.corrective_weights(self.original,local,zero)
+                       for local in samples]
+            for frame in range(41):
+                for i,name in enumerate(solver.MORPH_NAMES):
+                    self.assertAlmostEqual(stored[frame*8+i],
+                        predicted[frame][name],delta=.000002,
+                        msg=(kind,frame,name))
+                if frame in (0,40):
+                    self.assertTrue(all(abs(stored[frame*8+i])<1e-6
+                                        for i in range(8)),kind)
+            peaks=self.report['patterns'][kind]['morphPeakWeights']
+            for name in solver.MORPH_NAMES:
+                self.assertAlmostEqual(peaks[name],
+                    max(f[name] for f in predicted),delta=.000001)
+            if kind.startswith('unilateral_reach_'):
+                other='r' if kind.endswith('left') else 'l'
+                self.assertTrue(all(peaks[name]<.000001 for name
+                                    in solver.MORPH_NAMES if name.endswith('_'+other)))
+            self.assertTrue(any(value>.01 for value in peaks.values()),kind)
+            self.assertTrue(self.report['patterns'][kind][
+                'correctivesLinkedToSolvedIK'])
 
     def test_seven_patterns_contacts_across_121_frames(self):
         for clip in self.rig.doc['animations']:
@@ -105,6 +144,38 @@ class ContactTests(unittest.TestCase):
             self.assertTrue(all(abs(h[0]-position[0])<.52 for h in hands))
         self.assertTrue(all(not data['certifiedBiomechanics']
                      for data in self.report['patterns'].values()))
+
+    def test_independent_scapular_girdle_pivots_drive_reach_clips(self):
+        # Validate exported GLB channels, not only pre-export solver poses.
+        for clip in self.rig.doc['animations']:
+            kind=clip['extras']['pattern']
+            channels={self.rig.nodes[c['target']['node']]['name']:c
+                      for c in clip['channels']
+                      if c['target']['path']=='rotation'}
+            expected=(set(('l','r')) if kind=='overhead_reach_bilateral'
+                      else ({'l'} if kind=='unilateral_reach_left' else
+                            {'r'} if kind=='unilateral_reach_right' else set()))
+            for side in ('l','r'):
+                name='stk_scapula_control_'+side
+                if side not in expected:
+                    self.assertNotIn(name,channels,(kind,side))
+                    continue
+                self.assertIn(name,channels,(kind,side))
+                sampler=clip['samplers'][channels[name]['sampler']]
+                values=self.rig.accessor(sampler['output'])
+                self.assertEqual(len(values),41)
+                self.assertAlmostEqual(values[0][2],0.,delta=.00001)
+                self.assertAlmostEqual(values[-1][2],0.,delta=.00001)
+                peak=values[20]
+                direction=1 if side=='l' else -1
+                self.assertGreater(peak[2]*direction,.04)
+                degrees=2*math.degrees(math.acos(min(1,abs(peak[3]))))
+                self.assertAlmostEqual(degrees,6.,delta=.15)
+                self.assertLessEqual(degrees,20.)
+            self.assertEqual(self.report['patterns'][kind][
+                'scapularGirdlePreviewDegrees'],6 if expected else 0)
+            self.assertFalse(self.report['patterns'][kind][
+                'scapularGeometryIndependentlySculpted'])
 
     def test_rotation_excursions_remain_inside_preview_angular_gates(self):
         # These are deliberately mechanical excursion ceilings, NOT
