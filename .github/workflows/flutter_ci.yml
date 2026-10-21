@@ -183,6 +183,15 @@ jobs:
       - name: Test master 55-joint motion library and glTF morph animation
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_motion_v3.py'
+      - name: Generate optimized 55-joint mobile master with seven clips and eight morphs
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_mobile_v4.py
+          --input build/cc0_master_motion_v3/stk_master_55_motion_lab_v3_unapproved.glb
+          --output build/cc0_master_mobile_v4
+      - name: Check v4 mobile LOD size and exact glTF motion/morph preservation
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_mobile_v4.py'
       - name: Retarget three CC0 exercises to full GLB and mobile LOD
         working-directory: apps/app_mobile
         run: >-
@@ -252,6 +261,8 @@ jobs:
             apps/app_mobile/build/cc0_master_character/
             apps/app_mobile/build/cc0_master_surface_v2/
             apps/app_mobile/build/cc0_master_motion_v3/
+            apps/app_mobile/build/cc0_master_mobile_v4/
+            apps/app_mobile/build/cc0_master_v4_flutter_qa/
             apps/app_mobile/build/cc0_flutter_review/
             apps/app_mobile/build/cc0_video_comparison/mp4/
           retention-days: 14
