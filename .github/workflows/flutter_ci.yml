@@ -201,6 +201,15 @@ jobs:
       - name: Validate 121 in-between frames with wrist and foot targets
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_contacts_v5.py'
+      - name: Generate unapproved v6 master joint-surface continuity GLB
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_surface_v6.py
+          --input build/cc0_master_contacts_v5/stk_master_v5_contact_review.glb
+          --output build/cc0_master_surface_v6
+      - name: Validate CC0 v6 morph junction continuity and unchanged skin
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_surface_v6.py'
       - name: Retarget three CC0 exercises to full GLB and mobile LOD
         working-directory: apps/app_mobile
         run: >-
@@ -272,6 +281,8 @@ jobs:
             apps/app_mobile/build/cc0_master_motion_v3/
             apps/app_mobile/build/cc0_master_mobile_v4/
             apps/app_mobile/build/cc0_master_contacts_v5/
+            apps/app_mobile/build/cc0_master_surface_v6/
+            apps/app_mobile/build/cc0_master_v6_flutter_qa/
             apps/app_mobile/build/cc0_master_v5_flutter_qa/
             apps/app_mobile/build/cc0_master_v4_flutter_qa/
             apps/app_mobile/build/cc0_flutter_review/
