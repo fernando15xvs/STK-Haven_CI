@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:core/core/theme/appearance_theme.dart';
+import 'package:core/core/theme/app_palette.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -50,6 +51,30 @@ void main() {
         (s,p)=>s+p.positions.fold(0,(a,v)=>a+v.dx+v.dy));
       expect((signature(a)-signature(b)).abs(),greaterThan(2));
       expect(signature(a),closeTo(signature(loop),.5));
+    }
+  });
+  test('53-bone anatomy atlas supports 8 accents and both themes',(){
+    for(final id in ids){
+      final scene=scenes[id]!;
+      // These are UNIQUE skinned vertex streams, not per-material copies.
+      expect(scene.vertexCount,greaterThan(3000));
+      expect(scene.vertexCount,lessThan(10000));
+      for(final brightness in Brightness.values){
+        for(final accent in AppAccent.values){
+          final primary=AppColors.accentSeed(accent);
+          final frame=scene.frame(1.5,const Size(320,320),
+            {'STK_PRIMARY':primary,'STK_SECONDARY':
+              Color.lerp(primary,Colors.white,.28)!},
+            dark:brightness==Brightness.dark);
+          expect(frame.finite,isTrue);
+          final highlighted=frame.parts.where((p)=>p.material=='STK_PRIMARY');
+          expect(highlighted,isNotEmpty);
+          expect(frame.parts.every((p)=>p.indices.length%3==0),isTrue);
+          expect(frame.parts.every((p)=>p.positions.length==p.colors.length),
+            isTrue);
+          expect(frame.parts.length,greaterThanOrEqualTo(5));
+        }
+      }
     }
   });
   for(final id in ids){

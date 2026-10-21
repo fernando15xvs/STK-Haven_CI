@@ -172,9 +172,13 @@ class GlbSkinnedScene {
             view.getFloat32(at,Endian.little);
       },growable:false),growable:false);
     }
-    List<V3> coords(int accessor) => access(accessor,3,integer:false)
-      .map((r)=>V3(r[0].toDouble(),r[1].toDouble(),r[2].toDouble()))
-      .toList(growable:false);
+    // Anatomical region primitives reuse the SAME skinned vertex buffers.
+    // Decode and validate those buffers only once per source accessor.
+    final coordinates=<int,List<V3>>{};
+    List<V3> coords(int accessor) => coordinates.putIfAbsent(accessor, () =>
+      access(accessor,3,integer:false)
+       .map((r)=>V3(r[0].toDouble(),r[1].toDouble(),r[2].toDouble()))
+       .toList(growable:false));
     final parsedNodes=nodes.map((n) {
       if(n.containsKey('matrix')||n.containsKey('scale')) {
         throw const FormatException('Unsupported animated node matrix/scale');
@@ -230,6 +234,7 @@ class GlbSkinnedScene {
     }
     if(duration<=0||duration>10)throw const FormatException('Animation duration');
     final instances=<_Instance>[];
+    final countedStreams=<(int,int)>{};
     var vertices=0,triangles=0;
     for(var ni=0;ni<parsedNodes.length;ni++) {
       final node=parsedNodes[ni];
@@ -271,7 +276,12 @@ class GlbSkinnedScene {
         if(mat<0||mat>=materials.length)throw const FormatException('Material');
         final name=materials[mat]['name'] as String;
         if(!name.startsWith('STK_'))throw const FormatException('Material namespace');
-        vertices+=pos.length;triangles+=indices.length~/3;
+        // Multiple anatomical regions reference one shared POSITION accessor.
+        // Re-counting it per region incorrectly rejects otherwise small GLBs.
+        if(countedStreams.add((ni,attrs['POSITION'] as int))){
+          vertices+=pos.length;
+        }
+        triangles+=indices.length~/3;
         primitives.add(_Primitive(pos,normals,jointRows,weightRows,indices,name,skinned));
       }
       instances.add(_Instance(ni,primitives,node.skin!=null));
@@ -336,41 +346,57 @@ class GlbSkinnedScene {
     final up=right.cross(forward).unit;
     final light=const V3(.55,1,.65).unit;
     final drawn=<GlbDrawPart>[];
+    // Region primitives share the same source positions/joints/normals.
+    // CPU skinning and 3D projection are cached once per node/vertex stream.
+    // Each region still receives its independently themed vertex colors.
+    final poseCache=<(int,List<V3>),({
+      List<Offset> positions,
+      List<double> shades,
+      double depth,
+    })>{};
     for(final instance in _instances) {
       for(final prim in instance.primitives) {
-        final points=<Offset>[],colors=<Color>[];
-        var meanDepth=0.0;
-        final base=theme[prim.material] ??
-          _fallback(prim.material, dark);
-        for(var index=0;index<prim.positions.length;index++) {
-          var position=prim.positions[index];
-          var normal=prim.normals[index];
-          if(prim.skinned) {
-            var p=const V3(0,0,0),n=const V3(0,0,0);
-            for(var k=0;k<4;k++) {
-              final weight=prim.weights[index][k];
-              if(weight<.00001)continue;
-              final joint=joints[prim.joints[index][k]];
-              p=p+joint.point(position)*weight;
-              n=n+joint.direction(normal)*weight;
+        final key=(instance.node,prim.positions);
+        var projected=poseCache[key];
+        if(projected==null) {
+          final positions=<Offset>[],shades=<double>[];
+          var meanDepth=0.0;
+          for(var index=0;index<prim.positions.length;index++) {
+            var position=prim.positions[index];
+            var normal=prim.normals[index];
+            if(prim.skinned) {
+              var p=const V3(0,0,0),n=const V3(0,0,0);
+              for(var k=0;k<4;k++) {
+                final weight=prim.weights[index][k];
+                if(weight<.00001)continue;
+                final joint=joints[prim.joints[index][k]];
+                p=p+joint.point(position)*weight;
+                n=n+joint.direction(normal)*weight;
+              }
+              position=p;normal=n.unit;
+            } else {
+              position=world[instance.node].point(position);
+              normal=world[instance.node].direction(normal).unit;
             }
-            position=p;normal=n.unit;
-          } else {
-            position=world[instance.node].point(position);
-            normal=world[instance.node].direction(normal).unit;
+            final ray=position-eye;
+            final depth=math.max(.6,ray.dot(forward));
+            meanDepth+=depth;
+            final scale=size.shortestSide*1.58/depth;
+            positions.add(Offset(size.width*.5+ray.dot(right)*scale,
+               size.height*.55-ray.dot(up)*scale));
+            shades.add((.51+.45*math.max(0.0,normal.dot(light)))
+               .clamp(.39,1.0));
           }
-          final ray=position-eye;
-          final depth=math.max(.6,ray.dot(forward));
-          meanDepth+=depth;
-          final scale=size.shortestSide*1.58/depth;
-          points.add(Offset(size.width*.5+ray.dot(right)*scale,
-             size.height*.55-ray.dot(up)*scale));
-          final brightness=(.51+.45*math.max(0.0,normal.dot(light)))
-              .clamp(.39,1.0);
-          colors.add(Color.lerp(Colors.black,base,brightness)!);
+          meanDepth/=positions.length;
+          projected=(positions:positions,shades:shades,depth:meanDepth);
+          poseCache[key]=projected;
         }
-        meanDepth/=points.length;
-        drawn.add(GlbDrawPart(points,colors,prim.indices,meanDepth,prim.material));
+        final base=theme[prim.material]??_fallback(prim.material,dark);
+        final colors=projected.shades
+            .map((s)=>Color.lerp(Colors.black,base,s)!)
+            .toList(growable:false);
+        drawn.add(GlbDrawPart(projected.positions,colors,
+           prim.indices,projected.depth,prim.material));
       }
     }
     // Object-depth ordering has no per-pixel Z buffer: occlusion QA required.
