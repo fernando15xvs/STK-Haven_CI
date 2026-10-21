@@ -92,7 +92,8 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                 if(_cached==null||_cacheKey!=key){
                   _cached=widget.scene.frame(tick/24,
                     Size(widget.dimension,widget.dimension),materials,
-                    dark:dark,orbit:_orbit,depthSlices:depthSlices);
+                    dark:dark,orbit:_orbit,depthSlices:depthSlices,
+                    poseNormals:still);
                   _cacheKey=key;
                 }
                 return CustomPaint(painter:GlbSkinnedPainter(
