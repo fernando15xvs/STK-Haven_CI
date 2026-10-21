@@ -42,6 +42,29 @@ void main() {
     }
   });
 
+  test('V5 shape keys deform the solved-IK geometry',() {
+    for(final name in _patterns) {
+      final scene=scenes[name]!;
+      final a=scene.frame(2,const Size(320,320),const {},
+          applyMorphs:true);
+      final b=scene.frame(2,const Size(320,320),const {},
+          applyMorphs:false);
+      expect(a.finite,true);
+      expect(b.finite,true);
+      expect(a.parts.length,b.parts.length);
+      var delta=0.0;
+      for(var part=0;part<a.parts.length;part++) {
+        final positions=a.parts[part].positions;
+        final reference=b.parts[part].positions;
+        expect(positions.length,reference.length);
+        for(var i=0;i<positions.length;i++) {
+          delta+=(positions[i]-reference[i]).distance;
+        }
+      }
+      expect(delta,greaterThan(.01),reason:name);
+    }
+  });
+
   testWidgets('Render seven updated CC0 v5 poses in light and dark',
       (tester) async {
     for(final name in _patterns) {
