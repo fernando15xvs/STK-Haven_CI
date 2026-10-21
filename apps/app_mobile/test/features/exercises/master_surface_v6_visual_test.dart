@@ -89,6 +89,31 @@ void main() {
     }
   });
 
+  test('Posed normals illuminate deforming CC0 muscles only when opted in',
+      () {
+    for(final pattern in [
+      'overhead_reach_bilateral','squat_articulation'
+    ]) {
+      final scene=scenes[pattern]!;
+      final fast=scene.frame(2,const Size(320,320),const {});
+      final slow=scene.frame(2,const Size(320,320),const {},
+          poseNormals:true);
+      expect(fast.finite,true);
+      expect(slow.finite,true);
+      expect(slow.parts.length,fast.parts.length);
+      var changed=0;
+      for(var i=0;i<fast.parts.length;i++) {
+        final a=fast.parts[i],b=slow.parts[i];
+        expect(a.indices,b.indices);
+        expect(a.positions,b.positions);
+        for(var j=0;j<a.colors.length;j++) {
+          if(a.colors[j]!=b.colors[j])changed++;
+        }
+      }
+      expect(changed,greaterThan(100),reason:pattern);
+    }
+  });
+
   testWidgets('V6 renders real GLB previews in light and dark themes',
       (tester) async {
     for (final pattern in ['unilateral_reach_left', 'squat_articulation']) {
@@ -98,7 +123,7 @@ void main() {
         final frame = scenes[pattern]!.frame(
           2, const Size(320, 320),
           {'STK_REGION_pectoralis_major': const Color(0xFF2962FF)},
-          dark: dark, depthSlices: 6,
+          dark: dark, depthSlices: 6, poseNormals: true,
         );
         await tester.pumpWidget(MaterialApp(
           home: Scaffold(
