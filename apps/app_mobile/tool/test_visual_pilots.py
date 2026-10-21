@@ -83,4 +83,30 @@ class VisualPilotsTest(unittest.TestCase):
                 for joint in ('knee','elbow','wrist','shoulder'):
                     self.assertLess(math.dist(b.lerp(left[joint],right[joint],t),actual[joint]),5,id)
 
+
+    def test_approved_anatomical_direction_is_not_approved_media(self):
+        """A style decision must never implicitly publish Lottie drafts."""
+        spec=json.loads((b.OUT/'anatomical_style_v2.json').read_text())
+        old=json.loads((b.OUT/'manifest.json').read_text())
+        self.assertEqual(spec['version'],2)
+        self.assertTrue(spec['approved_reference'])
+        self.assertFalse(spec['approved_assets'])
+        self.assertFalse(spec['enabled_assets'])
+        self.assertEqual(spec['character']['basePalette'],'neutral_grayscale')
+        self.assertEqual(spec['character']['targetHighlight'],'theme_primary')
+        self.assertEqual(set(spec['appearance']['modes']),{'light','dark'})
+        self.assertEqual(len(spec['appearance']['accents']),8)
+        self.assertTrue(spec['appearance']['highlightOnlyAnatomicalMuscles'])
+        self.assertEqual([p['id'] for p in spec['pilots']],list(b.IDS))
+        for pilot in spec['pilots']:
+            self.assertTrue(pilot['primaryMuscles'])
+            self.assertTrue(pilot['secondaryMuscles'])
+            self.assertTrue(pilot['motionRequirements'])
+        self.assertTrue(spec['rules']['noGifs'])
+        self.assertTrue(spec['rules']['noAppWeb'])
+        self.assertTrue(spec['rules']['preserveExerciseIds'])
+        self.assertFalse(old['approved'])
+        self.assertFalse(old['enabled'])
+        self.assertFalse(any(spec['review'].values()))
+
 if __name__=='__main__': unittest.main()
