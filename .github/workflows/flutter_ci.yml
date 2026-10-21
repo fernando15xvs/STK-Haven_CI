@@ -121,10 +121,13 @@ jobs:
         run: python3 tool/build_anatomical_v2.py --output build/anatomical_v2
       - name: Generate skinned GLB v3 candidates (unapproved)
         working-directory: apps/app_mobile
-        run: python3 tool/anatomical_3d/build_anatomical_glb.py --output build/anatomical_3d_glb
+        run: python3 tool/anatomical_3d/build_refined_anatomical_glb.py --output build/anatomical_3d_glb
       - name: Test glTF 2.0 rig, skinning and animation
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_anatomical_glb.py'
+      - name: Test v3.2 anatomical mesh junctions and weighted deformation
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_refined_anatomical_glb.py'
       - name: Test GLB grip, stance and motion contacts
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_kinematic_contact.py'
