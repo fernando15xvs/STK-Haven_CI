@@ -320,9 +320,17 @@ class GlbSkinnedScene {
     final world=_world(elapsed);
     final joints=List<_Matrix>.generate(_jointNodes.length,
        (i)=>world[_jointNodes[i]].times(_inverseBind[i]));
-    final center=id=='ex_bench_press'?const V3(0,1.06,0):const V3(0,1.00,0);
-    final yaw=(id=='ex_barbell_row'?math.pi:0)+.57+orbit;
-    final eye=center+V3(math.sin(yaw)*4.5,2.3,math.cos(yaw)*4.5);
+    // Per-exercise camera composition: lower elevation and closer framing.
+    // Bench is supine along -Z, row uses a back three-quarter viewpoint.
+    final bench=id=='ex_bench_press';
+    final row=id=='ex_barbell_row';
+    final center=bench ? const V3(0,.80,-.22)
+        : row ? const V3(0,.92,.15) : const V3(0,.88,0);
+    final yaw=(row ? math.pi+.68 : bench ? .88 : .43)+orbit;
+    final distance=bench ? 3.65 : row ? 3.75 : 3.9;
+    final height=bench ? 1.50 : row ? 1.55 : 1.72;
+    final eye=center+V3(math.sin(yaw)*distance,height,
+                        math.cos(yaw)*distance);
     final forward=(center-eye).unit;
     final right=forward.cross(const V3(0,1,0)).unit;
     final up=right.cross(forward).unit;

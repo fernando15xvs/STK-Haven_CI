@@ -46,7 +46,7 @@ class CC0RetargetTest(unittest.TestCase):
             self.assertEqual(len(mobile['animations']),1)
             self.assertEqual(len(full['meshes'][0]['primitives']),3)
             self.assertEqual(len(mobile['meshes'][0]['primitives']),3)
-            self.assertEqual(len(mobile['materials']),4)
+            self.assertEqual(len(mobile['materials']),5 if exercise=='ex_bench_press' else 4)
             self.assertLess(len(mobile_bytes),850*1024)
             self.assertGreater(len(full_bytes),4*1024*1024)
             self.assertEqual([m['name'] for m in full['materials']],

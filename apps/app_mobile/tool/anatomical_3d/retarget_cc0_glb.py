@@ -149,9 +149,9 @@ def set_world_rotation(glb,local,name,target_world):
 def body_pose(glb,exercise,t):
     p=motion(t/4.)
     if exercise==EXERCISES[0]:
-        orientation=qx(-1.27);target_hip=(0,.79,0)
+        orientation=qx(-1.50);target_hip=(0,.74,0)
     elif exercise==EXERCISES[1]:
-        orientation=qx(.85);target_hip=(0,.82,0)
+        orientation=qx(1.15);target_hip=(0,.81,-.02)
     else:
         orientation=qx(.08*p);target_hip=(0,.89-.34*p,-.12*p)
     container=glb.by_name['Avery | anatomical body.rig'];pelvis=glb.by_name['pelvis']
@@ -159,9 +159,9 @@ def body_pose(glb,exercise,t):
     translation=sub(target_hip,qrot(orientation,rest))
     loc={container:(translation,orientation)}
     if exercise==EXERCISES[0]:
-        bar=(0,1.22-.27*p,-.46)
+        bar=(0,1.13-.27*p,-.37)
     elif exercise==EXERCISES[1]:
-        bar=(0,.77+.25*p,.48-.12*p)
+        bar=(0,.64+.18*p,.54-.09*p)
     else:
         bar=(0,1.32-.33*p,-.08-.11*p)
     foot_y=.069
@@ -184,7 +184,7 @@ def body_pose(glb,exercise,t):
         upper,lower,hand=('upperarm_'+side,'lowerarm_'+side,'hand_'+side)
         pos,_=glb.world(loc)
         shoulder=pos[glb.by_name[upper]]
-        grip=(sign*(.52 if exercise!=EXERCISES[2] else .51),bar[1],bar[2])
+        grip=(sign*(.50 if exercise!=EXERCISES[2] else .51),bar[1],bar[2])
         elbow=ik_point(shoulder,grip,
                  norm(sub(glb.restpos[glb.by_name[lower]],glb.restpos[glb.by_name[upper]])),
                  norm(sub(glb.restpos[glb.by_name[hand]],glb.restpos[glb.by_name[lower]])),
@@ -193,7 +193,7 @@ def body_pose(glb,exercise,t):
         adjust_bone(glb,loc,lower,hand,grip)
     pos,_=glb.world(loc)
     diagnostics={'gripErrorMeters':max(norm(sub(pos[glb.by_name['hand_'+s]],
-                         ((1 if s=='l' else -1)*(.52 if exercise!=EXERCISES[2] else .51),bar[1],bar[2]))) for s in ('l','r')),
+                         ((1 if s=='l' else -1)*(.50 if exercise!=EXERCISES[2] else .51),bar[1],bar[2]))) for s in ('l','r')),
                  'footErrorMeters':max(norm(sub(pos[glb.by_name['foot_'+s]],
                          (glb.restpos[glb.by_name['foot_'+s]][0],foot_y,
                           (.20 if exercise==EXERCISES[0] else .10 if exercise==EXERCISES[1] else glb.restpos[glb.by_name['foot_'+s]][2])))) for s in ('l','r'))}
@@ -273,6 +273,49 @@ def equipment(glb):
     return ni
 
 
+def add_bench(glb):
+    """Stationary flat bench with cushion and supports; never parented to bar."""
+    positions=[];normals=[];indices=[];parts=[]
+    def box(x0,x1,y0,y1,z0,z1,role):
+        corners=[(x0,y0,z0),(x1,y0,z0),(x1,y1,z0),(x0,y1,z0),
+                 (x0,y0,z1),(x1,y0,z1),(x1,y1,z1),(x0,y1,z1)]
+        faces=[((3,2,6,7),(0,1,0)),((0,4,5,1),(0,-1,0)),
+               ((1,5,6,2),(1,0,0)),((0,3,7,4),(-1,0,0)),
+               ((4,7,6,5),(0,0,1)),((0,1,2,3),(0,0,-1))]
+        start=len(indices)
+        for corners_index,normal in faces:
+            n=len(positions)
+            positions.extend(corners[i] for i in corners_index)
+            normals.extend([normal]*4)
+            indices.extend([n,n+1,n+2,n,n+2,n+3])
+        parts.append((role,start,len(indices)-start))
+    box(-.225,.225,.555,.622,-.89,.40,'cushion')
+    box(-.105,.105,.49,.556,-.78,.29,'frame')
+    for z in (-.63,.25):
+        box(-.13,.13,.07,.50,z-.035,z+.035,'frame')
+        box(-.26,.26,.055,.088,z-.08,z+.08,'frame')
+    materials={'cushion':len(glb.doc['materials']),
+      'frame':next(i for i,v in enumerate(glb.doc['materials'])
+                   if v['name']=='STK_EQUIPMENT')}
+    glb.doc['materials'].append({'name':'STK_CUSHION',
+      'extras':{'stkMuscleRole':'cushion'},'doubleSided':True,
+      'pbrMetallicRoughness':{'baseColorFactor':[.16,.18,.23,1],
+          'metallicFactor':0.,'roughnessFactor':.86}})
+    ap=glb.append(positions,3,'VEC3',target=34962)
+    an=glb.append(normals,3,'VEC3',target=34962)
+    primitives=[]
+    for role,offset,count in parts:
+        ai=glb.append(indices[offset:offset+count],1,'SCALAR',component=5125,target=34963)
+        primitives.append({'attributes':{'POSITION':ap,'NORMAL':an},
+                           'indices':ai,'material':materials[role],'mode':4})
+    mesh=len(glb.doc['meshes'])
+    glb.doc['meshes'].append({'name':'STK_BENCH_STATIC','primitives':primitives})
+    node=len(glb.nodes)
+    glb.nodes.append({'name':'STK_BENCH_STATIONARY','mesh':mesh})
+    glb.doc['scenes'][glb.doc.get('scene',0)]['nodes'].append(node)
+    return node
+
+
 def optimized_lod(glb,voxel_size=.017):
     """Create a separate <850 KiB preview GLB using skin-aware voxel clustering.
 
@@ -340,18 +383,19 @@ def optimized_lod(glb,voxel_size=.017):
            'extras':copy.deepcopy(prim.get('extras',{}))})
     small.doc['meshes'][0]['primitives']=frame_data
     # Carry over the same rigid bar, plates, and animation channels.
-    old_rigid=source['meshes'][1]
-    slim_rigid=[]
-    for prim in old_rigid['primitives']:
-        coord=glb.accessor(prim['attributes']['POSITION'])
-        normal=glb.accessor(prim['attributes']['NORMAL'])
-        indices=[int(v[0]) for v in glb.accessor(prim['indices'])]
-        ap=small.append(coord,3,'VEC3',target=34962)
-        an=small.append(normal,3,'VEC3',target=34962)
-        ai=small.append(indices,1,'SCALAR',component=5123,target=34963)
-        slim_rigid.append({'attributes':{'POSITION':ap,'NORMAL':an},
-                 'indices':ai,'material':prim['material'],'mode':4})
-    small.doc['meshes'][1]['primitives']=slim_rigid
+    # Re-encode ALL unskinned meshes, including barbell and stationary bench.
+    for mesh_idx,old_rigid in enumerate(source['meshes'][1:],start=1):
+        slim_rigid=[]
+        for prim in old_rigid['primitives']:
+            coord=glb.accessor(prim['attributes']['POSITION'])
+            normal=glb.accessor(prim['attributes']['NORMAL'])
+            indices=[int(v[0]) for v in glb.accessor(prim['indices'])]
+            ap=small.append(coord,3,'VEC3',target=34962)
+            an=small.append(normal,3,'VEC3',target=34962)
+            ai=small.append(indices,1,'SCALAR',component=5123,target=34963)
+            slim_rigid.append({'attributes':{'POSITION':ap,'NORMAL':an},
+                       'indices':ai,'material':prim['material'],'mode':4})
+        small.doc['meshes'][mesh_idx]['primitives']=slim_rigid
     old_skin=source['skins'][0]
     ibm=glb.accessor(old_skin['inverseBindMatrices'])
     small.doc['skins'][0]['inverseBindMatrices']=small.append(ibm,16,'MAT4')
@@ -388,6 +432,7 @@ def retarget(data,exercise):
             del node['scale']
     tris=highlight_regions(glb,exercise)
     bar_node=equipment(glb)
+    if exercise==EXERCISES[0]: add_bench(glb)
     times=[i*.1 for i in range(FRAMES)]
     tracks={}
     for frame,t in enumerate(times):
