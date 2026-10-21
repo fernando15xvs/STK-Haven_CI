@@ -161,6 +161,9 @@ jobs:
       - name: Audit bench support and three pose constraints at 81 samples
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_cc0_posture.py'
+      - name: Check actual GLB linear interpolation and planted contacts at 30 FPS
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_cc0_interpolated_motion.py'
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
