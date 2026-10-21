@@ -57,6 +57,10 @@ class MasterCharacterTests(unittest.TestCase):
             clav=self.master.by_name["clavicle_"+side]
             upper=self.master.by_name["upperarm_"+side]
             self.assertEqual(self.master.parents[clav],scap)
+            profile_control=self.profile["rigControls"]["scapula"][side]
+            joint_index=profile_control["jointIndex"]
+            self.assertEqual(self.master.doc["skins"][0]["joints"][joint_index],scap)
+            self.assertEqual(joint_index,53 if side=="l" else 54)
             rest=self.master.restpos[upper]
             loc={scap:(tuple(self.master.nodes[scap]["translation"]),base.qx(.18))}
             displaced=self.master.world(loc)[0][upper]
