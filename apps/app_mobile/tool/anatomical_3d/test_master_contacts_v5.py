@@ -105,4 +105,21 @@ class ContactTests(unittest.TestCase):
             self.assertTrue(all(abs(h[0]-position[0])<.52 for h in hands))
         self.assertTrue(all(not data['certifiedBiomechanics']
                      for data in self.report['patterns'].values()))
+
+    def test_rotation_excursions_remain_inside_preview_angular_gates(self):
+        # These are deliberately mechanical excursion ceilings, NOT
+        # human range-of-motion/clinical limits. A coach must still review.
+        for clip in self.rig.doc['animations']:
+            for channel in clip['channels']:
+                if channel['target']['path']!='rotation':continue
+                node=channel['target']['node']
+                joint_name=self.rig.nodes[node]['name']
+                sample=clip['samplers'][channel['sampler']]
+                before=solver.rest(self.rig,node)[1]
+                samples=self.rig.accessor(sample['output'])
+                for q in samples:
+                    d=abs(sum(x*y for x,y in zip(before,q)))
+                    swing=2*math.degrees(math.acos(min(1,max(0,d))))
+                    limit=100 if joint_name.startswith('upperarm_') else 135
+                    self.assertLess(swing,limit,(clip['name'],joint_name,swing))
 if __name__=='__main__':unittest.main()

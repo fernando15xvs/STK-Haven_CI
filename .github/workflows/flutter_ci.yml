@@ -272,6 +272,7 @@ jobs:
             apps/app_mobile/build/cc0_master_motion_v3/
             apps/app_mobile/build/cc0_master_mobile_v4/
             apps/app_mobile/build/cc0_master_contacts_v5/
+            apps/app_mobile/build/cc0_master_v5_flutter_qa/
             apps/app_mobile/build/cc0_master_v4_flutter_qa/
             apps/app_mobile/build/cc0_flutter_review/
             apps/app_mobile/build/cc0_video_comparison/mp4/
