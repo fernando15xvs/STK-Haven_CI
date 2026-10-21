@@ -377,6 +377,15 @@ def optimized_lod(glb,voxel_size=.017):
 def retarget(data,exercise):
     if exercise not in EXERCISES:raise ValueError('Unknown stable exercise ID')
     glb=GLB(data)
+    # Blender exporter stores tiny float32 scale noise (0.9999998..1.0000001)
+    # on most bones; remove it on the REVIEW derivative, not the licensed input.
+    # Current Flutter TRS runtime only supports rigid unit-scale joints.
+    for node in glb.nodes:
+        scale=node.get('scale')
+        if scale is not None:
+            if len(scale)!=3 or any(abs(float(x)-1.)>.0001 for x in scale):
+                raise ValueError('Non-unit CC0 bone scaling needs another runtime')
+            del node['scale']
     tris=highlight_regions(glb,exercise)
     bar_node=equipment(glb)
     times=[i*.1 for i in range(FRAMES)]
