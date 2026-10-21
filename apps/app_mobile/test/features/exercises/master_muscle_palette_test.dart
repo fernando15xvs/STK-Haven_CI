@@ -16,6 +16,8 @@ void main() {
             AppearanceSettings(accent: accent), brightness);
         late Map<String, Color> materials;
         await tester.pumpWidget(MaterialApp(
+          // Avoid inherited AnimatedTheme colors from the preceding accent.
+          themeAnimationDuration: Duration.zero,
           theme: ThemeData(
             brightness: brightness,
             extensions: [palette],
@@ -30,6 +32,7 @@ void main() {
             return const SizedBox.shrink();
           }),
         ));
+        await tester.pumpAndSettle();
         final keys=materials.keys.where((k)=>k.startsWith('STK_REGION_'));
         expect(keys.length, 11);
         expect(materials.containsKey('STK_REGION_not_a_real_region'), false);
