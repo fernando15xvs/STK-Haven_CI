@@ -201,44 +201,44 @@ def body_pose(glb,exercise,t):
 
 
 def highlight_regions(glb,exercise):
-    """Partition original surface triangles by approximate resting anatomical area."""
-    mesh=glb.doc['meshes'][0];primitive=mesh['primitives'][0]
-    original_material=glb.doc['materials'][0]
-    original_material['name']='STK_BODY'
-    original_material['extras']={'stkMuscleRole':'body'}
-    points=glb.accessor(primitive['attributes']['POSITION'])
-    indices=glb.accessor(primitive['indices']);roles={'body':[],'primary':[],'secondary':[]}
-    for aa,bb,cc in (indices[x:x+3] for x in range(0,len(indices),3)):
-        a,b,c=(int(aa[0]),int(bb[0]),int(cc[0]))
-        x,y,z=(sum(points[j][axis] for j in (a,b,c))/3 for axis in range(3))
-        xx=abs(x)
-        if exercise==EXERCISES[0]:
-            active=.04<xx<.31 and 1.09<y<1.41 and z>.08
-            secondary=.26<xx<.45 and 1.15<y<1.51 and z>.06
-        elif exercise==EXERCISES[1]:
-            active=.09<xx<.38 and .98<y<1.38 and z<.045
-            secondary=xx<.15 and 1.19<y<1.52 and z<.06
-        else:
-            active=.10<xx<.32 and .50<y<.88 and z>.04
-            secondary=.09<xx<.32 and .75<y<1.03 and z<0
-        roles['primary' if active else 'secondary' if secondary else 'body'].extend((a,b,c))
-    original=copy.deepcopy(primitive)
-    # Keep vertex attributes and original rig weights; split only index buffers.
-    mesh['primitives']=[]
+    """Keep the original 53-joint skinned vertices and assign REGION groups.
+
+    Each named region has its own primitive/index buffer, with a primary or
+    secondary material. Region boundaries remain approximate, not certified.
+    """
+    from muscle_region_atlas import classify_mesh,EXERCISE_ROLES
+    mesh=glb.doc['meshes'][0]
+    original=copy.deepcopy(mesh['primitives'][0])
+    glb.doc['materials'][0]['name']='STK_BODY'
+    glb.doc['materials'][0]['extras']={'stkMuscleRole':'body'}
     palette={'body':0}
-    for label,col in [('primary',[.16,.39,1.,1]),('secondary',[.47,.65,1.,1])]:
+    for label,color in [('primary',[.16,.39,1.,1]),
+                        ('secondary',[.47,.65,1.,1])]:
         palette[label]=len(glb.doc['materials'])
         glb.doc['materials'].append({'name':'STK_'+label.upper(),
             'extras':{'stkMuscleRole':label},
-            'pbrMetallicRoughness':{'baseColorFactor':col,'metallicFactor':0,'roughnessFactor':.78},
-            'doubleSided':True})
-    for label,values in roles.items():
-        if not values:raise ValueError('No '+label+' surface triangles')
-        accessor=glb.append(values,1,'SCALAR',component=5125,target=34963)
-        out=copy.deepcopy(original);out['indices']=accessor;out['material']=palette[label]
-        out['extras']={'stkMuscleRole':label,'anatomicalAccuracy':'approximate_bbox_not_professional_segmentation'}
+            'pbrMetallicRoughness':{'baseColorFactor':color,
+                'metallicFactor':0,'roughnessFactor':.78},'doubleSided':True})
+    groups=classify_mesh(glb,exercise)
+    mesh['primitives']=[]
+    total={'body':0,'primary':0,'secondary':0}
+    census={}
+    for (region,role),faces in sorted(groups.items(),
+        key=lambda item:(item[0][1]!='body',item[0][0])):
+        if not faces:continue
+        out=copy.deepcopy(original)
+        out['indices']=glb.append(faces,1,'SCALAR',component=5125,target=34963)
+        out['material']=palette[role]
+        out['extras']={'stkMuscleRegion':region,'stkMuscleRole':role,
+            'anatomicalAccuracy':'joint_weight_normal_approximation_not_reviewed'}
         mesh['primitives'].append(out)
-    return {role:len(values)//3 for role,values in roles.items()}
+        total[role]+=len(faces)//3
+        census[region]={'role':role,'triangles':len(faces)//3,
+                         'expertApproved':False}
+    mesh['extras']={'regionAtlas':'rest_pose_skin_weight_approximation',
+                    'reviewedByAnatomist':False,'regions':census}
+    return total
+
 
 
 def equipment(glb):
@@ -314,6 +314,26 @@ def add_bench(glb):
     glb.nodes.append({'name':'STK_BENCH_STATIONARY','mesh':mesh})
     glb.doc['scenes'][glb.doc.get('scene',0)]['nodes'].append(node)
     return node
+
+
+def curl_grip_fingers(glb):
+    """Pose original finger joints to a partial bar grip (not physics-verified).
+
+    Hand position stays driven by the arm IK; this corrects splayed open
+    fingers from the otherwise-neutral source mesh.
+    """
+    for side in ('l','r'):
+        for digit in ('index','middle','ring','pinky'):
+            for segment,angle in ((1,.73),(2,1.08),(3,1.05)):
+                idx=glb.by_name[f'{digit}_0{segment}_{side}']
+                node=glb.nodes[idx]
+                rest=tuple(node.get('rotation',(0,0,0,1)))
+                node['rotation']=list(qnorm(qmul(rest,qx(angle))))
+        for segment,angle in ((1,.43),(2,.73),(3,.66)):
+            idx=glb.by_name[f'thumb_0{segment}_{side}']
+            node=glb.nodes[idx]
+            rest=tuple(node.get('rotation',(0,0,0,1)))
+            node['rotation']=list(qnorm(qmul(rest,qx(angle))))
 
 
 def optimized_lod(glb,voxel_size=.017):
@@ -432,6 +452,7 @@ def retarget(data,exercise):
             del node['scale']
     tris=highlight_regions(glb,exercise)
     bar_node=equipment(glb)
+    curl_grip_fingers(glb)
     if exercise==EXERCISES[0]: add_bench(glb)
     times=[i*.1 for i in range(FRAMES)]
     tracks={}
