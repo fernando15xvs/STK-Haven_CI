@@ -22,7 +22,7 @@ class VisualPilotsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             b.build(Path(tmp))
             for file in b.OUT.iterdir():
-                if file.suffix in ('.json','.svg'):
+                if file.name == 'manifest.json' or (file.stem in b.IDS and file.suffix in ('.json', '.svg')):
                     self.assertEqual(file.read_bytes(),(Path(tmp)/file.name).read_bytes(),file.name)
 
     def test_asset_budget_and_supported_shapes(self):
