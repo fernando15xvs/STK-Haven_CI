@@ -192,6 +192,15 @@ jobs:
       - name: Check v4 mobile LOD size and exact glTF motion/morph preservation
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_mobile_v4.py'
+      - name: Build contact constrained master with separately animated overhead bar
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_contacts_v5.py
+          --input build/cc0_master_mobile_v4/stk_master_v4_mobile_morph_lod_unapproved.glb
+          --output build/cc0_master_contacts_v5
+      - name: Validate 121 in-between frames with wrist and foot targets
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_contacts_v5.py'
       - name: Retarget three CC0 exercises to full GLB and mobile LOD
         working-directory: apps/app_mobile
         run: >-
@@ -262,6 +271,7 @@ jobs:
             apps/app_mobile/build/cc0_master_surface_v2/
             apps/app_mobile/build/cc0_master_motion_v3/
             apps/app_mobile/build/cc0_master_mobile_v4/
+            apps/app_mobile/build/cc0_master_contacts_v5/
             apps/app_mobile/build/cc0_master_v4_flutter_qa/
             apps/app_mobile/build/cc0_flutter_review/
             apps/app_mobile/build/cc0_video_comparison/mp4/
