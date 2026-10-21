@@ -94,13 +94,15 @@ class _Channel {
 }
 class _Primitive {
   _Primitive(this.positions,this.normals,this.joints,this.weights,
-     this.indices,this.material,this.skinned);
+     this.indices,this.material,this.skinned,{this.morphs=const []});
   final List<V3> positions,normals;
   final List<List<int>> joints;
   final List<List<double>> weights;
   final List<int> indices;
   final String material;
   final bool skinned;
+  /// Eight bind-pose POSITION deltas. Shared among anatomically labelled parts.
+  final List<List<V3>> morphs;
 }
 class _Instance {
   _Instance(this.node,this.primitives,this.skin);
@@ -123,8 +125,28 @@ class GlbSkinnedScene {
   final List<_Channel> _channels;
   final List<_Instance> _instances;
 
-  static GlbSkinnedScene decode(Uint8List raw) {
-    final staging=AnatomicalGlbStaging.parse(raw);
+  static GlbSkinnedScene decode(Uint8List raw) =>
+      _decode(raw,master:false);
+
+  /// Strictly opt-in QA path for the 55-joint CC0 master, not catalog media.
+  static GlbSkinnedScene decodeMaster(Uint8List raw,{required String pattern}) =>
+      _decode(raw,master:true,pattern:pattern);
+
+  static GlbSkinnedScene _decode(Uint8List raw,
+      {required bool master,String? pattern}) {
+    final staging=master?null:AnatomicalGlbStaging.parse(raw);
+    if(master) {
+      if(raw.length<28||raw.length>850*1024) {
+        throw const FormatException('Master mobile LOD outside QA budget');
+      }
+      final h=ByteData.sublistView(raw);
+      if(h.getUint32(0,Endian.little)!=0x46546C67 ||
+          h.getUint32(4,Endian.little)!=2 ||
+          h.getUint32(8,Endian.little)!=raw.length ||
+          h.getUint32(16,Endian.little)!=0x4E4F534A) {
+        throw const FormatException('Invalid master glTF header');
+      }
+    }
     final view=ByteData.sublistView(raw);
     final jsonLength=view.getUint32(12,Endian.little);
     final doc=jsonDecode(utf8.decode(raw.sublist(20,20+jsonLength)))
@@ -135,6 +157,28 @@ class GlbSkinnedScene {
     final nodes=(doc['nodes'] as List).cast<Map<String,dynamic>>();
     final meshDefs=(doc['meshes'] as List).cast<Map<String,dynamic>>();
     final materials=(doc['materials'] as List).cast<Map<String,dynamic>>();
+    if(master) {
+      final extras=doc['extras'];
+      final skins=(doc['skins'] as List);
+      final supported={
+        'overhead_reach_bilateral','unilateral_reach_left',
+        'unilateral_reach_right','bilateral_elbow_curl','hip_hinge',
+        'squat_articulation','split_lunge_left'
+      };
+      if(extras is! Map || extras['masterMobileVersion']!=4 ||
+          extras['masterMotionVersion']!=3 ||
+          extras['sourceSha256']!='7135e03b6259e970458deff3e0458610914d7c35164cae12611101361e4a5749' ||
+          extras['approved']!=false || extras['enabled']!=false ||
+          extras['mobileLod']!=true || !supported.contains(pattern) ||
+          skins.length!=1 || (skins.single['joints'] as List).length!=55 ||
+          meshDefs.length!=1 ||
+          (meshDefs.single['primitives'] as List).length!=12 ||
+          (doc['animations'] as List).length!=7 ||
+          (doc['buffers'] as List).length!=1 ||
+          (doc['buffers'][0] as Map).containsKey('uri')) {
+        throw const FormatException('Unsafe master asset or clip');
+      }
+    }
     if(nodes.length>128||views.length>600||accessors.length>600||
        meshDefs.length>8||raw.length>850*1024) {
       throw const FormatException('GLB complexity budget exceeded');
@@ -206,24 +250,33 @@ class GlbSkinnedScene {
     if(ibm.length!=joints.length)throw const FormatException('Skin matrix count');
     final inverse=ibm.map((m)=>_Matrix(Float64List.fromList(
          m.map((x)=>x.toDouble()).toList()))).toList(growable:false);
-    final clips=(doc['animations'] as List).single as Map<String,dynamic>;
+    final clips=master
+      ? (doc['animations'] as List).cast<Map<String,dynamic>>().singleWhere(
+          (c)=>c['name']=='STK_MASTER_${pattern}_UNAPPROVED')
+      : (doc['animations'] as List).single as Map<String,dynamic>;
     final samplers=(clips['samplers'] as List).cast<Map<String,dynamic>>();
     final channels=< _Channel>[];
     var duration=0.0;
     for(final item in (clips['channels'] as List).cast<Map<String,dynamic>>()) {
       final target=item['target'] as Map<String,dynamic>;
       final node=target['node'] as int,path=target['path'] as String;
-      if(node<0||node>=nodes.length||!['rotation','translation'].contains(path)){
+      if(node<0||node>=nodes.length||
+         !['rotation','translation',if(master)'weights'].contains(path)){
         throw const FormatException('Unsupported animation target');
       }
       final sample=samplers[item['sampler'] as int];
       if(sample['interpolation']!='LINEAR')throw const FormatException('Interpolation');
       final ts=access(sample['input'] as int,1,integer:false)
           .map((r)=>r[0].toDouble()).toList();
-      final frames=access(sample['output'] as int,
-         path=='rotation'?4:3,integer:false)
+      final flat=access(sample['output'] as int,
+         path=='rotation'?4:path=='weights'?1:3,integer:false)
           .map((row)=>row.map((n)=>n.toDouble()).toList()).toList();
-      if(ts.length!=frames.length||ts.length<2||ts.first!=0) {
+      final frames=path=='weights'
+          ? List<List<double>>.generate(ts.length,
+              (i)=>List<double>.generate(8,(m)=>flat[i*8+m][0]))
+          : flat;
+      if((path=='weights'&&flat.length!=ts.length*8)||
+         ts.length!=frames.length||ts.length<2||ts.first!=0) {
         throw const FormatException('Invalid keyframes');
       }
       for(var i=1;i<ts.length;i++) {
@@ -282,15 +335,25 @@ class GlbSkinnedScene {
           vertices+=pos.length;
         }
         triangles+=indices.length~/3;
-        primitives.add(_Primitive(pos,normals,jointRows,weightRows,indices,name,skinned));
+        final morphs=master
+          ? ((p['targets'] as List).cast<Map<String,dynamic>>()).map(
+              (t)=>coords(t['POSITION'] as int)).toList(growable:false)
+          : <List<V3>>[];
+        if(master && (morphs.length!=8||
+            morphs.any((list)=>list.length!=pos.length))) {
+          throw const FormatException('Incomplete master corrective morphs');
+        }
+        primitives.add(_Primitive(pos,normals,jointRows,weightRows,
+            indices,name,skinned,morphs:morphs));
       }
       instances.add(_Instance(ni,primitives,node.skin!=null));
     }
     if(vertices>30000||triangles>25000||instances.isEmpty) {
       throw const FormatException('GLB vertex budget exceeded');
     }
-    return GlbSkinnedScene._(staging.id,raw.length,parsedNodes,parents,inverse,
-        joints,channels,instances,vertices,triangles,duration);
+    return GlbSkinnedScene._(master?'stk_master_v4:$pattern':staging!.id,
+        raw.length,parsedNodes,parents,inverse,joints,channels,instances,
+        vertices,triangles,duration);
   }
 
   List<_Matrix> _world(double elapsed) {
@@ -302,7 +365,7 @@ class GlbSkinnedScene {
       final v=channel.sampler.at(seconds);
       if(channel.path=='rotation'){
         rotations[channel.node]=v;
-      } else {
+      } else if(channel.path=='translation'){
         translations[channel.node]=V3(v[0],v[1],v[2]);
       }
     }
@@ -323,11 +386,20 @@ class GlbSkinnedScene {
     return result.cast<_Matrix>();
   }
 
+  List<double> _morphAt(double elapsed) {
+    final weights=_channels.where((c)=>c.path=='weights').toList();
+    if(weights.isEmpty)return const [];
+    if(weights.length!=1)throw const FormatException('Ambiguous morph driver');
+    final time=((elapsed%durationSeconds)+durationSeconds)%durationSeconds;
+    return weights.single.sampler.at(time);
+  }
+
   /// One pose from GLB animation; positions are skinned using WEIGHTS_0/JOINTS_0.
   /// Geometry and skin data are cached, only joints and projections vary.
   GlbDrawFrame frame(double elapsed,Size size,Map<String,Color> theme,
-      {bool dark=true,double orbit=0}) {
+      {bool dark=true,double orbit=0,bool applyMorphs=true}) {
     final world=_world(elapsed);
+    final morphWeights=applyMorphs?_morphAt(elapsed):const <double>[];
     final joints=List<_Matrix>.generate(_jointNodes.length,
        (i)=>world[_jointNodes[i]].times(_inverseBind[i]));
     // Per-exercise camera composition: lower elevation and closer framing.
@@ -364,6 +436,15 @@ class GlbSkinnedScene {
           for(var index=0;index<prim.positions.length;index++) {
             var position=prim.positions[index];
             var normal=prim.normals[index];
+            // glTF POSITION morph deltas apply before joint skinning.
+            if(morphWeights.isNotEmpty && prim.morphs.isNotEmpty) {
+              for(var m=0;m<prim.morphs.length;m++) {
+                final w=morphWeights[m];
+                if(w>0.00001){
+                  position=position+prim.morphs[m][index]*w;
+                }
+              }
+            }
             if(prim.skinned) {
               var p=const V3(0,0,0),n=const V3(0,0,0);
               for(var k=0;k<4;k++) {
