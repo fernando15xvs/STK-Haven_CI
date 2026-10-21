@@ -96,7 +96,7 @@ def add_scapular_controls(glb):
         rotation=glb.restrot[spine]
         extra_ibm.append(quat_to_inverse_mat4(position,rotation))
         controls[side]={"name":"stk_scapula_control_"+side,
-                        "node":control,"jointIndex":len(old_joints)+len(extra_ibm)-1,
+                        "node":control,"jointIndex":len(old_joints)-1,
                         "parentNode":spine,"clavicleNode":clav,
                         "position":list(position)}
         old_joints.append(control)
