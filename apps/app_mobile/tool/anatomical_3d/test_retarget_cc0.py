@@ -49,8 +49,10 @@ class CC0RetargetTest(unittest.TestCase):
             self.assertEqual(len(mobile['materials']),5 if exercise=='ex_bench_press' else 4)
             self.assertLess(len(mobile_bytes),850*1024)
             self.assertGreater(len(full_bytes),4*1024*1024)
-            self.assertEqual([m['name'] for m in full['materials']],
-                 ['STK_BODY','STK_PRIMARY','STK_SECONDARY','STK_EQUIPMENT'])
+            expected=['STK_BODY','STK_PRIMARY','STK_SECONDARY','STK_EQUIPMENT']
+            if exercise=='ex_bench_press':
+                expected.append('STK_CUSHION')
+            self.assertEqual([m['name'] for m in full['materials']],expected)
             self.assertFalse(any('uri' in buffer for buffer in full['buffers']))
             self.assertEqual(len(full['skins'][0]['joints']),
                 len(self.base.doc['skins'][0]['joints']))
