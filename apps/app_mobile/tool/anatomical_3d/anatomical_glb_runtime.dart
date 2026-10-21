@@ -405,7 +405,11 @@ class GlbSkinnedScene {
   /// One pose from GLB animation; positions are skinned using WEIGHTS_0/JOINTS_0.
   /// Geometry and skin data are cached, only joints and projections vary.
   GlbDrawFrame frame(double elapsed,Size size,Map<String,Color> theme,
-      {bool dark=true,double orbit=0,bool applyMorphs=true}) {
+      {bool dark=true,double orbit=0,bool applyMorphs=true,
+       int depthSlices=1}) {
+    if(depthSlices<1||depthSlices>8) {
+      throw RangeError.range(depthSlices,1,8,'depthSlices');
+    }
     final world=_world(elapsed);
     final morphWeights=applyMorphs?_morphAt(elapsed):const <double>[];
     final joints=List<_Matrix>.generate(_jointNodes.length,
@@ -432,6 +436,7 @@ class GlbSkinnedScene {
     final poseCache=<(int,List<V3>),({
       List<Offset> positions,
       List<double> shades,
+      List<double> depths,
       double depth,
     })>{};
     for(final instance in _instances) {
@@ -439,7 +444,7 @@ class GlbSkinnedScene {
         final key=(instance.node,prim.positions);
         var projected=poseCache[key];
         if(projected==null) {
-          final positions=<Offset>[],shades=<double>[];
+          final positions=<Offset>[],shades=<double>[],depths=<double>[];
           var meanDepth=0.0;
           for(var index=0;index<prim.positions.length;index++) {
             var position=prim.positions[index];
@@ -470,6 +475,7 @@ class GlbSkinnedScene {
             final ray=position-eye;
             final depth=math.max(.6,ray.dot(forward));
             meanDepth+=depth;
+            depths.add(depth);
             final scale=size.shortestSide*1.58/depth;
             positions.add(Offset(size.width*.5+ray.dot(right)*scale,
                size.height*.55-ray.dot(up)*scale));
@@ -477,7 +483,8 @@ class GlbSkinnedScene {
                .clamp(.39,1.0));
           }
           meanDepth/=positions.length;
-          projected=(positions:positions,shades:shades,depth:meanDepth);
+          projected=(positions:positions,shades:shades,depths:depths,
+              depth:meanDepth);
           poseCache[key]=projected;
         }
         final base=theme[prim.material] ??
@@ -488,12 +495,16 @@ class GlbSkinnedScene {
             .map((s)=>Color.lerp(Colors.black,base,s)!)
             .toList(growable:false);
         drawn.add(GlbDrawPart(projected.positions,colors,
-           prim.indices,projected.depth,prim.material));
+           prim.indices,projected.depth,prim.material,
+         depths:projected.depths));
       }
     }
-    // Object-depth ordering has no per-pixel Z buffer: occlusion QA required.
+    // Keep fast whole-region ordering for animated playback. A static
+    // QA/paused frame may opt into 2..8 triangle-depth layers instead.
+    // This improves cross-region overlap but is NOT a per-pixel Z buffer.
     drawn.sort((a,b)=>b.depth.compareTo(a.depth));
-    return GlbDrawFrame(drawn,vertexCount,triangleCount);
+    return GlbDrawFrame(depthSlices==1 ? drawn :
+        GlbDepthSlicer.split(drawn,depthSlices),vertexCount,triangleCount);
   }
   static Color _fallback(String name,bool dark) => switch(name) {
     'STK_BODY' => dark?const Color(0xFFC5CBD3):const Color(0xFF9099A4),
@@ -509,12 +520,69 @@ class GlbSkinnedScene {
   };
 }
 class GlbDrawPart {
-  const GlbDrawPart(this.positions,this.colors,this.indices,this.depth,this.material);
+  const GlbDrawPart(this.positions,this.colors,this.indices,this.depth,
+      this.material,{this.depths=const []});
   final List<Offset> positions;
   final List<Color> colors;
   final List<int> indices;
   final double depth;
   final String material;
+  /// Camera-space Z of the skinned vertices. Reuses the per-frame projection.
+  final List<double> depths;
+}
+
+/// Review-only coarse triangle-depth ordering; no extra skinning or vertices.
+/// Uses the same cached positions/colors for each grouped index list.
+/// DO NOT enable on animated playback until profiled on physical devices.
+class GlbDepthSlicer {
+  static List<GlbDrawPart> split(List<GlbDrawPart> parts,int layers) {
+    if(layers<1||layers>8)throw RangeError.range(layers,1,8,'layers');
+    if(layers==1)return parts;
+    var near=double.infinity,far=double.negativeInfinity;
+    for(final part in parts) {
+      if(part.depths.length!=part.positions.length) {
+        throw const FormatException('Missing skinned vertex depths');
+      }
+      for(final d in part.depths) {
+        if(!d.isFinite)throw const FormatException('Invalid skinned depth');
+        near=math.min(near,d);
+        far=math.max(far,d);
+      }
+    }
+    if(!near.isFinite||far-near<.0001)return parts;
+    final span=(far-near)/layers;
+    final pieces=<GlbDrawPart>[];
+    for(final part in parts) {
+      if(part.indices.length%3!=0) {
+        throw const FormatException('Triangle list is incomplete');
+      }
+      final bins=List.generate(layers,(_)=><int>[]);
+      final sums=List<double>.filled(layers,0);
+      final counts=List<int>.filled(layers,0);
+      for(var i=0;i<part.indices.length;i+=3) {
+        final a=part.indices[i],b=part.indices[i+1],c=part.indices[i+2];
+        if(a<0||b<0||c<0||a>=part.depths.length||
+           b>=part.depths.length||c>=part.depths.length) {
+          throw const FormatException('Out-of-range skinned triangle');
+        }
+        final z=(part.depths[a]+part.depths[b]+part.depths[c])/3;
+        var bin=((z-near)/span).floor();
+        if(bin<0)bin=0;
+        if(bin>=layers)bin=layers-1;
+        bins[bin].addAll([a,b,c]);
+        sums[bin]+=z;
+        counts[bin]++;
+      }
+      for(var bin=0;bin<layers;bin++) {
+        if(counts[bin]==0)continue;
+        pieces.add(GlbDrawPart(part.positions,part.colors,
+            bins[bin],sums[bin]/counts[bin],part.material,
+            depths:part.depths));
+      }
+    }
+    pieces.sort((a,b)=>b.depth.compareTo(a.depth));
+    return pieces;
+  }
 }
 class GlbDrawFrame {
   const GlbDrawFrame(this.parts,this.vertices,this.triangles);
