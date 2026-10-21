@@ -68,7 +68,7 @@ class AnatomicalGlbStaging {
     final buffers = decoded['buffers'];
     if (skins is! List || skins.length != 1 ||
         skins.single is! Map || skins.single['joints'] is! List ||
-        (skins.single['joints'] as List).length != 19 ||
+        !{19, 53}.contains((skins.single['joints'] as List).length) ||
         meshes is! List || meshes.length < 2 ||
         animations is! List || animations.length != 1 ||
         animations.single is! Map ||

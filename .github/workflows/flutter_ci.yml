@@ -144,6 +144,20 @@ jobs:
           command -v ffmpeg
           command -v ffprobe
           python3 -m unittest discover -s tool/anatomical_3d -p 'test_video_comparison.py'
+      - name: Download and hash-verify 53-bone CC0 source for QA
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/stage_cc0_humanoid.py
+          --download --output build/cc0_model_stage
+      - name: Retarget three CC0 exercises to full GLB and mobile LOD
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/retarget_cc0_glb.py
+          --input build/cc0_model_stage/human-base-rigged-cc0.glb
+          --output build/cc0_53bone_retarget
+      - name: Test 53-bone CC0 retargeting, provenance and skin weights
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_retarget_cc0.py'
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
@@ -157,11 +171,6 @@ jobs:
           --frames build/video_comparison/frames
           --glb build/anatomical_3d_glb
           --output build/video_comparison/mp4
-      - name: Try CC0 rigged base download for model-only QA
-        working-directory: apps/app_mobile
-        run: >-
-          python3 tool/anatomical_3d/stage_cc0_humanoid.py
-          --download --optional --output build/cc0_model_stage
       - name: Test visual pilot geometry and reproducibility
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool -p 'test_visual_pilots.py'
@@ -184,6 +193,8 @@ jobs:
             apps/app_mobile/build/anatomical_glb_flutter/
             apps/app_mobile/build/video_comparison/mp4/
             apps/app_mobile/build/cc0_model_stage/
+            apps/app_mobile/build/cc0_53bone_retarget/
+            apps/app_mobile/build/cc0_flutter_review/
           retention-days: 14
           if-no-files-found: error
       - name: Unit tests for offline Lottie reviewer
