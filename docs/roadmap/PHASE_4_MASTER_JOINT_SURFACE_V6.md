@@ -20,3 +20,11 @@ python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_surface_v6.py
 ```
 
 Genera `stk_master_v6_joint_surface_review.glb` y `joint_surface_v6_report.json`. El GLB v6 no está incluido en los assets de Flutter, su renderer GPU aún no existe y faltan ejecución CI pública, inspección visual, rendimiento de dispositivos y revisión anatómica por especialistas. **0/229 animaciones aprobadas; 0/229 habilitadas.**
+
+
+## v6.1 — render estático con capas de profundidad (QA móvil, 21 oct 2026)
+
+- `GlbSkinnedScene.frame(depthSlices: 1..8)` permite separar cada primitiva ya proyectada por profundidad media **del triángulo**, en lugar de ordenar una región muscular entera por su única profundidad promedio. Todas las capas conservan la misma lista de vértices proyectados y colores: el skinning e IK no se recalculan por capa, los índices y recuento de triángulos siguen intactos.
+- `AnatomicalGlbPreview` habilita **6 capas solo al pausar, mostrar un fotograma fijo o con movimiento reducido**. Mientras el personaje está animándose usa `depthSlices:1`: evita multiplicar llamadas de dibujo por cada actualización. El modo visual es experimental y no es un renderizador GPU glTF ni un búfer Z por píxel.
+- Validaciones nuevas en `test/features/exercises/glb_depth_slicer_test.dart`: profundidad, orden de capas, cobertura de índices, buffers compartidos y entradas inválidas. La prueba v6 sobre GLB real comprueba los siete patrones y produce capturas claras/oscuras con seis capas.
+- El catálogo de **229 ejercicios continúa sin medios anatómicos aprobados**. La versión 6.1 no añade `pubspec.yaml`, no crea pantallas de producción, no modifica `apps/app_web`, Supabase, Coach Pro ni historial. Antes de activar un motor definitivo deben medirse FPS, memoria, batería, oclusión real y calidad muscular en dispositivos físicos.
