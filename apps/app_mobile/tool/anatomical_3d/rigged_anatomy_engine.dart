@@ -246,7 +246,7 @@ class Mesh3d {
     switch(material) {
       case Material3d.primary:return accent;
       case Material3d.secondary:
-        return Color.lerp(accent,Colors.white,dark?.25:.13)!;
+        return Color.lerp(accent,Colors.white,dark ? .25 : .13)!;
       case Material3d.body:
         return dark?const Color(0xFFC4CBD3):const Color(0xFF919BA5);
       case Material3d.muscle:
