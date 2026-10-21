@@ -210,6 +210,15 @@ jobs:
       - name: Validate CC0 v6 morph junction continuity and unchanged skin
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_surface_v6.py'
+      - name: Sculpt optional v7 pectoral deltoid and back master surface
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_surface_v7.py
+          --input build/cc0_master_surface_v6/stk_master_v6_joint_surface_review.glb
+          --output build/cc0_master_surface_v7
+      - name: Test v7 bilateral muscle relief and mobile GLB safety invariants
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_surface_v7.py'
       - name: Retarget three CC0 exercises to full GLB and mobile LOD
         working-directory: apps/app_mobile
         run: >-
@@ -283,6 +292,8 @@ jobs:
             apps/app_mobile/build/cc0_master_contacts_v5/
             apps/app_mobile/build/cc0_master_surface_v6/
             apps/app_mobile/build/cc0_master_v6_flutter_qa/
+            apps/app_mobile/build/cc0_master_surface_v7/
+            apps/app_mobile/build/cc0_master_v7_flutter_qa/
             apps/app_mobile/build/cc0_master_v5_flutter_qa/
             apps/app_mobile/build/cc0_master_v4_flutter_qa/
             apps/app_mobile/build/cc0_flutter_review/
