@@ -12,9 +12,7 @@ import 'rigged_anatomy_engine.dart' show V3;
 class _Matrix {
   _Matrix(this.data);
   final Float64List data;
-  factory _Matrix.identity() => _Matrix(Float64List.fromList([
-    1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1,
-  ]));
+
   _Matrix times(_Matrix b) {
     final r=Float64List(16);
     for (var c=0;c<4;c++) for(var row=0;row<4;row++) {
