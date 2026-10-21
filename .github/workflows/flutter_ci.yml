@@ -156,6 +156,15 @@ jobs:
         run: >-
           python3 tool/anatomical_3d/stage_cc0_humanoid.py
           --download --output build/cc0_model_stage
+      - name: Generate neutral master human with 55-joint shoulder-girdle rig
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_character.py
+          --input build/cc0_model_stage/human-base-rigged-cc0.glb
+          --output build/cc0_master_character
+      - name: Verify master rest-pose invariant, 11 muscle regions and separate scapular controls
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_character.py'
       - name: Retarget three CC0 exercises to full GLB and mobile LOD
         working-directory: apps/app_mobile
         run: >-
@@ -222,6 +231,7 @@ jobs:
             apps/app_mobile/build/video_comparison/mp4/
             apps/app_mobile/build/cc0_model_stage/
             apps/app_mobile/build/cc0_53bone_retarget/
+            apps/app_mobile/build/cc0_master_character/
             apps/app_mobile/build/cc0_flutter_review/
             apps/app_mobile/build/cc0_video_comparison/mp4/
           retention-days: 14
