@@ -12,6 +12,7 @@ from pathlib import Path
 
 import retarget_cc0_glb as rig
 import pilot_motion_quality_v98 as quality
+import build_master_exercise_pilots_v99 as master55
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -160,6 +161,145 @@ class GlbBetweenKeyframesTest(unittest.TestCase):
         del glb.by_name['STK_BENCH_STATIONARY']
         with self.assertRaisesRegex(ValueError,'bench'):
             quality.check_source(glb,'ex_bench_press')
+
+
+
+class Master55ExercisePilotTest(unittest.TestCase):
+    """Test all three exercise-specific 55-bone GLB derivatives in public CI.
+
+    This checks compatible glTF transforms and morph inputs; it does NOT mean
+    the 53-bone motion is certified or the scapular rig is correctly animated.
+    """
+    MASTER=Path(os.environ.get(
+        'STK_MASTER_SURFACE_V7','build/cc0_master_surface_v7'))
+    OUTPUT=MASTER/'three_exercise_pilots_v99'
+
+    @classmethod
+    def setUpClass(cls):
+        cls.source=(cls.MASTER/'stk_master_v7_surface_preview.glb').read_bytes()
+        cls.master=rig.GLB(cls.source,expected_sha=None)
+        cls.manifest=master55.build(
+            cls.MASTER/'stk_master_v7_surface_preview.glb',
+            OUT,cls.OUTPUT)
+
+    @staticmethod
+    def _tracks(glb):
+        result=[]
+        for channel in glb.doc['animations'][0]['channels']:
+            sampler=glb.doc['animations'][0]['samplers'][channel['sampler']]
+            if channel['target']['path']=='weights':continue
+            result.append((channel['target']['node'],channel['target']['path'],
+                          [p[0] for p in glb.accessor(sampler['input'])],
+                          glb.accessor(sampler['output'])))
+        return result
+
+    def test_exact_55_joint_skin_atlas_eight_morphs_and_no_publication(self):
+        self.assertEqual(self.manifest['version'],99)
+        self.assertEqual(self.manifest['catalogCount'],229)
+        self.assertFalse(self.manifest['approved'])
+        self.assertFalse(self.manifest['enabled'])
+        self.assertEqual(len(self.manifest['pilots']),3)
+        for exercise in rig.EXERCISES:
+            filename=self.OUTPUT/(exercise+'_master55_v99_unapproved.glb')
+            data=filename.read_bytes()
+            preview=rig.GLB(data,expected_sha=None)
+            doc=preview.doc
+            self.assertLess(len(data),master55.MAX_QA_GLb_BYTES)
+            self.assertEqual(len(doc['skins'][0]['joints']),55)
+            self.assertEqual(len(doc['meshes'][0]['primitives']),12)
+            self.assertEqual(tuple(doc['meshes'][0]['extras']['targetNames']),
+                             master55.MORPH_NAMES)
+            self.assertEqual(len(doc['animations']),1)
+            self.assertEqual(doc['extras']['exerciseId'],exercise)
+            self.assertEqual(doc['extras']['masterExercisePilotVersion'],99)
+            self.assertFalse(doc['extras']['approved'])
+            self.assertFalse(doc['extras']['enabled'])
+            self.assertTrue(doc['extras']['contactAndExpertReviewPending'])
+            for node in ('stk_scapula_control_l','stk_scapula_control_r'):
+                self.assertIn(node,preview.by_name)
+            self.assertEqual(doc['skins'],self.master.doc['skins'])
+            self.assertEqual(doc['meshes'][0],self.master.doc['meshes'][0])
+            for name in ('POSITION','NORMAL','JOINTS_0','WEIGHTS_0'):
+                idx=doc['meshes'][0]['primitives'][0]['attributes'][name]
+                self.assertEqual(preview.accessor(idx),
+                                 self.master.accessor(idx))
+            for shape in doc['meshes'][0]['primitives'][0]['targets']:
+                idx=shape['POSITION']
+                self.assertEqual(preview.accessor(idx),
+                                 self.master.accessor(idx))
+            channels=doc['animations'][0]['channels']
+            weight_channels=[x for x in channels
+                             if x['target']['path']=='weights']
+            self.assertEqual(len(weight_channels),1)
+            w=weight_channels[0]
+            sampled=preview.accessor(
+                doc['animations'][0]['samplers'][w['sampler']]['output'])
+            self.assertEqual(len(sampled),41*8)
+            self.assertTrue(all(0<=v[0]<=1.025 for v in sampled))
+            self.assertEqual(len(doc['meshes'])-1,
+                             2 if exercise=='ex_bench_press' else 1)
+            report=next(p for p in self.manifest['pilots']
+                        if p['exerciseId']==exercise)
+            self.assertFalse(report['approved'])
+            self.assertFalse(report['enabled'])
+            self.assertTrue(report['rigControlsStillNeutral'])
+
+    def test_121_frame_55_joint_motion_and_grip_contact_parity(self):
+        for exercise in rig.EXERCISES:
+            original=rig.GLB(
+                (OUT/(exercise+'_mobile_lod.glb')).read_bytes(),
+                expected_sha=None)
+            restored=rig.GLB(
+                (self.OUTPUT/(exercise+'_master55_v99_unapproved.glb'))
+                .read_bytes(),expected_sha=None)
+            old_tracks=self._tracks(original)
+            new_tracks=self._tracks(restored)
+            base_old=world_at(original,0.,old_tracks)
+            base_new=world_at(restored,0.,new_tracks)
+            largest_difference=0.
+            biggest_grip=0.
+            biggest_foot=0.
+            for i in range(SAMPLES):
+                t=i/FPS
+                old=world_at(original,t,old_tracks)
+                new=world_at(restored,t,new_tracks)
+                for name in ('pelvis','hand_l','hand_r','foot_l',
+                             'foot_r','upperarm_l','upperarm_r',
+                             'STK_EXERCISE_BAR'):
+                    delta=math.dist(
+                        old[original.by_name[name]],
+                        new[restored.by_name[name]])
+                    largest_difference=max(largest_difference,delta)
+                bar=new[restored.by_name['STK_EXERCISE_BAR']]
+                for side,sign in (('l',1),('r',-1)):
+                    hand=new[restored.by_name['hand_'+side]]
+                    target=(bar[0]+sign*(.51 if exercise=='ex_squat' else .50),
+                            bar[1],bar[2])
+                    biggest_grip=max(biggest_grip,math.dist(hand,target))
+                    foot=restored.by_name['foot_'+side]
+                    biggest_foot=max(biggest_foot,math.dist(new[foot],
+                                                         base_new[foot]))
+                # Both added controls must stay neutral until a future
+                # exercise-specific scapular re-solve.
+                for side in ('l','r'):
+                    name='stk_scapula_control_'+side
+                    self.assertEqual(
+                        restored.nodes[restored.by_name[name]].get(
+                            'rotation',[0,0,0,1]),[0,0,0,1])
+            self.assertLess(largest_difference,.002,
+                            (exercise,'rest/pose migration drift'))
+            self.assertLess(biggest_grip,.005,(exercise,'new rig wrist grip'))
+            self.assertLess(biggest_foot,.005,(exercise,'new rig stance'))
+
+    def test_v99_rejects_unknown_ids_and_prematurely_approved_pilots(self):
+        sample=rig.GLB(
+            (OUT/'ex_bench_press_mobile_lod.glb').read_bytes(),
+            expected_sha=None)
+        self.assertRaises(ValueError,master55._valid_inputs,
+                          self.master,sample,'ex_not_real')
+        sample.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'disabled 53'):
+            master55._valid_inputs(self.master,sample,'ex_bench_press')
 
 
 if __name__ == "__main__":
