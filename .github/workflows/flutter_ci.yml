@@ -70,13 +70,20 @@ jobs:
           ls -1 supabase/migrations
           echo "Roadmap 3/4 staged migrations:"
           ls -1 /tmp/stk-post-roadmap2-migrations
-      - name: Select transient PostgreSQL port for isolated CI tests
+      - name: Select isolated ports for every local Supabase test service
         run: |
-          # Supabase's default 54322 can be occupied on hosted runners.
-          # This edit exists only in CI's disposable checkout, never in git.
-          port=$((56000 + GITHUB_RUN_ID % 4000))
-          printf '\n[db]\nport = %s\n' "$port" >> supabase/config.toml
-          echo "Ephemeral local test PostgreSQL port: $port"
+          # GitHub runners may already occupy Supabase's DEFAULT Inbucket
+          # port 54324. Isolate the entire local port bundle, not just db.
+          # This config change exists ONLY in CI's disposable checkout.
+          base=$((56000 + (GITHUB_RUN_ID % 700) * 10))
+          printf '\n[db]\nport = %s\nshadow_port = %s\n' \
+            "$base" "$((base+1))" >> supabase/config.toml
+          printf '\n[api]\nport = %s\n' \
+            "$((base+2))" >> supabase/config.toml
+          printf '\n[inbucket]\nport = %s\nsmtp_port = %s\npop3_port = %s\n' \
+            "$((base+3))" "$((base+4))" "$((base+5))" \
+            >> supabase/config.toml
+          echo "CI-only Supabase ports: db=$base, api=$((base+2)), inbucket=$((base+3))"
       - name: Start isolated Supabase at Roadmap 2 baseline
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
       - name: Rebuild Roadmap 2 baseline
