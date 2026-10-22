@@ -13,6 +13,7 @@ from pathlib import Path
 import retarget_cc0_glb as rig
 import pilot_motion_quality_v98 as quality
 import build_master_exercise_pilots_v99 as master55
+import solve_exercise_scapula_v910 as scapula
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -290,6 +291,92 @@ class Master55ExercisePilotTest(unittest.TestCase):
                             (exercise,'rest/pose migration drift'))
             self.assertLess(biggest_grip,.005,(exercise,'new rig wrist grip'))
             self.assertLess(biggest_foot,.005,(exercise,'new rig stance'))
+
+    def test_v910_three_pilots_scapular_ik_and_continuous_bar_contact(self):
+        folder=self.OUTPUT/'scapular_v910'
+        report=scapula.build(self.OUTPUT,folder)
+        self.assertEqual(report['rigJointCount'],55)
+        self.assertEqual(report['exerciseCount'],3)
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['enabled'])
+        for exercise in rig.EXERCISES:
+            previous=rig.GLB(
+                (self.OUTPUT/(exercise+'_master55_v99_unapproved.glb'))
+                .read_bytes(),expected_sha=None)
+            current=rig.GLB(
+                (folder/(exercise+'_master55_v910_scapular_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            self.assertEqual(current.doc['extras']['masterExercisePilotVersion'],
+                             910)
+            self.assertEqual(previous.doc['skins'],current.doc['skins'])
+            self.assertEqual(previous.doc['meshes'],current.doc['meshes'])
+            self.assertFalse(current.doc['extras']['approved'])
+            self.assertFalse(current.doc['extras']['enabled'])
+            self.assertEqual(
+                len(current.doc['animations'][0]['channels']),
+                len(previous.doc['animations'][0]['channels'])+2)
+            self.assertEqual(
+                {x['target']['path'] for x in current.doc['animations'][0]
+                   ['channels']},{'rotation','translation','weights'})
+            for side in ('l','r'):
+                node=current.by_name['stk_scapula_control_'+side]
+                clips=[c for c in current.doc['animations'][0]['channels']
+                       if c['target']=={'node':node,'path':'rotation'}]
+                self.assertEqual(len(clips),1)
+                sampler=current.doc['animations'][0]['samplers'][
+                    clips[0]['sampler']]
+                self.assertEqual(len(current.accessor(sampler['output'])),41)
+            prior_tracks=self._tracks(previous)
+            updated_tracks=self._tracks(current)
+            start=world_at(current,0,updated_tracks)
+            max_wrist_drift=0.
+            max_foot_drift=0.
+            max_old_motion_drift=0.
+            for frame in range(121):
+                t=frame/30.
+                baseline=world_at(previous,t,prior_tracks)
+                sample=world_at(current,t,updated_tracks)
+                for side,sign in (('l',1),('r',-1)):
+                    hand=sample[current.by_name['hand_'+side]]
+                    old_hand=baseline[previous.by_name['hand_'+side]]
+                    max_wrist_drift=max(max_wrist_drift,
+                                        math.dist(hand,old_hand))
+                    bar=sample[current.by_name['STK_EXERCISE_BAR']]
+                    grip=(bar[0]+sign*(.51 if exercise=='ex_squat' else .50),
+                          bar[1],bar[2])
+                    max_wrist_drift=max(max_wrist_drift,
+                                        math.dist(hand,grip))
+                    foot=sample[current.by_name['foot_'+side]]
+                    max_foot_drift=max(max_foot_drift,math.dist(
+                        foot,start[current.by_name['foot_'+side]]))
+                for name in ('pelvis','STK_EXERCISE_BAR'):
+                    max_old_motion_drift=max(max_old_motion_drift,
+                        math.dist(sample[current.by_name[name]],
+                            baseline[previous.by_name[name]]))
+            self.assertLess(max_wrist_drift,.005,
+                            (exercise,'sustained hand-bar contact'))
+            self.assertLess(max_foot_drift,.005,
+                            (exercise,'foot plant'))
+            self.assertLess(max_old_motion_drift,.00005,
+                            (exercise,'unchanged root/equipment paths'))
+            summary=next(p for p in report['pilots']
+                         if p['exerciseId']==exercise)
+            self.assertGreater(sum(summary['solvedIKKeys'].values()),0)
+            self.assertLess(
+                max(summary['peakScapularLocalDegrees'].values()),3.01)
+            self.assertLess(
+                max(summary['maxContactErrorAtKeysMeters'].values()),.001)
+            self.assertFalse(summary['surfaceCollisionValidated'])
+            self.assertFalse(summary['physicalDeviceMeasured'])
+
+    def test_v910_rejects_wrong_rig_and_approved_preview(self):
+        data=(self.OUTPUT/'ex_bench_press_master55_v99_unapproved.glb')
+        raw=data.read_bytes()
+        self.assertRaises(ValueError,scapula.correct,raw,'ex_not_real')
+        master=rig.GLB(raw,expected_sha=None)
+        master.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'disabled v9.9'):
+            scapula.correct(master.bytes(),'ex_bench_press')
 
     def test_v99_rejects_unknown_ids_and_prematurely_approved_pilots(self):
         sample=rig.GLB(
