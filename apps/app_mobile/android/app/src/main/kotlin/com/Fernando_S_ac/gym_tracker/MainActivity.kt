@@ -46,6 +46,11 @@ class MainActivity : FlutterActivity(), SensorEventListener {
             "stk_haven/anatomy_gpu_static",
             StkAnatomyGpuReviewFactory(flutterEngine.dartExecutor.binaryMessenger),
         )
+        // Separate GLES3 shader-skinned pilot, never selected in production.
+        flutterEngine.platformViewsController.registry.registerViewFactory(
+            "stk_haven/anatomy_gpu_skinning",
+            StkAnatomyGpuSkinnedFactory(flutterEngine.dartExecutor.binaryMessenger),
+        )
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
         MethodChannel(

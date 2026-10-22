@@ -402,6 +402,107 @@ class GlbSkinnedScene {
     return weights.single.sampler.at(time);
   }
 
+  /// Opt-in shader-skinning transfer for the disabled CC0 master.
+  /// CPU samples morph deltas; GLSL ES3 / Metal apply the actual 55 bone
+  /// matrices per vertex. Static QA only until transport and thermals qualify.
+  GlbShaderSkinSource shaderSkinSource(double elapsed,Size size,
+      Map<String,Color> theme,{bool dark=true,double orbit=0,
+      double elevation=0,double zoom=1}) {
+    if(!size.width.isFinite||!size.height.isFinite||
+       size.width<100||size.height<100||
+       !orbit.isFinite||!elevation.isFinite||!zoom.isFinite||
+       elevation<-.75||elevation>.85||zoom<.65||zoom>1.6||
+       _jointNodes.length!=55||_instances.length!=1) {
+      throw const FormatException('Unsupported master GPU skin preview');
+    }
+    final world=_world(elapsed);
+    final matrices=Float32List(_jointNodes.length*16);
+    for(var i=0;i<_jointNodes.length;i++) {
+      final m=world[_jointNodes[i]].times(_inverseBind[i]).data;
+      for(var k=0;k<16;k++) {
+        if(!m[k].isFinite||m[k].abs()>1e6) {
+          throw const FormatException('Invalid master skin matrix');
+        }
+        matrices[i*16+k]=m[k];
+      }
+    }
+    final center=const V3(0,.88,0);
+    final yaw=.43+orbit,dist=3.9,high=1.72;
+    final radius=math.sqrt(dist*dist+high*high)*zoom;
+    final pitch=math.atan2(high,dist)+elevation;
+    final eye=center+V3(math.sin(yaw)*math.cos(pitch)*radius,
+        math.sin(pitch)*radius,math.cos(yaw)*math.cos(pitch)*radius);
+    final forward=(center-eye).unit;
+    final right=forward.cross(const V3(0,1,0)).unit;
+    final up=right.cross(forward).unit;
+    final light=const V3(.55,1,.65).unit;
+    // Five vec4 uniforms. Camera input is identical to frame() projector:
+    // eye, right + scaleX, up + scaleY, forward + vertical center, light.
+    final camera=Float32List.fromList([
+      eye.x,eye.y,eye.z,0,
+      right.x,right.y,right.z,2*size.shortestSide*1.58/size.width,
+      up.x,up.y,up.z,2*size.shortestSide*1.58/size.height,
+      forward.x,forward.y,forward.z,-.10,
+      light.x,light.y,light.z,0,
+    ]);
+    final morph=_morphAt(elapsed);
+    final verts=Float32List(triangleCount*3*18);
+    var offset=0;
+    for(final instance in _instances) {
+      if(!instance.skin) {
+        throw const FormatException('GPU skin source contains rigid mesh');
+      }
+      for(final prim in instance.primitives) {
+        if(!prim.skinned||prim.joints.length!=prim.positions.length||
+           prim.weights.length!=prim.positions.length||
+           prim.indices.length%3!=0) {
+          throw const FormatException('GPU skinned primitive malformed');
+        }
+        final base=theme[prim.material] ??
+            (prim.material.startsWith('STK_REGION_')
+              ? (dark?const Color(0xFFE5E9EE):const Color(0xFFBBC3CD))
+              : _fallback(prim.material,dark));
+        final rgb=base.toARGB32();
+        for(final vertex in prim.indices) {
+          if(vertex<0||vertex>=prim.positions.length||
+             offset+18>verts.length) {
+            throw const FormatException('GPU vertex index exceeded budget');
+          }
+          var p=prim.positions[vertex];
+          final n=prim.normals[vertex];
+          if(morph.isNotEmpty) {
+            if(morph.length!=8||prim.morphs.length!=8) {
+              throw const FormatException('Incomplete eight-way morph');
+            }
+            for(var m=0;m<8;m++) {
+              if(morph[m]>.00001)p=p+prim.morphs[m][vertex]*morph[m];
+            }
+          }
+          final joints=prim.joints[vertex],weights=prim.weights[vertex];
+          if(joints.length!=4||weights.length!=4||
+             joints.any((j)=>j<0||j>=55)||
+             weights.any((w)=>!w.isFinite||w<0)||
+             (weights.reduce((a,b)=>a+b)-1).abs()>.025||
+             !p.finite||!n.finite) {
+            throw const FormatException('Invalid master GPU joint or normal');
+          }
+          final v=<double>[
+            p.x,p.y,p.z,n.x,n.y,n.z,
+            ...joints.map((j)=>j.toDouble()),...weights,
+            ((rgb>>16)&255)/255,((rgb>>8)&255)/255,
+            (rgb&255)/255,((rgb>>24)&255)/255,
+          ];
+          for(final value in v)verts[offset++]=value;
+        }
+      }
+    }
+    if(offset!=verts.length||triangleCount>25000||triangleCount<1||
+       verts.any((v)=>!v.isFinite)) {
+      throw const FormatException('Invalid master GPU stream size');
+    }
+    return GlbShaderSkinSource(verts,matrices,camera,triangleCount);
+  }
+
   /// One pose from GLB animation; positions are skinned using WEIGHTS_0/JOINTS_0.
   /// Geometry and skin data are cached, only joints and projections vary.
   GlbDrawFrame frame(double elapsed,Size size,Map<String,Color> theme,
@@ -547,6 +648,14 @@ class GlbSkinnedScene {
     'STK_CUSHION' => const Color(0xFF353B46),
     _ => const Color(0xFF9099A4),
   };
+}
+/// Data-only 55-bone shader contract: 18 floats per indexed triangle vertex.
+/// Bind-space position, normal, four joint IDs, four weights and RGBA base.
+class GlbShaderSkinSource {
+  const GlbShaderSkinSource(this.vertices,this.bones,this.camera,
+      this.triangles);
+  final Float32List vertices,bones,camera;
+  final int triangles;
 }
 class GlbDrawPart {
   const GlbDrawPart(this.positions,this.colors,this.indices,this.depth,
