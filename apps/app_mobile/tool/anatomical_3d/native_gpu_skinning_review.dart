@@ -84,6 +84,38 @@ class GpuSkinningPacket {
   }
 }
 
+/// Reuses an acknowledged mesh only if every vertex float is unchanged.
+/// A view recreation MUST create a fresh cache: native buffers are per view.
+/// The 8 glTF morphs are still CPU-side, so a changed pose uploads vertices.
+class GpuSkinningMeshCache {
+  Float32List? _acknowledgedVertices;
+
+  bool get hasMesh => _acknowledgedVertices != null;
+
+  Map<String,Object> encode(GpuSkinningPacket packet,Color background) {
+    final payload=packet.encode(background);
+    final old=_acknowledgedVertices;
+    if(old!=null&&old.length==packet.vertices.length) {
+      var identical=true;
+      for(var i=0;i<old.length;i++) {
+        if(old[i]!=packet.vertices[i]) {identical=false;break;}
+      }
+      if(identical) {
+        payload.remove('vertices');
+        payload['reuseMesh']=true;
+      }
+    }
+    return payload;
+  }
+
+  void acknowledge(GpuSkinningPacket packet) {
+    // Do not retain a caller-owned, mutable typed buffer.
+    _acknowledgedVertices=Float32List.fromList(packet.vertices);
+  }
+
+  void reset() => _acknowledgedVertices=null;
+}
+
 /// QA-only static shader-skinning PlatformView.
 /// No ongoing animations are allowed: a new packet is sent only for an
 /// explicit paused frame, so Android/iOS performance is not misrepresented.
@@ -110,6 +142,8 @@ class _NativeGpuSkinnedGlbReviewState
   MethodChannel? _channel;
   bool _failed=false;
   int _sequence=0;
+  Future<void> _pending=Future<void>.value();
+  final GpuSkinningMeshCache _meshCache=GpuSkinningMeshCache();
 
   GlbDrawFrame _canvasFrame() => widget.scene.frame(
     widget.elapsed,Size.square(widget.size),widget.materials,
@@ -117,30 +151,41 @@ class _NativeGpuSkinnedGlbReviewState
     zoom:widget.zoom,depthSlices:6,poseNormals:true,
   );
 
-  Future<void> _send() async {
-    final channel=_channel;
-    if(channel==null||!mounted||!widget.enabled||_failed)return;
+  // A PlatformView has one retained mesh. Serializing uploads prevents a
+  // compact pose update from overtaking the first full mesh packet.
+  void _scheduleSend() {
     final serial=++_sequence;
+    _pending=_pending.then((_)=>_send(serial));
+  }
+
+  Future<void> _send(int serial) async {
+    final channel=_channel;
+    if(serial!=_sequence||channel==null||!mounted||
+        !widget.enabled||_failed)return;
     try {
       final packet=GpuSkinningPacket.fromScene(widget.scene,widget.elapsed,
         Size.square(widget.size),widget.materials,dark:widget.dark,
         orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom);
+      final payload=_meshCache.encode(packet,widget.background);
       // An EGL/Metal surface may fail to initialize without delivering a
       // shader response. Never leave a blank PlatformView on screen forever.
-      final acknowledged=await channel.invokeMethod<bool>('drawSkinned',
-          packet.encode(widget.background))
+      final acknowledged=await channel.invokeMethod<bool>('drawSkinned',payload)
           .timeout(const Duration(seconds:5));
       if(acknowledged!=true) {
         throw StateError('Native shader did not acknowledge the frame');
       }
+      // Native has accepted the exact mesh of this packet. Even if a newer
+      // request was queued, it must compare against the last ACKed mesh.
+      _meshCache.acknowledge(packet);
     } catch (_) {
       if(mounted&&_sequence==serial)setState(()=>_failed=true);
     }
   }
 
   void _created(int id) {
+    _meshCache.reset();
     _channel=MethodChannel('$stkGpuSkinView/$id');
-    _send();
+    _scheduleSend();
   }
 
   @override
@@ -151,12 +196,12 @@ class _NativeGpuSkinnedGlbReviewState
        widget.materials!=old.materials||widget.dark!=old.dark||
        widget.orbit!=old.orbit||widget.elevation!=old.elevation||
        widget.zoom!=old.zoom||widget.enabled!=old.enabled) {
-      _send();
+      _scheduleSend();
     }
   }
 
   @override
-  void dispose(){_sequence++;_channel=null;super.dispose();}
+  void dispose(){_sequence++;_channel=null;_meshCache.reset();super.dispose();}
 
   @override
   Widget build(BuildContext context) {
