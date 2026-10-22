@@ -129,6 +129,8 @@ class AnatomicalGlbStaging {
   /// Unknown labels are ignored rather than becoming arbitrary material IDs.
   static Map<String, Color> themeMasterRegions(BuildContext context, {
     Set<String> highlightedRegions = const <String>{},
+    Set<String> primaryRegions = const <String>{},
+    Set<String> secondaryRegions = const <String>{},
   }) {
     final palette = AppColors.of(context);
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -136,11 +138,17 @@ class AnatomicalGlbStaging {
     final rest = dark ? const Color(0xFFB7C2CE) : const Color(0xFF86929E);
     final selectedBase = dark
         ? const Color(0xFFE5E9EE) : const Color(0xFFBBC3CD);
+    final primary=highlightedRegions.union(primaryRegions);
     for (final name in masterRegionNames) {
-      result['STK_REGION_$name'] = highlightedRegions.contains(name)
+      // Primary wins if an incomplete QA selection mentions both roles.
+      // Secondary intentionally has a weaker theme tint. Both stay legible
+      // across the existing 8 accent choices in light and dark themes.
+      final double opacity=primary.contains(name)
+          ? (dark ? .74 : .67)
+          : secondaryRegions.contains(name) ? (dark ? .36 : .29) : 0;
+      result['STK_REGION_$name'] = opacity>0
           ? Color.alphaBlend(
-              palette.primary.withValues(alpha: dark ? .74 : .67),
-              selectedBase,
+              palette.primary.withValues(alpha:opacity),selectedBase,
             )
           : rest;
     }

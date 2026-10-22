@@ -1,6 +1,9 @@
 import 'dart:typed_data';
 import 'package:core/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'mobile_device_qa_probe.dart';
+import 'anatomical_pilot_review_qa.dart';
 import 'anatomical_glb_runtime.dart';
 import 'native_gpu_glb_review.dart';
 import 'native_gpu_skinning_review.dart';
@@ -19,6 +22,7 @@ class AnatomicalGlbPreview extends StatefulWidget {
     this.experimentalIndexedGpu=false,
     this.experimentalIndexedGpuPlayback=false,
     this.experimentalGpuTelemetry=false,
+    this.reviewPilotId,
   });
   final GlbSkinnedScene scene;
   final double? progress;
@@ -42,6 +46,9 @@ class AnatomicalGlbPreview extends StatefulWidget {
   /// Displays ACK/transfer counters only in the internal indexed GPU pilot.
   /// Not remote analytics, not production FPS or physical memory telemetry.
   final bool experimentalGpuTelemetry;
+  /// Only the three historical pilot IDs have offline anatomy QA checklists.
+  /// Never selects or enables production exercise assets.
+  final String? reviewPilotId;
   static GlbSkinnedScene decode(Uint8List bytes) => GlbSkinnedScene.decode(bytes);
   @override
   State<AnatomicalGlbPreview> createState()=>_AnatomicalGlbPreviewState();
@@ -59,16 +66,62 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
   String? _cacheKey;
   GlbDrawFrame? _cached;
   final ValueNotifier<GpuQaMetricsSnapshot?> _qaMetrics=ValueNotifier(null);
+  final GlbDeviceQaSession _deviceQa=GlbDeviceQaSession();
+
+  bool get _physicalQaRequested =>
+      widget.experimentalGpuTelemetry&&widget.experimentalIndexedGpu;
+
+  void _syncPhysicalQa() {
+    if(_physicalQaRequested&&_appActive) {
+      _deviceQa.start();
+    } else {
+      _deviceQa.stop();
+    }
+  }
+
+  Map<String,Object> _gpuCounters() {
+    final m=_qaMetrics.value;
+    if(m==null)return {'available':false};
+    return <String,Object>{
+      'available':true,
+      'requested':m.requested,'sent':m.sent,
+      'acknowledged':m.acknowledged,'superseded':m.superseded,
+      'throttled':m.throttled,'failures':m.failures,
+      'maxInFlight':m.maxInFlight,'lastAckMs':m.lastAckMs,
+      'maxAckMs':m.maxAckMs,
+      'lastPayloadBytes':m.lastPayloadBytes,
+      'totalPayloadBytes':m.totalPayloadBytes,
+    };
+  }
+
+  Future<void> _copyDeviceQaReport() async {
+    _deviceQa.sampleMemory();
+    final json=_deviceQa.exportJson(
+      sceneId:widget.scene.id,
+      scenario:'12Hz_indexed_gpu_review_unapproved',
+      gpuChannelCounters:_gpuCounters(),
+    );
+    await Clipboard.setData(ClipboardData(text:json));
+    if(mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(const SnackBar(
+        content:Text('Informe de QA copiado; no se ha enviado a ningún servidor.'),
+      ));
+    }
+  }
   @override
   void initState(){
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _syncPhysicalQa();
     _clock.repeat();
   }
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _appActive=state==AppLifecycleState.resumed;
-    if(mounted)_sync();
+    if(mounted) {
+      _sync();
+      _syncPhysicalQa();
+    }
   }
   @override
   void didChangeDependencies(){super.didChangeDependencies();_sync();}
@@ -80,6 +133,8 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
           (widget.scene.durationSeconds*1000).round());
     }
     _cacheKey=null;
+    if(oldWidget.scene!=widget.scene)_deviceQa.data.reset();
+    _syncPhysicalQa();
     _sync();
   }
   void _sync(){
@@ -98,14 +153,18 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
     WidgetsBinding.instance.removeObserver(this);
     _clock.dispose();
     _qaMetrics.dispose();
+    _deviceQa.dispose();
     super.dispose();
   }
   @override
   Widget build(BuildContext context){
     final palette=AppColors.of(context);
     final dark=Theme.of(context).brightness==Brightness.dark;
+    final plan=AnatomicalPilotQaPlan.cases[widget.reviewPilotId];
     final materials=AnatomicalGlbStaging.themeMasterRegions(context,
-        highlightedRegions:widget.highlightRegions);
+        highlightedRegions:widget.highlightRegions,
+        primaryRegions:plan?.primaryRegions??const <String>{},
+        secondaryRegions:plan?.secondaryRegions??const <String>{});
     return Column(mainAxisSize:MainAxisSize.min,children:[
       Semantics(
         label:widget.scene.id+
@@ -204,6 +263,59 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
               style:Theme.of(context).textTheme.labelSmall,
             ),
           ),
+        ),
+      if(plan!=null)
+        Padding(
+          padding:const EdgeInsets.symmetric(horizontal:8,vertical:4),
+          child:ExpansionTile(
+            key:Key('skinned_glb_pilot_qa_${plan.exerciseId}'),
+            title:Text('QA anatómico · ${plan.title}'),
+            subtitle:const Text('Revisión manual pendiente · NO aprobado'),
+            children:[
+              Text('Equipo requerido: ${plan.equipment}'),
+              Text('Músculos principales: ${plan.primaryRegions.join(', ')}'),
+              for(final check in plan.checks)
+                ListTile(
+                  dense:true,
+                  leading:const Icon(Icons.radio_button_unchecked),
+                  title:Text(check),
+                ),
+              const Padding(
+                padding:EdgeInsets.all(8),
+                child:Text(
+                  'Los controles no certifican anatomía ni biomecánica. '
+                  'Requieren revisión humana en dispositivos físicos.',
+                ),
+              ),
+            ],
+          ),
+        ),
+      if(_physicalQaRequested)
+        AnimatedBuilder(
+          animation:_deviceQa,
+          builder:(context,_) {
+            final values=_deviceQa.data.summary();
+            final rss=values['lastProcessRssBytes'] as int;
+            return Padding(
+              padding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
+              child:Text(
+                'Flutter p95: ${values['flutterTotalP95Us']} µs'
+                ' · RSS de proceso: ${(rss/1048576).toStringAsFixed(1)} MiB'
+                ' · muestras: ${values['flutterFramesObserved']}'
+                ' · NO mide FPS de GPU/Metal/EGL',
+                key:const Key('skinned_glb_device_qa_stats'),
+                textAlign:TextAlign.center,
+                style:Theme.of(context).textTheme.labelSmall,
+              ),
+            );
+          },
+        ),
+      if(_physicalQaRequested)
+        TextButton.icon(
+          key:const Key('skinned_glb_copy_device_report'),
+          onPressed:_copyDeviceQaReport,
+          icon:const Icon(Icons.copy_all_outlined),
+          label:const Text('Copiar informe de dispositivo (QA)'),
         ),
       Row(mainAxisSize:MainAxisSize.min,children:[
         if(widget.progress==null&&!MediaQuery.disableAnimationsOf(context))
