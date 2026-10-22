@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -65,6 +66,44 @@ void main() {
       }
       expect(changed,greaterThan(.5),reason:name);
     }
+  });
+
+  test('Real v7 GLB supports full orbit, elevation and zoom', () {
+    final scene=v7['overhead_reach_bilateral']!;
+    const size=Size(320,320);
+    final zero=scene.frame(2,size,const {});
+    final full=scene.frame(2,size,const {},orbit:2*math.pi);
+    var loopError=0.0;
+    for(var part=0;part<zero.parts.length;part++) {
+      final a=zero.parts[part].positions;
+      final b=full.parts[part].positions;
+      expect(a.length,b.length);
+      for(var k=0;k<a.length;k++) {
+        loopError+=(a[k]-b[k]).distance;
+      }
+    }
+    expect(loopError,lessThan(.001));
+    for(final yaw in [math.pi/2,math.pi,1.5*math.pi]) {
+      final angle=scene.frame(2,size,const {},orbit:yaw);
+      expect(angle.finite,true);
+      expect(angle.triangles,scene.triangleCount);
+      expect(angle.parts.length,zero.parts.length);
+    }
+    for(final elevation in [-.75,0.,.85]) {
+      for(final zoom in [.65,1.,1.6]) {
+        final view=scene.frame(2,size,const {},
+            orbit:math.pi,elevation:elevation,zoom:zoom);
+        expect(view.finite,true);
+        expect(view.vertices,scene.vertexCount);
+        expect(view.triangles,scene.triangleCount);
+      }
+    }
+    expect(()=>scene.frame(2,size,const {},zoom:0),
+        throwsFormatException);
+    expect(()=>scene.frame(2,size,const {},elevation:1.2),
+        throwsFormatException);
+    expect(()=>scene.frame(2,size,const {},orbit:double.nan),
+        throwsFormatException);
   });
 
   testWidgets('Real v7 sculpt creates light and dark review captures',
