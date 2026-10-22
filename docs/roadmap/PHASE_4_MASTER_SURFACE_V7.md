@@ -25,3 +25,12 @@ flutter test test/features/exercises/master_surface_v7_visual_test.dart
 Productos locales: `build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb`, informe JSON y `build/cc0_master_v7_flutter_qa/` para capturas (evidencia CI pública). El GLB **no está en pubspec** ni se sirve a los usuarios.
 
 **Limitaciones explícitas:** este procedimiento no produce músculos individualmente modelados, inserciones tendinosas, fascia, anatomía validada, biomecánica profesional ni render GPU con Z-buffer. Una escultura profesional con rig/deformaciones de producción y una prueba de dispositivo físico siguen siendo necesarias. 229 borradores, **0 aprobados, 0 habilitados**.
+
+## v7.1 — exploración de cámara 3D para revisión móvil
+
+- El nuevo `anatomical_glb_camera.dart` representa un estado de cámara **independiente del esqueleto**: giro horizontal continuo de 360°, inclinación limitada a -0,75…+0,85 radianes y distancia de cámara entre 0,65× y 1,6× de la original. Los parámetros no alteran mallas, huesos ni animaciones.
+- `anatomical_glb_runtime.dart` calcula la cámara esférica con los parámetros de órbita, inclinación y zoom. La cámara inicial reproduce la vista anterior cuando `elevation=0` y `zoom=1`; entradas fuera de límites o no finitas se rechazan.
+- `AnatomicalGlbPreview` utiliza arrastre con un dedo para girar/inclinar, pellizco con dos dedos para acercar/alejar y tres controles accesibles para zoom y restablecer la vista. Esto permanece en el **visor experimental**, no en el catálogo de ejercicios.
+- Nuevas pruebas `glb_camera_controls_test.dart` y pruebas de proyección con el GLB real v7 verifican vuelta completa, límites, rotación de cámara y ausencia de geometría no finita. No son ensayos de rendimiento en dispositivos físicos.
+- Además, el test sintético de v7 se amplió de 6 a 120 vértices para satisfacer el umbral de seguridad de más de 100 vértices desplazados, **sin relajar el gate productivo**. El CI #479 había fallado exclusivamente en ese fixture.
+- Sigue pendiente evaluar GPU skinning nativo con Z-buffer real, presupuesto de batería y FPS, así como un modelo profesional de músculos separados, anatomía validada y movimientos de los 229 ejercicios.
