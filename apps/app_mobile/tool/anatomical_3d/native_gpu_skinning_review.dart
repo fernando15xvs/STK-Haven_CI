@@ -195,6 +195,155 @@ class GpuMorphTransportCache {
   void reset() { _scene=null;_appearance=null; }
 }
 
+/// v9.4 index stream uses 32-bit unsigned indices, not 16-bit: the model
+/// may have over 65,535 referenced vertices before deduplication.
+const int stkGpuIndexedStride=42;
+const int stkGpuIndexedBudgetBytes=12*1024*1024;
+
+/// A distinct, disabled review protocol. Deduplicates exact bind-pose vertex
+/// attributes + all eight morph deltas; never merges across different colors
+/// or poses solely because positions coincide.
+@immutable
+class GpuIndexedMorphPacket {
+  const GpuIndexedMorphPacket(this.interleaved,this.indices,
+      this.morphWeights,this.bones,this.camera,this.triangles,
+      this.includesMesh);
+  final Float32List interleaved,morphWeights,bones,camera;
+  final Uint32List indices;
+  final int triangles;
+  final bool includesMesh;
+
+  int get vertexCount => interleaved.length~/stkGpuIndexedStride;
+  int get retainedBytes => interleaved.lengthInBytes+indices.lengthInBytes;
+  int get expandedBytes => triangles*3*stkGpuIndexedStride*4;
+  double get transportRatio => expandedBytes==0?0:retainedBytes/expandedBytes;
+
+  factory GpuIndexedMorphPacket.fromScene(GlbSkinnedScene scene,double elapsed,
+      Size size,Map<String,Color> materials,{bool dark=true,double orbit=0,
+      double elevation=0,double zoom=1,bool includeMesh=true}) {
+    final source=GpuMorphPacket.fromScene(scene,elapsed,size,materials,
+      dark:dark,orbit:orbit,elevation:elevation,zoom:zoom,
+      includeMesh:includeMesh);
+    if(!includeMesh) {
+      return GpuIndexedMorphPacket(Float32List(0),Uint32List(0),
+        source.morphWeights,source.bones,source.camera,source.triangles,false)
+        ..validate();
+    }
+    final vertices=source.vertices,deltas=source.deltas;
+    final original=ByteData.sublistView(vertices);
+    final correctives=ByteData.sublistView(deltas);
+    final values=<double>[];
+    final indexList=<int>[];
+    final hashBuckets=<int,List<int>>{};
+    final count=source.triangles*3;
+    for(var i=0;i<count;i++) {
+      var hash=0x811c9dc5;
+      for(var j=0;j<stkGpuIndexedStride;j++) {
+        final bits=j<stkGpuSkinStride
+          ?original.getUint32((i*stkGpuSkinStride+j)*4,Endian.host)
+          :correctives.getUint32(
+              (i*stkGpuMorphDeltaStride+j-stkGpuSkinStride)*4,Endian.host);
+        hash=((hash^bits)*0x01000193)&0xffffffff;
+      }
+      final bucket=hashBuckets.putIfAbsent(hash,()=>[]);
+      var found=-1;
+      for(final candidate in bucket) {
+        var equal=true;
+        for(var j=0;j<stkGpuIndexedStride;j++) {
+          final v=j<stkGpuSkinStride
+            ?vertices[i*stkGpuSkinStride+j]
+            :deltas[i*stkGpuMorphDeltaStride+j-stkGpuSkinStride];
+          if(values[candidate*stkGpuIndexedStride+j]!=v) {
+            equal=false;break;
+          }
+        }
+        if(equal) {found=candidate;break;}
+      }
+      if(found<0) {
+        found=values.length~/stkGpuIndexedStride;
+        for(var j=0;j<stkGpuIndexedStride;j++) {
+          values.add(j<stkGpuSkinStride
+            ?vertices[i*stkGpuSkinStride+j]
+            :deltas[i*stkGpuMorphDeltaStride+j-stkGpuSkinStride]);
+        }
+        bucket.add(found);
+      }
+      indexList.add(found);
+    }
+    final packet=GpuIndexedMorphPacket(Float32List.fromList(values),
+      Uint32List.fromList(indexList),source.morphWeights,source.bones,
+      source.camera,source.triangles,true);
+    packet.validate();
+    return packet;
+  }
+
+  void validate() {
+    if(triangles<1||triangles>stkGpuSkinMaxTriangles||
+        morphWeights.length!=stkGpuMorphCount||
+        morphWeights.any((w)=>!w.isFinite||w<0||w>1.025)||
+        bones.length!=stkGpuSkinBoneCount*16||
+        bones.any((x)=>!x.isFinite||x.abs()>1e6)||
+        camera.length!=stkGpuSkinCameraFloats||
+        camera.any((x)=>!x.isFinite)||
+        camera[7]<=0||camera[7]>4||
+        camera[11]<=0||camera[11]>4) {
+      throw const FormatException('Invalid indexed morph pose');
+    }
+    if(!includesMesh) {
+      if(interleaved.isNotEmpty||indices.isNotEmpty) {
+        throw const FormatException('Compact indexed pose includes mesh');
+      }
+      return;
+    }
+    if(interleaved.isEmpty||
+        interleaved.length%stkGpuIndexedStride!=0||
+        indices.length!=triangles*3||
+        vertexCount>stkGpuSkinMaxTriangles*3||
+        retainedBytes>stkGpuIndexedBudgetBytes||
+        interleaved.any((v)=>!v.isFinite)||
+        indices.any((i)=>i>=vertexCount)) {
+      throw const FormatException('Indexed morph GPU budget/index violation');
+    }
+    for(var offset=0;offset<interleaved.length;
+        offset+=stkGpuIndexedStride) {
+      var blend=0.0;
+      for(var k=0;k<4;k++) {
+        final bone=interleaved[offset+6+k];
+        final weight=interleaved[offset+10+k];
+        if(bone<0||bone>=stkGpuSkinBoneCount||
+            bone!=bone.roundToDouble()||weight<0||weight>1.025) {
+          throw const FormatException('Invalid indexed skin influence');
+        }
+        blend+=weight;
+      }
+      if((blend-1).abs()>.025) {
+        throw const FormatException('Unnormalized indexed blend');
+      }
+      for(var k=14;k<18;k++) {
+        if(interleaved[offset+k]<0||interleaved[offset+k]>1) {
+          throw const FormatException('Invalid indexed material color');
+        }
+      }
+    }
+  }
+
+  Map<String,Object> encode(Color background) {
+    validate();
+    final c=background.toARGB32();
+    return {
+      if(includesMesh) ...{'indexedVertices':interleaved,'indices':indices}
+      else 'reuseIndexedMesh':true,
+      'morphWeights':morphWeights,
+      'bones':bones,
+      'camera':camera,
+      'background':Float32List.fromList([
+        ((c>>16)&255)/255,((c>>8)&255)/255,
+        (c&255)/255,((c>>24)&255)/255,
+      ]),
+    };
+  }
+}
+
 /// QA-only static shader-skinning PlatformView.
 /// No ongoing animations are allowed: a new packet is sent only for an
 /// explicit paused frame, so Android/iOS performance is not misrepresented.
@@ -203,14 +352,14 @@ class NativeGpuSkinnedGlbReview extends StatefulWidget {
     super.key,required this.scene,required this.size,required this.materials,
     required this.background,this.elapsed=2,this.dark=true,this.orbit=0,
     this.elevation=0,this.zoom=1,this.enabled=false,
-    this.experimentalMorphGpu=false,
+    this.experimentalMorphGpu=false,this.experimentalIndexedGpu=false,
   });
 
   final GlbSkinnedScene scene;
   final double size,elapsed,orbit,elevation,zoom;
   final Map<String,Color> materials;
   final Color background;
-  final bool dark,enabled,experimentalMorphGpu;
+  final bool dark,enabled,experimentalMorphGpu,experimentalIndexedGpu;
 
   @override
   State<NativeGpuSkinnedGlbReview> createState() =>
@@ -225,6 +374,7 @@ class _NativeGpuSkinnedGlbReviewState
   Future<void> _pending=Future<void>.value();
   final GpuSkinningMeshCache _meshCache=GpuSkinningMeshCache();
   final GpuMorphTransportCache _morphCache=GpuMorphTransportCache();
+  final GpuMorphTransportCache _indexedCache=GpuMorphTransportCache();
 
   GlbDrawFrame _canvasFrame() => widget.scene.frame(
     widget.elapsed,Size.square(widget.size),widget.materials,
@@ -244,7 +394,7 @@ class _NativeGpuSkinnedGlbReviewState
     if(serial!=_sequence||channel==null||!mounted||
         !widget.enabled||_failed)return;
     try {
-      if(widget.experimentalMorphGpu) {
+      if(widget.experimentalMorphGpu||widget.experimentalIndexedGpu) {
         // Stable against material map reallocation on Flutter rebuilds.
         final swatches=widget.materials.entries.toList()
           ..sort((a,b)=>a.key.compareTo(b.key));
@@ -252,16 +402,24 @@ class _NativeGpuSkinnedGlbReviewState
           widget.dark.toString(),
           for(final e in swatches) '${e.key}:${e.value.toARGB32()}',
         ].join('|');
-        final includeMesh=_morphCache.requiresMesh(widget.scene,appearance);
-        final packet=GpuMorphPacket.fromScene(widget.scene,widget.elapsed,
-          Size.square(widget.size),widget.materials,dark:widget.dark,
-          orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom,
-          includeMesh:includeMesh);
-        final acknowledged=await channel.invokeMethod<bool>('drawMorphed',
-          packet.encode(widget.background)).timeout(const Duration(seconds:5));
+        final indexed=widget.experimentalIndexedGpu;
+        final cache=indexed?_indexedCache:_morphCache;
+        final includeMesh=cache.requiresMesh(widget.scene,appearance);
+        final payload=indexed
+          ?GpuIndexedMorphPacket.fromScene(widget.scene,widget.elapsed,
+              Size.square(widget.size),widget.materials,dark:widget.dark,
+              orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom,
+              includeMesh:includeMesh).encode(widget.background)
+          :GpuMorphPacket.fromScene(widget.scene,widget.elapsed,
+              Size.square(widget.size),widget.materials,dark:widget.dark,
+              orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom,
+              includeMesh:includeMesh).encode(widget.background);
+        final acknowledged=await channel.invokeMethod<bool>(
+          indexed?'drawIndexedMorph':'drawMorphed',payload)
+          .timeout(const Duration(seconds:5));
         if(acknowledged!=true)throw StateError('Morph GPU frame rejected');
         if(identical(channel,_channel)) {
-          _morphCache.acknowledge(widget.scene,appearance);
+          cache.acknowledge(widget.scene,appearance);
         }
       } else {
         final packet=GpuSkinningPacket.fromScene(widget.scene,widget.elapsed,
@@ -283,6 +441,7 @@ class _NativeGpuSkinnedGlbReviewState
   void _created(int id) {
     _meshCache.reset();
     _morphCache.reset();
+    _indexedCache.reset();
     _channel=MethodChannel('$stkGpuSkinView/$id');
     _scheduleSend();
   }
@@ -290,16 +449,19 @@ class _NativeGpuSkinnedGlbReviewState
   @override
   void didUpdateWidget(covariant NativeGpuSkinnedGlbReview old) {
     super.didUpdateWidget(old);
-    if(widget.experimentalMorphGpu!=old.experimentalMorphGpu) {
+    if(widget.experimentalMorphGpu!=old.experimentalMorphGpu||
+       widget.experimentalIndexedGpu!=old.experimentalIndexedGpu) {
       _meshCache.reset();
       _morphCache.reset();
+      _indexedCache.reset();
     }
     if(widget.scene!=old.scene||widget.elapsed!=old.elapsed||
        widget.size!=old.size||widget.background!=old.background||
        widget.materials!=old.materials||widget.dark!=old.dark||
        widget.orbit!=old.orbit||widget.elevation!=old.elevation||
        widget.zoom!=old.zoom||widget.enabled!=old.enabled||
-       widget.experimentalMorphGpu!=old.experimentalMorphGpu) {
+       widget.experimentalMorphGpu!=old.experimentalMorphGpu||
+       widget.experimentalIndexedGpu!=old.experimentalIndexedGpu) {
       _scheduleSend();
     }
   }
@@ -307,6 +469,7 @@ class _NativeGpuSkinnedGlbReviewState
   @override
   void dispose(){
     _sequence++;_channel=null;_meshCache.reset();_morphCache.reset();
+    _indexedCache.reset();
     super.dispose();
   }
 

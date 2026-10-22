@@ -50,7 +50,8 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
         return
       }
       guard call.method == "drawSkinned" ||
-            call.method == "drawMorphed" else {
+            call.method == "drawMorphed" ||
+            call.method == "drawIndexedMorph" else {
         result(FlutterMethodNotImplemented)
         return
       }
@@ -72,14 +73,44 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
         ))
         return
       }
-      let isMorph = call.method == "drawMorphed"
+      let indexedMode = call.method == "drawIndexedMorph"
+      let isMorph = call.method == "drawMorphed" || indexedMode
       let reuseMesh = args["reuseMesh"] as? Bool == true
       let reuseMorphMesh = args["reuseMorphMesh"] as? Bool == true
+      let reuseIndexedMesh = args["reuseIndexedMesh"] as? Bool == true
+      let indexedVertices = (args["indexedVertices"] as? FlutterStandardTypedData)?.data
+      let indexedIndices = (args["indices"] as? FlutterStandardTypedData)?.data
       let meshBytes = (args["vertices"] as? FlutterStandardTypedData)?.data
       let deltas = (args["morphDeltas"] as? FlutterStandardTypedData)?.data
       let morphWeights = (args["morphWeights"] as? FlutterStandardTypedData)?.data
       let meshShapeValid: Bool
-      if isMorph {
+      if indexedMode {
+        if reuseIndexedMesh {
+          meshShapeValid = indexedVertices == nil && indexedIndices == nil &&
+            meshBytes == nil && deltas == nil && renderer.hasIndexedMorphMesh
+        } else if let indexedVertices, let indexedIndices {
+          let vertexCount = indexedVertices.count / (42 * 4)
+          let payloadBytes = indexedVertices.count + indexedIndices.count
+          let validIndices = indexedIndices.withUnsafeBytes { raw -> Bool in
+            (0..<(indexedIndices.count / 4)).allSatisfy { i in
+              let index = raw.loadUnaligned(
+                fromByteOffset: i * 4, as: UInt32.self)
+              return index < UInt32(vertexCount)
+            }
+          }
+          meshShapeValid = meshBytes == nil && deltas == nil &&
+            indexedVertices.count > 0 &&
+            indexedVertices.count % (42 * 4) == 0 &&
+            vertexCount <= 25000 * 3 &&
+            indexedIndices.count >= 3 * 4 &&
+            indexedIndices.count % (3 * 4) == 0 &&
+            indexedIndices.count <= 25000 * 3 * 4 &&
+            payloadBytes <= 12 * 1024 * 1024 &&
+            Self.valid(indexedVertices) && validIndices
+        } else {
+          meshShapeValid = false
+        }
+      } else if isMorph {
         if reuseMorphMesh {
           meshShapeValid = meshBytes == nil && deltas == nil &&
             renderer.hasMorphMesh
@@ -129,7 +160,11 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
         (0..<4).map { bytes.loadUnaligned(fromByteOffset: $0 * 4, as: Float.self) }
       }
       let uploaded: Bool
-      if isMorph {
+      if indexedMode {
+        uploaded = renderer.loadIndexedMorph(vertices: indexedVertices,
+          indices: indexedIndices, weights: morphWeights!,
+          bones: rawBones.data, camera: rawCamera.data, color: background)
+      } else if isMorph {
         uploaded = renderer.loadMorph(vertices: meshBytes,
           deltas: deltas, weights: morphWeights!,
           bones: rawBones.data, camera: rawCamera.data, color: background)
@@ -178,6 +213,9 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
   private let morphPipeline: MTLRenderPipelineState?
   private let depth: MTLDepthStencilState
   private var vertexBuffer: MTLBuffer?
+  private var indexBuffer: MTLBuffer?
+  private var indexCount = 0
+  private var indexedActive = false
   private var boneBuffer: MTLBuffer?
   private var cameraBuffer: MTLBuffer?
   private var morphWeightsBuffer: MTLBuffer?
@@ -186,11 +224,15 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
   private var background: [Float] = [0.07, 0.09, 0.12, 1.0]
 
   var hasMesh: Bool {
-    vertexBuffer != nil && vertexCount > 0 && !morphActive
+    vertexBuffer != nil && vertexCount > 0 && !morphActive && !indexedActive
   }
   var hasMorphMesh: Bool {
     vertexBuffer != nil && vertexCount > 0 &&
-      morphActive && morphPipeline != nil
+      morphActive && !indexedActive && morphPipeline != nil
+  }
+  var hasIndexedMorphMesh: Bool {
+    vertexBuffer != nil && indexBuffer != nil && indexCount > 0 &&
+      indexedActive && morphActive && morphPipeline != nil
   }
 
   private static let shaderSource = """
@@ -359,6 +401,9 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
     boneBuffer = bone
     cameraBuffer = cam
     morphActive = false
+    indexedActive = false
+    indexBuffer = nil
+    indexCount = 0
     morphWeightsBuffer = nil
     if let vertices { vertexCount = vertices.count / (18 * 4) }
     background = color
@@ -407,6 +452,34 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
     morphWeightsBuffer = morph
     vertexCount = newCount
     morphActive = true
+    indexedActive = false
+    indexBuffer = nil
+    indexCount = 0
+    background = color
+    return true
+  }
+
+  func loadIndexedMorph(
+    vertices: Data?, indices: Data?, weights: Data,
+    bones: Data, camera: Data, color: [Float]
+  ) -> Bool {
+    guard morphPipeline != nil else { return false }
+    let newVertex = vertices.flatMap { upload($0) } ??
+      (indexedActive ? vertexBuffer : nil)
+    let newIndices = indices.flatMap { upload($0) } ??
+      (indexedActive ? indexBuffer : nil)
+    guard let vertex = newVertex, let index = newIndices,
+          let bone = upload(bones), let cam = upload(camera),
+          let morph = upload(weights) else { return false }
+    vertexBuffer = vertex
+    indexBuffer = index
+    if let vertices { vertexCount = vertices.count / (42 * 4) }
+    if let indices { indexCount = indices.count / 4 }
+    boneBuffer = bone
+    cameraBuffer = cam
+    morphWeightsBuffer = morph
+    morphActive = true
+    indexedActive = true
     background = color
     return true
   }
@@ -447,9 +520,18 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
       }
       encoder.setVertexBuffer(morph, offset: 0, index: 3)
     }
-    encoder.drawPrimitives(type: .triangle,
-                           vertexStart: 0,
-                           vertexCount: vertexCount)
+    if indexedActive {
+      guard let indices = indexBuffer else {
+        encoder.endEncoding()
+        return
+      }
+      encoder.drawIndexedPrimitives(type: .triangle,
+        indexCount: indexCount, indexType: .uint32,
+        indexBuffer: indices, indexBufferOffset: 0)
+    } else {
+      encoder.drawPrimitives(type: .triangle,
+        vertexStart: 0, vertexCount: vertexCount)
+    }
     encoder.endEncoding()
     command.present(drawable)
     command.commit()

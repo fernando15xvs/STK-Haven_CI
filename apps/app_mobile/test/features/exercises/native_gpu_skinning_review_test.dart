@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -150,6 +151,125 @@ void main() {
     cache.reset();
     expect(cache.requiresMesh(scene,'light:blue'),true);
   });
+
+  test('v9.4 indexed QA keeps vertex/morph parity and bounded byte usage',
+      () {
+    final bytes=File(
+      'build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb',
+    ).readAsBytesSync();
+    const size=Size(320,320);
+    final summary=<Map<String,Object>>[];
+    for(final name in names) {
+      final scene=GlbSkinnedScene.decodeMaster(bytes,pattern:name);
+      final expanded=GpuMorphPacket.fromScene(scene,2,size,const {});
+      final indexed=GpuIndexedMorphPacket.fromScene(scene,2,size,const {});
+      expect(indexed.triangles,expanded.triangles);
+      expect(indexed.indices.length,indexed.triangles*3);
+      expect(indexed.retainedBytes,lessThanOrEqualTo(stkGpuIndexedBudgetBytes));
+      expect(indexed.retainedBytes,lessThan(indexed.expandedBytes));
+      expect(indexed.vertexCount,lessThan(indexed.indices.length));
+      final positions=expanded.vertices,deltas=expanded.deltas;
+      final samples=indexed.indices.length;
+      for(var t=0;t<samples;t+=math.max(1,samples~/160)) {
+        final vertex=indexed.indices[t];
+        final start=vertex*stkGpuIndexedStride;
+        for(var axis=0;axis<stkGpuIndexedStride;axis++) {
+          final expected=axis<stkGpuSkinStride
+            ?positions[t*stkGpuSkinStride+axis]
+            :deltas[t*stkGpuMorphDeltaStride+axis-stkGpuSkinStride];
+          expect(indexed.interleaved[start+axis],expected,
+            reason:'$name index $t attribute $axis');
+        }
+      }
+      expect(indexed.encode(const Color(0xFF12181F)).keys.toSet(),
+        {'indexedVertices','indices','morphWeights','bones','camera',
+          'background'});
+      final compact=GpuIndexedMorphPacket.fromScene(scene,3,size,const {},
+        includeMesh:false);
+      expect(compact.interleaved,isEmpty);
+      expect(compact.indices,isEmpty);
+      expect(compact.encode(const Color(0xFF12181F)).keys.toSet(),
+        {'reuseIndexedMesh','morphWeights','bones','camera','background'});
+      expect(compact.bones.length,55*16);
+      summary.add({
+        'pattern':name,
+        'triangles':indexed.triangles,
+        'uniqueVertices':indexed.vertexCount,
+        'expandedVertices':indexed.indices.length,
+        'expandedMeshBytes':indexed.expandedBytes,
+        'indexedMeshBytes':indexed.retainedBytes,
+        'ratio':indexed.transportRatio,
+        'withinStaticBudget':true,
+      });
+    }
+    final destination=File(
+      'build/cc0_master_v7_flutter_qa/indexed_morph_memory_v94.json',
+    );
+    destination.parent.createSync(recursive:true);
+    destination.writeAsStringSync(
+      const JsonEncoder.withIndent('  ').convert({
+        'type':'static_wire_byte_budget_not_measured_device_RAM',
+        'platform':'internal_QA_only',
+        'model':'CC0_55_joint_v7',
+        'deviceMemoryMeasured':false,
+        'physicalFPSMeasured':false,
+        'patterns':summary,
+        'approvedAssets':0,
+        'enabledAssets':0,
+      }),
+    );
+  },timeout:const Timeout(Duration(minutes:8)));
+
+  test('v9.4 indexed payload rejects invalid references and resets on switch',
+      () {
+    final bytes=File(
+      'build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb',
+    ).readAsBytesSync();
+    final scene=GlbSkinnedScene.decodeMaster(bytes,
+      pattern:'overhead_reach_bilateral');
+    final indexed=GpuIndexedMorphPacket.fromScene(
+      scene,1,const Size(320,320),const {});
+    final invalid=Uint32List.fromList(indexed.indices);
+    invalid[0]=indexed.vertexCount;
+    final malformed=GpuIndexedMorphPacket(
+      indexed.interleaved,invalid,indexed.morphWeights,indexed.bones,
+      indexed.camera,indexed.triangles,true);
+    expect(()=>malformed.validate(),throwsFormatException);
+    final wrongCompact=GpuIndexedMorphPacket(
+      indexed.interleaved,Uint32List(0),indexed.morphWeights,indexed.bones,
+      indexed.camera,indexed.triangles,false);
+    expect(()=>wrongCompact.validate(),throwsFormatException);
+    final cache=GpuMorphTransportCache();
+    expect(cache.requiresMesh(scene,'dark:red'),true);
+    cache.acknowledge(scene,'dark:red');
+    expect(cache.requiresMesh(scene,'dark:red'),false);
+    cache.reset();
+    expect(cache.requiresMesh(scene,'dark:red'),true);
+  },timeout:const Timeout(Duration(minutes:4)));
+
+  test('v9.4 compact pose sampling prepares a disabled 24-step probe',() {
+    final bytes=File(
+      'build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb',
+    ).readAsBytesSync();
+    final scene=GlbSkinnedScene.decodeMaster(bytes,
+      pattern:'squat_articulation');
+    const size=Size(320,320);
+    final watch=Stopwatch()..start();
+    var sampled=0;
+    for(var step=0;step<24;step++) {
+      final packet=GpuIndexedMorphPacket.fromScene(scene,
+        step/24,size,const {},includeMesh:false);
+      expect(packet.interleaved,isEmpty);
+      expect(packet.indices,isEmpty);
+      sampled+=packet.morphWeights.length+packet.bones.length+
+        packet.camera.length;
+    }
+    watch.stop();
+    expect(sampled,24*(8+55*16+20));
+    // Diagnostic only: this timer excludes method channels, native raster,
+    // battery and actual device FPS; never assert performance on CI runners.
+    expect(watch.elapsedMicroseconds,greaterThanOrEqualTo(0));
+  },timeout:const Timeout(Duration(minutes:2)));
 
   test('Seven CC0 v7 motions project GPU-skinned joints like CPU baseline',() {
     final raw=File(

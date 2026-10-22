@@ -99,3 +99,25 @@ mostrar una pose fija o activar la preferencia del SO de movimiento reducido.
 **Precauciones:** la primera carga incrementa la geometría de transporte de 18 a 42 floats por vértice expandido (×2,33, antes de matrices), y exige que el dispositivo soporte suficientes atributos/recursos GPU. La geometría sigue expandida por triángulo (todavía NO indexada), la capa nativa aún copia buffers de pose y el render carece de ensayo físico de memoria, batería, gestión de interrupciones y fotogramas. Solo se separaron morphs y articulaciones para envíos posteriores, **no se autoriza playback 24/30/60 FPS ni producción**. Todas las 229 demostraciones continúan **0 aprobadas / 0 habilitadas**.
 
 **Siguientes puertas de calidad:** compilar CI público Android/iOS, inspeccionar capturas reales y restauración de contexto, medir la memoria extra del buffer base y revisar técnicamente los 7 patrones; después estudiar índices/vertex sharing, amortización del primer envío y una prueba temporal controlada en teléfono antes de considerar las 229 animaciones.
+
+## v9.4 — malla indexada + presupuestos de memoria + sonda de poses (QA interno)
+
+**Solo iOS/Android.** Se añade `AnatomicalGlbPreview(experimentalIndexedGpu:true)` como tercera ruta nativa experimental, inicialmente `false`. El catálogo, las 229 animaciones, `pubspec.yaml`, la web, Supabase y los historiales no cambian. `drawSkinned` (v9.2), `drawMorphed` (v9.3) y Canvas siguen disponibles como alternativas. Ninguna ruta se habilita para reproducción continua o para usuarios.
+
+### Contrato v9.4
+
+- Flutter reutiliza `GpuMorphPacket.fromScene` una sola vez para la carga inicial y construye `GpuIndexedMorphPacket`. Cada entrada de 42 floats representa posición/normal, cuatro articulaciones, cuatro pesos, RGBA y 8 deltas de posición. Se deduplica por **los 42 valores completos**, sin fusionar regiones que tengan distinto color, huesos o morphs. La tabla hash verifica la igualdad completa ante colisiones. Índices **Uint32** explícitos, sin suponer que caben en 16 bits.
+- Transferencia inicial: `drawIndexedMorph` recibe `indexedVertices: Float32List`, `indices: Uint32List`, pesos morfológicos, 55 matrices, cámara y fondo. Las poses posteriores reciben `reuseIndexedMesh:true` y únicamente 8 pesos, matrices, cámara y fondo; la geometría solo se confirma como reutilizable **después de ACK nativo**. Si cambia la escena, paleta o la PlatformView, se exige una carga completa nueva.
+- Android GLES3: `glDrawElements(GL_UNSIGNED_INT)`, VBO de 42 floats y EBO de 32 bits; cargas iniciales acotadas, datos persistentes en la vista, recuperación al recrear EGL, rechazo a referencias fuera de rango. Los parámetros por pose no suben malla.
+- iOS Metal: `MTLBuffer` de vértices e índices reutilizados por vista; `drawIndexedPrimitives(indexType:.uint32)`, protección de índices y 12 MiB para ambos buffers transferidos. Los pesos, articulaciones y cámara sí se renuevan por pose.
+- Presupuesto estático antes de aceptar malla: **12 MiB** (interleaved + índices). Los vértices e índices no deben contener números inválidos; los índices deben estar dentro de 0..<uniqueVertexCount, el conteo de triángulos no puede pasar 25.000. El presupuesto se aplica también en los dos puentes nativos. Este límite **no mide la memoria total de la app** ni el coste de Flutter/MethodChannel/copias de staging/Metal/EGL.
+- QA de siete patrones: reconstruye de modo determinista posiciones, normales, influencias, materiales y 8 deltas; coteja muestras de cada triángulo contra el stream expandido v9.3. Produce `build/cc0_master_v7_flutter_qa/indexed_morph_memory_v94.json` con bytes y ratio por clip. Otras pruebas rechazan índices inválidos, validan reinicio de caché y muestrean **24 poses compactas** sin arrancar una reproducción real.
+
+### Condiciones antes de v9.5
+
+1. Verificar CI público con Android/iOS y pruebas de los siete clips; arreglar regresiones de Kotlin, Swift y Dart antes de afirmar «verde».
+2. Revisar artefactos, capturas y **medir memoria física**, FPS, consumo térmico/batería en iPhone y Android; el ratio de transporte es **estimación estática**, no un resultado físico.
+3. La deduplicación corre en CPU al construir la malla inicial (incluye el stream temporal v9.3). Medir ese pico antes de permitir animación continua. Considerar extracción indexada directa desde accesores glTF, límites de memoria y eliminación de buffers transitorios.
+4. Implementar un reproductor con cadencia limitada y backpressure solamente después de la validación física, y manteniendo `reduceMotion`, fallback Canvas y control opt-in.
+
+**Publicación: 229 borradores / 0 aprobados / 0 habilitados.** El PR experimental permanece sin fusionar a `main`.

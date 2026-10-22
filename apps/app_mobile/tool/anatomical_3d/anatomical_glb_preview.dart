@@ -16,6 +16,7 @@ class AnatomicalGlbPreview extends StatefulWidget {
     this.experimentalNativeGpuStatic=false,
     this.experimentalGpuSkinning=false,
     this.experimentalGpuMorphs=false,
+    this.experimentalIndexedGpu=false,
   });
   final GlbSkinnedScene scene;
   final double? progress;
@@ -30,6 +31,9 @@ class AnatomicalGlbPreview extends StatefulWidget {
   /// v9.3 experimental reusable base mesh + 8 GPU morph targets;
   /// only sampled poses, never continuous or routed to the exercise list.
   final bool experimentalGpuMorphs;
+  /// v9.4 indexed GPU QA: disabled unless explicitly selected.
+  /// No production workouts, web or continuous playback.
+  final bool experimentalIndexedGpu;
   static GlbSkinnedScene decode(Uint8List bytes) => GlbSkinnedScene.decode(bytes);
   @override
   State<AnatomicalGlbPreview> createState()=>_AnatomicalGlbPreviewState();
@@ -118,7 +122,8 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                   _cacheKey=key;
                 }
                 if((widget.experimentalGpuSkinning||
-                    widget.experimentalGpuMorphs)&&still) {
+                    widget.experimentalGpuMorphs||
+                    widget.experimentalIndexedGpu)&&still) {
                   return NativeGpuSkinnedGlbReview(
                     scene:widget.scene,size:widget.dimension,
                     materials:materials,background:palette.surface,
@@ -126,6 +131,7 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                     elevation:_camera.elevation,zoom:_camera.zoom,
                     enabled:true,
                     experimentalMorphGpu:widget.experimentalGpuMorphs,
+                    experimentalIndexedGpu:widget.experimentalIndexedGpu,
                   );
                 }
                 if(widget.experimentalNativeGpuStatic&&still) {

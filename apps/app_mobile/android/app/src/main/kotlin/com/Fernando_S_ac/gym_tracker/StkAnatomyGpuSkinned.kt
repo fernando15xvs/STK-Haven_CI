@@ -15,6 +15,7 @@ import io.flutter.plugin.platform.PlatformViewFactory
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
+import java.nio.IntBuffer
 import javax.microedition.khronos.egl.EGLConfig
 import javax.microedition.khronos.opengles.GL10
 
@@ -55,7 +56,8 @@ private class StkAnatomyGpuSkinnedView(
                 result.error("disposed", "GPU skinning view disposed", null)
                 return@setMethodCallHandler
             }
-            if (call.method != "drawSkinned" && call.method != "drawMorphed") {
+            if (call.method != "drawSkinned" && call.method != "drawMorphed" &&
+                call.method != "drawIndexedMorph") {
                 result.notImplemented()
                 return@setMethodCallHandler
             }
@@ -66,6 +68,10 @@ private class StkAnatomyGpuSkinnedView(
             val params = call.arguments as? Map<*, *>
             val positions = params?.get("vertices") as? FloatArray
             val reuseMesh = params?.get("reuseMesh") == true
+            val indexedMode = call.method == "drawIndexedMorph"
+            val indexedVertices = params?.get("indexedVertices") as? FloatArray
+            val drawIndices = params?.get("indices") as? IntArray
+            val reuseIndexedMesh = params?.get("reuseIndexedMesh") == true
             val morphMode = call.method == "drawMorphed"
             val reuseMorphMesh = params?.get("reuseMorphMesh") == true
             val morphDeltas = params?.get("morphDeltas") as? FloatArray
@@ -75,7 +81,26 @@ private class StkAnatomyGpuSkinnedView(
             val background = params?.get("background") as? FloatArray
             // Compact packets are legal only when vertices are omitted.
             // Native GL thread verifies that the current view owns a mesh.
-            val meshValid = if (morphMode) {
+            val meshValid = if (indexedMode) {
+                if (reuseIndexedMesh) {
+                    indexedVertices == null && drawIndices == null &&
+                        positions == null && morphDeltas == null
+                } else {
+                    indexedVertices != null && drawIndices != null &&
+                        positions == null && morphDeltas == null &&
+                        indexedVertices.isNotEmpty() &&
+                        indexedVertices.size % 42 == 0 &&
+                        indexedVertices.size <= 25000 * 3 * 42 &&
+                        drawIndices.isNotEmpty() &&
+                        drawIndices.size % 3 == 0 &&
+                        drawIndices.size <= 25000 * 3 &&
+                        (indexedVertices.size + drawIndices.size) * 4 <= 12 * 1024 * 1024 &&
+                        indexedVertices.all { it.isFinite() } &&
+                        drawIndices.all {
+                            it >= 0 && it < indexedVertices.size / 42
+                        }
+                }
+            } else if (morphMode) {
                 if (reuseMorphMesh) positions == null && morphDeltas == null
                 else positions != null && positions.isNotEmpty() &&
                     positions.size % (18 * 3) == 0 &&
@@ -89,8 +114,9 @@ private class StkAnatomyGpuSkinnedView(
                 positions.size % (18 * 3) == 0 &&
                 positions.size <= 25000 * 3 * 18 &&
                 positions.all { it.isFinite() }
-            val weightsValid = if (!morphMode) morphDeltas == null &&
-                morphWeights == null && !reuseMorphMesh else
+            val weightsValid = if (!morphMode && !indexedMode) morphDeltas == null &&
+                morphWeights == null && !reuseMorphMesh && !reuseIndexedMesh &&
+                indexedVertices == null && drawIndices == null else
                 morphWeights != null && morphWeights.size == 8 &&
                 morphWeights.all { it.isFinite() && it >= 0f && it <= 1.025f }
             if (!meshValid || !weightsValid || bones == null || camera == null ||
@@ -102,12 +128,14 @@ private class StkAnatomyGpuSkinnedView(
                 result.error("invalid_skin_mesh", "Unsafe GPU joint packet", null)
                 return@setMethodCallHandler
             }
-            if (positions != null) {
-                for (offset in positions.indices step 18) {
+            if (positions != null || indexedVertices != null) {
+                val stream = indexedVertices ?: positions!!
+                val stride = if (indexedMode) 42 else 18
+                for (offset in stream.indices step stride) {
                     var weight = 0f
                     for (j in 0..3) {
-                        val joint = positions[offset + 6 + j]
-                        val w = positions[offset + 10 + j]
+                        val joint = stream[offset + 6 + j]
+                        val w = stream[offset + 10 + j]
                         if (joint < 0f || joint > 54f ||
                             joint != joint.toInt().toFloat() ||
                             w < 0f || w > 1.025f) {
@@ -124,14 +152,24 @@ private class StkAnatomyGpuSkinnedView(
             }
             surface.queueEvent {
                 if ((morphMode && reuseMorphMesh && !renderer.hasMorphMesh()) ||
-                    (!morphMode && reuseMesh && !renderer.hasStandardMesh())) {
+                    (indexedMode && reuseIndexedMesh && !renderer.hasIndexedMesh()) ||
+                    (!morphMode && !indexedMode && reuseMesh &&
+                        !renderer.hasStandardMesh())) {
                     Handler(Looper.getMainLooper()).post {
                         result.error("missing_gpu_mesh",
                             "Compact frame has no acknowledged mesh", null)
                     }
                     return@queueEvent
                 }
-                if (morphMode) {
+                if (indexedMode) {
+                    if (indexedVertices != null && drawIndices != null) {
+                        renderer.updateIndexed(indexedVertices, drawIndices,
+                            morphWeights!!, bones, camera, background)
+                    } else {
+                        renderer.updateMorphPose(
+                            morphWeights!!, bones, camera, background)
+                    }
+                } else if (morphMode) {
                     if (positions != null && morphDeltas != null) {
                         renderer.updateMorph(positions, morphDeltas,
                             morphWeights!!, bones, camera, background)
@@ -152,7 +190,7 @@ private class StkAnatomyGpuSkinnedView(
                         if (destroyed) {
                             result.error("disposed", "GPU view disposed", null)
                         } else if (!supported ||
-                            (morphMode && !renderer.supportsMorphs())) {
+                            ((morphMode || indexedMode) && !renderer.supportsMorphs())) {
                             result.error("shader_unavailable",
                                 "Device cannot compile the 55-bone GLES3 shader", null)
                         } else {
@@ -253,6 +291,12 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
     private var morphCameraLocation = -1
     private var morphWeightsLocation = -1
     private var positions: FloatBuffer? = null
+    private var indexBuffer: IntBuffer? = null
+    private var indexBufferId = 0
+    private var uploadedIndexBytes = 0
+    private var indexDirty = false
+    private var indexCount = 0
+    private var indexedActive = false
     private var meshBufferId = 0
     private var uploadedBytes = 0
     private var meshDirty = false
@@ -279,9 +323,11 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
     }
 
     fun hasStandardMesh(): Boolean = positions != null &&
-        count > 0 && !morphActive
+        count > 0 && !morphActive && !indexedActive
     fun hasMorphMesh(): Boolean = positions != null &&
-        count > 0 && morphActive
+        count > 0 && morphActive && !indexedActive
+    fun hasIndexedMesh(): Boolean = positions != null &&
+        indexBuffer != null && indexCount > 0 && indexedActive
     fun supportsMorphs(): Boolean = morphReady
 
     fun update(vertices: FloatArray, bones: FloatArray, camera: FloatArray, bg: FloatArray) {
@@ -292,6 +338,9 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
         positions = direct
         count = vertices.size / 18
         morphActive = false
+        indexedActive = false
+        indexBuffer = null
+        indexCount = 0
         meshDirty = true
         updatePose(bones, camera, bg)
     }
@@ -310,6 +359,31 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
         count = vertexCount
         meshDirty = true
         morphActive = true
+        indexedActive = false
+        indexBuffer = null
+        indexCount = 0
+        updateMorphPose(weights, bones, camera, bg)
+    }
+
+    fun updateIndexed(vertices: FloatArray, indices: IntArray,
+        weights: FloatArray, bones: FloatArray, camera: FloatArray, bg: FloatArray) {
+        // First QA upload only; 42-float bind data is already interleaved.
+        val vertexData = ByteBuffer.allocateDirect(vertices.size * 4)
+            .order(ByteOrder.nativeOrder()).asFloatBuffer()
+        vertexData.put(vertices)
+        vertexData.position(0)
+        val indexData = ByteBuffer.allocateDirect(indices.size * 4)
+            .order(ByteOrder.nativeOrder()).asIntBuffer()
+        indexData.put(indices)
+        indexData.position(0)
+        positions = vertexData
+        indexBuffer = indexData
+        count = vertices.size / 42
+        indexCount = indices.size
+        morphActive = true
+        indexedActive = true
+        meshDirty = true
+        indexDirty = true
         updateMorphPose(weights, bones, camera, bg)
     }
 
@@ -347,6 +421,9 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
         meshBufferId = 0
         uploadedBytes = 0
         meshDirty = true
+        indexBufferId = 0
+        uploadedIndexBytes = 0
+        indexDirty = true
         morphReady = false
         morphProgram = 0
         try {
@@ -463,6 +540,29 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
         val activeIndices = if (morphActive) morphIndices else indices
         val boneUniform = if (morphActive) morphBonesLocation else bonesLocation
         val cameraUniform = if (morphActive) morphCameraLocation else cameraLocation
+        if (indexedActive) {
+            val index = indexBuffer ?: return
+            if (indexBufferId == 0) {
+                val buffers = IntArray(1)
+                GLES30.glGenBuffers(1, buffers, 0)
+                indexBufferId = buffers[0]
+                if (indexBufferId == 0) return
+            }
+            GLES30.glBindBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER, indexBufferId)
+            if (indexDirty) {
+                index.position(0)
+                val bytes = indexCount * 4
+                if (uploadedIndexBytes != bytes) {
+                    GLES30.glBufferData(GLES30.GL_ELEMENT_ARRAY_BUFFER, bytes,
+                        index, GLES30.GL_STATIC_DRAW)
+                    uploadedIndexBytes = bytes
+                } else {
+                    GLES30.glBufferSubData(GLES30.GL_ELEMENT_ARRAY_BUFFER, 0,
+                        bytes, index)
+                }
+                indexDirty = false
+            }
+        }
         GLES30.glUseProgram(activeProgram)
         GLES30.glUniformMatrix4fv(boneUniform, 55, false, matrixPalette, 0)
         GLES30.glUniform4fv(cameraUniform, 5, cameraValues, 0)
@@ -478,7 +578,13 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
                 GLES30.GL_FLOAT, false, activeStride * 4, offsets[i] * 4)
             GLES30.glEnableVertexAttribArray(activeIndices[i])
         }
-        GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, count)
+        if (indexedActive) {
+            GLES30.glDrawElements(GLES30.GL_TRIANGLES, indexCount,
+                GLES30.GL_UNSIGNED_INT, 0)
+            GLES30.glBindBuffer(GLES30.GL_ELEMENT_ARRAY_BUFFER, 0)
+        } else {
+            GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, count)
+        }
         for (index in activeIndices) GLES30.glDisableVertexAttribArray(index)
         GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, 0)
     }
