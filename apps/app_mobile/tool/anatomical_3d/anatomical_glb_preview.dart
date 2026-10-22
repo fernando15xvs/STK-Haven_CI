@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:core/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'anatomical_glb_runtime.dart';
+import 'anatomical_glb_camera.dart';
 import 'anatomical_glb_staging.dart';
 
 /// Isolated GLB candidate viewer. CPU skinning, drawVertices rasterization.
@@ -27,7 +28,8 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
     vsync:this,duration:Duration(milliseconds:
         (widget.scene.durationSeconds*1000).round()));
   bool _playing=true;
-  double _orbit=0;
+  GlbCameraPose _camera=const GlbCameraPose();
+  double _pinchStartZoom=1;
   String? _cacheKey;
   GlbDrawFrame? _cached;
   @override
@@ -68,8 +70,12 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
           '. Modelo 3D experimental animado, pendiente de aprobación.',
         image:true,
         child:GestureDetector(
-          onHorizontalDragUpdate:(details)=>setState((){
-            _orbit=(_orbit+details.delta.dx*.006).clamp(-.8,.8);
+          onScaleStart:(_)=>_pinchStartZoom=_camera.zoom,
+          onScaleUpdate:(details)=>setState((){
+            _camera=details.pointerCount>1
+              ?_camera.scale(details.scale,initialZoom:_pinchStartZoom)
+              :_camera.drag(details.focalPointDelta.dx,
+                            details.focalPointDelta.dy);
             _cacheKey=null;
           }),
           child:RepaintBoundary(
@@ -85,15 +91,17 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                     MediaQuery.disableAnimationsOf(context)||!_playing;
                 final depthSlices=still?6:1;
                 final regions=widget.highlightRegions.toList()..sort();
-                final key=[tick,depthSlices,_orbit,regions.join(','),
+                final key=[tick,depthSlices,_camera.yaw,
+                  _camera.elevation,_camera.zoom,regions.join(','),
                   palette.primary.toARGB32(),
                   palette.surface.toARGB32(),widget.dimension,dark,
                   widget.scene.id].join(':');
                 if(_cached==null||_cacheKey!=key){
                   _cached=widget.scene.frame(tick/24,
                     Size(widget.dimension,widget.dimension),materials,
-                    dark:dark,orbit:_orbit,depthSlices:depthSlices,
-                    poseNormals:still);
+                    dark:dark,orbit:_camera.yaw,
+                    elevation:_camera.elevation,zoom:_camera.zoom,
+                    depthSlices:depthSlices,poseNormals:still);
                   _cacheKey=key;
                 }
                 return CustomPaint(painter:GlbSkinnedPainter(
@@ -103,12 +111,29 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
           ),
         ),
       ),
-      if(widget.progress==null&&!MediaQuery.disableAnimationsOf(context))
-        TextButton(key:const Key('skinned_glb_play_pause'),
+      Row(mainAxisSize:MainAxisSize.min,children:[
+        if(widget.progress==null&&!MediaQuery.disableAnimationsOf(context))
+          TextButton(key:const Key('skinned_glb_play_pause'),
+            onPressed:()=>setState((){
+              _playing=!_playing;_sync();
+            }),
+            child:Text(_playing?'Pausar':'Reproducir')),
+        IconButton(key:const Key('skinned_glb_zoom_in'),
+          tooltip:'Acercar modelo 3D',icon:const Icon(Icons.zoom_in),
           onPressed:()=>setState((){
-            _playing=!_playing;_sync();
-          }),
-          child:Text(_playing?'Pausar':'Reproducir')),
+            _camera=_camera.zoomButton(true);_cacheKey=null;
+          })),
+        IconButton(key:const Key('skinned_glb_zoom_out'),
+          tooltip:'Alejar modelo 3D',icon:const Icon(Icons.zoom_out),
+          onPressed:()=>setState((){
+            _camera=_camera.zoomButton(false);_cacheKey=null;
+          })),
+        IconButton(key:const Key('skinned_glb_reset_camera'),
+          tooltip:'Restablecer vista 3D',icon:const Icon(Icons.center_focus_strong),
+          onPressed:()=>setState((){
+            _camera=const GlbCameraPose();_cacheKey=null;
+          })),
+      ]),
     ]);
   }
 }
