@@ -49,7 +49,8 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
         result(FlutterError(code: "disposed", message: nil, details: nil))
         return
       }
-      guard call.method == "drawSkinned" else {
+      guard call.method == "drawSkinned" ||
+            call.method == "drawMorphed" else {
         result(FlutterMethodNotImplemented)
         return
       }
@@ -71,23 +72,55 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
         ))
         return
       }
+      let isMorph = call.method == "drawMorphed"
       let reuseMesh = args["reuseMesh"] as? Bool == true
+      let reuseMorphMesh = args["reuseMorphMesh"] as? Bool == true
       let meshBytes = (args["vertices"] as? FlutterStandardTypedData)?.data
-      let meshValid: Bool
-      if reuseMesh {
-        meshValid = meshBytes == nil && renderer.hasMesh
+      let deltas = (args["morphDeltas"] as? FlutterStandardTypedData)?.data
+      let morphWeights = (args["morphWeights"] as? FlutterStandardTypedData)?.data
+      let meshShapeValid: Bool
+      if isMorph {
+        if reuseMorphMesh {
+          meshShapeValid = meshBytes == nil && deltas == nil &&
+            renderer.hasMorphMesh
+        } else if let meshBytes, let deltas {
+          meshShapeValid = meshBytes.count > 0 &&
+            meshBytes.count <= 25000 * 3 * 18 * 4 &&
+            meshBytes.count % (18 * 3 * 4) == 0 &&
+            deltas.count == (meshBytes.count / (18 * 4)) * 24 * 4 &&
+            Self.valid(meshBytes) && Self.valid(deltas)
+        } else {
+          meshShapeValid = false
+        }
+      } else if reuseMesh {
+        meshShapeValid = meshBytes == nil && deltas == nil &&
+          morphWeights == nil && renderer.hasMesh
       } else if let meshBytes {
-        meshValid = meshBytes.count > 0 &&
+        meshShapeValid = meshBytes.count > 0 &&
           meshBytes.count <= 25000 * 3 * 18 * 4 &&
           meshBytes.count % (18 * 3 * 4) == 0 &&
+          deltas == nil && morphWeights == nil &&
           Self.valid(meshBytes)
       } else {
-        meshValid = false
+        meshShapeValid = false
       }
-      guard meshValid else {
+      let weightsValid = !isMorph || (
+        morphWeights?.count == 8 * 4 &&
+        morphWeights.map { Self.valid($0) } == true &&
+        morphWeights.map { raw in
+          raw.withUnsafeBytes { bytes in
+            (0..<8).allSatisfy {
+              let weight = bytes.loadUnaligned(
+                fromByteOffset: $0 * 4, as: Float.self)
+              return weight >= 0 && weight <= 1.025
+            }
+          }
+        } == true
+      )
+      guard meshShapeValid && weightsValid else {
         result(FlutterError(
           code: "missing_or_invalid_gpu_mesh",
-          message: "Compact frame requires a retained mesh in this view",
+          message: "Morph frame requires valid reusable geometry and weights",
           details: nil
         ))
         return
@@ -95,11 +128,17 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
       let background = rawBackground.data.withUnsafeBytes { bytes -> [Float] in
         (0..<4).map { bytes.loadUnaligned(fromByteOffset: $0 * 4, as: Float.self) }
       }
+      let uploaded: Bool
+      if isMorph {
+        uploaded = renderer.loadMorph(vertices: meshBytes,
+          deltas: deltas, weights: morphWeights!,
+          bones: rawBones.data, camera: rawCamera.data, color: background)
+      } else {
+        uploaded = renderer.load(vertices: meshBytes,
+          bones: rawBones.data, camera: rawCamera.data, color: background)
+      }
       guard background.allSatisfy({ $0 >= 0 && $0 <= 1 }),
-            renderer.load(vertices: meshBytes,
-                          bones: rawBones.data,
-                          camera: rawCamera.data,
-                          color: background) else {
+            uploaded else {
         result(FlutterError(
           code: "gpu_skin_upload_failed",
           message: "Unable to allocate a bounded Metal palette/mesh",
@@ -136,14 +175,23 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
   private let device: MTLDevice
   private let queue: MTLCommandQueue
   private let pipeline: MTLRenderPipelineState
+  private let morphPipeline: MTLRenderPipelineState?
   private let depth: MTLDepthStencilState
   private var vertexBuffer: MTLBuffer?
   private var boneBuffer: MTLBuffer?
   private var cameraBuffer: MTLBuffer?
+  private var morphWeightsBuffer: MTLBuffer?
+  private var morphActive = false
   private var vertexCount = 0
   private var background: [Float] = [0.07, 0.09, 0.12, 1.0]
 
-  var hasMesh: Bool { vertexBuffer != nil && vertexCount > 0 }
+  var hasMesh: Bool {
+    vertexBuffer != nil && vertexCount > 0 && !morphActive
+  }
+  var hasMorphMesh: Bool {
+    vertexBuffer != nil && vertexCount > 0 &&
+      morphActive && morphPipeline != nil
+  }
 
   private static let shaderSource = """
     #include <metal_stdlib>
@@ -161,18 +209,33 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
       float4 color;
     };
 
-    vertex Output skinnedVertex(
-        Input v [[stage_in]],
-        constant float4x4* bones [[buffer(1)]],
-        constant float4* camera [[buffer(2)]]) {
-      uint4 joint = uint4(v.joint + 0.5);
+    struct MorphInput {
+      float3 position [[attribute(0)]];
+      float3 normal [[attribute(1)]];
+      float4 joint [[attribute(2)]];
+      float4 weight [[attribute(3)]];
+      float4 color [[attribute(4)]];
+      float3 morph0 [[attribute(5)]];
+      float3 morph1 [[attribute(6)]];
+      float3 morph2 [[attribute(7)]];
+      float3 morph3 [[attribute(8)]];
+      float3 morph4 [[attribute(9)]];
+      float3 morph5 [[attribute(10)]];
+      float3 morph6 [[attribute(11)]];
+      float3 morph7 [[attribute(12)]];
+    };
+
+    Output shadeSkinned(float3 bindPosition, float3 originalNormal,
+        float4 joints, float4 weights, float4 baseColor,
+        constant float4x4* bones, constant float4* camera) {
+      uint4 joint = uint4(joints + 0.5);
       float4x4 skin =
-          bones[joint.x] * v.weight.x +
-          bones[joint.y] * v.weight.y +
-          bones[joint.z] * v.weight.z +
-          bones[joint.w] * v.weight.w;
-      float3 world = (skin * float4(v.position, 1.0)).xyz;
-      float3 normal = normalize((skin * float4(v.normal, 0.0)).xyz);
+          bones[joint.x] * weights.x +
+          bones[joint.y] * weights.y +
+          bones[joint.z] * weights.z +
+          bones[joint.w] * weights.w;
+      float3 world = (skin * float4(bindPosition, 1.0)).xyz;
+      float3 normal = normalize((skin * float4(originalNormal, 0.0)).xyz);
       float3 ray = world - camera[0].xyz;
       float distance = max(0.6, dot(ray, camera[3].xyz));
       float px = dot(ray, camera[1].xyz) * camera[1].w;
@@ -183,8 +246,34 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
       o.position = float4(px, py, pz, distance);
       float shade = clamp(0.51 + 0.45 *
           max(0.0, dot(normal, camera[4].xyz)), 0.39, 1.0);
-      o.color = float4(v.color.rgb * shade, v.color.a);
+      o.color = float4(baseColor.rgb * shade, baseColor.a);
       return o;
+    }
+
+    vertex Output skinnedVertex(
+        Input v [[stage_in]],
+        constant float4x4* bones [[buffer(1)]],
+        constant float4* camera [[buffer(2)]]) {
+      return shadeSkinned(v.position, v.normal, v.joint, v.weight,
+        v.color, bones, camera);
+    }
+
+    vertex Output morphedVertex(
+        MorphInput v [[stage_in]],
+        constant float4x4* bones [[buffer(1)]],
+        constant float4* camera [[buffer(2)]],
+        constant float4* morphWeights [[buffer(3)]]) {
+      float3 position = v.position +
+        v.morph0 * morphWeights[0].x +
+        v.morph1 * morphWeights[0].y +
+        v.morph2 * morphWeights[0].z +
+        v.morph3 * morphWeights[0].w +
+        v.morph4 * morphWeights[1].x +
+        v.morph5 * morphWeights[1].y +
+        v.morph6 * morphWeights[1].z +
+        v.morph7 * morphWeights[1].w;
+      return shadeSkinned(position, v.normal, v.joint, v.weight,
+        v.color, bones, camera);
     }
 
     fragment float4 skinnedFragment(Output v [[stage_in]]) {
@@ -226,32 +315,98 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
     self.device = device
     self.queue = queue
     self.pipeline = pipeline
+    let morphDesc = MTLRenderPipelineDescriptor()
+    morphDesc.vertexFunction = lib.makeFunction(name: "morphedVertex")
+    morphDesc.fragmentFunction = fragment
+    morphDesc.colorAttachments[0].pixelFormat = view.colorPixelFormat
+    morphDesc.depthAttachmentPixelFormat = view.depthStencilPixelFormat
+    let morphVertexDesc = MTLVertexDescriptor()
+    for index in 0..<5 {
+      morphVertexDesc.attributes[index].format = formats[index]
+      morphVertexDesc.attributes[index].offset = offsets[index]
+      morphVertexDesc.attributes[index].bufferIndex = 0
+    }
+    for index in 0..<8 {
+      morphVertexDesc.attributes[index + 5].format = .float3
+      morphVertexDesc.attributes[index + 5].offset = (18 + index * 3) * 4
+      morphVertexDesc.attributes[index + 5].bufferIndex = 0
+    }
+    morphVertexDesc.layouts[0].stride = 42 * 4
+    morphVertexDesc.layouts[0].stepFunction = .perVertex
+    morphDesc.vertexDescriptor = morphVertexDesc
+    self.morphPipeline = try? device.makeRenderPipelineState(descriptor: morphDesc)
     self.depth = depth
     super.init()
+  }
+
+  private func upload(_ bytes: Data) -> MTLBuffer? {
+    bytes.withUnsafeBytes { raw -> MTLBuffer? in
+      guard let pointer = raw.baseAddress else { return nil }
+      return device.makeBuffer(bytes: pointer, length: bytes.count,
+                               options: .storageModeShared)
+    }
   }
 
   func load(
     vertices: Data?, bones: Data, camera: Data, color: [Float]
   ) -> Bool {
-    func upload(_ bytes: Data) -> MTLBuffer? {
-      bytes.withUnsafeBytes { raw -> MTLBuffer? in
-        guard let pointer = raw.baseAddress else { return nil }
-        return device.makeBuffer(bytes: pointer,
-                                 length: bytes.count,
-                                 options: .storageModeShared)
-      }
-    }
-    // Reuse the retained Metal vertex buffer for an unchanged morph mesh.
-    // Changed morph poses allocate a fresh buffer so in-flight GPU reads
-    // cannot race with CPU writes to the previous vertex allocation.
-    let vertex = vertices.flatMap { upload($0) } ?? vertexBuffer
+    let vertex = vertices.flatMap { upload($0) } ??
+      (morphActive ? nil : vertexBuffer)
     guard let vertex,
           let bone = upload(bones),
           let cam = upload(camera) else { return false }
     vertexBuffer = vertex
     boneBuffer = bone
     cameraBuffer = cam
+    morphActive = false
+    morphWeightsBuffer = nil
     if let vertices { vertexCount = vertices.count / (18 * 4) }
+    background = color
+    return true
+  }
+
+  func loadMorph(
+    vertices: Data?, deltas: Data?, weights: Data,
+    bones: Data, camera: Data, color: [Float]
+  ) -> Bool {
+    guard morphPipeline != nil else { return false }
+    var candidate = hasMorphMesh ? vertexBuffer : nil
+    var newCount = vertexCount
+    if let vertices, let deltas {
+      let count = vertices.count / (18 * 4)
+      // Compose once into a GPU buffer. Later poses reuse the exact buffer.
+      // Neither static stream nor its 8 delta targets are resent.
+      var combined = Data(count: count * 42 * 4)
+      combined.withUnsafeMutableBytes { destination in
+        vertices.withUnsafeBytes { positions in
+          deltas.withUnsafeBytes { targets in
+            guard let out = destination.baseAddress,
+                  let base = positions.baseAddress,
+                  let morph = targets.baseAddress else { return }
+            for i in 0..<count {
+              out.advanced(by: i * 42 * 4).copyMemory(
+                from: base.advanced(by: i * 18 * 4),
+                byteCount: 18 * 4)
+              out.advanced(by: (i * 42 + 18) * 4).copyMemory(
+                from: morph.advanced(by: i * 24 * 4),
+                byteCount: 24 * 4)
+            }
+          }
+        }
+      }
+      candidate = upload(combined)
+      newCount = count
+    }
+    guard let vertex = candidate,
+          let bone = upload(bones),
+          let cam = upload(camera),
+          let morph = upload(weights) else { return false }
+    vertexBuffer = vertex
+    boneBuffer = bone
+    cameraBuffer = cam
+    morphWeightsBuffer = morph
+    vertexCount = newCount
+    morphActive = true
     background = color
     return true
   }
@@ -275,12 +430,23 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
     guard let encoder = command.makeRenderCommandEncoder(
       descriptor: pass
     ) else { return }
-    encoder.setRenderPipelineState(pipeline)
+    guard let activePipeline = morphActive ? morphPipeline : pipeline else {
+      encoder.endEncoding()
+      return
+    }
+    encoder.setRenderPipelineState(activePipeline)
     encoder.setDepthStencilState(depth)
     encoder.setCullMode(.none)
     encoder.setVertexBuffer(vertices, offset: 0, index: 0)
     encoder.setVertexBuffer(bones, offset: 0, index: 1)
     encoder.setVertexBuffer(camera, offset: 0, index: 2)
+    if morphActive {
+      guard let morph = morphWeightsBuffer else {
+        encoder.endEncoding()
+        return
+      }
+      encoder.setVertexBuffer(morph, offset: 0, index: 3)
+    }
     encoder.drawPrimitives(type: .triangle,
                            vertexStart: 0,
                            vertexCount: vertexCount)

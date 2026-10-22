@@ -116,6 +116,85 @@ class GpuSkinningMeshCache {
   void reset() => _acknowledgedVertices=null;
 }
 
+const int stkGpuMorphCount=8;
+const int stkGpuMorphDeltaStride=24;
+
+/// v9.3 transport: full base geometry and eight morph targets only for the
+/// first acknowledged packet (or when scene/palette changes). Later frames
+/// contain just eight morph weights, the 55 bone matrices and camera.
+@immutable
+class GpuMorphPacket {
+  const GpuMorphPacket(this.vertices,this.deltas,this.morphWeights,
+      this.bones,this.camera,this.triangles,this.includesMesh);
+  final Float32List vertices,deltas,morphWeights,bones,camera;
+  final int triangles;
+  final bool includesMesh;
+
+  factory GpuMorphPacket.fromScene(GlbSkinnedScene scene,double elapsed,
+      Size size,Map<String,Color> materials,{bool dark=true,double orbit=0,
+      double elevation=0,double zoom=1,bool includeMesh=true}) {
+    final source=scene.shaderMorphSource(elapsed,size,materials,
+      dark:dark,orbit:orbit,elevation:elevation,zoom:zoom,
+      includeMesh:includeMesh);
+    final packet=GpuMorphPacket(source.vertices,source.deltas,
+      source.morphWeights,source.bones,source.camera,source.triangles,
+      includeMesh);
+    packet.validate();
+    return packet;
+  }
+
+  void validate() {
+    if(triangles<1||triangles>stkGpuSkinMaxTriangles||
+        morphWeights.length!=stkGpuMorphCount||
+        morphWeights.any((v)=>!v.isFinite||v<0||v>1.025)||
+        bones.length!=stkGpuSkinBoneCount*16||
+        camera.length!=stkGpuSkinCameraFloats||
+        bones.any((v)=>!v.isFinite||v.abs()>1e6)||
+        camera.any((v)=>!v.isFinite)||
+        camera[7]<=0||camera[7]>4||
+        camera[11]<=0||camera[11]>4) {
+      throw const FormatException('Invalid morph GPU pose');
+    }
+    if(includesMesh) {
+      if(deltas.length!=triangles*3*stkGpuMorphDeltaStride||
+          deltas.any((v)=>!v.isFinite)) {
+        throw const FormatException('Invalid eight-target morph stream');
+      }
+      GpuSkinningPacket(vertices,bones,camera,triangles).validate();
+    } else if(vertices.isNotEmpty||deltas.isNotEmpty) {
+      throw const FormatException('Compact morph packet carries mesh');
+    }
+  }
+
+  Map<String,Object> encode(Color background) {
+    validate();
+    final c=background.toARGB32();
+    return {
+      if(includesMesh) ...{'vertices':vertices,'morphDeltas':deltas}
+      else 'reuseMorphMesh':true,
+      'morphWeights':morphWeights,
+      'bones':bones,
+      'camera':camera,
+      'background':Float32List.fromList([
+        ((c>>16)&255)/255,((c>>8)&255)/255,
+        (c&255)/255,((c>>24)&255)/255,
+      ]),
+    };
+  }
+}
+
+class GpuMorphTransportCache {
+  GlbSkinnedScene? _scene;
+  String? _appearance;
+  bool requiresMesh(GlbSkinnedScene scene,String appearance) =>
+      !identical(scene,_scene)||appearance!=_appearance;
+  void acknowledge(GlbSkinnedScene scene,String appearance) {
+    _scene=scene;
+    _appearance=appearance;
+  }
+  void reset() { _scene=null;_appearance=null; }
+}
+
 /// QA-only static shader-skinning PlatformView.
 /// No ongoing animations are allowed: a new packet is sent only for an
 /// explicit paused frame, so Android/iOS performance is not misrepresented.
@@ -124,13 +203,14 @@ class NativeGpuSkinnedGlbReview extends StatefulWidget {
     super.key,required this.scene,required this.size,required this.materials,
     required this.background,this.elapsed=2,this.dark=true,this.orbit=0,
     this.elevation=0,this.zoom=1,this.enabled=false,
+    this.experimentalMorphGpu=false,
   });
 
   final GlbSkinnedScene scene;
   final double size,elapsed,orbit,elevation,zoom;
   final Map<String,Color> materials;
   final Color background;
-  final bool dark,enabled;
+  final bool dark,enabled,experimentalMorphGpu;
 
   @override
   State<NativeGpuSkinnedGlbReview> createState() =>
@@ -144,6 +224,7 @@ class _NativeGpuSkinnedGlbReviewState
   int _sequence=0;
   Future<void> _pending=Future<void>.value();
   final GpuSkinningMeshCache _meshCache=GpuSkinningMeshCache();
+  final GpuMorphTransportCache _morphCache=GpuMorphTransportCache();
 
   GlbDrawFrame _canvasFrame() => widget.scene.frame(
     widget.elapsed,Size.square(widget.size),widget.materials,
@@ -163,20 +244,37 @@ class _NativeGpuSkinnedGlbReviewState
     if(serial!=_sequence||channel==null||!mounted||
         !widget.enabled||_failed)return;
     try {
-      final packet=GpuSkinningPacket.fromScene(widget.scene,widget.elapsed,
-        Size.square(widget.size),widget.materials,dark:widget.dark,
-        orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom);
-      final payload=_meshCache.encode(packet,widget.background);
-      // An EGL/Metal surface may fail to initialize without delivering a
-      // shader response. Never leave a blank PlatformView on screen forever.
-      final acknowledged=await channel.invokeMethod<bool>('drawSkinned',payload)
-          .timeout(const Duration(seconds:5));
-      if(acknowledged!=true) {
-        throw StateError('Native shader did not acknowledge the frame');
+      if(widget.experimentalMorphGpu) {
+        // Stable against material map reallocation on Flutter rebuilds.
+        final swatches=widget.materials.entries.toList()
+          ..sort((a,b)=>a.key.compareTo(b.key));
+        final appearance=[
+          widget.dark.toString(),
+          for(final e in swatches) '${e.key}:${e.value.toARGB32()}',
+        ].join('|');
+        final includeMesh=_morphCache.requiresMesh(widget.scene,appearance);
+        final packet=GpuMorphPacket.fromScene(widget.scene,widget.elapsed,
+          Size.square(widget.size),widget.materials,dark:widget.dark,
+          orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom,
+          includeMesh:includeMesh);
+        final acknowledged=await channel.invokeMethod<bool>('drawMorphed',
+          packet.encode(widget.background)).timeout(const Duration(seconds:5));
+        if(acknowledged!=true)throw StateError('Morph GPU frame rejected');
+        if(identical(channel,_channel)) {
+          _morphCache.acknowledge(widget.scene,appearance);
+        }
+      } else {
+        final packet=GpuSkinningPacket.fromScene(widget.scene,widget.elapsed,
+          Size.square(widget.size),widget.materials,dark:widget.dark,
+          orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom);
+        final payload=_meshCache.encode(packet,widget.background);
+        final acknowledged=await channel.invokeMethod<bool>('drawSkinned',payload)
+            .timeout(const Duration(seconds:5));
+        if(acknowledged!=true) {
+          throw StateError('Native shader did not acknowledge the frame');
+        }
+        if(identical(channel,_channel))_meshCache.acknowledge(packet);
       }
-      // Native has accepted the exact mesh of this packet. Even if a newer
-      // request was queued, it must compare against the last ACKed mesh.
-      _meshCache.acknowledge(packet);
     } catch (_) {
       if(mounted&&_sequence==serial)setState(()=>_failed=true);
     }
@@ -184,6 +282,7 @@ class _NativeGpuSkinnedGlbReviewState
 
   void _created(int id) {
     _meshCache.reset();
+    _morphCache.reset();
     _channel=MethodChannel('$stkGpuSkinView/$id');
     _scheduleSend();
   }
@@ -191,17 +290,25 @@ class _NativeGpuSkinnedGlbReviewState
   @override
   void didUpdateWidget(covariant NativeGpuSkinnedGlbReview old) {
     super.didUpdateWidget(old);
+    if(widget.experimentalMorphGpu!=old.experimentalMorphGpu) {
+      _meshCache.reset();
+      _morphCache.reset();
+    }
     if(widget.scene!=old.scene||widget.elapsed!=old.elapsed||
        widget.size!=old.size||widget.background!=old.background||
        widget.materials!=old.materials||widget.dark!=old.dark||
        widget.orbit!=old.orbit||widget.elevation!=old.elevation||
-       widget.zoom!=old.zoom||widget.enabled!=old.enabled) {
+       widget.zoom!=old.zoom||widget.enabled!=old.enabled||
+       widget.experimentalMorphGpu!=old.experimentalMorphGpu) {
       _scheduleSend();
     }
   }
 
   @override
-  void dispose(){_sequence++;_channel=null;_meshCache.reset();super.dispose();}
+  void dispose(){
+    _sequence++;_channel=null;_meshCache.reset();_morphCache.reset();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

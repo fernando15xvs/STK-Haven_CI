@@ -407,7 +407,8 @@ class GlbSkinnedScene {
   /// matrices per vertex. Static QA only until transport and thermals qualify.
   GlbShaderSkinSource shaderSkinSource(double elapsed,Size size,
       Map<String,Color> theme,{bool dark=true,double orbit=0,
-      double elevation=0,double zoom=1}) {
+      double elevation=0,double zoom=1,
+      bool includeVertices=true,bool applyMorphs=true}) {
     if(!size.width.isFinite||!size.height.isFinite||
        size.width<100||size.height<100||
        !orbit.isFinite||!elevation.isFinite||!zoom.isFinite||
@@ -445,10 +446,10 @@ class GlbSkinnedScene {
       forward.x,forward.y,forward.z,-.10,
       light.x,light.y,light.z,0,
     ]);
-    final morph=_morphAt(elapsed);
-    final verts=Float32List(triangleCount*3*18);
+    final morph=applyMorphs?_morphAt(elapsed):const <double>[];
+    final verts=Float32List(includeVertices?triangleCount*3*18:0);
     var offset=0;
-    for(final instance in _instances) {
+    if(includeVertices)for(final instance in _instances) {
       if(!instance.skin) {
         throw const FormatException('GPU skin source contains rigid mesh');
       }
@@ -501,6 +502,54 @@ class GlbSkinnedScene {
       throw const FormatException('Invalid master GPU stream size');
     }
     return GlbShaderSkinSource(verts,matrices,camera,triangleCount);
+  }
+
+  /// Experimental v9.3: base bind-pose vertices and eight POSITION morph
+  /// deltas are stable. When includeMesh=false only bone matrices, camera and
+  /// 8 morph weights are sampled; no triangle streams are traversed.
+  /// This is QA-only and never changes approved exercise media.
+  GlbShaderMorphSource shaderMorphSource(double elapsed,Size size,
+      Map<String,Color> theme,{bool dark=true,double orbit=0,
+      double elevation=0,double zoom=1,bool includeMesh=true}) {
+    final pose=shaderSkinSource(elapsed,size,theme,dark:dark,orbit:orbit,
+      elevation:elevation,zoom:zoom,includeVertices:includeMesh,
+      applyMorphs:false);
+    final sampled=_morphAt(elapsed);
+    if(sampled.length!=8||sampled.any((v)=>!v.isFinite||v<0||v>1.025)) {
+      throw const FormatException('Expected eight safe master morph weights');
+    }
+    final morphWeights=Float32List.fromList(sampled);
+    final deltas=Float32List(includeMesh?triangleCount*3*24:0);
+    if(includeMesh) {
+      var cursor=0;
+      for(final instance in _instances) {
+        if(!instance.skin)throw const FormatException('Unsupported morph mesh');
+        for(final prim in instance.primitives) {
+          if(prim.morphs.length!=8||prim.morphs.any(
+              (m)=>m.length!=prim.positions.length)) {
+            throw const FormatException('Incomplete GPU morph targets');
+          }
+          for(final vertex in prim.indices) {
+            if(vertex<0||vertex>=prim.positions.length||
+                cursor+24>deltas.length) {
+              throw const FormatException('GPU morph vertex overflow');
+            }
+            for(var m=0;m<8;m++) {
+              final d=prim.morphs[m][vertex];
+              if(!d.finite)throw const FormatException('Invalid morph delta');
+              deltas[cursor++]=d.x;
+              deltas[cursor++]=d.y;
+              deltas[cursor++]=d.z;
+            }
+          }
+        }
+      }
+      if(cursor!=deltas.length||deltas.any((v)=>!v.isFinite)) {
+        throw const FormatException('GPU morph stream malformed');
+      }
+    }
+    return GlbShaderMorphSource(pose.vertices,deltas,morphWeights,
+      pose.bones,pose.camera,pose.triangles);
   }
 
   /// One pose from GLB animation; positions are skinned using WEIGHTS_0/JOINTS_0.
@@ -655,6 +704,16 @@ class GlbShaderSkinSource {
   const GlbShaderSkinSource(this.vertices,this.bones,this.camera,
       this.triangles);
   final Float32List vertices,bones,camera;
+  final int triangles;
+}
+class GlbShaderMorphSource {
+  const GlbShaderMorphSource(this.vertices,this.deltas,this.morphWeights,
+      this.bones,this.camera,this.triangles);
+  /// Original non-morphed bind-pose 18-float triangle vertex stream.
+  final Float32List vertices;
+  /// Eight POSITION delta vec3 entries (24 floats) per expanded vertex.
+  final Float32List deltas;
+  final Float32List morphWeights,bones,camera;
   final int triangles;
 }
 class GlbDrawPart {

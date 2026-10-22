@@ -89,6 +89,68 @@ void main() {
     expect(cache.encode(packet(),bg).containsKey('vertices'),true);
   });
 
+  test('v9.3 morph stream matches CPU pre-skinned vertices for seven clips',() {
+    final data=File(
+      'build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb',
+    ).readAsBytesSync();
+    const size=Size(320,320);
+    for(final name in names) {
+      final scene=GlbSkinnedScene.decodeMaster(data,pattern:name);
+      for(final elapsed in [0.0,1.0,2.0,3.0]) {
+        final morphed=scene.shaderMorphSource(elapsed,size,const {});
+        final cpu=scene.shaderSkinSource(elapsed,size,const {});
+        expect(morphed.triangles,cpu.triangles);
+        expect(morphed.vertices.length,cpu.vertices.length);
+        expect(morphed.deltas.length,morphed.triangles*3*24);
+        expect(morphed.morphWeights.length,8);
+        expect(morphed.bones,orderedEquals(cpu.bones));
+        expect(morphed.camera,orderedEquals(cpu.camera));
+        final count=morphed.triangles*3;
+        for(var vertex=0;vertex<count;vertex+=math.max(1,count~/70)) {
+          for(var axis=0;axis<3;axis++) {
+            var position=morphed.vertices[vertex*18+axis];
+            for(var m=0;m<8;m++) {
+              position+=morphed.deltas[vertex*24+m*3+axis]*
+                  morphed.morphWeights[m];
+            }
+            expect((position-cpu.vertices[vertex*18+axis]).abs(),
+                lessThan(0.0004),
+                reason:'$name at $elapsed / vertex $vertex axis $axis');
+          }
+        }
+        final pose=GpuMorphPacket.fromScene(scene,elapsed,size,const {},
+            includeMesh:false);
+        expect(pose.vertices,isEmpty);
+        expect(pose.deltas,isEmpty);
+        expect(pose.encode(const Color(0xFF12181F)).keys.toSet(),
+            {'reuseMorphMesh','morphWeights','bones','camera','background'});
+        final payload=GpuMorphPacket.fromScene(scene,elapsed,size,const {});
+        expect(payload.encode(const Color(0xFF12181F)).keys.toSet(),
+            {'vertices','morphDeltas','morphWeights','bones','camera',
+             'background'});
+        expect(payload.deltas.length,count*24);
+      }
+    }
+  },timeout:const Timeout(Duration(minutes:6)));
+
+  test('v9.3 ACK cache invalidates by scene, palette and view lifetime',() {
+    final cache=GpuMorphTransportCache();
+    final bytes=File(
+      'build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb',
+    ).readAsBytesSync();
+    final scene=GlbSkinnedScene.decodeMaster(bytes,
+      pattern:'overhead_reach_bilateral');
+    expect(cache.requiresMesh(scene,'light:blue'),true);
+    cache.acknowledge(scene,'light:blue');
+    expect(cache.requiresMesh(scene,'light:blue'),false);
+    expect(cache.requiresMesh(scene,'dark:blue'),true);
+    final sceneAgain=GlbSkinnedScene.decodeMaster(bytes,
+      pattern:'overhead_reach_bilateral');
+    expect(cache.requiresMesh(sceneAgain,'light:blue'),true);
+    cache.reset();
+    expect(cache.requiresMesh(scene,'light:blue'),true);
+  });
+
   test('Seven CC0 v7 motions project GPU-skinned joints like CPU baseline',() {
     final raw=File(
       'build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb',
