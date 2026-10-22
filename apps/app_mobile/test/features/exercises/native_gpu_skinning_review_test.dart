@@ -49,6 +49,46 @@ void main() {
     expect(stkGpuSkinView,'stk_haven/anatomy_gpu_skinning');
   });
 
+  test('GPU QA cache omits only byte-equivalent ACKed vertex mesh',() {
+    GpuSkinningPacket packet([double position=0]) {
+      final vertices=Float32List(3*stkGpuSkinStride);
+      for(var i=0;i<vertices.length;i+=stkGpuSkinStride) {
+        vertices[i]=position;
+        vertices[i+10]=1; // Bone zero has full weight.
+        vertices[i+14]=.8;
+        vertices[i+15]=.8;
+        vertices[i+16]=.8;
+        vertices[i+17]=1;
+      }
+      final bones=Float32List(stkGpuSkinBoneCount*16);
+      final camera=Float32List(stkGpuSkinCameraFloats);
+      camera[7]=1;
+      camera[11]=1;
+      return GpuSkinningPacket(vertices,bones,camera,1);
+    }
+    const bg=Color(0xFF12181F);
+    final cache=GpuSkinningMeshCache();
+    final first=packet();
+    final full=cache.encode(first,bg);
+    expect(full.containsKey('vertices'),true);
+    expect(full.containsKey('reuseMesh'),false);
+    // No compact frames may be sent until the native upload acknowledges.
+    expect(cache.encode(packet(),bg).containsKey('vertices'),true);
+    cache.acknowledge(first);
+    final compact=cache.encode(packet(),bg);
+    expect(compact.containsKey('vertices'),false);
+    expect(compact['reuseMesh'],true);
+    expect(compact.keys.toSet(),
+        {'bones','camera','background','reuseMesh'});
+    expect(cache.encode(packet(.1),bg).containsKey('vertices'),true);
+    // An old mutable packet must not corrupt the last-ACKed mesh.
+    first.vertices[0]=.9;
+    expect(cache.encode(packet(),bg).containsKey('vertices'),false);
+    cache.reset();
+    expect(cache.hasMesh,false);
+    expect(cache.encode(packet(),bg).containsKey('vertices'),true);
+  });
+
   test('Seven CC0 v7 motions project GPU-skinned joints like CPU baseline',() {
     final raw=File(
       'build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb',
