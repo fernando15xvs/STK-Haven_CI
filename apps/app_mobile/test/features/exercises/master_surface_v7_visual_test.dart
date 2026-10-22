@@ -89,8 +89,8 @@ void main() {
       expect(angle.triangles,scene.triangleCount);
       expect(angle.parts.length,zero.parts.length);
     }
-    for(final elevation in [-.75,0.,.85]) {
-      for(final zoom in [.65,1.,1.6]) {
+    for(final elevation in [-0.75,0.0,0.85]) {
+      for(final zoom in [0.65,1.0,1.6]) {
         final view=scene.frame(2,size,const {},
             orbit:math.pi,elevation:elevation,zoom:zoom);
         expect(view.finite,true);
