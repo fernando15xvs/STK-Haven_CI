@@ -62,3 +62,17 @@ mostrar una pose fija o activar la preferencia del SO de movimiento reducido.
    y envío incremental de matrices/8 pesos morfológicos.
 4. Sólo entonces activar reproducción GPU continua (24 o más FPS) con
    mediciones térmicas y de batería; después avanzar a ejercicios.
+
+## v9.1 — defensas de inicialización y fallback del visor
+
+- La vista de Android confirma la preparación del shader GLES3 **después**
+  de `onSurfaceCreated`, no apenas recibe el método de Flutter. De otro modo
+  un evento encolado antes de la creación de EGL podría marcar hardware
+  compatible como no soportado. Si la compilación del shader falla, responde
+  con error, no propaga la excepción desde el hilo GL.
+- Flutter impone un máximo de **5 segundos** a la respuesta nativa; ante
+  error, rechazo explícito o timeout vuelve a la representación Canvas.
+- Prueba Flutter adicional: cuando el piloto está desactivado, utiliza
+  `GlbSkinnedPainter` y nunca crea `AndroidView` ni `UiKitView`.
+- Esta medida es una defensa de QA: **no equivale a garantizar** continuidad
+  de contextos EGL/Metal durante cambios de fondo ni estabilidad térmica.

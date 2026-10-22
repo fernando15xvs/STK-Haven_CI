@@ -84,4 +84,25 @@ void main() {
       }
     }
   },timeout:const Timeout(Duration(minutes:4)));
+
+  testWidgets('Disabled GPU pilot remains a Flutter Canvas preview',
+      (tester) async {
+    final data=File(
+      'build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb',
+    ).readAsBytesSync();
+    final scene=GlbSkinnedScene.decodeMaster(data,
+        pattern:'overhead_reach_bilateral');
+    await tester.pumpWidget(MaterialApp(home:Scaffold(
+      body:Center(child:NativeGpuSkinnedGlbReview(
+        scene:scene,size:320,materials:const {},
+        background:const Color(0xFF12181F),
+        enabled:false,
+      )),
+    )));
+    expect(find.byType(AndroidView),findsNothing);
+    expect(find.byType(UiKitView),findsNothing);
+    expect(find.byWidgetPredicate((widget) => widget is CustomPaint &&
+        widget.painter is GlbSkinnedPainter),findsOneWidget);
+    expect(tester.takeException(),isNull);
+  });
 }

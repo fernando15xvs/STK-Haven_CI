@@ -4,6 +4,8 @@ import android.app.ActivityManager
 import android.content.Context
 import android.opengl.GLES30
 import android.opengl.GLSurfaceView
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
@@ -97,9 +99,25 @@ private class StkAnatomyGpuSkinnedView(
                     return@setMethodCallHandler
                 }
             }
-            surface.queueEvent { renderer.update(positions, bones, camera, background) }
-            surface.requestRender()
-            result.success(true)
+            surface.queueEvent {
+                renderer.update(positions, bones, camera, background)
+                // GLSurfaceView may process queued events BEFORE the first
+                // onSurfaceCreated. A false early verdict would disable GPU
+                // even on compatible hardware. Acknowledge after shader init.
+                renderer.whenInitialized { supported ->
+                    Handler(Looper.getMainLooper()).post {
+                        if (destroyed) {
+                            result.error("disposed", "GPU view disposed", null)
+                        } else if (!supported) {
+                            result.error("shader_unavailable",
+                                "Device cannot compile the 55-bone GLES3 shader", null)
+                        } else {
+                            surface.requestRender()
+                            result.success(true)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -162,6 +180,20 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
     private var background = floatArrayOf(0.07f, 0.09f, 0.12f, 1f)
     private var count = 0
     private var ready = false
+    private var initialized = false
+    private val pending = mutableListOf<(Boolean) -> Unit>()
+
+    fun whenInitialized(callback: (Boolean) -> Unit) {
+        if (initialized) callback(ready) else pending.add(callback)
+    }
+
+    private fun finishInitialize(supported: Boolean) {
+        ready = supported
+        initialized = true
+        val callbacks = pending.toList()
+        pending.clear()
+        callbacks.forEach { it(supported) }
+    }
 
     fun update(vertices: FloatArray, bones: FloatArray, camera: FloatArray, bg: FloatArray) {
         val direct = ByteBuffer.allocateDirect(vertices.size * 4)
@@ -190,11 +222,14 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
     }
 
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
+        initialized = false
+        ready = false
+        try {
         val capacity = IntArray(1)
         GLES30.glGetIntegerv(GLES30.GL_MAX_VERTEX_UNIFORM_VECTORS, capacity, 0)
         if (capacity[0] < 225) {
             // 55 mat4 bone uniforms + 5 camera vec4, with shader headroom.
-            ready = false
+            finishInitialize(false)
             return
         }
         val vertex = compile(GLES30.GL_VERTEX_SHADER, vertexSource)
@@ -223,8 +258,13 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
         GLES30.glEnable(GLES30.GL_DEPTH_TEST)
         GLES30.glDepthFunc(GLES30.GL_LESS)
         GLES30.glDisable(GLES30.GL_CULL_FACE)
+        finishInitialize(ready)
+        } catch (_: Exception) {
+            // Shader compile or link problems must trigger Flutter fallback,
+            // NEVER crash the GL render thread of the full application.
+            finishInitialize(false)
+        }
     }
-
     override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
         GLES30.glViewport(0, 0, width, height)
     }

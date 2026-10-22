@@ -125,8 +125,14 @@ class _NativeGpuSkinnedGlbReviewState
       final packet=GpuSkinningPacket.fromScene(widget.scene,widget.elapsed,
         Size.square(widget.size),widget.materials,dark:widget.dark,
         orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom);
-      await channel.invokeMethod<bool>('drawSkinned',
-          packet.encode(widget.background));
+      // An EGL/Metal surface may fail to initialize without delivering a
+      // shader response. Never leave a blank PlatformView on screen forever.
+      final acknowledged=await channel.invokeMethod<bool>('drawSkinned',
+          packet.encode(widget.background))
+          .timeout(const Duration(seconds:5));
+      if(acknowledged!=true) {
+        throw StateError('Native shader did not acknowledge the frame');
+      }
     } catch (_) {
       if(mounted&&_sequence==serial)setState(()=>_failed=true);
     }
