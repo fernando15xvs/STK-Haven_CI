@@ -55,17 +55,12 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
       }
       guard let renderer = self.renderer,
             let args = call.arguments as? [String: Any],
-            let rawVertices = args["vertices"] as? FlutterStandardTypedData,
             let rawBones = args["bones"] as? FlutterStandardTypedData,
             let rawCamera = args["camera"] as? FlutterStandardTypedData,
             let rawBackground = args["background"] as? FlutterStandardTypedData,
-            rawVertices.data.count > 0,
-            rawVertices.data.count <= 25000 * 3 * 18 * 4,
-            rawVertices.data.count % (18 * 3 * 4) == 0,
             rawBones.data.count == 55 * 16 * 4,
             rawCamera.data.count == 20 * 4,
             rawBackground.data.count == 4 * 4,
-            Self.valid(rawVertices.data),
             Self.valid(rawBones.data),
             Self.valid(rawCamera.data),
             Self.valid(rawBackground.data) else {
@@ -76,11 +71,32 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
         ))
         return
       }
+      let reuseMesh = args["reuseMesh"] as? Bool == true
+      let meshBytes = (args["vertices"] as? FlutterStandardTypedData)?.data
+      let meshValid: Bool
+      if reuseMesh {
+        meshValid = meshBytes == nil && renderer.hasMesh
+      } else if let meshBytes {
+        meshValid = meshBytes.count > 0 &&
+          meshBytes.count <= 25000 * 3 * 18 * 4 &&
+          meshBytes.count % (18 * 3 * 4) == 0 &&
+          Self.valid(meshBytes)
+      } else {
+        meshValid = false
+      }
+      guard meshValid else {
+        result(FlutterError(
+          code: "missing_or_invalid_gpu_mesh",
+          message: "Compact frame requires a retained mesh in this view",
+          details: nil
+        ))
+        return
+      }
       let background = rawBackground.data.withUnsafeBytes { bytes -> [Float] in
         (0..<4).map { bytes.loadUnaligned(fromByteOffset: $0 * 4, as: Float.self) }
       }
       guard background.allSatisfy({ $0 >= 0 && $0 <= 1 }),
-            renderer.load(vertices: rawVertices.data,
+            renderer.load(vertices: meshBytes,
                           bones: rawBones.data,
                           camera: rawCamera.data,
                           color: background) else {
@@ -126,6 +142,8 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
   private var cameraBuffer: MTLBuffer?
   private var vertexCount = 0
   private var background: [Float] = [0.07, 0.09, 0.12, 1.0]
+
+  var hasMesh: Bool { vertexBuffer != nil && vertexCount > 0 }
 
   private static let shaderSource = """
     #include <metal_stdlib>
@@ -213,7 +231,7 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
   }
 
   func load(
-    vertices: Data, bones: Data, camera: Data, color: [Float]
+    vertices: Data?, bones: Data, camera: Data, color: [Float]
   ) -> Bool {
     func upload(_ bytes: Data) -> MTLBuffer? {
       bytes.withUnsafeBytes { raw -> MTLBuffer? in
@@ -223,13 +241,17 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
                                  options: .storageModeShared)
       }
     }
-    guard let vertex = upload(vertices),
+    // Reuse the retained Metal vertex buffer for an unchanged morph mesh.
+    // Changed morph poses allocate a fresh buffer so in-flight GPU reads
+    // cannot race with CPU writes to the previous vertex allocation.
+    let vertex = vertices.flatMap { upload($0) } ?? vertexBuffer
+    guard let vertex,
           let bone = upload(bones),
           let cam = upload(camera) else { return false }
     vertexBuffer = vertex
     boneBuffer = bone
     cameraBuffer = cam
-    vertexCount = vertices.count / (18 * 4)
+    if let vertices { vertexCount = vertices.count / (18 * 4) }
     background = color
     return true
   }
