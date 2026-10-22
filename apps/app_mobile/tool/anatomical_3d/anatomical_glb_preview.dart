@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:core/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'anatomical_glb_runtime.dart';
+import 'native_gpu_glb_review.dart';
 import 'anatomical_glb_camera.dart';
 import 'anatomical_glb_staging.dart';
 
@@ -11,12 +12,16 @@ class AnatomicalGlbPreview extends StatefulWidget {
   const AnatomicalGlbPreview({
     super.key,required this.scene,this.progress,this.dimension=360,
     this.highlightRegions=const <String>{},
+    this.experimentalNativeGpuStatic=false,
   });
   final GlbSkinnedScene scene;
   final double? progress;
   final double dimension;
   /// Exercise-specific muscles for offline preview. No production routing.
   final Set<String> highlightRegions;
+  /// Never enabled by production: only static, paused or reduced-motion QA.
+  /// Renders native Metal/GLES triangles with depth while CPU skinning stays.
+  final bool experimentalNativeGpuStatic;
   static GlbSkinnedScene decode(Uint8List bytes) => GlbSkinnedScene.decode(bytes);
   @override
   State<AnatomicalGlbPreview> createState()=>_AnatomicalGlbPreviewState();
@@ -103,6 +108,15 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                     elevation:_camera.elevation,zoom:_camera.zoom,
                     depthSlices:depthSlices,poseNormals:still);
                   _cacheKey=key;
+                }
+                if(widget.experimentalNativeGpuStatic&&still) {
+                  return NativeGpuGlbReview(
+                    scene:widget.scene,size:widget.dimension,
+                    materials:materials,background:palette.surface,
+                    elapsed:tick/24,dark:dark,orbit:_camera.yaw,
+                    elevation:_camera.elevation,zoom:_camera.zoom,
+                    enabled:true,
+                  );
                 }
                 return CustomPaint(painter:GlbSkinnedPainter(
                   _cached!,palette.surface));
