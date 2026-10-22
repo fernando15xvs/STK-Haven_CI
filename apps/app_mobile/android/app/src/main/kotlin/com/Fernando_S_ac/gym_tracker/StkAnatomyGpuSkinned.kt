@@ -65,42 +65,59 @@ private class StkAnatomyGpuSkinnedView(
             }
             val params = call.arguments as? Map<*, *>
             val positions = params?.get("vertices") as? FloatArray
+            val reuseMesh = params?.get("reuseMesh") == true
             val bones = params?.get("bones") as? FloatArray
             val camera = params?.get("camera") as? FloatArray
             val background = params?.get("background") as? FloatArray
-            if (positions == null || bones == null || camera == null ||
-                background == null ||
-                positions.isEmpty() ||
-                positions.size % (18 * 3) != 0 ||
-                positions.size > 25000 * 3 * 18 ||
-                bones.size != 55 * 16 || camera.size != 20 ||
-                background.size != 4 ||
-                positions.any { !it.isFinite() } ||
+            // Compact packets are legal only when vertices are omitted.
+            // Native GL thread verifies that the current view owns a mesh.
+            val meshValid = if (reuseMesh) positions == null else
+                positions != null && positions.isNotEmpty() &&
+                positions.size % (18 * 3) == 0 &&
+                positions.size <= 25000 * 3 * 18 &&
+                positions.all { it.isFinite() }
+            if (!meshValid || bones == null || camera == null ||
+                background == null || bones.size != 55 * 16 ||
+                camera.size != 20 || background.size != 4 ||
                 bones.any { !it.isFinite() } ||
                 camera.any { !it.isFinite() } ||
                 background.any { !it.isFinite() || it < 0f || it > 1f }) {
                 result.error("invalid_skin_mesh", "Unsafe GPU joint packet", null)
                 return@setMethodCallHandler
             }
-            for (offset in positions.indices step 18) {
-                var weight = 0f
-                for (j in 0..3) {
-                    val joint = positions[offset + 6 + j]
-                    val w = positions[offset + 10 + j]
-                    if (joint < 0f || joint > 54f || joint != joint.toInt().toFloat() ||
-                        w < 0f || w > 1.025f) {
-                        result.error("invalid_skin_weights", "Invalid joint blend", null)
+            if (positions != null) {
+                for (offset in positions.indices step 18) {
+                    var weight = 0f
+                    for (j in 0..3) {
+                        val joint = positions[offset + 6 + j]
+                        val w = positions[offset + 10 + j]
+                        if (joint < 0f || joint > 54f ||
+                            joint != joint.toInt().toFloat() ||
+                            w < 0f || w > 1.025f) {
+                            result.error("invalid_skin_weights", "Invalid joint blend", null)
+                            return@setMethodCallHandler
+                        }
+                        weight += w
+                    }
+                    if (kotlin.math.abs(weight - 1f) > 0.025f) {
+                        result.error("invalid_skin_weights", "Unnormalized skinning", null)
                         return@setMethodCallHandler
                     }
-                    weight += w
-                }
-                if (kotlin.math.abs(weight - 1f) > 0.025f) {
-                    result.error("invalid_skin_weights", "Unnormalized skinning", null)
-                    return@setMethodCallHandler
                 }
             }
             surface.queueEvent {
-                renderer.update(positions, bones, camera, background)
+                if (reuseMesh && !renderer.hasMesh()) {
+                    Handler(Looper.getMainLooper()).post {
+                        result.error("missing_gpu_mesh",
+                            "Compact frame has no acknowledged mesh", null)
+                    }
+                    return@queueEvent
+                }
+                if (positions != null) {
+                    renderer.update(positions, bones, camera, background)
+                } else {
+                    renderer.updatePose(bones, camera, background)
+                }
                 // GLSurfaceView may process queued events BEFORE the first
                 // onSurfaceCreated. A false early verdict would disable GPU
                 // even on compatible hardware. Acknowledge after shader init.
@@ -175,6 +192,9 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
     private var bonesLocation = -1
     private var cameraLocation = -1
     private var positions: FloatBuffer? = null
+    private var meshBufferId = 0
+    private var uploadedBytes = 0
+    private var meshDirty = false
     private var matrixPalette = FloatArray(55 * 16)
     private var cameraValues = FloatArray(20)
     private var background = floatArrayOf(0.07f, 0.09f, 0.12f, 1f)
@@ -195,6 +215,8 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
         callbacks.forEach { it(supported) }
     }
 
+    fun hasMesh(): Boolean = positions != null && count > 0
+
     fun update(vertices: FloatArray, bones: FloatArray, camera: FloatArray, bg: FloatArray) {
         val direct = ByteBuffer.allocateDirect(vertices.size * 4)
             .order(ByteOrder.nativeOrder()).asFloatBuffer()
@@ -202,6 +224,11 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
         direct.position(0)
         positions = direct
         count = vertices.size / 18
+        meshDirty = true
+        updatePose(bones, camera, bg)
+    }
+
+    fun updatePose(bones: FloatArray, camera: FloatArray, bg: FloatArray) {
         matrixPalette = bones
         cameraValues = camera
         background = bg
@@ -224,6 +251,11 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
     override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
         initialized = false
         ready = false
+        // EGL context loss invalidates GL objects, but retains the CPU copy
+        // for re-uploading the mesh on this view's next static frame.
+        meshBufferId = 0
+        uploadedBytes = 0
+        meshDirty = true
         try {
         val capacity = IntArray(1)
         GLES30.glGetIntegerv(GLES30.GL_MAX_VERTEX_UNIFORM_VECTORS, capacity, 0)
@@ -275,19 +307,37 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
         GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT or GLES30.GL_DEPTH_BUFFER_BIT)
         val mesh = positions ?: return
         if (!ready || count == 0) return
+        if (meshBufferId == 0) {
+            val ids = IntArray(1)
+            GLES30.glGenBuffers(1, ids, 0)
+            meshBufferId = ids[0]
+            if (meshBufferId == 0) return
+        }
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, meshBufferId)
+        if (meshDirty) {
+            mesh.position(0)
+            val bytes = count * 18 * 4
+            if (uploadedBytes != bytes) {
+                GLES30.glBufferData(GLES30.GL_ARRAY_BUFFER, bytes,
+                    mesh, GLES30.GL_DYNAMIC_DRAW)
+                uploadedBytes = bytes
+            } else {
+                GLES30.glBufferSubData(GLES30.GL_ARRAY_BUFFER, 0, bytes, mesh)
+            }
+            meshDirty = false
+        }
         GLES30.glUseProgram(program)
         GLES30.glUniformMatrix4fv(bonesLocation, 55, false, matrixPalette, 0)
         GLES30.glUniform4fv(cameraLocation, 5, cameraValues, 0)
         val offsets = intArrayOf(0, 3, 6, 10, 14)
         val sizes = intArrayOf(3, 3, 4, 4, 4)
         for (i in indices.indices) {
-            mesh.position(offsets[i])
             GLES30.glVertexAttribPointer(indices[i], sizes[i],
-                GLES30.GL_FLOAT, false, 18 * 4, mesh)
+                GLES30.GL_FLOAT, false, 18 * 4, offsets[i] * 4)
             GLES30.glEnableVertexAttribArray(indices[i])
         }
         GLES30.glDrawArrays(GLES30.GL_TRIANGLES, 0, count)
         for (index in indices) GLES30.glDisableVertexAttribArray(index)
-        mesh.position(0)
+        GLES30.glBindBuffer(GLES30.GL_ARRAY_BUFFER, 0)
     }
 }
