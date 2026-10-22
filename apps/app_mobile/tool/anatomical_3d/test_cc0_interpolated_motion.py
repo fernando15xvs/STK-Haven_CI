@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 import retarget_cc0_glb as rig
+import pilot_motion_quality_v98 as quality
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -107,6 +108,59 @@ class GlbBetweenKeyframesTest(unittest.TestCase):
             "approved":False,"enabled":False,
             "samplesPerExercise":SAMPLES,
             "clips":report},indent=2)+"\n",encoding="utf8")
+
+
+    def test_v98_actual_lod_bar_bench_and_joint_contact_diagnostics(self):
+        audits=[]
+        for exercise in rig.EXERCISES:
+            glb=rig.GLB((OUT/(exercise+"_mobile_lod.glb")).read_bytes(),
+                        expected_sha=None)
+            clip=glb.doc['animations'][0]
+            tracks=[]
+            for channel in clip['channels']:
+                sampler=clip['samplers'][channel['sampler']]
+                times=[float(x[0]) for x in glb.accessor(sampler['input'])]
+                frames=glb.accessor(sampler['output'])
+                self.assertEqual(sampler['interpolation'],'LINEAR')
+                self.assertEqual(len(times),len(frames))
+                tracks.append((channel['target']['node'],
+                               channel['target']['path'],times,frames))
+            report=quality.review(glb,exercise,tracks,world_at)
+            self.assertEqual(report['sampledFrames'],121)
+            self.assertLess(report['maxWristBarErrorMeters'],.005)
+            self.assertLess(report['maxFootDriftMeters'],.005)
+            self.assertGreater(report['barCenterTravelMeters'],.10)
+            self.assertFalse(report['approved'])
+            self.assertFalse(report['enabled'])
+            self.assertFalse(report['expertBiomechanicsReviewed'])
+            self.assertFalse(report['nativeIphoneAndroidVerified'])
+            self.assertEqual(report['benchNodeRequiredAndStatic'],
+                             exercise=='ex_bench_press')
+            self.assertGreaterEqual(len(report['manualBlockers']),4)
+            audits.append(report)
+        result={
+            'version':'v9.8','status':'draft_equipment_and_joint_contact_QA',
+            'source':'actual 53-bone CC0 mobile GLB LINEAR channels',
+            'catalogCount':229,'approved':False,'enabled':False,
+            'notMeasured':['muscle anatomy quality','surface collisions',
+              'exercise coaching correctness','device FPS or battery'],
+            'pilots':audits,
+        }
+        (OUT/'three_pilot_motion_quality_v98.json').write_text(
+            json.dumps(result,indent=2)+'\n',encoding='utf8')
+
+    def test_v98_rejects_untrusted_or_missing_equipment_pilots(self):
+        file=OUT/'ex_bench_press_mobile_lod.glb'
+        glb=rig.GLB(file.read_bytes(),expected_sha=None)
+        self.assertTrue(quality.check_source(glb,'ex_bench_press'))
+        glb.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'Unsafe'):
+            quality.check_source(glb,'ex_bench_press')
+        glb.doc['extras']['approved']=False
+        del glb.by_name['STK_BENCH_STATIONARY']
+        with self.assertRaisesRegex(ValueError,'bench'):
+            quality.check_source(glb,'ex_bench_press')
+
 
 if __name__ == "__main__":
     unittest.main()

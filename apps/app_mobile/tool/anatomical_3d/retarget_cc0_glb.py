@@ -245,6 +245,10 @@ def equipment(glb):
     """Single rigid bar and weight plates, represented by a low-poly cylinder mesh."""
     positions=[];normals=[];indices=[]
     def cylinder(x0,x1,radius,role):
+        # Low-poly watertight rounded-body proxies. Full bar caps/rings are
+        # visible on mobile even in oblique 3D views, unlike uncapped v9.7.
+        if not x0<x1 or not 0.<radius<=.18:
+            raise ValueError('Unsafe equipment proxy dimensions')
         first=len(positions);sides=14
         for x in (x0,x1):
             for k in range(sides):
@@ -255,7 +259,29 @@ def equipment(glb):
             j=(k+1)%sides
             indices.extend([first+k,first+sides+k,first+j,
                             first+j,first+sides+k,first+sides+j])
+        # Dedicated cap vertices keep face normals correct and avoid
+        # shading the flat disk as a curved surface.
+        for x,normal,reverse in ((x0,(-1,0,0),True),
+                                 (x1,(1,0,0),False)):
+            center=len(positions);positions.append((x,0.,0.))
+            normals.append(normal)
+            cap=len(positions)
+            for k in range(sides):
+                a=2*math.pi*k/sides
+                positions.append((x,math.cos(a)*radius,math.sin(a)*radius))
+                normals.append(normal)
+            for k in range(sides):
+                j=(k+1)%sides
+                indices.extend(([center,cap+j,cap+k] if reverse else
+                                [center,cap+k,cap+j]))
     cylinder(-1.1,1.1,.019,'bar')
+    # Narrow orientation guides at ±0.50 m mark the two grasp zones.
+    # A wider short collar visually separates sleeves from the grip shaft.
+    for sign in (-1,1):
+        grip=sign*.50
+        cylinder(grip-.008,grip+.008,.022,'grip_reference')
+        sleeve=sign*.835
+        cylinder(sleeve-.025,sleeve+.025,.044,'sleeve_collar')
     cylinder(-.93,-.87,.17,'plates')
     cylinder(.87,.93,.17,'plates')
     pos=glb.append(positions,3,'VEC3',target=34962)

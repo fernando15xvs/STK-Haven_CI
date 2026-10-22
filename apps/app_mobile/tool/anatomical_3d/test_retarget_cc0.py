@@ -91,6 +91,38 @@ class CC0RetargetTest(unittest.TestCase):
             end=rig.body_pose(self.base,ex,4)[1]
             self.assertLess(math.dist(start,end),1e-6)
 
+    def test_v98_capped_bar_and_grip_markers_are_in_actual_mobile_glb(self):
+        # Exactly seven low-poly capped components: shaft, two plates,
+        # two grip markers and two sleeve collars, all within existing size.
+        for ex in rig.EXERCISES:
+            full=rig.GLB((OUTPUT/(ex+'.glb')).read_bytes(),expected_sha=None)
+            mobile=rig.GLB(
+                (OUTPUT/(ex+'_mobile_lod.glb')).read_bytes(),
+                expected_sha=None)
+            for candidate in (full,mobile):
+                bar=next(mesh for mesh in candidate.doc['meshes']
+                         if mesh.get('name')=='STK_BAR_AND_PLATES')
+                prim=bar['primitives'][0]
+                xyz=candidate.accessor(prim['attributes']['POSITION'])
+                normals=candidate.accessor(prim['attributes']['NORMAL'])
+                faces=candidate.accessor(prim['indices'])
+                self.assertEqual(len(xyz),7*58)
+                self.assertEqual(len(normals),len(xyz))
+                self.assertEqual(len(faces),7*168)
+                self.assertTrue(all(math.isfinite(v)
+                                    for row in xyz for v in row))
+                self.assertTrue(all(abs(
+                    sum(v*v for v in normal)-1)<.0001
+                                    for normal in normals))
+                self.assertTrue(all(0<=int(index[0])<len(xyz)
+                                    for index in faces))
+                centers=[p for p,n in zip(xyz,normals)
+                         if abs(abs(n[0])-1.)<1e-5 and
+                            abs(p[1])<1e-6 and abs(p[2])<1e-6]
+                self.assertEqual(len(centers),14)
+                self.assertFalse(candidate.doc['extras']['approved'])
+                self.assertFalse(candidate.doc['extras']['enabled'])
+
     def test_rejects_wrong_source_hash(self):
         fake=bytearray(self.raw)
         fake[-1]^=1
