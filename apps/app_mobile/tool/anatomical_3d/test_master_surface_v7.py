@@ -13,23 +13,32 @@ OUT=Path(os.getenv("STK_MASTER_SURFACE_V7","build/cc0_master_surface_v7"))
 
 class ProceduralDetailMathTests(unittest.TestCase):
     def test_symmetrical_bounded_bilateral_lobes(self):
-        points=(
+        # Repeat the symmetric synthetic triangles to satisfy the same
+        # >100 changed-vertex safety gate required for the real sculpt.
+        # Do NOT weaken the production quality gate just for this test.
+        unit=(
             (.20,.7,.10),(.25,.7,.10),(.20,.8,.10),
             (-.20,.7,.10),(-.25,.7,.10),(-.20,.8,.10),
         )
-        normals=[(0,0,1)]*6
-        graph=[
+        adjacency=(
             {1:1.,2:1.},{0:1.,2:1.},{0:1.,1:1.},
             {4:1.,5:1.},{3:1.,5:1.},{3:1.,4:1.},
-        ]
-        votes={name:[1.]*6 for name in v7.REGION_RELIEF_METERS}
+        )
+        points=tuple((x,y+row*.002,z)
+                     for row in range(20) for x,y,z in unit)
+        normals=[(0,0,1)]*len(points)
+        graph=[{j+6*row:weight for j,weight in edges.items()}
+               for row in range(20) for edges in adjacency]
+        votes={name:[1.]*len(points) for name in v7.REGION_RELIEF_METERS}
         moved,metrics=v7.detail(points,normals,votes,graph)
-        self.assertEqual(metrics["editedVertices"],6)
+        self.assertEqual(metrics["editedVertices"],len(points))
         for before,after in zip(points,moved):
             self.assertGreater(after[2]-before[2],.0001)
             self.assertLessEqual(math.dist(before,after),.00150001)
-        for left,right in ((0,3),(1,4),(2,5)):
-            self.assertAlmostEqual(moved[left][2],moved[right][2],delta=1e-7)
+        for row in range(20):
+            for left,right in ((0,3),(1,4),(2,5)):
+                i,j=6*row+left,6*row+right
+                self.assertAlmostEqual(moved[i][2],moved[j][2],delta=1e-7)
         self.assertTrue(metrics["bilateralMirroredProfiles"])
 
     def test_folded_triangle_and_bad_region_inputs_fail_closed(self):
