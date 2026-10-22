@@ -34,3 +34,11 @@ Productos locales: `build/cc0_master_surface_v7/stk_master_v7_surface_preview.gl
 - Nuevas pruebas `glb_camera_controls_test.dart` y pruebas de proyección con el GLB real v7 verifican vuelta completa, límites, rotación de cámara y ausencia de geometría no finita. No son ensayos de rendimiento en dispositivos físicos.
 - Además, el test sintético de v7 se amplió de 6 a 120 vértices para satisfacer el umbral de seguridad de más de 100 vértices desplazados, **sin relajar el gate productivo**. El CI #479 había fallado exclusivamente en ese fixture.
 - Sigue pendiente evaluar GPU skinning nativo con Z-buffer real, presupuesto de batería y FPS, así como un modelo profesional de músculos separados, anatomía validada y movimientos de los 229 ejercicios.
+
+## v7.2 — línea base de costo de CPU antes de evaluar render GPU
+
+- `glb_mobile_frame_probe.dart` reúne medianas, percentil 95 y máximo de **microsegundos de cálculo CPU** por pose/proyección para el GLB v7, junto con número de triángulos/vértices y llamadas de dibujo preparadas. Solo ejecuta fotogramas en el Dart/Flutter test runner; no mide tiempo de rasterización en GPU, FPS real de teléfono, batería ni consumo de memoria.
+- `glb_cpu_frame_probe_test.dart` guarda un JSON de los siete patrones dentro de `build/cc0_master_v7_flutter_qa/cpu_frame_probe_report.json` para comparación técnica. Los valores son diagnósticos, sin umbrales de tiempos que harían frágil el CI.
+- Se corrigieron dos literales de coma decimal en el test v7 de cámara que habían provocado fallos de `flutter analyze` en CI #486.
+- El workflow **solo público** cambia en su copia temporal `supabase/config.toml` los puertos de DB, shadow DB, API e Inbucket, evitando el puerto fijo 54324 ocupado por otros contenedores en GitHub Actions. No altera el proyecto Supabase real ni las migraciones.
+- El render sigue siendo CPU skinning y Flutter Canvas; **no se ha implementado aún GPU skinning nativo**. El siguiente paso exige examinar artefactos, perfiles en dispositivos físicos y decisiones de plataforma.
