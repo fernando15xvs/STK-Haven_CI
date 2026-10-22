@@ -552,6 +552,115 @@ class GlbSkinnedScene {
       pose.bones,pose.camera,pose.triangles);
   }
 
+  /// v9.5 QA: build a deduplicated 42-float vertex stream DIRECTLY from
+  /// decoded glTF primitives. No 18/24-float expanded triangle arrays and no
+  /// per-triangle deformed vertex stream are ever allocated for this route.
+  /// The 55-bone pose/camera uses the identical shaderSkinSource transform.
+  GlbShaderIndexedMorphSource shaderIndexedMorphSource(double elapsed,
+      Size size,Map<String,Color> theme,{bool dark=true,double orbit=0,
+      double elevation=0,double zoom=1,bool includeMesh=true}) {
+    final pose=shaderMorphSource(elapsed,size,theme,dark:dark,orbit:orbit,
+      elevation:elevation,zoom:zoom,includeMesh:false);
+    if(!includeMesh) {
+      return GlbShaderIndexedMorphSource(Float32List(0),Uint32List(0),
+        pose.morphWeights,pose.bones,pose.camera,pose.triangles);
+    }
+    if(triangleCount<1||triangleCount>25000||_instances.length!=1) {
+      throw const FormatException('Indexed master exceeds triangle budget');
+    }
+    const stride=42;
+    const byteBudget=12*1024*1024;
+    final attributes=<double>[];
+    final indices=<int>[];
+    final buckets=<int,List<int>>{};
+    // Hash and equality both operate on the exact Float32 wire values.
+    final scratch=Float32List(stride);
+    final scratchBits=Uint32List.view(scratch.buffer);
+    for(final instance in _instances) {
+      if(!instance.skin) {
+        throw const FormatException('Indexed GLB contains rigid geometry');
+      }
+      for(final prim in instance.primitives) {
+        if(!prim.skinned||prim.joints.length!=prim.positions.length||
+           prim.weights.length!=prim.positions.length||
+           prim.normals.length!=prim.positions.length||
+           prim.morphs.length!=8||
+           prim.morphs.any((m)=>m.length!=prim.positions.length)||
+           prim.indices.length%3!=0) {
+          throw const FormatException('Invalid indexed morph primitive');
+        }
+        final base=theme[prim.material] ??
+          (prim.material.startsWith('STK_REGION_')
+            ? (dark?const Color(0xFFE5E9EE):const Color(0xFFBBC3CD))
+            : _fallback(prim.material,dark));
+        final rgb=base.toARGB32();
+        for(final vertex in prim.indices) {
+          if(vertex<0||vertex>=prim.positions.length) {
+            throw const FormatException('Indexed morph reference exceeds GLB');
+          }
+          final p=prim.positions[vertex],n=prim.normals[vertex];
+          final js=prim.joints[vertex],ws=prim.weights[vertex];
+          if(!p.finite||!n.finite||js.length!=4||ws.length!=4||
+             js.any((j)=>j<0||j>=55)||
+             ws.any((w)=>!w.isFinite||w<0||w>1.025)||
+             (ws.reduce((a,b)=>a+b)-1).abs()>.025) {
+            throw const FormatException('Invalid indexed skin influence');
+          }
+          scratch[0]=p.x;scratch[1]=p.y;scratch[2]=p.z;
+          scratch[3]=n.x;scratch[4]=n.y;scratch[5]=n.z;
+          for(var k=0;k<4;k++) {
+            scratch[6+k]=js[k].toDouble();
+            scratch[10+k]=ws[k];
+          }
+          scratch[14]=((rgb>>16)&255)/255;
+          scratch[15]=((rgb>>8)&255)/255;
+          scratch[16]=(rgb&255)/255;
+          scratch[17]=((rgb>>24)&255)/255;
+          for(var m=0;m<8;m++) {
+            final d=prim.morphs[m][vertex];
+            if(!d.finite)throw const FormatException('Invalid morph shape');
+            final at=18+m*3;
+            scratch[at]=d.x;scratch[at+1]=d.y;scratch[at+2]=d.z;
+          }
+          if(scratch.any((v)=>!v.isFinite)) {
+            throw const FormatException('Nonfinite indexed vertex');
+          }
+          var hash=0x811c9dc5;
+          for(final bits in scratchBits) {
+            hash=((hash^bits)*0x01000193)&0xffffffff;
+          }
+          final bucket=buckets.putIfAbsent(hash,()=>[]);
+          var index=-1;
+          for(final candidate in bucket) {
+            var equal=true;
+            final base=candidate*stride;
+            for(var j=0;j<stride;j++) {
+              if(attributes[base+j]!=scratch[j]) {
+                equal=false;break;
+              }
+            }
+            if(equal) {index=candidate;break;}
+          }
+          if(index<0) {
+            index=attributes.length~/stride;
+            attributes.addAll(scratch);
+            bucket.add(index);
+          }
+          indices.add(index);
+          if((attributes.length+indices.length)*4>byteBudget) {
+            throw const FormatException('Indexed GPU mesh exceeds 12MiB');
+          }
+        }
+      }
+    }
+    if(indices.length!=triangleCount*3) {
+      throw const FormatException('Mismatched indexed triangle count');
+    }
+    return GlbShaderIndexedMorphSource(Float32List.fromList(attributes),
+      Uint32List.fromList(indices),pose.morphWeights,
+      pose.bones,pose.camera,pose.triangles);
+  }
+
   /// One pose from GLB animation; positions are skinned using WEIGHTS_0/JOINTS_0.
   /// Geometry and skin data are cached, only joints and projections vary.
   GlbDrawFrame frame(double elapsed,Size size,Map<String,Color> theme,
@@ -714,6 +823,14 @@ class GlbShaderMorphSource {
   /// Eight POSITION delta vec3 entries (24 floats) per expanded vertex.
   final Float32List deltas;
   final Float32List morphWeights,bones,camera;
+  final int triangles;
+}
+/// Data-only v9.5 source: deduplicated 42-float bind/morph vertices.
+class GlbShaderIndexedMorphSource {
+  const GlbShaderIndexedMorphSource(this.vertices,this.indices,
+      this.morphWeights,this.bones,this.camera,this.triangles);
+  final Float32List vertices,morphWeights,bones,camera;
+  final Uint32List indices;
   final int triangles;
 }
 class GlbDrawPart {

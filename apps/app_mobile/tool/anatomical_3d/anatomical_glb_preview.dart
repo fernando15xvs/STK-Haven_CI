@@ -17,6 +17,7 @@ class AnatomicalGlbPreview extends StatefulWidget {
     this.experimentalGpuSkinning=false,
     this.experimentalGpuMorphs=false,
     this.experimentalIndexedGpu=false,
+    this.experimentalIndexedGpuPlayback=false,
   });
   final GlbSkinnedScene scene;
   final double? progress;
@@ -34,23 +35,36 @@ class AnatomicalGlbPreview extends StatefulWidget {
   /// v9.4 indexed GPU QA: disabled unless explicitly selected.
   /// No production workouts, web or continuous playback.
   final bool experimentalIndexedGpu;
+  /// Internal 12 fps capped native playback pilot. Still disabled by default.
+  /// Does not bypass the user's pause/reduced-motion controls.
+  final bool experimentalIndexedGpuPlayback;
   static GlbSkinnedScene decode(Uint8List bytes) => GlbSkinnedScene.decode(bytes);
   @override
   State<AnatomicalGlbPreview> createState()=>_AnatomicalGlbPreviewState();
 }
 
 class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin,WidgetsBindingObserver {
   late final AnimationController _clock=AnimationController(
     vsync:this,duration:Duration(milliseconds:
         (widget.scene.durationSeconds*1000).round()));
   bool _playing=true;
+  bool _appActive=true;
   GlbCameraPose _camera=const GlbCameraPose();
   double _pinchStartZoom=1;
   String? _cacheKey;
   GlbDrawFrame? _cached;
   @override
-  void initState(){super.initState();_clock.repeat();}
+  void initState(){
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _clock.repeat();
+  }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appActive=state==AppLifecycleState.resumed;
+    if(mounted)_sync();
+  }
   @override
   void didChangeDependencies(){super.didChangeDependencies();_sync();}
   @override
@@ -64,7 +78,8 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
     _sync();
   }
   void _sync(){
-    if(widget.progress!=null||MediaQuery.disableAnimationsOf(context)||!_playing){
+    if(!_appActive||widget.progress!=null||
+        MediaQuery.disableAnimationsOf(context)||!_playing){
       _clock.stop();
       if(widget.progress!=null||MediaQuery.disableAnimationsOf(context)){
         _clock.value=widget.progress?.clamp(0.0,1.0)??.35;
@@ -74,7 +89,11 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
     }
   }
   @override
-  void dispose(){_clock.dispose();super.dispose();}
+  void dispose(){
+    WidgetsBinding.instance.removeObserver(this);
+    _clock.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context){
     final palette=AppColors.of(context);
@@ -107,6 +126,34 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                 final still=widget.progress!=null||
                     MediaQuery.disableAnimationsOf(context)||!_playing;
                 final depthSlices=still?6:1;
+                // Native QA path first: do not render an unused full CPU
+                // Canvas mesh during every experimental GPU playback frame.
+                final probe=widget.experimentalIndexedGpu &&
+                    widget.experimentalIndexedGpuPlayback && !still;
+                if(((widget.experimentalGpuSkinning||
+                    widget.experimentalGpuMorphs||
+                    widget.experimentalIndexedGpu)&&still)||probe) {
+                  final elapsed=probe ? (tick~/2)/12 : tick/24;
+                  return NativeGpuSkinnedGlbReview(
+                    scene:widget.scene,size:widget.dimension,
+                    materials:materials,background:palette.surface,
+                    elapsed:elapsed,dark:dark,orbit:_camera.yaw,
+                    elevation:_camera.elevation,zoom:_camera.zoom,
+                    enabled:true,
+                    experimentalMorphGpu:widget.experimentalGpuMorphs,
+                    experimentalIndexedGpu:widget.experimentalIndexedGpu,
+                    playbackProbe:probe,
+                  );
+                }
+                if(widget.experimentalNativeGpuStatic&&still) {
+                  return NativeGpuGlbReview(
+                    scene:widget.scene,size:widget.dimension,
+                    materials:materials,background:palette.surface,
+                    elapsed:tick/24,dark:dark,orbit:_camera.yaw,
+                    elevation:_camera.elevation,zoom:_camera.zoom,
+                    enabled:true,
+                  );
+                }
                 final regions=widget.highlightRegions.toList()..sort();
                 final key=[tick,depthSlices,_camera.yaw,
                   _camera.elevation,_camera.zoom,regions.join(','),
@@ -120,28 +167,6 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                     elevation:_camera.elevation,zoom:_camera.zoom,
                     depthSlices:depthSlices,poseNormals:still);
                   _cacheKey=key;
-                }
-                if((widget.experimentalGpuSkinning||
-                    widget.experimentalGpuMorphs||
-                    widget.experimentalIndexedGpu)&&still) {
-                  return NativeGpuSkinnedGlbReview(
-                    scene:widget.scene,size:widget.dimension,
-                    materials:materials,background:palette.surface,
-                    elapsed:tick/24,dark:dark,orbit:_camera.yaw,
-                    elevation:_camera.elevation,zoom:_camera.zoom,
-                    enabled:true,
-                    experimentalMorphGpu:widget.experimentalGpuMorphs,
-                    experimentalIndexedGpu:widget.experimentalIndexedGpu,
-                  );
-                }
-                if(widget.experimentalNativeGpuStatic&&still) {
-                  return NativeGpuGlbReview(
-                    scene:widget.scene,size:widget.dimension,
-                    materials:materials,background:palette.surface,
-                    elapsed:tick/24,dark:dark,orbit:_camera.yaw,
-                    elevation:_camera.elevation,zoom:_camera.zoom,
-                    enabled:true,
-                  );
                 }
                 return CustomPaint(painter:GlbSkinnedPainter(
                   _cached!,palette.surface));

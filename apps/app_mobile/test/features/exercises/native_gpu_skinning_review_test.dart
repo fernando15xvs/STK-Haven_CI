@@ -152,6 +152,92 @@ void main() {
     expect(cache.requiresMesh(scene,'light:blue'),true);
   });
 
+  test('v9.5 direct glTF indexing matches expanded morph wire geometry',
+      () {
+    final bytes=File(
+      'build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb',
+    ).readAsBytesSync();
+    const size=Size(320,320);
+    final report=<Map<String,Object>>[];
+    for(final name in names) {
+      final scene=GlbSkinnedScene.decodeMaster(bytes,pattern:name);
+      final expanded=GpuMorphPacket.fromScene(scene,1.75,size,const {});
+      final direct=scene.shaderIndexedMorphSource(1.75,size,const {});
+      final packet=GpuIndexedMorphPacket.fromScene(scene,1.75,size,const {});
+      expect(direct.triangles,expanded.triangles);
+      expect(direct.vertices,orderedEquals(packet.interleaved));
+      expect(direct.indices,orderedEquals(packet.indices));
+      expect(direct.morphWeights,orderedEquals(expanded.morphWeights));
+      expect(direct.bones,orderedEquals(expanded.bones));
+      expect(direct.camera,orderedEquals(expanded.camera));
+      final count=direct.indices.length;
+      for(var k=0;k<count;k+=math.max(1,count~/300)) {
+        final first=direct.indices[k]*stkGpuIndexedStride;
+        final base=k*stkGpuSkinStride;
+        final morph=k*stkGpuMorphDeltaStride;
+        for(var i=0;i<stkGpuSkinStride;i++) {
+          expect(direct.vertices[first+i],expanded.vertices[base+i],
+            reason:'$name vertex=$k base-channel=$i');
+        }
+        for(var i=0;i<stkGpuMorphDeltaStride;i++) {
+          expect(direct.vertices[first+stkGpuSkinStride+i],
+            expanded.deltas[morph+i],
+            reason:'$name vertex=$k morph-channel=$i');
+        }
+      }
+      for(final t in [0.0,1.0,2.0,3.0]) {
+        final noMesh=scene.shaderIndexedMorphSource(t,size,const {},
+          includeMesh:false);
+        expect(noMesh.vertices,isEmpty);
+        expect(noMesh.indices,isEmpty);
+        expect(noMesh.bones.length,55*16);
+        expect(noMesh.morphWeights.length,8);
+        final match=scene.shaderMorphSource(t,size,const {},
+          includeMesh:false);
+        expect(noMesh.bones,orderedEquals(match.bones));
+        expect(noMesh.morphWeights,orderedEquals(match.morphWeights));
+      }
+      report.add({
+        'clip':name,
+        'triangles':packet.triangles,
+        'uniqueVertices':packet.vertexCount,
+        'initialIndexedBytes':packet.retainedBytes,
+        'previousExpandedWireBytes':packet.expandedBytes,
+        'transientExpandedArraysEliminated':true,
+        'physicalRamMeasured':false,
+      });
+    }
+    final output=File(
+      'build/cc0_master_v7_flutter_qa/indexed_morph_memory_v95.json');
+    output.parent.createSync(recursive:true);
+    output.writeAsStringSync(
+      const JsonEncoder.withIndent('  ').convert({
+        'schema':'stk_gpu_indexed_v95_qa_only',
+        'scope':'static_buffer_bytes_not_physical_peak_memory',
+        'approvedAssets':0,
+        'enabledAssets':0,
+        'maxProbeHz':GpuProbeFrameGate.maxFramesPerSecond,
+        'clips':report,
+      }));
+  },timeout:const Timeout(Duration(minutes:8)));
+
+  test('v9.5 probe throttles to 12Hz, resumes, and allows camera changes',() {
+    final gate=GpuProbeFrameGate();
+    expect(GpuProbeFrameGate.maxFramesPerSecond,12);
+    var accepted=0;
+    for(var frame=0;frame<240;frame++) {
+      if(gate.allow(frame/120))accepted++;
+    }
+    expect(accepted,24); // 120Hz input over 2 seconds.
+    expect(gate.allow(239/120),false);
+    expect(gate.allow(239/120,force:true),true);
+    expect(gate.allow(239/120),false);
+    gate.reset();
+    expect(gate.allow(0),true);
+    expect(()=>gate.allow(double.nan),throwsFormatException);
+    expect(()=>gate.allow(-1),throwsFormatException);
+  });
+
   test('v9.4 indexed QA keeps vertex/morph parity and bounded byte usage',
       () {
     final bytes=File(

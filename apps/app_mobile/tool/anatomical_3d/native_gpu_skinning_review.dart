@@ -221,58 +221,15 @@ class GpuIndexedMorphPacket {
   factory GpuIndexedMorphPacket.fromScene(GlbSkinnedScene scene,double elapsed,
       Size size,Map<String,Color> materials,{bool dark=true,double orbit=0,
       double elevation=0,double zoom=1,bool includeMesh=true}) {
-    final source=GpuMorphPacket.fromScene(scene,elapsed,size,materials,
+    // Build the indexed data straight from decoded glTF primitives. The v9.4
+    // path allocated two expanded arrays BEFORE deduplication (~42 floats per
+    // triangle corner); v9.5 never materializes either expanded stream.
+    final source=scene.shaderIndexedMorphSource(elapsed,size,materials,
       dark:dark,orbit:orbit,elevation:elevation,zoom:zoom,
       includeMesh:includeMesh);
-    if(!includeMesh) {
-      return GpuIndexedMorphPacket(Float32List(0),Uint32List(0),
-        source.morphWeights,source.bones,source.camera,source.triangles,false)
-        ..validate();
-    }
-    final vertices=source.vertices,deltas=source.deltas;
-    final original=ByteData.sublistView(vertices);
-    final correctives=ByteData.sublistView(deltas);
-    final values=<double>[];
-    final indexList=<int>[];
-    final hashBuckets=<int,List<int>>{};
-    final count=source.triangles*3;
-    for(var i=0;i<count;i++) {
-      var hash=0x811c9dc5;
-      for(var j=0;j<stkGpuIndexedStride;j++) {
-        final bits=j<stkGpuSkinStride
-          ?original.getUint32((i*stkGpuSkinStride+j)*4,Endian.host)
-          :correctives.getUint32(
-              (i*stkGpuMorphDeltaStride+j-stkGpuSkinStride)*4,Endian.host);
-        hash=((hash^bits)*0x01000193)&0xffffffff;
-      }
-      final bucket=hashBuckets.putIfAbsent(hash,()=>[]);
-      var found=-1;
-      for(final candidate in bucket) {
-        var equal=true;
-        for(var j=0;j<stkGpuIndexedStride;j++) {
-          final v=j<stkGpuSkinStride
-            ?vertices[i*stkGpuSkinStride+j]
-            :deltas[i*stkGpuMorphDeltaStride+j-stkGpuSkinStride];
-          if(values[candidate*stkGpuIndexedStride+j]!=v) {
-            equal=false;break;
-          }
-        }
-        if(equal) {found=candidate;break;}
-      }
-      if(found<0) {
-        found=values.length~/stkGpuIndexedStride;
-        for(var j=0;j<stkGpuIndexedStride;j++) {
-          values.add(j<stkGpuSkinStride
-            ?vertices[i*stkGpuSkinStride+j]
-            :deltas[i*stkGpuMorphDeltaStride+j-stkGpuSkinStride]);
-        }
-        bucket.add(found);
-      }
-      indexList.add(found);
-    }
-    final packet=GpuIndexedMorphPacket(Float32List.fromList(values),
-      Uint32List.fromList(indexList),source.morphWeights,source.bones,
-      source.camera,source.triangles,true);
+    final packet=GpuIndexedMorphPacket(source.vertices,source.indices,
+      source.morphWeights,source.bones,source.camera,source.triangles,
+      includeMesh);
     packet.validate();
     return packet;
   }
@@ -344,6 +301,26 @@ class GpuIndexedMorphPacket {
   }
 }
 
+/// Deterministic 12 fps maximum QA probe. This only throttles enqueueing:
+/// MethodChannel ACK serialization still provides backpressure. No real-time
+/// performance claim should be inferred from this clock.
+class GpuProbeFrameGate {
+  static const int maxFramesPerSecond=12;
+  int? _lastFrame;
+
+  bool allow(double elapsed,{bool force=false}) {
+    if(!elapsed.isFinite||elapsed<0) {
+      throw const FormatException('Invalid GPU QA probe time');
+    }
+    final frame=(elapsed*maxFramesPerSecond).floor();
+    if(!force&&_lastFrame==frame)return false;
+    _lastFrame=frame;
+    return true;
+  }
+
+  void reset() => _lastFrame=null;
+}
+
 /// QA-only static shader-skinning PlatformView.
 /// No ongoing animations are allowed: a new packet is sent only for an
 /// explicit paused frame, so Android/iOS performance is not misrepresented.
@@ -353,6 +330,7 @@ class NativeGpuSkinnedGlbReview extends StatefulWidget {
     required this.background,this.elapsed=2,this.dark=true,this.orbit=0,
     this.elevation=0,this.zoom=1,this.enabled=false,
     this.experimentalMorphGpu=false,this.experimentalIndexedGpu=false,
+    this.playbackProbe=false,
   });
 
   final GlbSkinnedScene scene;
@@ -360,6 +338,8 @@ class NativeGpuSkinnedGlbReview extends StatefulWidget {
   final Map<String,Color> materials;
   final Color background;
   final bool dark,enabled,experimentalMorphGpu,experimentalIndexedGpu;
+  /// Internal 12-fps-only QA; never enabled from workout/catalog routes.
+  final bool playbackProbe;
 
   @override
   State<NativeGpuSkinnedGlbReview> createState() =>
@@ -375,6 +355,7 @@ class _NativeGpuSkinnedGlbReviewState
   final GpuSkinningMeshCache _meshCache=GpuSkinningMeshCache();
   final GpuMorphTransportCache _morphCache=GpuMorphTransportCache();
   final GpuMorphTransportCache _indexedCache=GpuMorphTransportCache();
+  final GpuProbeFrameGate _probeGate=GpuProbeFrameGate();
 
   GlbDrawFrame _canvasFrame() => widget.scene.frame(
     widget.elapsed,Size.square(widget.size),widget.materials,
@@ -384,7 +365,9 @@ class _NativeGpuSkinnedGlbReviewState
 
   // A PlatformView has one retained mesh. Serializing uploads prevents a
   // compact pose update from overtaking the first full mesh packet.
-  void _scheduleSend() {
+  void _scheduleSend({bool force=false}) {
+    if(widget.playbackProbe&&widget.experimentalIndexedGpu&&
+        !_probeGate.allow(widget.elapsed,force:force))return;
     final serial=++_sequence;
     _pending=_pending.then((_)=>_send(serial));
   }
@@ -442,18 +425,21 @@ class _NativeGpuSkinnedGlbReviewState
     _meshCache.reset();
     _morphCache.reset();
     _indexedCache.reset();
+    _probeGate.reset();
     _channel=MethodChannel('$stkGpuSkinView/$id');
-    _scheduleSend();
+    _scheduleSend(force:true);
   }
 
   @override
   void didUpdateWidget(covariant NativeGpuSkinnedGlbReview old) {
     super.didUpdateWidget(old);
     if(widget.experimentalMorphGpu!=old.experimentalMorphGpu||
-       widget.experimentalIndexedGpu!=old.experimentalIndexedGpu) {
+       widget.experimentalIndexedGpu!=old.experimentalIndexedGpu||
+       widget.playbackProbe!=old.playbackProbe) {
       _meshCache.reset();
       _morphCache.reset();
       _indexedCache.reset();
+      _probeGate.reset();
     }
     if(widget.scene!=old.scene||widget.elapsed!=old.elapsed||
        widget.size!=old.size||widget.background!=old.background||
@@ -461,8 +447,17 @@ class _NativeGpuSkinnedGlbReviewState
        widget.orbit!=old.orbit||widget.elevation!=old.elevation||
        widget.zoom!=old.zoom||widget.enabled!=old.enabled||
        widget.experimentalMorphGpu!=old.experimentalMorphGpu||
-       widget.experimentalIndexedGpu!=old.experimentalIndexedGpu) {
-      _scheduleSend();
+       widget.experimentalIndexedGpu!=old.experimentalIndexedGpu||
+       widget.playbackProbe!=old.playbackProbe) {
+      final force=widget.scene!=old.scene||widget.size!=old.size||
+          widget.background!=old.background||
+          widget.materials!=old.materials||widget.dark!=old.dark||
+          widget.orbit!=old.orbit||widget.elevation!=old.elevation||
+          widget.zoom!=old.zoom||widget.enabled!=old.enabled||
+          widget.experimentalMorphGpu!=old.experimentalMorphGpu||
+          widget.experimentalIndexedGpu!=old.experimentalIndexedGpu||
+          widget.playbackProbe!=old.playbackProbe;
+      _scheduleSend(force:force);
     }
   }
 
@@ -470,6 +465,7 @@ class _NativeGpuSkinnedGlbReviewState
   void dispose(){
     _sequence++;_channel=null;_meshCache.reset();_morphCache.reset();
     _indexedCache.reset();
+    _probeGate.reset();
     super.dispose();
   }
 
