@@ -18,6 +18,7 @@ class AnatomicalGlbPreview extends StatefulWidget {
     this.experimentalGpuMorphs=false,
     this.experimentalIndexedGpu=false,
     this.experimentalIndexedGpuPlayback=false,
+    this.experimentalGpuTelemetry=false,
   });
   final GlbSkinnedScene scene;
   final double? progress;
@@ -38,6 +39,9 @@ class AnatomicalGlbPreview extends StatefulWidget {
   /// Internal 12 fps capped native playback pilot. Still disabled by default.
   /// Does not bypass the user's pause/reduced-motion controls.
   final bool experimentalIndexedGpuPlayback;
+  /// Displays ACK/transfer counters only in the internal indexed GPU pilot.
+  /// Not remote analytics, not production FPS or physical memory telemetry.
+  final bool experimentalGpuTelemetry;
   static GlbSkinnedScene decode(Uint8List bytes) => GlbSkinnedScene.decode(bytes);
   @override
   State<AnatomicalGlbPreview> createState()=>_AnatomicalGlbPreviewState();
@@ -54,6 +58,7 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
   double _pinchStartZoom=1;
   String? _cacheKey;
   GlbDrawFrame? _cached;
+  final ValueNotifier<GpuQaMetricsSnapshot?> _qaMetrics=ValueNotifier(null);
   @override
   void initState(){
     super.initState();
@@ -92,6 +97,7 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
   void dispose(){
     WidgetsBinding.instance.removeObserver(this);
     _clock.dispose();
+    _qaMetrics.dispose();
     super.dispose();
   }
   @override
@@ -143,6 +149,11 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                     experimentalMorphGpu:widget.experimentalGpuMorphs,
                     experimentalIndexedGpu:widget.experimentalIndexedGpu,
                     playbackProbe:probe,
+                    onMetrics:widget.experimentalGpuTelemetry
+                      ? (data) {
+                          if(mounted)_qaMetrics.value=data;
+                        }
+                      : null,
                   );
                 }
                 if(widget.experimentalNativeGpuStatic&&still) {
@@ -175,6 +186,25 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
           ),
         ),
       ),
+      if(widget.experimentalGpuTelemetry&&widget.experimentalIndexedGpu)
+        ValueListenableBuilder<GpuQaMetricsSnapshot?>(
+          valueListenable:_qaMetrics,
+          builder:(context,stats,_)=>Padding(
+            padding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
+            child:Text(
+              stats==null
+                ?'GPU QA · esperando confirmación nativa'
+                :'GPU QA · ACK ${stats.acknowledged}/${stats.sent}'
+                 ' · omitidos ${stats.superseded+stats.throttled}'
+                 ' · errores ${stats.failures}'
+                 ' · respuesta ${stats.lastAckMs} ms'
+                 ' · último envío ${stats.lastPayloadBytes} bytes',
+              key:const Key('skinned_glb_gpu_qa_metrics'),
+              textAlign:TextAlign.center,
+              style:Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+        ),
       Row(mainAxisSize:MainAxisSize.min,children:[
         if(widget.progress==null&&!MediaQuery.disableAnimationsOf(context))
           TextButton(key:const Key('skinned_glb_play_pause'),

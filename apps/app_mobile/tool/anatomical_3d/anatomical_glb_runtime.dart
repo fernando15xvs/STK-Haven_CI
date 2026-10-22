@@ -570,8 +570,14 @@ class GlbSkinnedScene {
     }
     const stride=42;
     const byteBudget=12*1024*1024;
-    final attributes=<double>[];
-    final indices=<int>[];
+    // Bounded typed staging: eliminate the growable List<double>, its
+    // boxed elements and the final Float32List.fromList() copy. Capacity
+    // grows geometrically; a sublist view keeps the last allocation.
+    var capacity=math.min(triangleCount*3,2048);
+    var attributes=Float32List(capacity*stride);
+    var unique=0;
+    final indices=Uint32List(triangleCount*3);
+    var indexCursor=0;
     final buckets=<int,List<int>>{};
     // Hash and equality both operate on the exact Float32 wire values.
     final scratch=Float32List(stride);
@@ -642,23 +648,39 @@ class GlbSkinnedScene {
             if(equal) {index=candidate;break;}
           }
           if(index<0) {
-            index=attributes.length~/stride;
-            attributes.addAll(scratch);
+            index=unique;
+            if(unique==capacity) {
+              final next=math.min(triangleCount*3,capacity*2);
+              if(next<=capacity) {
+                throw const FormatException('Indexed vertex count exceeded');
+              }
+              final grown=Float32List(next*stride);
+              grown.setRange(0,unique*stride,attributes);
+              attributes=grown;
+              capacity=next;
+            }
+            attributes.setRange(unique*stride,(unique+1)*stride,scratch);
+            unique++;
             bucket.add(index);
           }
-          indices.add(index);
-          if((attributes.length+indices.length)*4>byteBudget) {
+          if(indexCursor>=indices.length) {
+            throw const FormatException('Indexed triangle overflow');
+          }
+          indices[indexCursor++]=index;
+          if((unique*stride+indexCursor)*4>byteBudget) {
             throw const FormatException('Indexed GPU mesh exceeds 12MiB');
           }
         }
       }
     }
-    if(indices.length!=triangleCount*3) {
+    if(indexCursor!=indices.length) {
       throw const FormatException('Mismatched indexed triangle count');
     }
-    return GlbShaderIndexedMorphSource(Float32List.fromList(attributes),
-      Uint32List.fromList(indices),pose.morphWeights,
-      pose.bones,pose.camera,pose.triangles);
+    // Uint32List is exact-sized; only the unique-vertex staging may retain
+    // unused capacity. sublistView does NOT allocate another large buffer.
+    return GlbShaderIndexedMorphSource(
+      Float32List.sublistView(attributes,0,unique*stride),
+      indices,pose.morphWeights,pose.bones,pose.camera,pose.triangles);
   }
 
   /// One pose from GLB animation; positions are skinned using WEIGHTS_0/JOINTS_0.

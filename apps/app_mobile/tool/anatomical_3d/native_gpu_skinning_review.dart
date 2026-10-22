@@ -321,6 +321,58 @@ class GpuProbeFrameGate {
   void reset() => _lastFrame=null;
 }
 
+/// Diagnostic wall-clock data: native acknowledgement does not certify a
+/// completed GPU draw or a measured display frame. Never use for FPS claims.
+@immutable
+class GpuQaMetricsSnapshot {
+  const GpuQaMetricsSnapshot({
+    required this.requested,required this.sent,required this.acknowledged,
+    required this.superseded,required this.throttled,required this.failures,
+    required this.inFlight,required this.maxInFlight,
+    required this.lastAckMs,required this.maxAckMs,
+    required this.lastPayloadBytes,required this.totalPayloadBytes,
+  });
+  final int requested,sent,acknowledged,superseded,throttled,failures;
+  final int inFlight,maxInFlight,lastAckMs,maxAckMs;
+  final int lastPayloadBytes,totalPayloadBytes;
+}
+
+/// Mutable counters deliberately local to one internal PlatformView.
+class GpuQaMetrics {
+  int requested=0,sent=0,acknowledged=0,superseded=0,throttled=0;
+  int failures=0,inFlight=0,maxInFlight=0,lastAckMs=0,maxAckMs=0;
+  int lastPayloadBytes=0,totalPayloadBytes=0;
+
+  void request() => requested++;
+  void supersede() => superseded++;
+  void throttle() => throttled++;
+  void begin(int payloadBytes) {
+    if(payloadBytes<0||payloadBytes>stkGpuIndexedBudgetBytes*3) {
+      throw const FormatException('Invalid QA transfer byte count');
+    }
+    sent++;
+    inFlight++;
+    if(inFlight>maxInFlight)maxInFlight=inFlight;
+    lastPayloadBytes=payloadBytes;
+    totalPayloadBytes+=payloadBytes;
+  }
+  void finish(int elapsedMs,{required bool success}) {
+    if(elapsedMs<0)throw const FormatException('Invalid QA latency');
+    if(inFlight>0)inFlight--;
+    lastAckMs=elapsedMs;
+    if(elapsedMs>maxAckMs)maxAckMs=elapsedMs;
+    if(success) {acknowledged++;} else {failures++;}
+  }
+  GpuQaMetricsSnapshot get snapshot => GpuQaMetricsSnapshot(
+    requested:requested,sent:sent,acknowledged:acknowledged,
+    superseded:superseded,throttled:throttled,failures:failures,
+    inFlight:inFlight,maxInFlight:maxInFlight,
+    lastAckMs:lastAckMs,maxAckMs:maxAckMs,
+    lastPayloadBytes:lastPayloadBytes,
+    totalPayloadBytes:totalPayloadBytes,
+  );
+}
+
 /// QA-only static shader-skinning PlatformView.
 /// No ongoing animations are allowed: a new packet is sent only for an
 /// explicit paused frame, so Android/iOS performance is not misrepresented.
@@ -330,7 +382,7 @@ class NativeGpuSkinnedGlbReview extends StatefulWidget {
     required this.background,this.elapsed=2,this.dark=true,this.orbit=0,
     this.elevation=0,this.zoom=1,this.enabled=false,
     this.experimentalMorphGpu=false,this.experimentalIndexedGpu=false,
-    this.playbackProbe=false,
+    this.playbackProbe=false,this.onMetrics,
   });
 
   final GlbSkinnedScene scene;
@@ -340,6 +392,8 @@ class NativeGpuSkinnedGlbReview extends StatefulWidget {
   final bool dark,enabled,experimentalMorphGpu,experimentalIndexedGpu;
   /// Internal 12-fps-only QA; never enabled from workout/catalog routes.
   final bool playbackProbe;
+  /// Optional internal-only telemetry. Not connected to app analytics.
+  final ValueChanged<GpuQaMetricsSnapshot>? onMetrics;
 
   @override
   State<NativeGpuSkinnedGlbReview> createState() =>
@@ -351,7 +405,10 @@ class _NativeGpuSkinnedGlbReviewState
   MethodChannel? _channel;
   bool _failed=false;
   int _sequence=0;
-  Future<void> _pending=Future<void>.value();
+  int _viewEpoch=0;
+  bool _pumpActive=false;
+  bool _queued=false;
+  final GpuQaMetrics _metrics=GpuQaMetrics();
   final GpuSkinningMeshCache _meshCache=GpuSkinningMeshCache();
   final GpuMorphTransportCache _morphCache=GpuMorphTransportCache();
   final GpuMorphTransportCache _indexedCache=GpuMorphTransportCache();
@@ -363,22 +420,53 @@ class _NativeGpuSkinnedGlbReviewState
     zoom:widget.zoom,depthSlices:6,poseNormals:true,
   );
 
-  // A PlatformView has one retained mesh. Serializing uploads prevents a
-  // compact pose update from overtaking the first full mesh packet.
+  // Coalescing scheduler: only one MethodChannel call can be in flight and
+  // at most ONE pending pose is remembered. A slow native renderer does not
+  // accumulate an unbounded chain of Future callbacks.
   void _scheduleSend({bool force=false}) {
     if(widget.playbackProbe&&widget.experimentalIndexedGpu&&
-        !_probeGate.allow(widget.elapsed,force:force))return;
-    final serial=++_sequence;
-    _pending=_pending.then((_)=>_send(serial));
+        !_probeGate.allow(widget.elapsed,force:force)) {
+      _metrics.throttle();
+      return;
+    }
+    ++_sequence;
+    _metrics.request();
+    if(_pumpActive) {
+      if(_queued)_metrics.supersede();
+      _queued=true;
+      return;
+    }
+    _pumpActive=true;
+    _drain();
+  }
+
+  Future<void> _drain() async {
+    try {
+      do {
+        _queued=false;
+        final serial=_sequence;
+        await _send(serial);
+      } while(_queued&&mounted&&!_failed);
+    } finally {
+      _pumpActive=false;
+    }
+  }
+
+  void _publish() {
+    if(mounted)widget.onMetrics?.call(_metrics.snapshot);
   }
 
   Future<void> _send(int serial) async {
     final channel=_channel;
+    final epoch=_viewEpoch;
     if(serial!=_sequence||channel==null||!mounted||
         !widget.enabled||_failed)return;
+    final started=Stopwatch()..start();
+    var succeeded=false;
     try {
       if(widget.experimentalMorphGpu||widget.experimentalIndexedGpu) {
-        // Stable against material map reallocation on Flutter rebuilds.
+        // Appearance must be calculated from actual semantic region colors.
+        final scene=widget.scene;
         final swatches=widget.materials.entries.toList()
           ..sort((a,b)=>a.key.compareTo(b.key));
         final appearance=[
@@ -387,38 +475,59 @@ class _NativeGpuSkinnedGlbReviewState
         ].join('|');
         final indexed=widget.experimentalIndexedGpu;
         final cache=indexed?_indexedCache:_morphCache;
-        final includeMesh=cache.requiresMesh(widget.scene,appearance);
+        final includeMesh=cache.requiresMesh(scene,appearance);
         final payload=indexed
-          ?GpuIndexedMorphPacket.fromScene(widget.scene,widget.elapsed,
+          ?GpuIndexedMorphPacket.fromScene(scene,widget.elapsed,
               Size.square(widget.size),widget.materials,dark:widget.dark,
               orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom,
               includeMesh:includeMesh).encode(widget.background)
-          :GpuMorphPacket.fromScene(widget.scene,widget.elapsed,
+          :GpuMorphPacket.fromScene(scene,widget.elapsed,
               Size.square(widget.size),widget.materials,dark:widget.dark,
               orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom,
               includeMesh:includeMesh).encode(widget.background);
+        _metrics.begin(_typedPayloadBytes(payload));
         final acknowledged=await channel.invokeMethod<bool>(
           indexed?'drawIndexedMorph':'drawMorphed',payload)
           .timeout(const Duration(seconds:5));
         if(acknowledged!=true)throw StateError('Morph GPU frame rejected');
-        if(identical(channel,_channel)) {
-          cache.acknowledge(widget.scene,appearance);
+        if(identical(channel,_channel)&&epoch==_viewEpoch) {
+          cache.acknowledge(scene,appearance);
         }
       } else {
         final packet=GpuSkinningPacket.fromScene(widget.scene,widget.elapsed,
           Size.square(widget.size),widget.materials,dark:widget.dark,
           orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom);
         final payload=_meshCache.encode(packet,widget.background);
+        _metrics.begin(_typedPayloadBytes(payload));
         final acknowledged=await channel.invokeMethod<bool>('drawSkinned',payload)
             .timeout(const Duration(seconds:5));
         if(acknowledged!=true) {
           throw StateError('Native shader did not acknowledge the frame');
         }
-        if(identical(channel,_channel))_meshCache.acknowledge(packet);
+        if(identical(channel,_channel)&&epoch==_viewEpoch) {
+          _meshCache.acknowledge(packet);
+        }
       }
+      succeeded=true;
     } catch (_) {
-      if(mounted&&_sequence==serial)setState(()=>_failed=true);
+      if(mounted&&identical(channel,_channel)&&epoch==_viewEpoch&&
+          _sequence==serial) {
+        setState(()=>_failed=true);
+      }
+    } finally {
+      started.stop();
+      // Even a malformed CPU packet counts as a failed attempted request.
+      _metrics.finish(started.elapsedMilliseconds,success:succeeded);
+      _publish();
     }
+  }
+
+  static int _typedPayloadBytes(Map<String,Object> packet) {
+    var bytes=0;
+    for(final value in packet.values) {
+      if(value is TypedData)bytes+=value.lengthInBytes;
+    }
+    return bytes;
   }
 
   void _created(int id) {
@@ -426,6 +535,7 @@ class _NativeGpuSkinnedGlbReviewState
     _morphCache.reset();
     _indexedCache.reset();
     _probeGate.reset();
+    _viewEpoch++;
     _channel=MethodChannel('$stkGpuSkinView/$id');
     _scheduleSend(force:true);
   }
@@ -440,6 +550,7 @@ class _NativeGpuSkinnedGlbReviewState
       _morphCache.reset();
       _indexedCache.reset();
       _probeGate.reset();
+      _viewEpoch++;
     }
     if(widget.scene!=old.scene||widget.elapsed!=old.elapsed||
        widget.size!=old.size||widget.background!=old.background||
@@ -463,7 +574,8 @@ class _NativeGpuSkinnedGlbReviewState
 
   @override
   void dispose(){
-    _sequence++;_channel=null;_meshCache.reset();_morphCache.reset();
+    _sequence++;_viewEpoch++;_queued=false;
+    _channel=null;_meshCache.reset();_morphCache.reset();
     _indexedCache.reset();
     _probeGate.reset();
     super.dispose();

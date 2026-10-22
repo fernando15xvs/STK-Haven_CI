@@ -152,6 +152,88 @@ void main() {
     expect(cache.requiresMesh(scene,'light:blue'),true);
   });
 
+  test('v9.6 diagnostic counters distinguish throttling, ACK and error',() {
+    final telemetry=GpuQaMetrics();
+    telemetry.request();
+    telemetry.request();
+    telemetry.throttle();
+    telemetry.supersede();
+    telemetry.begin(2048);
+    expect(telemetry.snapshot.inFlight,1);
+    expect(telemetry.snapshot.maxInFlight,1);
+    telemetry.finish(19,success:true);
+    final first=telemetry.snapshot;
+    expect(first.requested,2);
+    expect(first.sent,1);
+    expect(first.acknowledged,1);
+    expect(first.superseded,1);
+    expect(first.throttled,1);
+    expect(first.failures,0);
+    expect(first.lastPayloadBytes,2048);
+    expect(first.totalPayloadBytes,2048);
+    expect(first.lastAckMs,19);
+    expect(first.inFlight,0);
+    telemetry.begin(128);
+    telemetry.finish(41,success:false);
+    final failed=telemetry.snapshot;
+    expect(failed.sent,2);
+    expect(failed.failures,1);
+    expect(failed.maxInFlight,1);
+    expect(failed.acknowledged,1);
+    expect(failed.maxAckMs,41);
+    expect(failed.lastAckMs,41);
+    expect(failed.totalPayloadBytes,2176);
+    expect(()=>telemetry.begin(-1),throwsFormatException);
+    expect(()=>telemetry.finish(-5,success:true),throwsFormatException);
+  });
+
+  test('v9.6 direct mesh uses bounded typed storage and exact uint32 indices',
+      () {
+    final bytes=File(
+      'build/cc0_master_surface_v7/stk_master_v7_surface_preview.glb',
+    ).readAsBytesSync();
+    const size=Size(320,320);
+    final audit=<Map<String,Object>>[];
+    for(final name in names) {
+      final scene=GlbSkinnedScene.decodeMaster(bytes,pattern:name);
+      final mesh=scene.shaderIndexedMorphSource(0,size,const {});
+      final packet=GpuIndexedMorphPacket.fromScene(scene,0,size,const {});
+      expect(mesh.vertices,orderedEquals(packet.interleaved));
+      expect(mesh.indices,orderedEquals(packet.indices));
+      expect(mesh.indices.buffer.lengthInBytes,mesh.indices.lengthInBytes);
+      final used=mesh.vertices.lengthInBytes;
+      final capacity=mesh.vertices.buffer.lengthInBytes;
+      expect(used,greaterThan(0));
+      expect(capacity,greaterThanOrEqualTo(used));
+      // Last geometric allocation is retained via sublist view, rather
+      // than allocating a second contiguous Float32List.fromList copy.
+      expect(capacity,lessThanOrEqualTo(
+        2*used+2048*stkGpuIndexedStride*4));
+      expect(mesh.indices.length,mesh.triangles*3);
+      expect(packet.retainedBytes,lessThanOrEqualTo(stkGpuIndexedBudgetBytes));
+      audit.add({
+        'clip':name,
+        'usedVertexBytes':used,
+        'allocatedVertexBackingBytes':capacity,
+        'indexBytes':mesh.indices.lengthInBytes,
+        'withinWireBudget':true,
+      });
+    }
+    final destination=File(
+      'build/cc0_master_v7_flutter_qa/indexed_morph_memory_v96.json');
+    destination.parent.createSync(recursive:true);
+    destination.writeAsStringSync(
+      const JsonEncoder.withIndent('  ').convert({
+        'schema':'stk_gpu_indexed_v96_qa_only',
+        'description':'Dart typed data wire and backing bytes, not physical RAM',
+        'physicalGpuMemoryMeasured':false,
+        'nativeFramePresentMeasured':false,
+        'approvedAssets':0,'enabledAssets':0,
+        'clips':audit,
+      }),
+    );
+  },timeout:const Timeout(Duration(minutes:5)));
+
   test('v9.5 direct glTF indexing matches expanded morph wire geometry',
       () {
     final bytes=File(
