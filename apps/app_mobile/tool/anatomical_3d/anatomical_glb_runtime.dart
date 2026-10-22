@@ -406,9 +406,14 @@ class GlbSkinnedScene {
   /// Geometry and skin data are cached, only joints and projections vary.
   GlbDrawFrame frame(double elapsed,Size size,Map<String,Color> theme,
       {bool dark=true,double orbit=0,bool applyMorphs=true,
-       int depthSlices=1,bool poseNormals=false}) {
+       int depthSlices=1,bool poseNormals=false,
+       double elevation=0,double zoom=1}) {
     if(depthSlices<1||depthSlices>8) {
       throw RangeError.range(depthSlices,1,8,'depthSlices');
+    }
+    if(!orbit.isFinite||!elevation.isFinite||!zoom.isFinite||
+       elevation<-.75||elevation>.85||zoom<.65||zoom>1.6) {
+      throw const FormatException('Invalid offline 3D camera pose');
     }
     final world=_world(elapsed);
     final morphWeights=applyMorphs?_morphAt(elapsed):const <double>[];
@@ -423,8 +428,14 @@ class GlbSkinnedScene {
     final yaw=(row ? math.pi+.68 : bench ? .88 : .43)+orbit;
     final distance=bench ? 3.65 : row ? 3.75 : 3.9;
     final height=bench ? 1.50 : row ? 1.55 : 1.72;
-    final eye=center+V3(math.sin(yaw)*distance,height,
-                        math.cos(yaw)*distance);
+    // Spherical camera: neutral elevation=0 and zoom=1 reproduce the
+    // original master framing. Camera changes NEVER affect skin/IK geometry.
+    final radius=math.sqrt(distance*distance+height*height)*zoom;
+    final pitch=math.atan2(height,distance)+elevation;
+    final eye=center+V3(
+        math.sin(yaw)*math.cos(pitch)*radius,
+        math.sin(pitch)*radius,
+        math.cos(yaw)*math.cos(pitch)*radius);
     final forward=(center-eye).unit;
     final right=forward.cross(const V3(0,1,0)).unit;
     final up=right.cross(forward).unit;
