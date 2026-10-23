@@ -21,6 +21,7 @@ import bake_master_detail_v915 as detail915
 import build_torso_contours_v916 as torso916
 import animate_hand_grip_v917 as hand917
 import calibrate_grip_contact_v918 as contact918
+import review_fingertip_mesh_v919 as skin919
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -962,6 +963,68 @@ class Master55ExercisePilotTest(unittest.TestCase):
                                      new.accessor(after[accessor]),
                                      (ex,quality,accessor))
         self.assertTrue((target/'contact_gap_v918_report.json').exists())
+
+
+    def test_v919_121_frame_real_finger_skin_and_bar_geometry_audit(self):
+        source=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917')
+        target=source/'contact_v918'
+        if not (target/'ex_squat_v918_contact_mobile_qa.glb').is_file():
+            self.test_v918_measured_finger_gaps_and_safe_wrist_orientation()
+        out=target/'skin_v919'
+        report=skin919.build(source,out)
+        self.assertEqual(report['schema'],
+            'stk_v919_real_skinned_fingertip_geometry_audit')
+        self.assertEqual(report['pilotCount'],3)
+        self.assertEqual(report['catalogCount'],229)
+        self.assertEqual(report['rigJoints'],55)
+        self.assertEqual(report['skinnedMorphTargets'],8)
+        self.assertEqual(report['framesPerExercise'],121)
+        self.assertFalse(report['certifiesFingertipContact'])
+        self.assertFalse(report['collisionFreeCertified'])
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['enabled'])
+        self.assertEqual(len(report['pilots']),3)
+        for pilot in report['pilots']:
+            self.assertIn(pilot['exerciseId'],rig.EXERCISES)
+            for version in ('v917','v918'):
+                data=pilot[version]
+                self.assertEqual(data['samplesPerGroup'],121)
+                self.assertEqual(data['distalSurfaceGroups'],10)
+                self.assertGreaterEqual(data['uniqueSkinnedSurfaceVertices'],60)
+                self.assertEqual(data['totalVertexSkinEvaluations'],
+                                 data['uniqueSkinnedSurfaceVertices']*121)
+                self.assertFalse(data['surfaceContactCertified'])
+                self.assertEqual(len(data['fingerSurfaceMetrics']),10)
+                for name,entry in data['fingerSurfaceMetrics'].items():
+                    self.assertEqual(entry['frames'],121)
+                    self.assertGreaterEqual(entry['sampledMeshVertexCount'],6)
+                    self.assertGreaterEqual(
+                        entry['meanNearestPositiveGapMeters'],0.)
+                    self.assertGreaterEqual(
+                        entry['worstNearestPositiveGapMeters'],0.)
+                    self.assertLessEqual(entry['framesWithin10mmOfShaft'],121)
+                    self.assertGreaterEqual(
+                        entry['framesPossibleSkinPenetrationOver2mm'],0)
+            self.assertEqual(len(pilot['fingerComparisons']),10)
+            self.assertFalse(pilot['skinContactCorrectlyCertified'])
+            self.assertTrue(all(v['needsExpertVisualReview']
+                for v in pilot['fingerComparisons'].values()))
+        self.assertTrue(
+            (out/'fingertip_skin_contact_v919_report.json').exists())
+
+    def test_v919_refuses_untrusted_and_unavailable_finger_surfaces(self):
+        source=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917')
+        if not (source/'ex_squat_v917_finger_mobile_qa.glb').exists():
+            self.test_v917_three_pilots_add_real_finger_clips_without_ik_regression()
+        raw=(source/'ex_squat_v917_finger_mobile_qa.glb').read_bytes()
+        old=rig.GLB(raw,expected_sha=None)
+        old.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'Require disabled'):
+            skin919._verified_mesh(old.bytes(),'ex_squat',False)
+        self.assertRaises(ValueError,skin919.measure,raw,'ex_squat',True)
+        self.assertRaises(ValueError,skin919.measure,raw,'not_valid',False)
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
