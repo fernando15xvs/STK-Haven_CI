@@ -17,6 +17,7 @@ import solve_exercise_scapula_v910 as scapula
 import exercise_surface_collision_v911 as surface
 import build_master_anatomy_v8 as anatomy913
 import build_master_high_res_v914 as hires914
+import bake_master_detail_v915 as detail915
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -573,6 +574,105 @@ class Master55ExercisePilotTest(unittest.TestCase):
             self.assertFalse(summary['productionAsset'])
             self.assertFalse(summary['professionalAnatomy'])
         self.assertTrue((root/'high_res_authoring_v914_report.json').is_file())
+
+    def test_v915_detail_transfer_preserves_exact_motion_and_mobile_mesh(self):
+        folder=self.MASTER/'v8_authoring'
+        high=folder/'high_res_v914'
+        if not (high/'ex_squat_master55_v914_high_res_qa.glb').exists():
+            self.test_v914_four_high_res_GLBS_preserve_exercise_kinematics()
+        output=folder/'detail_bake_v915'
+        report=detail915.build(
+            high/'stk_master_v914_high_res_authoring.glb',
+            folder/'stk_master_v8_anatomy_preview.glb',
+            high,folder,output)
+        self.assertEqual(report['schema'],
+            'stk_anatomy_detail_bake_v915_QA_only')
+        self.assertEqual(len(report['assets']),4)
+        self.assertEqual(report['highVertices'],19004)
+        self.assertEqual(report['mobileVertices'],4727)
+        self.assertEqual(report['highTriangles'],39372)
+        self.assertEqual(report['muscleRegions'],11)
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['enabled'])
+        self.assertFalse(report['productionReady'])
+        self.assertGreater(
+            report['geometry']['affectedHighResVertices'],350)
+        self.assertLessEqual(
+            report['geometry']['maxDisplacementMeters'],
+            detail915.MAX_DETAIL_DISPLACEMENT+.000001)
+        self.assertEqual(report['geometry']['flippedTriangles'],0)
+        for ex in (None,*rig.EXERCISES):
+            basename='stk_master' if ex is None else ex
+            original_high=(high/('stk_master_v914_high_res_authoring.glb'
+                if ex is None else ex+'_master55_v914_high_res_qa.glb'))
+            original_low=(folder/('stk_master_v8_anatomy_preview.glb'
+                if ex is None else ex+'_master55_v8_sculpt_qa.glb'))
+            old_high=rig.GLB(original_high.read_bytes(),expected_sha=None)
+            old_low=rig.GLB(original_low.read_bytes(),expected_sha=None)
+            new_high=rig.GLB((output/(
+                basename+'_v915_high_detail_authoring.glb')).read_bytes(),
+                expected_sha=None)
+            new_low=rig.GLB((output/(
+                basename+'_v915_mobile_normal_bake_qa.glb')).read_bytes(),
+                expected_sha=None)
+            for source,new in ((old_high,new_high),(old_low,new_low)):
+                for name in ('skins','animations','nodes','meshes','materials'):
+                    self.assertEqual(source.doc[name],new.doc[name],
+                                     (basename,name))
+                self.assertEqual(new.doc['extras']['anatomyShadingVersion'],915)
+                self.assertFalse(new.doc['extras']['approved'])
+                self.assertFalse(new.doc['extras']['enabled'])
+                attrs=source.doc['meshes'][0]['primitives'][0]['attributes']
+                for key in ('JOINTS_0','WEIGHTS_0'):
+                    self.assertEqual(source.accessor(attrs[key]),
+                                     new.accessor(attrs[key]),key)
+                for original,new_shape in zip(
+                    source.doc['meshes'][0]['primitives'][0]['targets'],
+                    new.doc['meshes'][0]['primitives'][0]['targets']):
+                    self.assertEqual(
+                        source.accessor(original['POSITION']),
+                        new.accessor(new_shape['POSITION']))
+            low_attr=old_low.doc['meshes'][0]['primitives'][0]['attributes']
+            self.assertEqual(old_low.accessor(low_attr['POSITION']),
+                             new_low.accessor(low_attr['POSITION']))
+            old_normals=old_low.accessor(low_attr['NORMAL'])
+            normals=new_low.accessor(low_attr['NORMAL'])
+            self.assertEqual(len(normals),4727)
+            self.assertTrue(all(abs(detail915.length(v)-1)<.00005
+                                for v in normals))
+            changes=sum(math.dist(a,b)>.0005
+                        for a,b in zip(old_normals,normals))
+            self.assertGreater(changes,75)
+            old_attr=old_high.doc['meshes'][0]['primitives'][0]['attributes']
+            after_h=new_high.accessor(old_attr['POSITION'])
+            before_h=old_high.accessor(old_attr['POSITION'])
+            self.assertEqual(len(after_h),19004)
+            self.assertLessEqual(max(math.dist(a,b) for a,b in
+                zip(after_h,before_h)),
+                detail915.MAX_DETAIL_DISPLACEMENT+.000001)
+            measured=next(x for x in report['assets']
+                          if x['exerciseId']==ex)
+            self.assertGreater(measured['bake']['changedMobileNormals'],75)
+            self.assertLess(measured['bake'][
+                'maximumNormalDeviationDegrees'],12.1)
+            self.assertFalse(measured['approved'])
+            self.assertFalse(measured['enabled'])
+            self.assertLess(measured['mobileBytes'],
+                850*1024 if ex is None else 1400*1024)
+        self.assertTrue((output/'normal_bake_v915_report.json').is_file())
+
+    def test_v915_refuses_invalid_provenance_and_bad_normal_map(self):
+        folder=self.MASTER/'v8_authoring'
+        if not (folder/'stk_master_v8_anatomy_preview.glb').exists():
+            self.test_v913_11_bilateral_regions_and_three_consistent_55_joint_pilots()
+        old=rig.GLB(
+            (folder/'stk_master_v8_anatomy_preview.glb').read_bytes(),
+            expected_sha=None)
+        old.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'Untrusted'):
+            detail915._assert_source(old,False)
+        with self.assertRaises(ValueError):
+            detail915._bake_normals([(0,0,0)],[],[],[],[])
 
     def test_v914_rejects_unsafe_joint_palettes_and_approved_source(self):
         self.assertRaises(ValueError,hires914.blended_joint,
