@@ -24,6 +24,7 @@ import calibrate_grip_contact_v918 as contact918
 import review_fingertip_mesh_v919 as skin919
 import sculpt_finger_pads_v920 as pads920
 import audit_finger_triangles_v921 as triangles921
+import refine_fingertip_topology_v922 as topology922
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1180,6 +1181,124 @@ class Master55ExercisePilotTest(unittest.TestCase):
         altered.doc['extras']['enabled']=True
         with self.assertRaises(ValueError):
             triangles921.audit(altered.bytes(),exercise,candidate=True)
+
+    def test_v922_conforming_face_patterns_and_shared_edges(self):
+        cases=[
+            ({},1),
+            ({(0,1):4},2),
+            ({(0,1):4,(1,2):5},3),
+            ({(0,1):4,(1,2):5,(0,2):6},4),
+        ]
+        for edges,total in cases:
+            f=topology922._split(0,1,2,edges)
+            self.assertEqual(len(f),total)
+            self.assertTrue(all(len(set(tri))==3 for tri in f))
+            self.assertEqual(sum(len(tri) for tri in f),total*3)
+        # A neighbouring opposite-side primitive uses the SAME midpoint.
+        midpoint={(0,1):5}
+        left=topology922._split(0,1,2,midpoint)
+        right=topology922._split(1,0,3,midpoint)
+        self.assertEqual(sum(5 in face for face in left),2)
+        self.assertEqual(sum(5 in face for face in right),2)
+
+    def test_v922_real_local_finger_mesh_retopology_mobile_budget(self):
+        origin=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917')
+        pad=origin/'contact_v918'/'skin_v919'/'hand_v920'
+        if not (pad/'ex_squat_v920_hand_surface_mobile_qa.glb').exists():
+            self.test_v920_bounded_real_fingertip_pad_candidates_preserve_55_rig()
+        target=pad/'topology_v922'
+        report=topology922.build(origin,target)
+        self.assertEqual(report['schema'],
+            'stk_v922_real_local_finger_mesh_subdivision')
+        self.assertEqual(report['pilotCount'],3)
+        self.assertEqual(report['catalogCount'],229)
+        self.assertEqual(report['jointCount'],55)
+        self.assertEqual(report['morphTargets'],8)
+        self.assertTrue(report['topologyActuallyChanged'])
+        self.assertFalse(report['contactIKComplete'])
+        self.assertFalse(report['fullAnatomicalHandRetopologyComplete'])
+        self.assertFalse(report['productionReady'])
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['enabled'])
+        for pilot in report['pilots']:
+            ex=pilot['exerciseId']
+            original=rig.GLB((pad/(ex+'_v920_hand_surface_mobile_qa.glb')
+                              ).read_bytes(),expected_sha=None)
+            dst=target/(ex+'_v922_fingertip_mesh_mobile_qa.glb')
+            updated=rig.GLB(dst.read_bytes(),expected_sha=None)
+            self.assertEqual(original.doc['skins'],updated.doc['skins'])
+            self.assertEqual(original.doc['nodes'],updated.doc['nodes'])
+            self.assertEqual(original.doc['animations'],updated.doc['animations'])
+            self.assertEqual(original.doc['materials'],updated.doc['materials'])
+            self.assertEqual(len(original.doc['accessors']),
+                             len(updated.doc['accessors']))
+            self.assertEqual(len(original.doc['bufferViews']),
+                             len(updated.doc['bufferViews']))
+            beforeparts=original.doc['meshes'][0]['primitives']
+            afterparts=updated.doc['meshes'][0]['primitives']
+            self.assertEqual(len(afterparts),12)
+            self.assertEqual(len(beforeparts),len(afterparts))
+            before=beforeparts[0]['attributes']
+            after=afterparts[0]['attributes']
+            self.assertEqual(before,after)
+            self.assertEqual(pilot['sourceVertices'],4727)
+            self.assertEqual(pilot['originalTriangles'],9843)
+            self.assertGreater(pilot['edgeMidpointVerticesAdded'],60)
+            self.assertLessEqual(pilot['edgeMidpointVerticesAdded'],
+                                 topology922.MAX_NEW_VERTICES)
+            self.assertEqual(pilot['newVertices'],
+                             4727+pilot['edgeMidpointVerticesAdded'])
+            self.assertGreater(pilot['retopologizedTriangles'],9843)
+            self.assertLess(pilot['retopologizedTriangles'],20001)
+            self.assertLess(pilot['mobileBytes'],topology922.MAX_MOBILE_BYTES)
+            self.assertTrue(pilot['topologyConforming'])
+            self.assertFalse(pilot['handProportionCorrectionCompleted'])
+            self.assertFalse(pilot['contactIKCompleted'])
+            self.assertEqual(updated.doc['extras']['fingerLocalRetopologyVersion'],922)
+            self.assertFalse(updated.doc['extras']['approved'])
+            self.assertFalse(updated.doc['extras']['enabled'])
+            for label in ('POSITION','NORMAL','JOINTS_0','WEIGHTS_0'):
+                before_rows=original.accessor(before[label])
+                after_rows=updated.accessor(after[label])
+                self.assertEqual(before_rows,after_rows[:len(before_rows)])
+                self.assertEqual(len(after_rows),pilot['newVertices'])
+            for before_morph,after_morph in zip(beforeparts[0]['targets'],
+                                                afterparts[0]['targets']):
+                b=original.accessor(before_morph['POSITION'])
+                a=updated.accessor(after_morph['POSITION'])
+                self.assertEqual(b,a[:len(b)])
+                self.assertEqual(len(a),pilot['newVertices'])
+            weights=updated.accessor(after['WEIGHTS_0'])
+            joints=updated.accessor(after['JOINTS_0'])
+            for a,b in zip(joints[4727:],weights[4727:]):
+                self.assertTrue(all(0<=int(x)<55 for x in a))
+                self.assertAlmostEqual(sum(b),1.,places=4)
+            for before_part,after_part in zip(beforeparts,afterparts):
+                self.assertEqual(before_part['material'],after_part['material'])
+                self.assertEqual(before_part['attributes'],after_part['attributes'])
+                self.assertEqual(before_part['targets'],after_part['targets'])
+                before_ids=original.accessor(before_part['indices'])
+                after_ids=updated.accessor(after_part['indices'])
+                self.assertGreaterEqual(len(after_ids),len(before_ids))
+                self.assertTrue(all(0<=v[0]<pilot['newVertices']
+                                    for v in after_ids))
+        self.assertTrue((target/'fingertip_topology_v922_report.json').is_file())
+
+    def test_v922_rejects_approved_glb_and_double_subdivision(self):
+        origin=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917'/'contact_v918'/
+                'skin_v919'/'hand_v920')
+        raw=(origin/'ex_squat_v920_hand_surface_mobile_qa.glb').read_bytes()
+        old=rig.GLB(raw,expected_sha=None)
+        old.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            topology922.retopologize(old.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            topology922.retopologize(raw,'bogus')
+        candidate,_=topology922.retopologize(raw,'ex_squat')
+        with self.assertRaises(ValueError):
+            topology922.retopologize(candidate,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
