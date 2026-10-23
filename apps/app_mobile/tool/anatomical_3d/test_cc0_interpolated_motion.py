@@ -16,6 +16,7 @@ import build_master_exercise_pilots_v99 as master55
 import solve_exercise_scapula_v910 as scapula
 import exercise_surface_collision_v911 as surface
 import build_master_anatomy_v8 as anatomy913
+import build_master_high_res_v914 as hires914
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -499,6 +500,91 @@ class Master55ExercisePilotTest(unittest.TestCase):
             self.assertEqual(after.accessor(a['NORMAL']),
                              sculpted.accessor(attrs['NORMAL']))
             self.assertLess(len(pilots[ex]),1400*1024)
+
+
+    def test_v914_four_high_res_GLBS_preserve_exercise_kinematics(self):
+        # 4 authoring assets, not copies deployed in app/pubspec.
+        prior=self.MASTER/'v8_authoring'
+        if not (prior/'ex_squat_master55_v8_sculpt_qa.glb').is_file():
+            self.test_v913_11_bilateral_regions_and_three_consistent_55_joint_pilots()
+        root=prior/'high_res_v914'
+        report=hires914.build(
+            prior/'stk_master_v8_anatomy_preview.glb',prior,root)
+        self.assertEqual(report['schema'],'stk_anatomy_v914_high_res_unapproved')
+        self.assertEqual(report['catalogCount'],229)
+        self.assertEqual(len(report['assets']),4)
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['enabled'])
+        for ex in (None,*rig.EXERCISES):
+            original=(prior/('stk_master_v8_anatomy_preview.glb'
+                      if ex is None else ex+'_master55_v8_sculpt_qa.glb'))
+            output=(root/('stk_master_v914_high_res_authoring.glb'
+                      if ex is None else ex+'_master55_v914_high_res_qa.glb'))
+            before=rig.GLB(original.read_bytes(),expected_sha=None)
+            after=rig.GLB(output.read_bytes(),expected_sha=None)
+            self.assertEqual(before.doc['skins'],after.doc['skins'])
+            self.assertEqual(before.doc['nodes'],after.doc['nodes'])
+            self.assertEqual(before.doc['animations'],after.doc['animations'])
+            self.assertEqual(before.doc['materials'],after.doc['materials'])
+            self.assertEqual(before.doc['extras']['approved'],False)
+            self.assertEqual(after.doc['extras']['approved'],False)
+            self.assertEqual(after.doc['extras']['enabled'],False)
+            self.assertEqual(after.doc['extras']['anatomyAuthoringVersion'],914)
+            parts=after.doc['meshes'][0]['primitives']
+            self.assertEqual(len(parts),12)
+            oldparts=before.doc['meshes'][0]['primitives']
+            attr=parts[0]['attributes']
+            oldattr=oldparts[0]['attributes']
+            vertex=after.accessor(attr['POSITION'])
+            source_vertex=before.accessor(oldattr['POSITION'])
+            self.assertEqual(len(source_vertex),4727)
+            self.assertEqual(len(vertex),19004)
+            for old,new in zip(source_vertex,vertex):
+                self.assertEqual(old,new)
+            joint=after.accessor(attr['JOINTS_0'])
+            weight=after.accessor(attr['WEIGHTS_0'])
+            self.assertTrue(all(abs(sum(w)-1)<.0002 for w in weight))
+            self.assertTrue(all(0<=int(j)<55 for row in joint for j in row))
+            self.assertEqual(joint[:4727],before.accessor(oldattr['JOINTS_0']))
+            self.assertEqual(weight[:4727],before.accessor(oldattr['WEIGHTS_0']))
+            for prior_target,new_target in zip(oldparts[0]['targets'],
+                                               parts[0]['targets']):
+                oldshape=before.accessor(prior_target['POSITION'])
+                newshape=after.accessor(new_target['POSITION'])
+                self.assertEqual(newshape[:4727],oldshape)
+                self.assertEqual(len(newshape),19004)
+            for left,right in zip(oldparts,parts):
+                a=len(before.accessor(left['indices']))
+                b=len(after.accessor(right['indices']))
+                self.assertEqual(b,4*a)
+                self.assertEqual(left['extras'],right['extras'])
+                self.assertEqual(left['material'],right['material'])
+            self.assertEqual(after.doc['meshes'][1:],before.doc['meshes'][1:])
+            summary=next(x for x in report['assets'] if x['exerciseId']==ex)
+            self.assertEqual(summary['originalTriangles'],9843)
+            self.assertEqual(summary['highResolutionTriangles'],39372)
+            self.assertEqual(summary['triangleFlips'],0)
+            self.assertEqual(summary['morphTargetCount'],8)
+            self.assertEqual(summary['jointCount'],55)
+            self.assertGreater(summary['curvatureSuppressedEdges'],0)
+            self.assertLessEqual(summary['maxMidpointCurvatureMeters'],
+                                 hires914.MAX_CURVE+.000001)
+            self.assertLess(summary['authoringBytes'],6*1024*1024)
+            self.assertFalse(summary['productionAsset'])
+            self.assertFalse(summary['professionalAnatomy'])
+        self.assertTrue((root/'high_res_authoring_v914_report.json').is_file())
+
+    def test_v914_rejects_unsafe_joint_palettes_and_approved_source(self):
+        self.assertRaises(ValueError,hires914.blended_joint,
+            (0,1,2,3),(.25,)*4,(4,5,6,7),(.25,)*4)
+        self.assertRaises(ValueError,hires914.normalized,(0,0,0))
+        prior=self.MASTER/'v8_authoring'/'stk_master_v8_anatomy_preview.glb'
+        if not prior.exists():
+            self.test_v913_11_bilateral_regions_and_three_consistent_55_joint_pilots()
+        before=rig.GLB(prior.read_bytes(),expected_sha=None)
+        before.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'disabled and trusted'):
+            hires914.check_source(before)
 
     def test_v913_rejects_untrusted_or_approved_legacy_geometry(self):
         old=rig.GLB(
