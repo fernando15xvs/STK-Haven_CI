@@ -152,13 +152,18 @@ jobs:
         run: |
           # Public CI only: ubuntu runners often ship usable ffmpeg already.
           # Avoid an unnecessary apt index refresh that can stall this job.
-          if command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1 \
-             && ffmpeg -hide_banner -encoders 2>/dev/null | grep -q 'libx264'; then
-            echo "Using preinstalled FFmpeg with libx264"
+          if command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1; then
+            echo "Using preinstalled FFmpeg"
           else
-            timeout 180s sudo apt-get update -qq
-            timeout 180s sudo apt-get install -y -qq ffmpeg
+            # Apt index downloads have stalled on GitHub-hosted runners.
+            # Try the cached Ubuntu package metadata first; do not refresh
+            # repository indexes unless the install explicitly fails.
+            if ! timeout 180s sudo apt-get install -y -qq ffmpeg; then
+              timeout 90s sudo apt-get update -qq
+              timeout 180s sudo apt-get install -y -qq ffmpeg
+            fi
           fi
+          ffmpeg -hide_banner -encoders 2>/dev/null | grep 'libx264'
           ffmpeg -version | head -1
           ffprobe -version | head -1
       - name: Test H264 encoder from synthetic fixtures
