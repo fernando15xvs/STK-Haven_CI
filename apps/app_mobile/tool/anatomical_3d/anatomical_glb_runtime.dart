@@ -359,7 +359,9 @@ class GlbSkinnedScene {
         if(master && skinned && (region==null||region.isEmpty)) {
           throw const FormatException('Master region label absent');
         }
-        final displayMaterial=master && region!='body'
+        // Rigid equipment is NOT an anatomical skin region. In a mixed
+        // scene, never rewrite STK_PILOT_* to STK_REGION_null.
+        final displayMaterial=master && skinned && region!='body'
             ? 'STK_REGION_$region' : name;
         // Multiple anatomical regions reference one shared POSITION accessor.
         // Re-counting it per region incorrectly rejects otherwise small GLBs.
@@ -392,7 +394,7 @@ class GlbSkinnedScene {
         throw const FormatException('Missing isolated QA bar/bench geometry');
       }
     }
-    return GlbSkinnedScene._(exercise?exerciseId:
+    return GlbSkinnedScene._(exercise?exerciseId!:
          master?'stk_master_v4:$pattern':staging!.id,
         raw.length,parsedNodes,parents,inverse,joints,channels,instances,
         vertices,triangles,duration);
