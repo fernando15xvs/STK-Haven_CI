@@ -83,7 +83,10 @@ def grip_pose(rest,exercise,side,seconds):
     if len(rest)!=4 or not .999<math.sqrt(sum(x*x for x in rest))<1.001:
         raise ValueError('Bad input wrist rest quaternion')
     neutral,peak=DIRECTIONS[exercise][side]
-    p=motion(seconds)
+    # retarget.motion expects a normalized 0..1 phase, not seconds.
+    # Keeping seconds here compressed a four-second grip into one second
+    # and exceeded the 2-degree-per-key safety limit in CI #524.
+    p=motion(seconds/4.)
     v=capped_vector(tuple(a*(1-p)+b*p for a,b in zip(neutral,peak)))
     pose=qnorm(qmul(rest,rotation_vector_quaternion(v)))
     if degrees_between(rest,pose)>MAX_ANGLE_DEG+.02:
