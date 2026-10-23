@@ -22,6 +22,7 @@ import build_torso_contours_v916 as torso916
 import animate_hand_grip_v917 as hand917
 import calibrate_grip_contact_v918 as contact918
 import review_fingertip_mesh_v919 as skin919
+import sculpt_finger_pads_v920 as pads920
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1025,6 +1026,78 @@ class Master55ExercisePilotTest(unittest.TestCase):
             skin919._verified_mesh(old.bytes(),'ex_squat',False)
         self.assertRaises(ValueError,skin919.measure,raw,'ex_squat',True)
         self.assertRaises(ValueError,skin919.measure,raw,'not_valid',False)
+
+    def test_v920_bounded_real_fingertip_pad_candidates_preserve_55_rig(self):
+        origin=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917')
+        inputs=origin/'contact_v918'
+        if not (inputs/'ex_squat_v918_contact_mobile_qa.glb').exists():
+            self.test_v918_measured_finger_gaps_and_safe_wrist_orientation()
+        output=inputs/'skin_v919'/'hand_v920'
+        report=pads920.build(origin,output)
+        self.assertEqual(report['schema'],
+            'stk_v920_bounded_hand_surface_review')
+        self.assertEqual(report['pilotCount'],3)
+        self.assertEqual(report['catalogCount'],229)
+        self.assertEqual(report['rigJoints'],55)
+        self.assertEqual(report['framesPerExercise'],121)
+        self.assertTrue(report['zeroTopologyChanges'])
+        self.assertFalse(report['actualFingertipRetopologyCompleted'])
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['enabled'])
+        self.assertEqual(len(report['pilots']),3)
+        for pilot in report['pilots']:
+            ex=pilot['exerciseId']
+            before=rig.GLB((inputs/(ex+'_v918_contact_mobile_qa.glb')
+                            ).read_bytes(),expected_sha=None)
+            after=rig.GLB((output/(ex+'_v920_hand_surface_mobile_qa.glb')
+                           ).read_bytes(),expected_sha=None)
+            self.assertEqual(before.doc['skins'],after.doc['skins'])
+            self.assertEqual(before.doc['animations'],after.doc['animations'])
+            self.assertEqual(before.doc['meshes'],after.doc['meshes'])
+            old_attr=before.doc['meshes'][0]['primitives'][0]['attributes']
+            new_attr=after.doc['meshes'][0]['primitives'][0]['attributes']
+            self.assertEqual(old_attr,new_attr)
+            self.assertEqual(before.accessor(old_attr['JOINTS_0']),
+                             after.accessor(new_attr['JOINTS_0']))
+            self.assertEqual(before.accessor(old_attr['WEIGHTS_0']),
+                             after.accessor(new_attr['WEIGHTS_0']))
+            for old_target,new_target in zip(
+                before.doc['meshes'][0]['primitives'][0]['targets'],
+                after.doc['meshes'][0]['primitives'][0]['targets']):
+                self.assertEqual(before.accessor(old_target['POSITION']),
+                                 after.accessor(new_target['POSITION']))
+            old_pos=before.accessor(old_attr['POSITION'])
+            new_pos=after.accessor(new_attr['POSITION'])
+            edits=[math.dist(a,b) for a,b in zip(old_pos,new_pos)]
+            self.assertGreaterEqual(sum(x>1e-6 for x in edits),10)
+            self.assertLessEqual(max(edits),pads920.MAX_PAD_METERS+2e-7)
+            self.assertGreater(pilot['changedPositionVertices'],9)
+            self.assertEqual(pilot['invertedTriangles'],0)
+            self.assertEqual(len(pilot['distalGroups']),10)
+            self.assertEqual(len(pilot['skinnedGapComparison']),10)
+            self.assertTrue(all(v['expertReviewPending'] for v
+                in pilot['skinnedGapComparison'].values()))
+            self.assertEqual(after.doc['extras']['fingerPadReviewVersion'],920)
+            self.assertFalse(after.doc['extras']['approved'])
+            self.assertFalse(after.doc['extras']['enabled'])
+        self.assertTrue((output/'hand_surface_v920_report.json').exists())
+
+    def test_v920_rejects_unapproved_input_spoofing_and_double_sculpt(self):
+        source=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917'/'contact_v918')
+        if not (source/'ex_squat_v918_contact_mobile_qa.glb').exists():
+            self.test_v918_measured_finger_gaps_and_safe_wrist_orientation()
+        raw=(source/'ex_squat_v918_contact_mobile_qa.glb').read_bytes()
+        old=rig.GLB(raw,expected_sha=None)
+        old.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'Require disabled'):
+            pads920.sculpt(old.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            pads920.sculpt(raw,'not_an_exercise')
+        proposed,_=pads920.sculpt(raw,'ex_squat')
+        with self.assertRaisesRegex(ValueError,'Refuse repeated'):
+            pads920.sculpt(proposed,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
