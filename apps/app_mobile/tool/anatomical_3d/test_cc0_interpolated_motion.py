@@ -23,6 +23,7 @@ import animate_hand_grip_v917 as hand917
 import calibrate_grip_contact_v918 as contact918
 import review_fingertip_mesh_v919 as skin919
 import sculpt_finger_pads_v920 as pads920
+import audit_finger_triangles_v921 as triangles921
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1098,6 +1099,87 @@ class Master55ExercisePilotTest(unittest.TestCase):
         proposed,_=pads920.sculpt(raw,'ex_squat')
         with self.assertRaisesRegex(ValueError,'Refuse repeated'):
             pads920.sculpt(proposed,'ex_squat')
+
+    def test_v921_triangle_interior_catches_crossings_missed_by_vertices(self):
+        # All three corners are outside the bar; the centre of the *actual
+        # rendered triangle* crosses the finite cylindrical shaft.
+        a,b,c=(0.,-.07,0.),(0.,.07,0.),(0.,0.,.07)
+        corner_gaps=[surface.capped_cylinder_sdf(
+            p, triangles921.SHAFT_MIN_X, triangles921.SHAFT_MAX_X,
+            triangles921.SHAFT_RADIUS) for p in (a,b,c)]
+        self.assertTrue(all(gap>.03 for gap in corner_gaps))
+        crossing=triangles921.triangle_probe(a,b,c)
+        self.assertLess(crossing,-.002)
+        self.assertGreater(triangles921.triangle_probe(
+            (1.7,-.07,0.),(1.7,.07,0.),(1.7,0.,.07)),.5)
+        # A physically rotated bar must use inverse bar orientation; a
+        # world-space X-axis-only proximity test would be wrong.
+        turn=rig.qnorm((0.,0.,math.sin(math.pi/4),math.cos(math.pi/4)))
+        world=[rig.qrot(turn,p) for p in (a,b,c)]
+        local=[rig.qrot(rig.qconj(turn),p) for p in world]
+        self.assertAlmostEqual(triangles921.triangle_probe(*local),
+                               crossing,places=8)
+        with self.assertRaises(ValueError):
+            triangles921.triangle_probe((math.nan,0,0),b,c)
+
+    def test_v921_report_actual_skinned_triangles_are_quarantined(self):
+        origin=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917')
+        candidate=origin/'contact_v918'/'skin_v919'/'hand_v920'
+        if not (candidate/'ex_squat_v920_hand_surface_mobile_qa.glb').exists():
+            self.test_v920_bounded_real_fingertip_pad_candidates_preserve_55_rig()
+        out=candidate/'triangle_v921'
+        summary=triangles921.build(origin,out)
+        self.assertEqual(summary['schema'],
+            'stk_v921_skinned_triangle_bar_proximity_qa')
+        self.assertEqual(summary['pilotCount'],3)
+        self.assertEqual(summary['catalogCount'],229)
+        self.assertEqual(summary['rigJoints'],55)
+        self.assertEqual(summary['morphTargets'],8)
+        self.assertEqual(summary['frames'],121)
+        self.assertEqual(summary['pointSamplesPerTriangle'],7)
+        self.assertTrue(summary['barFrameIncludesAnimatedQuaternion'])
+        self.assertFalse(summary['retopologyComplete'])
+        self.assertFalse(summary['contactIKComplete'])
+        self.assertFalse(summary['continuousCollisionCertified'])
+        self.assertFalse(summary['approved'])
+        self.assertFalse(summary['enabled'])
+        for pilot in summary['pilots']:
+            self.assertEqual(len(pilot['perFingerComparison']),10)
+            self.assertFalse(pilot['fingertipCollisionResolved'])
+            for version in ('v918','v920'):
+                view=pilot[version]
+                self.assertFalse(view['approved'])
+                self.assertFalse(view['enabled'])
+                self.assertFalse(view['exactTriangleCylinderIntersectionCertified'])
+                self.assertEqual(view['framesPerExercise'],121)
+                self.assertEqual(view['fingerRegions'],10)
+                self.assertTrue(view['triangleInteriorSamples'])
+                self.assertGreaterEqual(
+                    view['uniqueSkinnedVerticesPerFrame'],60)
+                self.assertEqual(len(view['surfaceMetrics']),10)
+                for region in view['surfaceMetrics'].values():
+                    self.assertGreater(region['trianglesPerFrame'],0)
+                    self.assertEqual(region['frames'],121)
+                    self.assertEqual(region['barycentricSamplesPerTriangle'],7)
+                    self.assertEqual(region['totalSurfaceSamples'],
+                        121*7*region['trianglesPerFrame'])
+                    self.assertLessEqual(region['framesWithin10mmOfShaft'],121)
+                    self.assertGreaterEqual(
+                        region['framesPossibleTrianglePenetrationOver2mm'],0)
+            for region in pilot['perFingerComparison'].values():
+                self.assertTrue(region[
+                    'requiresFingerRetopologyAndContactSolverReview'])
+        self.assertTrue((out/'finger_triangle_bar_v921_report.json').is_file())
+        exercise='ex_squat'
+        raw=(candidate/(exercise+'_v920_hand_surface_mobile_qa.glb')
+             ).read_bytes()
+        self.assertRaises(ValueError, triangles921.audit,raw,
+                          exercise,candidate=False)
+        altered=rig.GLB(raw,expected_sha=None)
+        altered.doc['extras']['enabled']=True
+        with self.assertRaises(ValueError):
+            triangles921.audit(altered.bytes(),exercise,candidate=True)
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
