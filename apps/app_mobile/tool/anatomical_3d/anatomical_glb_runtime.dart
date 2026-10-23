@@ -125,6 +125,11 @@ class GlbSkinnedScene {
   final List<_Channel> _channels;
   final List<_Instance> _instances;
 
+  /// True for internal exercise GLBs carrying rigid bar and/or bench.
+  /// Current native shader skinning renderer handles body ONLY; callers
+  /// must use the Canvas preview until native mixed-scene support exists.
+  bool get containsRigidEquipment=>_instances.any((i)=>!i.skin);
+
   static GlbSkinnedScene decode(Uint8List raw) =>
       _decode(raw,master:false);
 
@@ -132,11 +137,18 @@ class GlbSkinnedScene {
   static GlbSkinnedScene decodeMaster(Uint8List raw,{required String pattern}) =>
       _decode(raw,master:true,pattern:pattern);
 
+  /// Offline-only v9.11 review: THREE unapproved 55-joint exercise clips
+  /// with separate rigid bar/bench meshes. This path is NOT wired to catalog.
+  static GlbSkinnedScene decodeMasterExercise(Uint8List raw,
+      {required String exerciseId}) =>
+      _decode(raw,master:true,exerciseId:exerciseId);
+
   static GlbSkinnedScene _decode(Uint8List raw,
-      {required bool master,String? pattern}) {
+      {required bool master,String? pattern,String? exerciseId}) {
+    final exercise=exerciseId!=null;
     final staging=master?null:AnatomicalGlbStaging.parse(raw);
     if(master) {
-      if(raw.length<28||raw.length>850*1024) {
+      if(raw.length<28||raw.length>(exercise?1400:850)*1024) {
         throw const FormatException('Master mobile LOD outside QA budget');
       }
       final h=ByteData.sublistView(raw);
@@ -160,27 +172,38 @@ class GlbSkinnedScene {
     if(master) {
       final extras=doc['extras'];
       final skins=(doc['skins'] as List);
-      final supported={
+      const supported={
         'overhead_reach_bilateral','unilateral_reach_left',
         'unilateral_reach_right','bilateral_elbow_curl','hip_hinge',
         'squat_articulation','split_lunge_left'
       };
+      const pilots={'ex_bench_press','ex_barbell_row','ex_squat'};
+      final exerciseValid=exercise?
+        (pilots.contains(exerciseId)&&
+         extras is Map&&extras['masterExercisePilotVersion']==910&&
+         extras['exerciseId']==exerciseId&&
+         meshDefs.length==(exerciseId=='ex_bench_press'?3:2)&&
+         (doc['animations'] as List).length==1&&
+         (doc['animations'][0] as Map)['name']==
+           'STK_MASTER_55_${exerciseId}_V910_IK_UNAPPROVED'):true;
+      final genericValid=!exercise?
+        (supported.contains(pattern)&&meshDefs.length==1&&
+         (doc['animations'] as List).length==7):true;
       if(extras is! Map || extras['masterMobileVersion']!=4 ||
           extras['masterMotionVersion']!=3 ||
           extras['sourceSha256']!='7135e03b6259e970458deff3e0458610914d7c35164cae12611101361e4a5749' ||
           extras['approved']!=false || extras['enabled']!=false ||
-          extras['mobileLod']!=true || !supported.contains(pattern) ||
+          extras['mobileLod']!=true ||
+          !genericValid||!exerciseValid||
           skins.length!=1 || (skins.single['joints'] as List).length!=55 ||
-          meshDefs.length!=1 ||
-          (meshDefs.single['primitives'] as List).length!=12 ||
-          (doc['animations'] as List).length!=7 ||
+          (meshDefs.first['primitives'] as List).length!=12 ||
           (doc['buffers'] as List).length!=1 ||
           (doc['buffers'][0] as Map).containsKey('uri')) {
         throw const FormatException('Unsafe master asset or clip');
       }
     }
     if(nodes.length>128||views.length>600||accessors.length>600||
-       meshDefs.length>8||raw.length>850*1024) {
+       meshDefs.length>8||raw.length>(exercise?1400:850)*1024) {
       throw const FormatException('GLB complexity budget exceeded');
     }
     List<List<num>> access(int i,int dim,{required bool integer}) {
@@ -250,7 +273,7 @@ class GlbSkinnedScene {
     if(ibm.length!=joints.length)throw const FormatException('Skin matrix count');
     final inverse=ibm.map((m)=>_Matrix(Float64List.fromList(
          m.map((x)=>x.toDouble()).toList()))).toList(growable:false);
-    final clips=master
+    final clips=master && !exercise
       ? (doc['animations'] as List).cast<Map<String,dynamic>>().singleWhere(
           (c)=>c['name']=='STK_MASTER_${pattern}_UNAPPROVED')
       : (doc['animations'] as List).single as Map<String,dynamic>;
@@ -331,8 +354,9 @@ class GlbSkinnedScene {
         if(!name.startsWith('STK_'))throw const FormatException('Material namespace');
         // The master has 11 independent semantic region groups; expose
         // distinct Flutter theme keys without altering the CC0 source mesh.
-        final region=master ? ((p['extras'] as Map)['stkMuscleRegion'] as String?) : null;
-        if(master && (region==null||region.isEmpty)) {
+        final region=master && skinned
+          ? ((p['extras'] as Map)['stkMuscleRegion'] as String?) : null;
+        if(master && skinned && (region==null||region.isEmpty)) {
           throw const FormatException('Master region label absent');
         }
         final displayMaterial=master && region!='body'
@@ -343,11 +367,11 @@ class GlbSkinnedScene {
           vertices+=pos.length;
         }
         triangles+=indices.length~/3;
-        final morphs=master
+        final morphs=master && skinned
           ? ((p['targets'] as List).cast<Map<String,dynamic>>()).map(
               (t)=>coords(t['POSITION'] as int)).toList(growable:false)
           : <List<V3>>[];
-        if(master && (morphs.length!=8||
+        if(master && skinned && (morphs.length!=8||
             morphs.any((list)=>list.length!=pos.length))) {
           throw const FormatException('Incomplete master corrective morphs');
         }
@@ -359,7 +383,17 @@ class GlbSkinnedScene {
     if(vertices>30000||triangles>25000||instances.isEmpty) {
       throw const FormatException('GLB vertex budget exceeded');
     }
-    return GlbSkinnedScene._(master?'stk_master_v4:$pattern':staging!.id,
+    if(exercise) {
+      final rigid=instances.where((item)=>!item.skin).toList();
+      final skins=instances.where((item)=>item.skin).toList();
+      if(skins.length!=1||rigid.length!=(exerciseId=='ex_bench_press'?2:1)||
+         !rigid.every((item)=>item.primitives.every((p)=>
+           p.material.startsWith('STK_PILOT_')&&p.morphs.isEmpty))) {
+        throw const FormatException('Missing isolated QA bar/bench geometry');
+      }
+    }
+    return GlbSkinnedScene._(exercise?exerciseId:
+         master?'stk_master_v4:$pattern':staging!.id,
         raw.length,parsedNodes,parents,inverse,joints,channels,instances,
         vertices,triangles,duration);
   }
@@ -824,6 +858,10 @@ class GlbSkinnedScene {
     'STK_HAIR' => const Color(0xFF414954),
     'STK_SHOE' => const Color(0xFF58616C),
     'STK_EQUIPMENT' => const Color(0xFFABB3BF),
+    'STK_PILOT_STK_EQUIPMENT' => dark
+      ?const Color(0xFFADB7C6):const Color(0xFF697584),
+    'STK_PILOT_STK_CUSHION' => dark
+      ?const Color(0xFF66717E):const Color(0xFF495867),
     'STK_PLATE' => const Color(0xFF414852),
     'STK_CUSHION' => const Color(0xFF353B46),
     _ => const Color(0xFF9099A4),

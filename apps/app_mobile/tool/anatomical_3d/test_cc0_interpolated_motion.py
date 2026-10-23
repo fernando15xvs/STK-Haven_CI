@@ -14,6 +14,7 @@ import retarget_cc0_glb as rig
 import pilot_motion_quality_v98 as quality
 import build_master_exercise_pilots_v99 as master55
 import solve_exercise_scapula_v910 as scapula
+import exercise_surface_collision_v911 as surface
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -291,6 +292,60 @@ class Master55ExercisePilotTest(unittest.TestCase):
                             (exercise,'rest/pose migration drift'))
             self.assertLess(biggest_grip,.005,(exercise,'new rig wrist grip'))
             self.assertLess(biggest_foot,.005,(exercise,'new rig stance'))
+
+    def test_v911_signed_distance_helpers_and_invalid_equipment(self):
+        self.assertAlmostEqual(
+            surface.capped_cylinder_sdf((0,0,0),-1.,1.,.10),-.10)
+        self.assertAlmostEqual(
+            surface.capped_cylinder_sdf((0,.15,0),-1.,1.,.10),.05)
+        self.assertAlmostEqual(
+            surface.capped_cylinder_sdf((1.05,0,0),-1.,1.,.10),.05)
+        self.assertAlmostEqual(
+            surface.box_sdf((0,0,0),(-1,-1,-1),(1,1,1)),-1.)
+        self.assertAlmostEqual(
+            surface.box_sdf((0,0,1.12),(-1,-1,-1),(1,1,1)),.12)
+        with self.assertRaises(ValueError):
+            surface.capped_cylinder_sdf((0,0,0),1.,-1.,.10)
+        with self.assertRaises(ValueError):
+            surface.box_sdf((0,0,0),(1,1,1),(1,2,2))
+
+    def test_v911_actual_55_joint_surface_to_rigid_proxy_review(self):
+        folder=self.OUTPUT/'scapular_v910'
+        if not (folder/'ex_squat_master55_v910_scapular_qa.glb').is_file():
+            scapula.build(self.OUTPUT,folder)
+        audited=folder/'surface_v911'
+        report=surface.build(folder,audited)
+        self.assertEqual(report['catalogCount'],229)
+        self.assertEqual(report['samplesPerExercise'],121)
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['enabled'])
+        self.assertEqual(len(report['pilots']),3)
+        for result in report['pilots']:
+            exercise=result['exerciseId']
+            self.assertIn(exercise,rig.EXERCISES)
+            self.assertEqual(result['frames'],121)
+            self.assertEqual(result['skinningJointCount'],55)
+            self.assertEqual(result['morphTargetCount'],8)
+            self.assertEqual(result['barPiecesChecked'],7)
+            self.assertEqual(result['benchProxyParts']>0,
+                             exercise=='ex_bench_press')
+            metrics=result['metrics']
+            self.assertEqual(metrics['samples'],
+                             121*result['skinnedPointsPerFrame'])
+            self.assertTrue(math.isfinite(metrics[
+                'minBarSignedDistanceMeters']))
+            self.assertTrue(math.isfinite(metrics[
+                'minBodyHeightMeters']))
+            self.assertFalse(result['collisionFreeCertified'])
+            self.assertFalse(result['approved'])
+            self.assertFalse(result['enabled'])
+            self.assertGreater(len(result['manualBlockers']),2)
+        self.assertTrue((audited/'surface_collision_v911.json').is_file())
+        source=(folder/'ex_bench_press_master55_v910_scapular_qa.glb')
+        compromised=rig.GLB(source.read_bytes(),expected_sha=None)
+        compromised.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'disabled 55'):
+            surface.review(compromised.bytes(),'ex_bench_press')
 
     def test_v910_three_pilots_scapular_ik_and_continuous_bar_contact(self):
         folder=self.OUTPUT/'scapular_v910'

@@ -193,11 +193,15 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                 final depthSlices=still?6:1;
                 // Native QA path first: do not render an unused full CPU
                 // Canvas mesh during every experimental GPU playback frame.
-                final probe=widget.experimentalIndexedGpu &&
+                // The native GPU prototype draws ONLY the skinned body.
+                // Exercise pilots contain separate moving bar/bench nodes;
+                // keep these in layered Canvas QA so equipment never vanishes.
+                final gpuSafe=!widget.scene.containsRigidEquipment;
+                final probe=gpuSafe&&widget.experimentalIndexedGpu &&
                     widget.experimentalIndexedGpuPlayback && !still;
-                if(((widget.experimentalGpuSkinning||
+                if(gpuSafe&&(((widget.experimentalGpuSkinning||
                     widget.experimentalGpuMorphs||
-                    widget.experimentalIndexedGpu)&&still)||probe) {
+                    widget.experimentalIndexedGpu)&&still)||probe)) {
                   final elapsed=probe ? (tick~/2)/12 : tick/24;
                   return NativeGpuSkinnedGlbReview(
                     scene:widget.scene,size:widget.dimension,
@@ -215,7 +219,7 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                       : null,
                   );
                 }
-                if(widget.experimentalNativeGpuStatic&&still) {
+                if(gpuSafe&&widget.experimentalNativeGpuStatic&&still) {
                   return NativeGpuGlbReview(
                     scene:widget.scene,size:widget.dimension,
                     materials:materials,background:palette.surface,
