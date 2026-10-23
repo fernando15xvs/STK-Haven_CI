@@ -49,18 +49,24 @@ void main() {
       expect(art.triangleCount,original.triangleCount);
       expect(art.durationSeconds,closeTo(original.durationSeconds,.001));
       for(final second in [0.0,1.0,2.0,3.9]) {
-        final a=original.frame(second,size,const {},depthSlices:6);
-        final b=art.frame(second,size,const {},depthSlices:6);
+        // Depth-sliced triangles can move between layers when geometry
+        // improves. Compare unsliced anatomical parts by stable material
+        // name, not transient painter/depth ordering.
+        final a=original.frame(second,size,const {},depthSlices:1);
+        final b=art.frame(second,size,const {},depthSlices:1);
         expect(b.finite,true);
         expect(b.triangles,a.triangles);
         expect(b.parts.length,a.parts.length);
+        final sources={for(final part in a.parts) part.material:part};
+        expect(sources.length,a.parts.length);
         var deviation=0.0;
-        for(var part=0;part<a.parts.length;part++) {
-          expect(a.parts[part].positions.length,
-                 b.parts[part].positions.length);
-          for(var i=0;i<a.parts[part].positions.length;i++) {
-            deviation+=(a.parts[part].positions[i]-
-                        b.parts[part].positions[i]).distance;
+        for(final refined in b.parts) {
+          final before=sources[refined.material];
+          expect(before,isNotNull);
+          expect(before!.positions.length,refined.positions.length);
+          for(var i=0;i<before.positions.length;i++) {
+            deviation+=(before.positions[i]-
+                        refined.positions[i]).distance;
           }
         }
         expect(deviation,greaterThan(.2),reason:'$pattern $second');
