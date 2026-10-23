@@ -19,6 +19,7 @@ import build_master_anatomy_v8 as anatomy913
 import build_master_high_res_v914 as hires914
 import bake_master_detail_v915 as detail915
 import build_torso_contours_v916 as torso916
+import animate_hand_grip_v917 as hand917
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -779,6 +780,126 @@ class Master55ExercisePilotTest(unittest.TestCase):
         changed.doc['extras']['approved']=True
         with self.assertRaises(ValueError):
             torso916._validate_input(changed,changed)
+
+
+    def test_v917_three_pilots_add_real_finger_clips_without_ik_regression(self):
+        source=self.MASTER/'v8_authoring'/'detail_bake_v915'/'torso_v916'
+        if not (source/'ex_squat_v916_torso_mobile_qa.glb').exists():
+            self.test_v916_three_torso_contours_and_four_exact_55_joint_GLBS()
+        out=source/'hand_v917'
+        report=hand917.build(source,out)
+        self.assertEqual(report['schema'],
+            'stk_haven_v917_finger_ik_artist_preview')
+        self.assertEqual(report['catalogCount'],229)
+        self.assertEqual(report['variants'],6)
+        self.assertEqual(report['fingerChannelsPerExercise'],30)
+        self.assertEqual(len(report['files']),6)
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['enabled'])
+        for ex in rig.EXERCISES:
+            for label,high in (('mobile',False),('high',True)):
+                previous=rig.GLB((source/(ex+'_v916_torso_'+
+                    ('high' if high else 'mobile')+'_qa.glb')).read_bytes(),
+                    expected_sha=None)
+                upgraded=rig.GLB((out/(ex+'_v917_finger_'+
+                    label+'_qa.glb')).read_bytes(),expected_sha=None)
+                for field in ('skins','nodes','meshes','materials','scenes'):
+                    self.assertEqual(previous.doc[field],
+                                     upgraded.doc[field],(ex,label,field))
+                self.assertEqual(upgraded.doc['extras']['handGripArtVersion'],917)
+                self.assertFalse(upgraded.doc['extras']['approved'])
+                self.assertFalse(upgraded.doc['extras']['enabled'])
+                self.assertFalse(upgraded.doc['extras'][
+                    'fingerSurfaceToBarContactValidated'])
+                old_clip=previous.doc['animations'][0]
+                clip=upgraded.doc['animations'][0]
+                self.assertEqual(clip['name'],old_clip['name'])
+                self.assertEqual(clip['channels'][:len(old_clip['channels'])],
+                                 old_clip['channels'])
+                self.assertEqual(clip['samplers'][:len(old_clip['samplers'])],
+                                 old_clip['samplers'])
+                self.assertEqual(len(clip['channels']),
+                                 len(old_clip['channels'])+30)
+                for side in ('l','r'):
+                    for digit in hand917.DIGITS:
+                        for segment in hand917.SEGMENTS:
+                            joint=upgraded.by_name[
+                                f'{digit}_0{segment}_{side}']
+                            track=[c for c in clip['channels']
+                                   if c['target']=={'node':joint,
+                                                  'path':'rotation'}]
+                            self.assertEqual(len(track),1)
+                            sampling=clip['samplers'][track[0]['sampler']]
+                            self.assertEqual(len(upgraded.accessor(
+                                sampling['output'])),41)
+                base_tracks=self._tracks(previous)
+                new_tracks=self._tracks(upgraded)
+                for frame in range(121):
+                    tick=frame/30.
+                    base=world_at(previous,tick,base_tracks)
+                    fresh=world_at(upgraded,tick,new_tracks)
+                    for node in ('hand_l','hand_r','foot_l','foot_r',
+                                 'STK_EXERCISE_BAR','head','pelvis'):
+                        error=math.dist(base[previous.by_name[node]],
+                                        fresh[upgraded.by_name[node]])
+                        self.assertLess(error,.000001,
+                            (ex,label,node,frame,'unchanged wrist/equipment'))
+                    for side in ('l','r'):
+                        bar=fresh[upgraded.by_name['STK_EXERCISE_BAR']]
+                        hand=fresh[upgraded.by_name['hand_'+side]]
+                        sign=1 if side=='l' else -1
+                        distance=math.dist(hand,
+                           (bar[0]+sign*(.51 if ex=='ex_squat' else .50),
+                            bar[1],bar[2]))
+                        self.assertLess(distance,.005,
+                            (ex,label,side,frame,'original bar grip'))
+                start=world_at(upgraded,0,new_tracks)
+                raised=world_at(upgraded,2,new_tracks)
+                finish=world_at(upgraded,4,new_tracks)
+                for side in ('l','r'):
+                    for digit in hand917.DIGITS:
+                        name=f'{digit}_03_{side}'
+                        index=upgraded.by_name[name]
+                        self.assertLess(math.dist(start[index],
+                                                  finish[index]),.00001)
+                        self.assertGreater(math.dist(start[index],
+                                                     raised[index]),.00010)
+                for field in ('POSITION','NORMAL','WEIGHTS_0','JOINTS_0'):
+                    attr=previous.doc['meshes'][0]['primitives'][0][
+                        'attributes'][field]
+                    self.assertEqual(previous.accessor(attr),
+                                     upgraded.accessor(attr))
+                measured=next(x for x in report['files']
+                          if x['exerciseId']==ex and
+                             x['highResolution']==high)
+                self.assertLess(measured['maxFingerExcursionDegrees'],7.01)
+                self.assertLess(measured[
+                    'maxPerKeyframeAngularStepDegrees'],1.51)
+                self.assertTrue(measured['wristIKUnchanged'])
+                self.assertFalse(measured['fingertipSurfaceContactCertified'])
+                self.assertLess(len((out/(ex+'_v917_finger_'+
+                    label+'_qa.glb')).read_bytes()),
+                    6*1024*1024 if high else 1400*1024)
+        self.assertTrue((out/'finger_kinematics_v917_report.json').is_file())
+
+    def test_v917_grip_curve_rejects_invalid_motions_and_source(self):
+        self.assertAlmostEqual(hand917.grip_pressure(0,'ex_squat'),0)
+        self.assertAlmostEqual(hand917.grip_pressure(4,'ex_squat'),0,
+                               places=10)
+        self.assertGreater(hand917.grip_pressure(2,'ex_bench_press'),
+                           hand917.grip_pressure(2,'ex_squat'))
+        self.assertRaises(ValueError,hand917.grip_pressure,5,'ex_squat')
+        self.assertRaises(ValueError,hand917.grip_pressure,
+                          2,'not_a_valid_exercise')
+        self.assertEqual(len(hand917.FINGERS),30)
+        path=self.MASTER/'v8_authoring'/'detail_bake_v915'/'torso_v916'
+        if not (path/'ex_squat_v916_torso_mobile_qa.glb').exists():
+            self.test_v916_three_torso_contours_and_four_exact_55_joint_GLBS()
+        source=(path/'ex_squat_v916_torso_mobile_qa.glb').read_bytes()
+        altered=rig.GLB(source,expected_sha=None)
+        altered.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'Untrusted'):
+            hand917.valid_source(altered,'ex_squat',False)
 
     def test_v915_refuses_invalid_provenance_and_bad_normal_map(self):
         folder=self.MASTER/'v8_authoring'
