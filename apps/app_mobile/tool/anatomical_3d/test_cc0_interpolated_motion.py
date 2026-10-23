@@ -15,6 +15,7 @@ import pilot_motion_quality_v98 as quality
 import build_master_exercise_pilots_v99 as master55
 import solve_exercise_scapula_v910 as scapula
 import exercise_surface_collision_v911 as surface
+import build_master_anatomy_v8 as anatomy913
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -432,6 +433,81 @@ class Master55ExercisePilotTest(unittest.TestCase):
         master.doc['extras']['approved']=True
         with self.assertRaisesRegex(ValueError,'disabled v9.9'):
             scapula.correct(master.bytes(),'ex_bench_press')
+
+    def test_v913_11_bilateral_regions_and_three_consistent_55_joint_pilots(self):
+        # Offline authoring only: builds after the existing v9.10 pilot inputs,
+        # and requires exactly the same v7 surface before each transplant.
+        source_folder=self.OUTPUT/'scapular_v910'
+        if not (source_folder/'ex_squat_master55_v910_scapular_qa.glb').exists():
+            scapula.build(self.OUTPUT,source_folder)
+        baseline_bytes=(self.MASTER/'stk_master_v7_surface_preview.glb').read_bytes()
+        raw={ex:(source_folder/(ex+'_master55_v910_scapular_qa.glb')).read_bytes()
+             for ex in rig.EXERCISES}
+        master_out,pilots,report=anatomy913.build(baseline_bytes,raw)
+        dest=self.MASTER/'v8_authoring'
+        dest.mkdir(parents=True,exist_ok=True)
+        (dest/'stk_master_v8_anatomy_preview.glb').write_bytes(master_out)
+        for exercise,bytes_ in pilots.items():
+            (dest/(exercise+'_master55_v8_sculpt_qa.glb')).write_bytes(bytes_)
+        (dest/'master_anatomy_v913_report.json').write_text(
+            json.dumps(report,indent=2)+'\\n',encoding='utf8')
+        self.assertEqual(report['version'],913)
+        self.assertEqual(report['atlasRegions'],11)
+        self.assertEqual(report['catalogCount'],229)
+        self.assertEqual(report['jointCount'],55)
+        self.assertGreater(report['sculpt']['editedVertices'],800)
+        self.assertEqual(set(report['sculpt']['regionAffectedVertices']),
+                         set(anatomy913.REGION_ORDER))
+        self.assertTrue(all(count>0 for count in
+                            report['sculpt']['regionAffectedVertices'].values()))
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['enabled'])
+        original=rig.GLB(baseline_bytes,expected_sha=None)
+        sculpted=rig.GLB(master_out,expected_sha=None)
+        self.assertLessEqual(len(master_out),850*1024)
+        self.assertEqual(sculpted.doc['skins'],original.doc['skins'])
+        self.assertEqual(sculpted.doc['animations'],original.doc['animations'])
+        self.assertEqual(sculpted.doc['meshes'],original.doc['meshes'])
+        self.assertEqual(sculpted.doc['extras']['masterSculptDetailVersion'],8)
+        attrs=original.doc['meshes'][0]['primitives'][0]['attributes']
+        for label in ('JOINTS_0','WEIGHTS_0'):
+            self.assertEqual(original.accessor(attrs[label]),
+                             sculpted.accessor(attrs[label]),label)
+        for target in original.doc['meshes'][0]['primitives'][0]['targets']:
+            a=target['POSITION']
+            self.assertEqual(original.accessor(a),sculpted.accessor(a))
+        previous=original.accessor(attrs['POSITION'])
+        updated=sculpted.accessor(attrs['POSITION'])
+        changes=[math.dist(a,b) for a,b in zip(previous,updated)]
+        self.assertLessEqual(max(changes),anatomy913.MAX_ADDED_RELIEF+.000001)
+        self.assertGreater(sum(x>.00004 for x in changes),800)
+        for index,point in enumerate(previous):
+            if abs(point[0])<=anatomy913.SIDE_GUARD:
+                self.assertLess(changes[index],1e-6)
+        for ex in rig.EXERCISES:
+            before=rig.GLB(raw[ex],expected_sha=None)
+            after=rig.GLB(pilots[ex],expected_sha=None)
+            self.assertEqual(before.doc['skins'],after.doc['skins'])
+            self.assertEqual(before.doc['animations'],after.doc['animations'])
+            self.assertEqual(before.doc['nodes'],after.doc['nodes'])
+            self.assertEqual(before.doc['meshes'],after.doc['meshes'])
+            self.assertEqual(after.doc['extras']['approved'],False)
+            self.assertEqual(after.doc['extras']['enabled'],False)
+            self.assertEqual(after.doc['extras']['anatomyArtVersion'],913)
+            a=after.doc['meshes'][0]['primitives'][0]['attributes']
+            self.assertEqual(after.accessor(a['POSITION']),updated)
+            self.assertEqual(after.accessor(a['NORMAL']),
+                             sculpted.accessor(attrs['NORMAL']))
+            self.assertLess(len(pilots[ex]),1400*1024)
+
+    def test_v913_rejects_untrusted_or_approved_legacy_geometry(self):
+        old=rig.GLB(
+            (self.MASTER/'stk_master_v7_surface_preview.glb').read_bytes(),
+            expected_sha=None)
+        old.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'trusted unapproved'):
+            anatomy913._check_base(old)
+        self.assertEqual(len(anatomy913.REGION_ORDER),11)
 
     def test_v99_rejects_unknown_ids_and_prematurely_approved_pilots(self):
         sample=rig.GLB(
