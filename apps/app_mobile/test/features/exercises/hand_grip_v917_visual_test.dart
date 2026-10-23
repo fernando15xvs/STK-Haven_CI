@@ -54,16 +54,31 @@ void main() {
         expect(oldFrame.finite,true);
         expect(newFrame.finite,true);
         expect(newFrame.triangles,oldFrame.triangles);
-        final parts={for(final part in oldFrame.parts)
-          part.material:part};
-        expect(parts.length,oldFrame.parts.length);
+        // Some rigid equipment primitives legitimately share a material.
+        // Compare per-material projected shape moments, independent of how
+        // the renderer sorts those primitives or duplicates material labels.
+        Map<String,List<double>> moments(GlbDrawFrame frame) {
+          final sums=<String,List<double>>{};
+          for(final part in frame.parts) {
+            final values=sums.putIfAbsent(
+              part.material,()=>List<double>.filled(4,0));
+            for(final point in part.positions) {
+              values[0]+=point.dx;
+              values[1]+=point.dy;
+              values[2]+=point.dx*point.dx;
+              values[3]+=point.dy*point.dy;
+            }
+          }
+          return sums;
+        }
+        final previous=moments(oldFrame);
+        final current=moments(newFrame);
+        expect(current.keys.toSet(),previous.keys.toSet());
         var changed=0.0;
-        for(final part in newFrame.parts) {
-          final previous=parts[part.material]!;
-          expect(previous.positions.length,part.positions.length);
-          for(var i=0;i<part.positions.length;i++) {
-            changed+=(previous.positions[i]-
-                      part.positions[i]).distance;
+        for(final material in previous.keys) {
+          final a=previous[material]!,b=current[material]!;
+          for(var i=0;i<a.length;i++) {
+            changed+=(a[i]-b[i]).abs();
           }
         }
         if(second==0 || second==4) {
