@@ -14,7 +14,7 @@ import math
 from pathlib import Path
 from retarget_cc0_glb import GLB
 from build_master_surface_v6 import BUDGET_BYTES, replace_accessor, topology
-from build_master_surface_v7 import (region_votes, weighted_profile,
+from build_master_surface_v7 import (weighted_profile,
                                       face_orientation, norm, smoothstep)
 from build_master_surface_v2 import recompute_normals, sub
 
@@ -37,6 +37,28 @@ SIDE_GUARD = .015
 BLEND_WIDTH = .035
 REGION_ORDER = tuple(REGION_STRENGTH)
 EXERCISE_IDS = ('ex_bench_press', 'ex_barbell_row', 'ex_squat')
+
+def region_votes(glb,vertex_count):
+    """All eleven v8 atlas masks; v7's legacy helper tracked only six."""
+    names=set(REGION_ORDER)
+    hits={name:[0]*vertex_count for name in names}
+    total=[0]*vertex_count
+    faces={}
+    for primitive in glb.doc['meshes'][0]['primitives']:
+        name=primitive['extras']['stkMuscleRegion']
+        indices=[int(v[0]) for v in glb.accessor(primitive['indices'])]
+        if name in faces or len(indices)%3:
+            raise ValueError('Corrupt or duplicate anatomical region')
+        faces[name]=indices
+        for index in indices:
+            if index<0 or index>=vertex_count:
+                raise ValueError('Anatomical face references missing vertex')
+            total[index]+=1
+            if name in hits:hits[name][index]+=1
+    if set(faces)!=names|{'body'}:
+        raise ValueError('Eleven muscle groups and neutral body required')
+    return ({name:[v/max(1,n) for v,n in zip(rows,total)]
+             for name,rows in hits.items()},faces)
 
 def _smooth_votes(votes, graph):
     result={}
