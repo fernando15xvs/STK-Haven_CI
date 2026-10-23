@@ -20,6 +20,7 @@ import build_master_high_res_v914 as hires914
 import bake_master_detail_v915 as detail915
 import build_torso_contours_v916 as torso916
 import animate_hand_grip_v917 as hand917
+import calibrate_grip_contact_v918 as contact918
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -881,6 +882,111 @@ class Master55ExercisePilotTest(unittest.TestCase):
                     label+'_qa.glb')).read_bytes()),
                     6*1024*1024 if high else 1400*1024)
         self.assertTrue((out/'finger_kinematics_v917_report.json').is_file())
+
+
+    def test_v918_measured_finger_gaps_and_safe_wrist_orientation(self):
+        pilot_root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                    'torso_v916'/'hand_v917')
+        if not (pilot_root/'ex_squat_v917_finger_mobile_qa.glb').exists():
+            self.test_v917_three_pilots_add_real_finger_clips_without_ik_regression()
+        target=pilot_root/'contact_v918'
+        summary=contact918.build(pilot_root,target)
+        self.assertEqual(summary['schema'],
+                         'stk_master_55_v918_conservative_wrist_contact_qa')
+        self.assertEqual(summary['catalogCount'],229)
+        self.assertEqual(summary['exercises'],3)
+        self.assertFalse(summary['fingerPhysicalContactValidated'])
+        self.assertFalse(summary['approved'])
+        self.assertFalse(summary['enabled'])
+        self.assertEqual(len(summary['assets']),6)
+        for ex in rig.EXERCISES:
+            for quality,high in (('mobile',False),('high',True)):
+                old=rig.GLB((pilot_root/(
+                    ex+'_v917_finger_'+quality+'_qa.glb')).read_bytes(),
+                    expected_sha=None)
+                new=rig.GLB((target/(
+                    ex+'_v918_contact_'+quality+'_qa.glb')).read_bytes(),
+                    expected_sha=None)
+                for immutable in ('skins','nodes','meshes','materials','scenes'):
+                    self.assertEqual(old.doc[immutable],new.doc[immutable],
+                                     (ex,quality,immutable))
+                a=old.doc['animations'][0];b=new.doc['animations'][0]
+                self.assertEqual(a['name'],b['name'])
+                self.assertEqual(b['channels'][:len(a['channels'])],
+                                 a['channels'])
+                self.assertEqual(b['samplers'][:len(a['samplers'])],
+                                 a['samplers'])
+                self.assertEqual(len(b['channels']),len(a['channels'])+2)
+                for side in ('l','r'):
+                    wrist=new.by_name['hand_'+side]
+                    matches=[c for c in b['channels']
+                             if c['target']=={
+                                 'node':wrist,'path':'rotation'}]
+                    self.assertEqual(len(matches),1)
+                    out=b['samplers'][matches[0]['sampler']]['output']
+                    self.assertEqual(len(new.accessor(out)),41)
+                self.assertEqual(new.doc['extras'][
+                    'gripContactCalibrationVersion'],918)
+                self.assertFalse(new.doc['extras']['approved'])
+                self.assertFalse(new.doc['extras']['enabled'])
+                self.assertFalse(new.doc['extras'][
+                    'fingerSurfaceToBarContactValidated'])
+                result=next(v for v in summary['assets']
+                            if v['exerciseId']==ex and
+                               v['highResolution']==high)
+                self.assertEqual(result['calibrated']['frames'],121)
+                self.assertEqual(result['calibrated']['fps'],30)
+                self.assertEqual(result['calibrated'][
+                    'sampledDistalJointCenters'],1210)
+                self.assertLess(result['calibrated'][
+                    'meanPositiveGapMeters'],
+                    result['baseline']['meanPositiveGapMeters']*.94)
+                self.assertGreaterEqual(result['calibrated'][
+                    'closestSignedGapMeters'],
+                    contact918.PENETRATION_GUARD)
+                self.assertGreater(result['calibrated'][
+                    'worstPositiveGapMeters'],.01)
+                self.assertTrue(result[
+                    'wristPositionsIdenticalAt121Frames'])
+                self.assertFalse(result['certifiedFingerSurfaceContact'])
+                self.assertFalse(result['approved'])
+                self.assertFalse(result['enabled'])
+                self.assertLessEqual(result['maxPerKeyframeWristAngularStepDegrees'],
+                                     contact918.MAX_STEP_DEG)
+                for angle in result['maxWristOrientationDegrees'].values():
+                    self.assertLessEqual(angle,contact918.MAX_ANGLE_DEG+.02)
+                previous=old.doc['meshes'][0]['primitives'][0]['attributes']
+                after=new.doc['meshes'][0]['primitives'][0]['attributes']
+                for accessor in ('POSITION','NORMAL','JOINTS_0','WEIGHTS_0'):
+                    self.assertEqual(old.accessor(previous[accessor]),
+                                     new.accessor(after[accessor]),
+                                     (ex,quality,accessor))
+        self.assertTrue((target/'contact_gap_v918_report.json').exists())
+
+    def test_v918_rejects_unsafe_or_approved_sources(self):
+        self.assertRaises(ValueError,contact918.grip_pose,
+                          (0.,0.,0.,1.),'ex_squat','l',-1)
+        self.assertRaises(ValueError,contact918.grip_pose,
+                          (0.,0.,0.,1.),'unknown','l',1)
+        self.assertEqual(len(contact918.DIRECTIONS),3)
+        self.assertEqual(len(contact918.DIGITS),5)
+        self.assertEqual(contact918.FPS,30)
+        folder=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917')
+        if not (folder/'ex_squat_v917_finger_mobile_qa.glb').exists():
+            self.test_v917_three_pilots_add_real_finger_clips_without_ik_regression()
+        raw=(folder/'ex_squat_v917_finger_mobile_qa.glb').read_bytes()
+        tampered=rig.GLB(raw,expected_sha=None)
+        tampered.doc['extras']['approved']=True
+        with self.assertRaisesRegex(ValueError,'disabled original'):
+            contact918.verify_input(tampered,'ex_squat',False)
+        old=rig.GLB(raw,expected_sha=None)
+        clip=old.doc['animations'][0]
+        clip['channels'].append({
+            'sampler':clip['channels'][0]['sampler'],
+            'target':{'node':old.by_name['hand_l'],'path':'rotation'}})
+        with self.assertRaises(ValueError):
+            contact918.verify_input(old,'ex_squat',False)
 
     def test_v917_grip_curve_rejects_invalid_motions_and_source(self):
         self.assertAlmostEqual(hand917.grip_pressure(0,'ex_squat'),0)
