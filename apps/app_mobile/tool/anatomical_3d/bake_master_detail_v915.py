@@ -117,7 +117,7 @@ def _atlas(glb,prims,n):
             triangles.append(tuple(ids[k:k+3]))
     if len(triangles)!=HIGH_TRIANGLES:
         raise ValueError('High-poly authoring face count changed')
-    mask={name:[hit/max(1,total) for hit,total in zip(votes[name],touched)]
+    mask={name:[hit/max(1,total) for hit,total in zip(vote[name],touched)]
           for name in vote}
     return mask,triangles
 
