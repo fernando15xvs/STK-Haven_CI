@@ -148,24 +148,61 @@ jobs:
       - name: Audit CC0 model staging rules without network
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_cc0_humanoid.py'
-      - name: Ensure FFmpeg available for experimental offline video QA
+      - name: Ensure FFmpeg and ffprobe for experimental offline video QA
+        shell: bash
         run: |
-          # Public CI only: ubuntu runners often ship usable ffmpeg already.
-          # Avoid an unnecessary apt index refresh that can stall this job.
-          if command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1; then
-            echo "Using preinstalled FFmpeg"
+          set -euo pipefail
+          # On the GitHub Ubuntu 26 image apt-get may hang even with a cached
+          # index (CI #530, exit 124). Avoid distro mirrors in this QA step.
+          if command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1 \
+              && ffmpeg -hide_banner -encoders 2>/dev/null | grep -q 'libx264'; then
+            echo "Using available FFmpeg with libx264"
           else
-            # Apt index downloads have stalled on GitHub-hosted runners.
-            # Try the cached Ubuntu package metadata first; do not refresh
-            # repository indexes unless the install explicitly fails.
-            if ! timeout 180s sudo apt-get install -y -qq ffmpeg; then
-              timeout 90s sudo apt-get update -qq
-              timeout 180s sudo apt-get install -y -qq ffmpeg
+            # Pinned immutable upstream BtbN GPL static release: includes
+            # ffmpeg, ffprobe and libx264, without runtime apt dependencies.
+            # Download its published SHA256 file from the SAME release.
+            version='autobuild-2026-10-22-13-06'
+            archive='ffmpeg-N-127941-g303510f9d1-linux64-gpl.tar.xz'
+            url="https://github.com/BtbN/FFmpeg-Builds/releases/download/${version}"
+            mkdir -p "$RUNNER_TEMP/stk-ffmpeg"
+            cd "$RUNNER_TEMP/stk-ffmpeg"
+            curl --fail --location --silent --show-error --retry 3 \
+              --retry-all-errors --connect-timeout 20 --max-time 240 \
+              "$url/$archive" -o "$archive"
+            curl --fail --location --silent --show-error --retry 3 \
+              --retry-all-errors --connect-timeout 20 --max-time 60 \
+              "$url/checksums.sha256" -o checksums.sha256
+            # Inspect exactly one expected checksum entry (no unverified
+            # executable allowed); tolerate standard sha256sum *filename.
+            matches="$(grep -F "$archive" checksums.sha256 || true)"
+            if [ "$(printf '%s\n' "$matches" | grep -c .)" -ne 1 ]; then
+              echo "Missing or ambiguous pinned upstream SHA256" >&2
+              exit 1
             fi
+            checksum="$(printf '%s\n' "$matches" | awk '{print $1}')"
+            if ! [[ "$checksum" =~ ^[a-fA-F0-9]{64}$ ]]; then
+              echo "Invalid upstream SHA256 checksum format" >&2
+              exit 1
+            fi
+            printf '%s  %s\n' "$checksum" "$archive" | sha256sum -c -
+            mkdir -p unpack
+            tar -xJf "$archive" -C unpack
+            binary="$(find unpack -type f -path '*/bin/ffmpeg' -print -quit)"
+            if [ -z "$binary" ] || [ ! -x "$binary" ]; then
+              echo "Static FFmpeg executable missing" >&2
+              exit 1
+            fi
+            dirname="$(dirname "$(realpath "$binary")")"
+            if [ ! -x "$dirname/ffprobe" ]; then
+              echo "Static ffprobe executable missing" >&2
+              exit 1
+            fi
+            echo "$dirname" >> "$GITHUB_PATH"
+            export PATH="$dirname:$PATH"
           fi
-          ffmpeg -hide_banner -encoders 2>/dev/null | grep 'libx264'
-          ffmpeg -version | head -1
-          ffprobe -version | head -1
+          ffmpeg -hide_banner -encoders 2>/dev/null | grep -F 'libx264'
+          ffmpeg -version | sed -n '1p'
+          ffprobe -version | sed -n '1p'
       - name: Test H264 encoder from synthetic fixtures
         working-directory: apps/app_mobile
         run: |
