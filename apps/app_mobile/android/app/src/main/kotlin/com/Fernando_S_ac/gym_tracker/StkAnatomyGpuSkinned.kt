@@ -69,6 +69,7 @@ private class StkAnatomyGpuSkinnedView(
             val positions = params?.get("vertices") as? FloatArray
             val reuseMesh = params?.get("reuseMesh") == true
             val indexedMode = call.method == "drawIndexedMorph"
+            val mixedRigid = params?.get("mixedRigid") == true
             val indexedVertices = params?.get("indexedVertices") as? FloatArray
             val drawIndices = params?.get("indices") as? IntArray
             val reuseIndexedMesh = params?.get("reuseIndexedMesh") == true
@@ -119,7 +120,8 @@ private class StkAnatomyGpuSkinnedView(
                 indexedVertices == null && drawIndices == null else
                 morphWeights != null && morphWeights.size == 8 &&
                 morphWeights.all { it.isFinite() && it >= 0f && it <= 1.025f }
-            if (!meshValid || !weightsValid || bones == null || camera == null ||
+            if ((mixedRigid && (!indexedMode || reuseIndexedMesh)) ||
+                !meshValid || !weightsValid || bones == null || camera == null ||
                 background == null || bones.size != 55 * 16 ||
                 camera.size != 20 || background.size != 4 ||
                 bones.any { !it.isFinite() } ||
@@ -131,14 +133,19 @@ private class StkAnatomyGpuSkinnedView(
             if (positions != null || indexedVertices != null) {
                 val stream = indexedVertices ?: positions!!
                 val stride = if (indexedMode) 42 else 18
+                var rigidCount = 0
                 for (offset in stream.indices step stride) {
+                    val rigid = mixedRigid && stream[offset + 6] == -1f
                     var weight = 0f
                     for (j in 0..3) {
                         val joint = stream[offset + 6 + j]
                         val w = stream[offset + 10 + j]
-                        if (joint < 0f || joint > 54f ||
+                        if (joint < (if (rigid && j == 0) -1f else 0f) ||
+                            joint > 54f ||
                             joint != joint.toInt().toFloat() ||
-                            w < 0f || w > 1.025f) {
+                            w < 0f || w > 1.025f ||
+                            (rigid && (joint != (if (j == 0) -1f else 0f) ||
+                                w != (if (j == 0) 1f else 0f)))) {
                             result.error("invalid_skin_weights", "Invalid joint blend", null)
                             return@setMethodCallHandler
                         }
@@ -148,6 +155,20 @@ private class StkAnatomyGpuSkinnedView(
                         result.error("invalid_skin_weights", "Unnormalized skinning", null)
                         return@setMethodCallHandler
                     }
+                    if (rigid) {
+                        rigidCount++
+                        for (j in 18 until 42) {
+                            if (stream[offset + j] != 0f) {
+                                result.error("invalid_rigid_mesh",
+                                    "Rigid QA vertex cannot morph", null)
+                                return@setMethodCallHandler
+                            }
+                        }
+                    }
+                }
+                if (mixedRigid && rigidCount < 3) {
+                    result.error("missing_rigid_mesh", "Mixed QA needs equipment", null)
+                    return@setMethodCallHandler
                 }
             }
             surface.queueEvent {
@@ -225,12 +246,15 @@ private class StkGpuJointRenderer : GLSurfaceView.Renderer {
         out vec4 vColor;
 
         void main() {
-            ivec4 j = ivec4(aJoint + vec4(0.5));
+            ivec4 j = ivec4(max(aJoint, vec4(0.0)) + vec4(0.5));
+            float rigid = aJoint.x < -0.5 ? 1.0 : 0.0;
             mat4 skin =
                 aWeight.x * uBones[j.x] + aWeight.y * uBones[j.y] +
                 aWeight.z * uBones[j.z] + aWeight.w * uBones[j.w];
             vec3 world = (skin * vec4(aPosition, 1.0)).xyz;
-            vec3 normal = normalize(mat3(skin) * aNormal);
+            // Rigid QA equipment is pretransformed to world space by Dart.
+            world = mix(world, aPosition, rigid);
+            vec3 normal = normalize(mix(mat3(skin) * aNormal, aNormal, rigid));
             vec3 ray = world - uCamera[0].xyz;
             float depth = max(0.6, dot(ray, uCamera[3].xyz));
             float xx = dot(ray, uCamera[1].xyz) * uCamera[1].w;

@@ -22,6 +22,7 @@ class AnatomicalGlbPreview extends StatefulWidget {
     this.experimentalIndexedGpu=false,
     this.experimentalIndexedGpuPlayback=false,
     this.experimentalGpuTelemetry=false,
+    this.experimentalMixedGpuStatic=false,
     this.reviewPilotId,
   });
   final GlbSkinnedScene scene;
@@ -46,6 +47,9 @@ class AnatomicalGlbPreview extends StatefulWidget {
   /// Displays ACK/transfer counters only in the internal indexed GPU pilot.
   /// Not remote analytics, not production FPS or physical memory telemetry.
   final bool experimentalGpuTelemetry;
+  /// INTERNAL: static shared-depth GLES3/Metal skin+rigid equipment pilot.
+  /// Default false and never routed from exercise catalog.
+  final bool experimentalMixedGpuStatic;
   /// Only the three historical pilot IDs have offline anatomy QA checklists.
   /// Never selects or enables production exercise assets.
   final String? reviewPilotId;
@@ -196,7 +200,9 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                 // The native GPU prototype draws ONLY the skinned body.
                 // Exercise pilots contain separate moving bar/bench nodes;
                 // keep these in layered Canvas QA so equipment never vanishes.
-                final gpuSafe=!widget.scene.containsRigidEquipment;
+                final gpuSafe=!widget.scene.containsRigidEquipment||
+                    (still&&widget.experimentalMixedGpuStatic&&
+                     widget.experimentalIndexedGpu);
                 final probe=gpuSafe&&widget.experimentalIndexedGpu &&
                     widget.experimentalIndexedGpuPlayback && !still;
                 if(gpuSafe&&(((widget.experimentalGpuSkinning||
@@ -212,6 +218,8 @@ class _AnatomicalGlbPreviewState extends State<AnatomicalGlbPreview>
                     experimentalMorphGpu:widget.experimentalGpuMorphs,
                     experimentalIndexedGpu:widget.experimentalIndexedGpu,
                     playbackProbe:probe,
+                    experimentalMixedGpu:widget.experimentalMixedGpuStatic&&
+                      widget.scene.containsRigidEquipment&&still,
                     onMetrics:widget.experimentalGpuTelemetry
                       ? (data) {
                           if(mounted)_qaMetrics.value=data;

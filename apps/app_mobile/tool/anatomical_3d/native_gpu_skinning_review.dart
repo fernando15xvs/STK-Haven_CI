@@ -207,11 +207,13 @@ const int stkGpuIndexedBudgetBytes=12*1024*1024;
 class GpuIndexedMorphPacket {
   const GpuIndexedMorphPacket(this.interleaved,this.indices,
       this.morphWeights,this.bones,this.camera,this.triangles,
-      this.includesMesh);
+      this.includesMesh,{this.mixedRigid=false});
   final Float32List interleaved,morphWeights,bones,camera;
   final Uint32List indices;
   final int triangles;
   final bool includesMesh;
+  /// Only explicit v9.12 QA permits rigid world-space sentinel vertices.
+  final bool mixedRigid;
 
   int get vertexCount => interleaved.length~/stkGpuIndexedStride;
   int get retainedBytes => interleaved.lengthInBytes+indices.lengthInBytes;
@@ -230,6 +232,24 @@ class GpuIndexedMorphPacket {
     final packet=GpuIndexedMorphPacket(source.vertices,source.indices,
       source.morphWeights,source.bones,source.camera,source.triangles,
       includeMesh);
+    packet.validate();
+    return packet;
+  }
+
+  /// Full upload at every paused pose, never cached: equipment moves.
+  factory GpuIndexedMorphPacket.fromMixedScene(
+      GlbSkinnedScene scene,double elapsed,Size size,
+      Map<String,Color> materials,{bool dark=true,double orbit=0,
+      double elevation=0,double zoom=1}) {
+    if(!scene.containsRigidEquipment) {
+      throw const FormatException('Expected mixed review scene');
+    }
+    final source=scene.shaderIndexedMorphSource(elapsed,size,materials,
+      dark:dark,orbit:orbit,elevation:elevation,zoom:zoom,
+      includeRigid:true);
+    final packet=GpuIndexedMorphPacket(source.vertices,source.indices,
+      source.morphWeights,source.bones,source.camera,source.triangles,true,
+      mixedRigid:true);
     packet.validate();
     return packet;
   }
@@ -267,8 +287,11 @@ class GpuIndexedMorphPacket {
       for(var k=0;k<4;k++) {
         final bone=interleaved[offset+6+k];
         final weight=interleaved[offset+10+k];
-        if(bone<0||bone>=stkGpuSkinBoneCount||
-            bone!=bone.roundToDouble()||weight<0||weight>1.025) {
+        final rigid=mixedRigid&&interleaved[offset+6]==-1;
+        if((!rigid&&(bone<0||bone>=stkGpuSkinBoneCount))||
+           (rigid&&bone!=(k==0?-1.0:0.0))||
+           bone!=bone.roundToDouble()||weight<0||weight>1.025||
+           (rigid&&weight!=(k==0?1.0:0.0))) {
           throw const FormatException('Invalid indexed skin influence');
         }
         blend+=weight;
@@ -281,6 +304,20 @@ class GpuIndexedMorphPacket {
           throw const FormatException('Invalid indexed material color');
         }
       }
+      if(mixedRigid&&interleaved[offset+6]==-1) {
+        for(var m=18;m<stkGpuIndexedStride;m++) {
+          if(interleaved[offset+m]!=0) {
+            throw const FormatException('Rigid equipment has nonzero morph');
+          }
+        }
+      }
+    }
+    if(mixedRigid) {
+      var rigidCount=0;
+      for(var i=6;i<interleaved.length;i+=stkGpuIndexedStride) {
+        if(interleaved[i]==-1)rigidCount++;
+      }
+      if(rigidCount<3)throw const FormatException('Missing QA equipment');
     }
   }
 
@@ -288,8 +325,12 @@ class GpuIndexedMorphPacket {
     validate();
     final c=background.toARGB32();
     return {
-      if(includesMesh) ...{'indexedVertices':interleaved,'indices':indices}
-      else 'reuseIndexedMesh':true,
+      if(includesMesh) ...{
+        'indexedVertices':interleaved,
+        // StandardMessageCodec supports Int32List, not Uint32List.
+        'indices':Int32List.fromList(indices),
+      } else 'reuseIndexedMesh':true,
+      if(mixedRigid) 'mixedRigid':true,
       'morphWeights':morphWeights,
       'bones':bones,
       'camera':camera,
@@ -383,6 +424,7 @@ class NativeGpuSkinnedGlbReview extends StatefulWidget {
     this.elevation=0,this.zoom=1,this.enabled=false,
     this.experimentalMorphGpu=false,this.experimentalIndexedGpu=false,
     this.playbackProbe=false,this.onMetrics,
+    this.experimentalMixedGpu=false,
   });
 
   final GlbSkinnedScene scene;
@@ -390,6 +432,8 @@ class NativeGpuSkinnedGlbReview extends StatefulWidget {
   final Map<String,Color> materials;
   final Color background;
   final bool dark,enabled,experimentalMorphGpu,experimentalIndexedGpu;
+  /// Hidden static-only mixed GLES3/Metal QA; never use for playback.
+  final bool experimentalMixedGpu;
   /// Internal 12-fps-only QA; never enabled from workout/catalog routes.
   final bool playbackProbe;
   /// Optional internal-only telemetry. Not connected to app analytics.
@@ -475,8 +519,15 @@ class _NativeGpuSkinnedGlbReviewState
         ].join('|');
         final indexed=widget.experimentalIndexedGpu;
         final cache=indexed?_indexedCache:_morphCache;
-        final includeMesh=cache.requiresMesh(scene,appearance);
-        final payload=indexed
+        final mixed=indexed&&widget.experimentalMixedGpu&&
+            scene.containsRigidEquipment&&!widget.playbackProbe;
+        final includeMesh=mixed||cache.requiresMesh(scene,appearance);
+        final payload=mixed
+          ?GpuIndexedMorphPacket.fromMixedScene(scene,widget.elapsed,
+              Size.square(widget.size),widget.materials,dark:widget.dark,
+              orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom)
+              .encode(widget.background)
+          :indexed
           ?GpuIndexedMorphPacket.fromScene(scene,widget.elapsed,
               Size.square(widget.size),widget.materials,dark:widget.dark,
               orbit:widget.orbit,elevation:widget.elevation,zoom:widget.zoom,
@@ -545,7 +596,8 @@ class _NativeGpuSkinnedGlbReviewState
     super.didUpdateWidget(old);
     if(widget.experimentalMorphGpu!=old.experimentalMorphGpu||
        widget.experimentalIndexedGpu!=old.experimentalIndexedGpu||
-       widget.playbackProbe!=old.playbackProbe) {
+       widget.playbackProbe!=old.playbackProbe||
+        widget.experimentalMixedGpu!=old.experimentalMixedGpu) {
       _meshCache.reset();
       _morphCache.reset();
       _indexedCache.reset();
@@ -559,7 +611,8 @@ class _NativeGpuSkinnedGlbReviewState
        widget.zoom!=old.zoom||widget.enabled!=old.enabled||
        widget.experimentalMorphGpu!=old.experimentalMorphGpu||
        widget.experimentalIndexedGpu!=old.experimentalIndexedGpu||
-       widget.playbackProbe!=old.playbackProbe) {
+       widget.playbackProbe!=old.playbackProbe||
+        widget.experimentalMixedGpu!=old.experimentalMixedGpu) {
       final force=widget.scene!=old.scene||widget.size!=old.size||
           widget.background!=old.background||
           widget.materials!=old.materials||widget.dark!=old.dark||
@@ -567,7 +620,8 @@ class _NativeGpuSkinnedGlbReviewState
           widget.zoom!=old.zoom||widget.enabled!=old.enabled||
           widget.experimentalMorphGpu!=old.experimentalMorphGpu||
           widget.experimentalIndexedGpu!=old.experimentalIndexedGpu||
-          widget.playbackProbe!=old.playbackProbe;
+          widget.playbackProbe!=old.playbackProbe||
+        widget.experimentalMixedGpu!=old.experimentalMixedGpu;
       _scheduleSend(force:force);
     }
   }
@@ -585,7 +639,12 @@ class _NativeGpuSkinnedGlbReviewState
   Widget build(BuildContext context) {
     final native=defaultTargetPlatform==TargetPlatform.android||
         defaultTargetPlatform==TargetPlatform.iOS;
-    if(!widget.enabled||_failed||!native) {
+    // Fail closed if a caller bypasses AnatomicalGlbPreview's QA gate:
+    // no body-only GPU when the scene contains bar/bench, no mixed playback.
+    final mixedSafe=!widget.scene.containsRigidEquipment||
+        (widget.experimentalMixedGpu&&widget.experimentalIndexedGpu&&
+         !widget.playbackProbe);
+    if(!widget.enabled||_failed||!native||!mixedSafe) {
       return SizedBox.square(dimension:widget.size,
         child:CustomPaint(painter:GlbSkinnedPainter(
           _canvasFrame(),widget.background)));

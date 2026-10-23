@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../tool/anatomical_3d/anatomical_glb_runtime.dart';
@@ -438,6 +439,102 @@ void main() {
     // battery and actual device FPS; never assert performance on CI runners.
     expect(watch.elapsedMicroseconds,greaterThanOrEqualTo(0));
   },timeout:const Timeout(Duration(minutes:2)));
+
+
+  test('v9.12 mixed master scene renders one native depth stream for bar and body',() {
+    const size=Size(320,320);
+    const root='build/cc0_master_surface_v7/three_exercise_pilots_v99/scapular_v910';
+    final rows=<Map<String,Object>>[];
+    for(final id in ['ex_bench_press','ex_barbell_row','ex_squat']) {
+      final scene=GlbSkinnedScene.decodeMasterExercise(
+        File('$root/${id}_master55_v910_scapular_qa.glb')
+          .readAsBytesSync(),exerciseId:id);
+      expect(scene.containsRigidEquipment,true);
+      for(final second in [0.0,1.4,2.0,3.6]) {
+        final packet=GpuIndexedMorphPacket.fromMixedScene(
+          scene,second,size,const {});
+        expect(packet.mixedRigid,true);
+        expect(packet.includesMesh,true);
+        expect(packet.triangles,scene.triangleCount);
+        expect(packet.retainedBytes,lessThanOrEqualTo(stkGpuIndexedBudgetBytes));
+        expect(packet.indices.length,packet.triangles*3);
+        var rigidCount=0;
+        var skinnedCount=0;
+        final rigidOffsets=<int>[];
+        for(var i=0;i<packet.vertexCount;i++) {
+          final offset=i*stkGpuIndexedStride;
+          if(packet.interleaved[offset+6]==-1) {
+            rigidCount++;
+            rigidOffsets.add(offset);
+            expect(packet.interleaved[offset+10],1);
+            for(var m=18;m<stkGpuIndexedStride;m++) {
+              expect(packet.interleaved[offset+m],0);
+            }
+          } else {
+            skinnedCount++;
+          }
+        }
+        expect(rigidCount,greaterThan(20),reason:id);
+        expect(skinnedCount,greaterThan(1000),reason:id);
+        final wire=packet.encode(const Color(0xFF12181F));
+        expect(wire['mixedRigid'],true);
+        expect(wire['indexedVertices'],isA<Float32List>());
+        expect(wire['indices'],isA<Int32List>());
+        final copy=const StandardMessageCodec().decodeMessage(
+          const StandardMessageCodec().encodeMessage(wire));
+        expect(copy,isA<Map>());
+        expect((copy as Map)['indices'],isA<Int32List>());
+        // World-space rigid vertices use exactly the same camera projector
+        // as the Canvas scene and are not multiplied by the bone palette.
+        final cpu=scene.frame(second,size,const {});
+        final rigidCpu=cpu.parts
+          .where((p)=>p.material.startsWith('STK_PILOT_'))
+          .expand((p)=>p.positions).toList();
+        expect(rigidCpu,isNotEmpty);
+        final c=packet.camera;
+        for(final i in rigidOffsets.take(16)) {
+          final v=packet.interleaved;
+          final dx=v[i]-c[0],dy=v[i+1]-c[1],dz=v[i+2]-c[2];
+          final depth=math.max(.6,dx*c[12]+dy*c[13]+dz*c[14]);
+          final projected=Offset(
+            size.width*.5+(dx*c[4]+dy*c[5]+dz*c[6])*
+              (size.shortestSide*1.58/depth),
+            size.height*.55-(dx*c[8]+dy*c[9]+dz*c[10])*
+              (size.shortestSide*1.58/depth));
+          expect(projected.dx.isFinite&&projected.dy.isFinite,true);
+          expect(rigidCpu.any((p)=>(p-projected).distance<.15),true,
+            reason:'$id t=$second: rigid equipment projection mismatch');
+        }
+        final other=GpuIndexedMorphPacket(
+          packet.interleaved,packet.indices,packet.morphWeights,
+          packet.bones,packet.camera,packet.triangles,true);
+        expect(other.validate,throwsFormatException,
+          reason:'Rigid sentinel prohibited in default skin packets');
+        final corrupted=Float32List.fromList(packet.interleaved);
+        corrupted[rigidOffsets.first+18]=.001;
+        final invalid=GpuIndexedMorphPacket(
+          corrupted,packet.indices,packet.morphWeights,packet.bones,
+          packet.camera,packet.triangles,true,mixedRigid:true);
+        expect(invalid.validate,throwsFormatException);
+        rows.add({'exercise':id,'elapsed':second,
+          'skinnedUniqueVertices':skinnedCount,
+          'rigidUniqueVertices':rigidCount,
+          'triangles':packet.triangles,'wireBytes':packet.retainedBytes});
+      }
+      expect(()=>GpuIndexedMorphPacket.fromScene(
+        scene,0,size,const {}),throwsFormatException);
+    }
+    final destination=File(
+      'build/cc0_master_v7_flutter_qa/native_mixed_indexed_v912.json');
+    destination.parent.createSync(recursive:true);
+    destination.writeAsStringSync(const JsonEncoder.withIndent('  ').convert({
+      'schema':'stk_native_mixed_qa_v912',
+      'generatedInFlutterTestRunner':true,
+      'nativeDeviceDrawVerified':false,
+      'gpuPresentationFrameTimeMeasured':false,
+      'approved':false,'enabled':false,'samples':rows,
+    }));
+  },timeout:const Timeout(Duration(minutes:5)));
 
   test('Seven CC0 v7 motions project GPU-skinned joints like CPU baseline',() {
     final raw=File(

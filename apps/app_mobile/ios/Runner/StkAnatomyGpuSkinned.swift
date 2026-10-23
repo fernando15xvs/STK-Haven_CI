@@ -74,6 +74,7 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
         return
       }
       let indexedMode = call.method == "drawIndexedMorph"
+      let mixedRigid = args["mixedRigid"] as? Bool == true
       let isMorph = call.method == "drawMorphed" || indexedMode
       let reuseMesh = args["reuseMesh"] as? Bool == true
       let reuseMorphMesh = args["reuseMorphMesh"] as? Bool == true
@@ -106,7 +107,9 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
             indexedIndices.count % (3 * 4) == 0 &&
             indexedIndices.count <= 25000 * 3 * 4 &&
             payloadBytes <= 12 * 1024 * 1024 &&
-            Self.valid(indexedVertices) && validIndices
+            Self.valid(indexedVertices) &&
+            Self.validIndexedSkin(indexedVertices,mixed: mixedRigid) &&
+            validIndices
         } else {
           meshShapeValid = false
         }
@@ -148,7 +151,8 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
           }
         } == true
       )
-      guard meshShapeValid && weightsValid else {
+      guard meshShapeValid && weightsValid &&
+            (!mixedRigid || (indexedMode && !reuseIndexedMesh)) else {
         result(FlutterError(
           code: "missing_or_invalid_gpu_mesh",
           message: "Morph frame requires valid reusable geometry and weights",
@@ -195,6 +199,47 @@ private final class StkAnatomyGpuSkinnedView: NSObject, FlutterPlatformView {
         }
       }
       return true
+    }
+  }
+
+  /// Native defense in depth: -1 joint sentinel is only legal on an
+  /// explicitly opt-in indexed mixed QA packet, and rigid morphs are zero.
+  private static func validIndexedSkin(_ data: Data, mixed: Bool) -> Bool {
+    guard data.count % (42 * 4) == 0 else { return false }
+    return data.withUnsafeBytes { raw in
+      var rigidCount = 0
+      for vertex in 0..<(data.count / (42 * 4)) {
+        let base = vertex * 42 * 4
+        let sentinel = raw.loadUnaligned(
+          fromByteOffset: base + 6 * 4, as: Float.self)
+        let rigid = mixed && sentinel == -1
+        var sum: Float = 0
+        for j in 0..<4 {
+          let joint = raw.loadUnaligned(
+            fromByteOffset: base + (6 + j) * 4, as: Float.self)
+          let weight = raw.loadUnaligned(
+            fromByteOffset: base + (10 + j) * 4, as: Float.self)
+          if !joint.isFinite || !weight.isFinite ||
+             joint != joint.rounded() || weight < 0 || weight > 1.025 {
+            return false
+          }
+          if rigid {
+            if joint != (j == 0 ? -1 : 0) ||
+               weight != (j == 0 ? 1 : 0) { return false }
+          } else if joint < 0 || joint > 54 { return false }
+          sum += weight
+        }
+        if abs(sum - 1) > 0.025 { return false }
+        if rigid {
+          rigidCount += 1
+          for channel in 18..<42 {
+            let morph = raw.loadUnaligned(
+              fromByteOffset: base + channel * 4, as: Float.self)
+            if morph != 0 { return false }
+          }
+        }
+      }
+      return !mixed || rigidCount >= 3
     }
   }
 
@@ -270,14 +315,18 @@ private final class StkGpuSkinnedMetalRenderer: NSObject, MTKViewDelegate {
     Output shadeSkinned(float3 bindPosition, float3 originalNormal,
         float4 joints, float4 weights, float4 baseColor,
         constant float4x4* bones, constant float4* camera) {
-      uint4 joint = uint4(joints + 0.5);
+      uint4 joint = uint4(max(joints, float4(0.0)) + 0.5);
+      float rigid = joints.x < -0.5 ? 1.0 : 0.0;
       float4x4 skin =
           bones[joint.x] * weights.x +
           bones[joint.y] * weights.y +
           bones[joint.z] * weights.z +
           bones[joint.w] * weights.w;
-      float3 world = (skin * float4(bindPosition, 1.0)).xyz;
-      float3 normal = normalize((skin * float4(originalNormal, 0.0)).xyz);
+      float3 world = mix((skin * float4(bindPosition, 1.0)).xyz,
+                         bindPosition, rigid);
+      float3 normal = normalize(mix(
+        (skin * float4(originalNormal, 0.0)).xyz,
+        originalNormal, rigid));
       float3 ray = world - camera[0].xyz;
       float distance = max(0.6, dot(ray, camera[3].xyz));
       float px = dot(ray, camera[1].xyz) * camera[1].w;

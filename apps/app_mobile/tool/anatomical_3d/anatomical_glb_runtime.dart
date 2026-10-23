@@ -394,7 +394,7 @@ class GlbSkinnedScene {
         throw const FormatException('Missing isolated QA bar/bench geometry');
       }
     }
-    return GlbSkinnedScene._(exercise?exerciseId!:
+    return GlbSkinnedScene._(exercise?exerciseId:
          master?'stk_master_v4:$pattern':staging!.id,
         raw.length,parsedNodes,parents,inverse,joints,channels,instances,
         vertices,triangles,duration);
@@ -444,12 +444,15 @@ class GlbSkinnedScene {
   GlbShaderSkinSource shaderSkinSource(double elapsed,Size size,
       Map<String,Color> theme,{bool dark=true,double orbit=0,
       double elevation=0,double zoom=1,
-      bool includeVertices=true,bool applyMorphs=true}) {
+      bool includeVertices=true,bool applyMorphs=true,
+      bool allowRigidPose=false}) {
     if(!size.width.isFinite||!size.height.isFinite||
        size.width<100||size.height<100||
        !orbit.isFinite||!elevation.isFinite||!zoom.isFinite||
        elevation<-.75||elevation>.85||zoom<.65||zoom>1.6||
-       _jointNodes.length!=55||_instances.length!=1) {
+       _jointNodes.length!=55||
+       (_instances.length!=1&&!allowRigidPose)||
+       (allowRigidPose&&includeVertices)) {
       throw const FormatException('Unsupported master GPU skin preview');
     }
     final world=_world(elapsed);
@@ -463,8 +466,14 @@ class GlbSkinnedScene {
         matrices[i*16+k]=m[k];
       }
     }
-    final center=const V3(0,.88,0);
-    final yaw=.43+orbit,dist=3.9,high=1.72;
+    final exercise=allowRigidPose&&containsRigidEquipment;
+    final bench=exercise&&id=='ex_bench_press';
+    final row=exercise&&id=='ex_barbell_row';
+    final center=bench?const V3(0,.80,-.22):
+        row?const V3(0,.92,.15):const V3(0,.88,0);
+    final yaw=(row ? math.pi+.68 : (bench ? .88 : .43))+orbit;
+    final dist=bench?3.65:row?3.75:3.9;
+    final high=bench?1.50:row?1.55:1.72;
     final radius=math.sqrt(dist*dist+high*high)*zoom;
     final pitch=math.atan2(high,dist)+elevation;
     final eye=center+V3(math.sin(yaw)*math.cos(pitch)*radius,
@@ -546,10 +555,11 @@ class GlbSkinnedScene {
   /// This is QA-only and never changes approved exercise media.
   GlbShaderMorphSource shaderMorphSource(double elapsed,Size size,
       Map<String,Color> theme,{bool dark=true,double orbit=0,
-      double elevation=0,double zoom=1,bool includeMesh=true}) {
+      double elevation=0,double zoom=1,bool includeMesh=true,
+      bool allowRigidPose=false}) {
     final pose=shaderSkinSource(elapsed,size,theme,dark:dark,orbit:orbit,
       elevation:elevation,zoom:zoom,includeVertices:includeMesh,
-      applyMorphs:false);
+      applyMorphs:false,allowRigidPose:allowRigidPose);
     final sampled=_morphAt(elapsed);
     if(sampled.length!=8||sampled.any((v)=>!v.isFinite||v<0||v>1.025)) {
       throw const FormatException('Expected eight safe master morph weights');
@@ -594,16 +604,24 @@ class GlbSkinnedScene {
   /// The 55-bone pose/camera uses the identical shaderSkinSource transform.
   GlbShaderIndexedMorphSource shaderIndexedMorphSource(double elapsed,
       Size size,Map<String,Color> theme,{bool dark=true,double orbit=0,
-      double elevation=0,double zoom=1,bool includeMesh=true}) {
+      double elevation=0,double zoom=1,bool includeMesh=true,
+      bool includeRigid=false}) {
+    if(includeRigid&&!containsRigidEquipment) {
+      throw const FormatException('Mixed GPU preview requires rigid equipment');
+    }
     final pose=shaderMorphSource(elapsed,size,theme,dark:dark,orbit:orbit,
-      elevation:elevation,zoom:zoom,includeMesh:false);
+      elevation:elevation,zoom:zoom,includeMesh:false,
+      allowRigidPose:includeRigid);
     if(!includeMesh) {
       return GlbShaderIndexedMorphSource(Float32List(0),Uint32List(0),
         pose.morphWeights,pose.bones,pose.camera,pose.triangles);
     }
-    if(triangleCount<1||triangleCount>25000||_instances.length!=1) {
+    if(triangleCount<1||triangleCount>25000||
+       (!includeRigid&&_instances.length!=1)||
+       (includeRigid&&_instances.where((i)=>i.skin).length!=1)) {
       throw const FormatException('Indexed master exceeds triangle budget');
     }
+    final world=includeRigid?_world(elapsed):< _Matrix>[];
     const stride=42;
     const byteBudget=12*1024*1024;
     // Bounded typed staging: eliminate the growable List<double>, its
@@ -619,16 +637,21 @@ class GlbSkinnedScene {
     final scratch=Float32List(stride);
     final scratchBits=Uint32List.view(scratch.buffer);
     for(final instance in _instances) {
-      if(!instance.skin) {
+      if(!instance.skin&&!includeRigid) {
         throw const FormatException('Indexed GLB contains rigid geometry');
       }
       for(final prim in instance.primitives) {
-        if(!prim.skinned||prim.joints.length!=prim.positions.length||
-           prim.weights.length!=prim.positions.length||
+        if(prim.skinned!=instance.skin||
            prim.normals.length!=prim.positions.length||
-           prim.morphs.length!=8||
-           prim.morphs.any((m)=>m.length!=prim.positions.length)||
-           prim.indices.length%3!=0) {
+           prim.indices.length%3!=0||
+           (prim.skinned&&(
+             prim.joints.length!=prim.positions.length||
+             prim.weights.length!=prim.positions.length||
+             prim.morphs.length!=8||
+             prim.morphs.any((m)=>m.length!=prim.positions.length)))||
+           (!prim.skinned&&(
+             prim.joints.isNotEmpty||prim.weights.isNotEmpty||
+             prim.morphs.isNotEmpty))) {
           throw const FormatException('Invalid indexed morph primitive');
         }
         final base=theme[prim.material] ??
@@ -640,29 +663,46 @@ class GlbSkinnedScene {
           if(vertex<0||vertex>=prim.positions.length) {
             throw const FormatException('Indexed morph reference exceeds GLB');
           }
-          final p=prim.positions[vertex],n=prim.normals[vertex];
-          final js=prim.joints[vertex],ws=prim.weights[vertex];
-          if(!p.finite||!n.finite||js.length!=4||ws.length!=4||
-             js.any((j)=>j<0||j>=55)||
-             ws.any((w)=>!w.isFinite||w<0||w>1.025)||
-             (ws.reduce((a,b)=>a+b)-1).abs()>.025) {
-            throw const FormatException('Invalid indexed skin influence');
+          var p=prim.positions[vertex],n=prim.normals[vertex];
+          final rigid=!prim.skinned;
+          if(!p.finite||!n.finite) {
+            throw const FormatException('Nonfinite indexed surface');
+          }
+          if(rigid) {
+            // World-space equipment bypasses bone skin and morphing using
+            // sentinel joint -1. Only explicitly marked QA payloads allow it.
+            p=world[instance.node].point(p);
+            n=world[instance.node].direction(n).unit;
+            scratch[6]=-1;scratch[7]=0;scratch[8]=0;scratch[9]=0;
+            scratch[10]=1;scratch[11]=0;scratch[12]=0;scratch[13]=0;
+          } else {
+            final js=prim.joints[vertex],ws=prim.weights[vertex];
+            if(js.length!=4||ws.length!=4||
+               js.any((j)=>j<0||j>=55)||
+               ws.any((w)=>!w.isFinite||w<0||w>1.025)||
+               (ws.reduce((a,b)=>a+b)-1).abs()>.025) {
+              throw const FormatException('Invalid indexed skin influence');
+            }
+            for(var k=0;k<4;k++) {
+              scratch[6+k]=js[k].toDouble();
+              scratch[10+k]=ws[k];
+            }
           }
           scratch[0]=p.x;scratch[1]=p.y;scratch[2]=p.z;
           scratch[3]=n.x;scratch[4]=n.y;scratch[5]=n.z;
-          for(var k=0;k<4;k++) {
-            scratch[6+k]=js[k].toDouble();
-            scratch[10+k]=ws[k];
-          }
           scratch[14]=((rgb>>16)&255)/255;
           scratch[15]=((rgb>>8)&255)/255;
           scratch[16]=(rgb&255)/255;
           scratch[17]=((rgb>>24)&255)/255;
           for(var m=0;m<8;m++) {
-            final d=prim.morphs[m][vertex];
-            if(!d.finite)throw const FormatException('Invalid morph shape');
             final at=18+m*3;
-            scratch[at]=d.x;scratch[at+1]=d.y;scratch[at+2]=d.z;
+            if(rigid) {
+              scratch[at]=0;scratch[at+1]=0;scratch[at+2]=0;
+            } else {
+              final d=prim.morphs[m][vertex];
+              if(!d.finite)throw const FormatException('Invalid morph shape');
+              scratch[at]=d.x;scratch[at+1]=d.y;scratch[at+2]=d.z;
+            }
           }
           if(scratch.any((v)=>!v.isFinite)) {
             throw const FormatException('Nonfinite indexed vertex');
