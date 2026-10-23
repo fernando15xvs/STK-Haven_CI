@@ -24,12 +24,12 @@ void main() {
   setUpAll(() {
     baseline={
       for(final id in _ids) id:GlbSkinnedScene.decodeMasterExercise(
-        File('$_root/'+id+'_v918_contact_mobile_qa.glb')
+        File('$_root/${id}_v918_contact_mobile_qa.glb')
             .readAsBytesSync(),exerciseId:id),
     };
     refined={
       for(final id in _ids) id:GlbSkinnedScene.decodeMasterExercise(
-        File('$_candidate/'+id+'_v920_hand_surface_mobile_qa.glb')
+        File('$_candidate/${id}_v920_hand_surface_mobile_qa.glb')
             .readAsBytesSync(),exerciseId:id),
     };
     Directory('build/cc0_master_v7_flutter_qa')
@@ -47,7 +47,7 @@ void main() {
       expect(after.durationSeconds,closeTo(4,.001));
       for(final dark in [false,true]) {
         for(final accent in _accents) {
-          for(final second in [0.,2.,4.]) {
+          for(final second in [0.0,2.0,4.0]) {
             final f=after.frame(second,size,{
               'STK_REGION_pectoralis_major':accent,
               'STK_REGION_anterior_deltoid':accent,
@@ -90,8 +90,7 @@ void main() {
           final picture=await boundary.toImage(pixelRatio:1);
           final png=await picture.toByteData(format:ui.ImageByteFormat.png);
           expect(png,isNotNull);
-          File('build/cc0_master_v7_flutter_qa/v921_'+id+'_'
-            +(dark?'dark':'light')+'.png')
+          File('build/cc0_master_v7_flutter_qa/v921_${id}_${dark ? "dark" : "light"}.png')
              .writeAsBytesSync(png!.buffer.asUint8List());
           picture.dispose();
         });
