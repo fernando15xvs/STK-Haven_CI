@@ -18,6 +18,7 @@ import exercise_surface_collision_v911 as surface
 import build_master_anatomy_v8 as anatomy913
 import build_master_high_res_v914 as hires914
 import bake_master_detail_v915 as detail915
+import build_torso_contours_v916 as torso916
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -660,6 +661,124 @@ class Master55ExercisePilotTest(unittest.TestCase):
             self.assertLess(measured['mobileBytes'],
                 850*1024 if ex is None else 1400*1024)
         self.assertTrue((output/'normal_bake_v915_report.json').is_file())
+
+
+    def test_v916_three_torso_contours_and_four_exact_55_joint_GLBS(self):
+        # Uses already produced real v9.15 geometry, no fake metadata stubs.
+        stage=self.MASTER/'v8_authoring'/'detail_bake_v915'
+        if not (stage/'stk_master_v915_high_detail_authoring.glb').is_file():
+            self.test_v915_detail_transfer_preserves_exact_motion_and_mobile_mesh()
+        out=stage/'torso_v916'
+        report=torso916.build(
+            stage/'stk_master_v915_high_detail_authoring.glb',
+            stage/'stk_master_v915_mobile_normal_bake_qa.glb',
+            stage,stage,out)
+        self.assertEqual(report['schema'],'stk_anatomy_torso_contours_v916')
+        self.assertEqual(report['catalogCount'],229)
+        self.assertEqual(report['newApproximateTorsoContours'],3)
+        self.assertEqual(report['existingMuscleAtlasGroups'],11)
+        self.assertEqual(report['skeletonJoints'],55)
+        self.assertEqual(report['morphCount'],8)
+        self.assertEqual(report['trianglesAddedToMobile'],0)
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['enabled'])
+        self.assertEqual(len(report['assets']),4)
+        groups=report['geometry']['highVerticesByContour']
+        self.assertEqual(set(groups),set(torso916.ARTIST_GROUPS))
+        for region,min_hits in torso916.MIN_HIGH_HITS.items():
+            self.assertGreaterEqual(groups[region],min_hits)
+        self.assertEqual(report['geometry']['triangleFlips'],0)
+        self.assertLessEqual(
+            report['geometry']['maximumReliefMeters'],
+            torso916.MAX_TORSO_RELIEF_METERS+.000001)
+        for ex in (None,*rig.EXERCISES):
+            basename='stk_master' if ex is None else ex
+            old_hi=rig.GLB((stage/(
+                basename+'_v915_high_detail_authoring.glb')
+                ).read_bytes(),expected_sha=None)
+            old_lo=rig.GLB((stage/(
+                basename+'_v915_mobile_normal_bake_qa.glb')
+                ).read_bytes(),expected_sha=None)
+            hi=rig.GLB((out/(
+                basename+'_v916_torso_high_qa.glb')
+                ).read_bytes(),expected_sha=None)
+            lo=rig.GLB((out/(
+                basename+'_v916_torso_mobile_qa.glb')
+                ).read_bytes(),expected_sha=None)
+            for old,new in ((old_hi,hi),(old_lo,lo)):
+                for field in ('skins','nodes','animations','meshes','materials'):
+                    self.assertEqual(old.doc[field],new.doc[field],
+                        (basename,field))
+                self.assertEqual(new.doc['extras']['torsoContourArtVersion'],916)
+                self.assertEqual(new.doc['extras']['torsoContourGroups'],
+                                 list(torso916.ARTIST_GROUPS))
+                self.assertFalse(new.doc['extras']['approved'])
+                self.assertFalse(new.doc['extras']['enabled'])
+                attrs=old.doc['meshes'][0]['primitives'][0]['attributes']
+                for key in ('JOINTS_0','WEIGHTS_0'):
+                    self.assertEqual(old.accessor(attrs[key]),
+                                     new.accessor(attrs[key]),key)
+                for t in old.doc['meshes'][0]['primitives'][0]['targets']:
+                    self.assertEqual(old.accessor(t['POSITION']),
+                                     new.accessor(t['POSITION']))
+            ah=hi.doc['meshes'][0]['primitives'][0]['attributes']
+            al=lo.doc['meshes'][0]['primitives'][0]['attributes']
+            old_hi_p=old_hi.accessor(ah['POSITION'])
+            new_hi_p=hi.accessor(ah['POSITION'])
+            old_lo_p=old_lo.accessor(al['POSITION'])
+            new_lo_p=lo.accessor(al['POSITION'])
+            self.assertEqual(old_lo_p,new_lo_p)
+            self.assertEqual(len(new_hi_p),19004)
+            self.assertEqual(len(new_lo_p),4727)
+            self.assertLessEqual(max(math.dist(a,b) for a,b in
+                zip(old_hi_p,new_hi_p)),
+                torso916.MAX_TORSO_RELIEF_METERS+.000001)
+            self.assertGreater(sum(math.dist(a,b)>.00002 for a,b in
+                zip(old_hi_p,new_hi_p)),450)
+            modified_normals=sum(math.dist(a,b)>.0006 for a,b in zip(
+                old_lo.accessor(al['NORMAL']),
+                lo.accessor(al['NORMAL'])))
+            self.assertGreater(modified_normals,torso916.MIN_LOW_CHANGED)
+            self.assertTrue(all(abs(torso916.length(n)-1)<.0001
+                for n in lo.accessor(al['NORMAL'])))
+            self.assertEqual(old_hi.doc['meshes'][1:],
+                             hi.doc['meshes'][1:],
+                             'Do not change bench or moving bar geometry')
+            measured=next(v for v in report['assets']
+                          if v['exerciseId']==ex)
+            self.assertGreater(
+                measured['normalTransfer']['changedMobileNormals'],
+                torso916.MIN_LOW_CHANGED)
+            self.assertLessEqual(
+                measured['normalTransfer']['maxNormalDeviationDegrees'],10.02)
+            self.assertTrue(all(n>=12 for n in
+                measured['normalTransfer']['changedNormalsByGroup'].values()))
+            self.assertLess(measured['lowBytes'],
+                850*1024 if ex is None else 1400*1024)
+            self.assertLess(measured['highBytes'],6*1024*1024)
+        self.assertTrue((out/'torso_contours_v916_report.json').is_file())
+
+    def test_v916_bilateral_masks_are_bounded_and_untrusted_is_blocked(self):
+        left=torso916.contour_fields((-.065,1.08,.15),(0,0,1))
+        right=torso916.contour_fields((.065,1.08,.15),(0,0,1))
+        self.assertEqual(left,right)
+        self.assertGreater(left['rectus_abdominis'],.3)
+        self.assertEqual(
+            torso916.contour_fields((0,1.08,-.05),(0,0,-1))[
+                'serratus_anterior'],0)
+        self.assertEqual(
+            torso916.contour_fields((.42,.34,.21),(0,0,1))[
+                'obliquus_externus_abdominis'],0)
+        self.assertRaises(ValueError,torso916.window,.5,.9,.8,.03)
+        self.assertRaises(ValueError,torso916.window,.5,0,1,0)
+        stage=self.MASTER/'v8_authoring'/'detail_bake_v915'
+        if not (stage/'stk_master_v915_high_detail_authoring.glb').exists():
+            self.test_v915_detail_transfer_preserves_exact_motion_and_mobile_mesh()
+        raw=(stage/'stk_master_v915_high_detail_authoring.glb').read_bytes()
+        changed=rig.GLB(raw,expected_sha=None)
+        changed.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            torso916._validate_input(changed,changed)
 
     def test_v915_refuses_invalid_provenance_and_bad_normal_map(self):
         folder=self.MASTER/'v8_authoring'
