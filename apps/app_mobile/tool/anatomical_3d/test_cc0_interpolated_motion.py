@@ -27,6 +27,7 @@ import audit_finger_triangles_v921 as triangles921
 import refine_fingertip_topology_v922 as topology922
 import audit_finger_contact_bounds_v923 as contact923
 import sculpt_palm_thenar_v924 as palm924
+import refine_palm_thumb_web_v925 as web925
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1438,6 +1439,89 @@ class Master55ExercisePilotTest(unittest.TestCase):
         self.assertFalse(report['approved'])
         with self.assertRaises(ValueError):
             palm924.sculpt(output,'ex_squat')
+
+
+    def test_v925_conforming_real_palm_thumb_topology(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922')
+        palm=root/'palm_v924'
+        if not (palm/'ex_squat_v924_palm_thumb_surface_mobile_qa.glb').exists():
+            palm924.build(root,palm)
+        target=palm/'web_v925'
+        report=web925.build(palm,target)
+        self.assertEqual(report['pilotCount'],3)
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['contactIKComplete'])
+        for item in report['pilots']:
+            exercise=item['exerciseId']
+            before=rig.GLB(
+                (palm/(exercise+'_v924_palm_thumb_surface_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            after=rig.GLB(
+                (target/(exercise+'_v925_palm_web_topology_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            self.assertEqual(before.doc['skins'],after.doc['skins'])
+            self.assertEqual(before.doc['nodes'],after.doc['nodes'])
+            self.assertEqual(before.doc['animations'],after.doc['animations'])
+            self.assertEqual(before.doc['materials'],after.doc['materials'])
+            self.assertEqual(after.doc['extras']['palmThumbRetopologyVersion'],925)
+            self.assertFalse(after.doc['extras']['approved'])
+            self.assertFalse(after.doc['extras']['enabled'])
+            self.assertGreater(item['newPalmVertices'],40)
+            self.assertLessEqual(item['newPalmVertices'],web925.MAX_NEW_VERTICES)
+            self.assertEqual(item['resultVertices'],
+                             item['sourceVertices']+item['newPalmVertices'])
+            self.assertGreater(item['resultTriangles'],item['sourceTriangles'])
+            self.assertLessEqual(item['resultTriangles'],
+                                 web925.MAX_TOTAL_TRIANGLES)
+            self.assertLessEqual(item['assetBytes'],web925.MAX_MOBILE_BYTES)
+            for side in ('l','r'):
+                self.assertGreaterEqual(
+                    item['bilateralRegions'][side]['edgeSplits'],
+                    web925.MIN_EDGES_PER_HAND)
+                self.assertGreaterEqual(
+                    item['bilateralRegions'][side]['thenarEdgeSplits'],
+                    web925.MIN_THENAR_EDGES_PER_HAND)
+            x=before.doc['meshes'][0]['primitives'][0]['attributes']
+            y=after.doc['meshes'][0]['primitives'][0]['attributes']
+            self.assertEqual(x,y)
+            for key in ('POSITION','NORMAL','JOINTS_0','WEIGHTS_0'):
+                a=before.accessor(x[key])
+                b=after.accessor(y[key])
+                self.assertEqual(a,b[:len(a)])
+                self.assertEqual(len(b),item['resultVertices'])
+            for previous,updated in zip(
+                    before.doc['meshes'][0]['primitives'],
+                    after.doc['meshes'][0]['primitives']):
+                self.assertEqual(previous['material'],updated['material'])
+                self.assertEqual(previous['targets'],updated['targets'])
+                self.assertEqual(previous['attributes'],updated['attributes'])
+                self.assertGreaterEqual(
+                    len(after.accessor(updated['indices'])),
+                    len(before.accessor(previous['indices'])))
+                for a,b in zip(previous['targets'],updated['targets']):
+                    old=before.accessor(a['POSITION'])
+                    new=after.accessor(b['POSITION'])
+                    self.assertEqual(old,new[:len(old)])
+        self.assertTrue((target/'palm_thumb_topology_v925_report.json').exists())
+
+    def test_v925_refuses_approved_or_double_subdivision(self):
+        folder=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+                'hand_v920'/'topology_v922'/'palm_v924')
+        if not (folder/'ex_squat_v924_palm_thumb_surface_mobile_qa.glb').exists():
+            palm924.build(folder.parent,folder)
+        raw=(folder/'ex_squat_v924_palm_thumb_surface_mobile_qa.glb').read_bytes()
+        forged=rig.GLB(raw,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            web925.retopologize(forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            web925.retopologize(raw,'bogus')
+        output,_=web925.retopologize(raw,'ex_squat')
+        with self.assertRaises(ValueError):
+            web925.retopologize(output,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
