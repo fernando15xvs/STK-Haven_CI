@@ -30,6 +30,7 @@ import sculpt_palm_thenar_v924 as palm924
 import refine_palm_thumb_web_v925 as web925
 import optimize_finger_grip_v926 as grip926
 import audit_grip_temporal_v927 as temporal927
+import stabilize_grip_v928 as stabilize928
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1683,6 +1684,82 @@ class Master55ExercisePilotTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             temporal927.review(old,forged.bytes(),'ex_squat')
 
+
+
+    def test_v928_gate_refuses_regression_or_no_measured_benefit(self):
+        stat={
+            'sampledFrames':241,'regressionFrames':[],
+            'introducedDeep':0,'deepBefore':3,'deepAfter':3,
+            'baselineMeanPositiveGapMeters':.02,
+            'candidateMeanPositiveGapMeters':.019,
+        }
+        self.assertTrue(stabilize928.gate(stat,True)[0])
+        self.assertFalse(stabilize928.gate(stat,False)[0])
+        self.assertFalse(stabilize928.gate(
+            dict(stat,regressionFrames=[22]),True)[0])
+        self.assertFalse(stabilize928.gate(
+            dict(stat,introducedDeep=1),True)[0])
+        self.assertFalse(stabilize928.gate(
+            dict(stat,candidateMeanPositiveGapMeters=.019999),True)[0])
+        with self.assertRaises(ValueError):
+            stabilize928.gate(dict(stat,sampledFrames=3),True)
+        with self.assertRaises(ValueError):
+            stabilize928.gate(dict(stat,baselineMeanPositiveGapMeters=float('nan')),True)
+
+    def test_v928_actual_three_pilot_rollback_preserves_master55(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925')
+        candidate=root/'grip_v926'
+        if not (candidate/'ex_squat_v926_grip_optimized_mobile_qa.glb').exists():
+            grip926.build(root,candidate)
+        target=candidate/'stable_v928'
+        report=stabilize928.build(root,candidate,target)
+        self.assertEqual(report['pilotCount'],3)
+        self.assertTrue(report['all241SamplesNoObservedRegression'])
+        self.assertFalse(report['continuousCollisionCertified'])
+        self.assertFalse(report['approved'])
+        for pilot in report['pilots']:
+            exercise=pilot['exerciseId']
+            original=rig.GLB(
+                (root/(exercise+'_v925_palm_web_topology_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            result=rig.GLB(
+                (target/(exercise+'_v928_grip_stabilized_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            for field in ('nodes','skins','meshes','materials','animations'):
+                self.assertEqual(original.doc[field],result.doc[field])
+            self.assertEqual(result.doc['extras']['gripTemporalRollbackVersion'],928)
+            self.assertFalse(result.doc['extras']['approved'])
+            self.assertFalse(result.doc['extras']['enabled'])
+            self.assertEqual(pilot['final60HzRegressionFrames'],0)
+            self.assertEqual(pilot['finalIntroducedDeepFrames'],0)
+            self.assertEqual(pilot['framesEvaluated'],241)
+            self.assertEqual(pilot['keptTracks']+pilot['revertedTracks'],
+                             pilot['initialChangedTracks'])
+            self.assertEqual(len(pilot['perDigit']),10)
+            self.assertEqual(result.doc['extras']['fingerCorrectedTracks'],
+                             pilot['keptTracks'])
+        self.assertTrue(
+            (target/'grip_temporal_rollback_v928_report.json').is_file())
+
+    def test_v928_refuses_approved_or_fake_exercise(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925')
+        candidate=root/'grip_v926'
+        if not (candidate/'ex_squat_v926_grip_optimized_mobile_qa.glb').exists():
+            grip926.build(root,candidate)
+        original=(root/'ex_squat_v925_palm_web_topology_mobile_qa.glb'
+                  ).read_bytes()
+        modified=(candidate/'ex_squat_v926_grip_optimized_mobile_qa.glb'
+                  ).read_bytes()
+        forged=rig.GLB(modified,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            stabilize928.stabilize(original,forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            stabilize928.stabilize(original,modified,'bogus')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
