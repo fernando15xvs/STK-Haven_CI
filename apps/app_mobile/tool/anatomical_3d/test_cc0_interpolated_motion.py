@@ -29,6 +29,7 @@ import audit_finger_contact_bounds_v923 as contact923
 import sculpt_palm_thenar_v924 as palm924
 import refine_palm_thumb_web_v925 as web925
 import optimize_finger_grip_v926 as grip926
+import audit_grip_temporal_v927 as temporal927
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1618,6 +1619,70 @@ class Master55ExercisePilotTest(unittest.TestCase):
         self.assertFalse(details['approved'])
         with self.assertRaises(ValueError):
             grip926.optimize(candidate,'ex_squat')
+
+
+    def test_v927_signed_regression_classifier_and_60hz_sampling(self):
+        self.assertEqual(temporal927.FPS,60)
+        self.assertEqual(temporal927.FRAMES,241)
+        self.assertFalse(temporal927.regression(.003,.0028))
+        self.assertTrue(temporal927.regression(-.002,-.0028))
+        with self.assertRaises(ValueError):
+            temporal927.regression(float('nan'),0.)
+
+    def test_v927_three_pilots_review_real_skin_241_frames(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925')
+        candidate=root/'grip_v926'
+        if not (candidate/'ex_squat_v926_grip_optimized_mobile_qa.glb').exists():
+            grip926.build(root,candidate)
+        output=candidate/'temporal_v927'
+        summary=temporal927.build(root,candidate,output)
+        self.assertEqual(summary['pilotCount'],3)
+        self.assertEqual(summary['sampledFramesPerExercise'],241)
+        self.assertFalse(summary['continuousCollisionCertified'])
+        self.assertFalse(summary['approved'])
+        for pilot in summary['pilots']:
+            self.assertEqual(pilot['frames'],241)
+            self.assertEqual(pilot['betweenKeyframeSamples'],200)
+            self.assertEqual(len(pilot['fingerResults']),10)
+            self.assertFalse(pilot['contactIKCompleted'])
+            self.assertFalse(pilot['enabled'])
+            for finger in pilot['fingerResults'].values():
+                a=finger['baselineSignedDistanceTraceMeters']
+                b=finger['candidateSignedDistanceTraceMeters']
+                self.assertEqual(len(a),241)
+                self.assertEqual(len(b),241)
+                self.assertEqual(
+                    len(finger['regressionFrames']),
+                    sum(temporal927.regression(x,y)
+                        for x,y in zip(a,b)))
+                self.assertTrue(all(n%6 for n in
+                                    finger['betweenKeyRegressions']))
+                self.assertFalse(finger['approved'])
+        self.assertTrue(
+            (output/'finger_bar_temporal_v927_report.json').is_file())
+
+    def test_v927_rejects_approved_and_unmatched_provenance(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925')
+        folder=root/'grip_v926'
+        if not (folder/'ex_squat_v926_grip_optimized_mobile_qa.glb').exists():
+            grip926.build(root,folder)
+        old=(root/'ex_squat_v925_palm_web_topology_mobile_qa.glb'
+             ).read_bytes()
+        new=(folder/'ex_squat_v926_grip_optimized_mobile_qa.glb'
+             ).read_bytes()
+        with self.assertRaises(ValueError):
+            temporal927.review(old,old,'ex_squat')
+        with self.assertRaises(ValueError):
+            temporal927.review(old,new,'no_exercise')
+        forged=rig.GLB(new,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            temporal927.review(old,forged.bytes(),'ex_squat')
+
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
