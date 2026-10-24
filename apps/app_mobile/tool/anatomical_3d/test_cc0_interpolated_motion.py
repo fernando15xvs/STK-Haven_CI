@@ -26,6 +26,7 @@ import sculpt_finger_pads_v920 as pads920
 import audit_finger_triangles_v921 as triangles921
 import refine_fingertip_topology_v922 as topology922
 import audit_finger_contact_bounds_v923 as contact923
+import sculpt_palm_thenar_v924 as palm924
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1356,6 +1357,87 @@ class Master55ExercisePilotTest(unittest.TestCase):
             contact923.audit(forged.bytes(),'ex_squat')
         with self.assertRaises(ValueError):
             contact923.audit(raw,'fake_exercise')
+
+
+    def test_v924_real_palm_thenar_sculpt_preserves_retopology_and_ik(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/
+              'skin_v919'/'hand_v920'/'topology_v922')
+        if not (root/'ex_squat_v922_fingertip_mesh_mobile_qa.glb').exists():
+            topology922.build(root.parent,root)
+        out=root/'palm_v924'
+        summary=palm924.build(root,out)
+        self.assertEqual(summary['catalogCount'],229)
+        self.assertEqual(summary['rigJoints'],55)
+        self.assertFalse(summary['approved'])
+        self.assertFalse(summary['productionReady'])
+        for pilot in summary['pilots']:
+            exercise=pilot['exerciseId']
+            source=rig.GLB((root/(exercise+'_v922_fingertip_mesh_mobile_qa.glb'))
+                           .read_bytes(), expected_sha=None)
+            target=rig.GLB(
+                (out/(exercise+'_v924_palm_thumb_surface_mobile_qa.glb'))
+                .read_bytes(), expected_sha=None)
+            self.assertEqual(source.doc['skins'],target.doc['skins'])
+            self.assertEqual(source.doc['nodes'],target.doc['nodes'])
+            self.assertEqual(source.doc['animations'],target.doc['animations'])
+            self.assertEqual(source.doc['materials'],target.doc['materials'])
+            self.assertEqual(source.doc['meshes'],target.doc['meshes'])
+            self.assertEqual(source.doc['accessors'],target.doc['accessors'])
+            self.assertEqual(target.doc['extras']['palmThumbSculptVersion'],924)
+            self.assertFalse(target.doc['extras']['approved'])
+            self.assertFalse(target.doc['extras']['enabled'])
+            a=source.doc['meshes'][0]['primitives'][0]['attributes']
+            b=target.doc['meshes'][0]['primitives'][0]['attributes']
+            self.assertEqual(a,b)
+            old_positions=source.accessor(a['POSITION'])
+            new_positions=target.accessor(b['POSITION'])
+            changed=[i for i,(x,y) in enumerate(zip(old_positions,new_positions))
+                     if math.dist(x,y)>0.000005]
+            self.assertGreaterEqual(len(changed),16)
+            self.assertEqual(len(old_positions),len(new_positions))
+            self.assertLessEqual(pilot['maximumDisplacementMeters'],
+                                 palm924.MAX_DISPLACEMENT_METERS+.000001)
+            self.assertGreater(pilot['maximumDisplacementMeters'],0)
+            self.assertGreater(pilot['normalsRecomputedForVertices'],0)
+            for side in ('l','r'):
+                self.assertGreaterEqual(
+                    pilot['bilateralEditedVertices'][side],
+                    palm924.MIN_CHANGED_PER_HAND)
+                self.assertGreaterEqual(
+                    pilot['bilateralThenarVertices'][side],3)
+            for key in ('JOINTS_0','WEIGHTS_0'):
+                self.assertEqual(source.accessor(a[key]),
+                                 target.accessor(b[key]))
+            for sp,tp in zip(source.doc['meshes'][0]['primitives'],
+                             target.doc['meshes'][0]['primitives']):
+                self.assertEqual(source.accessor(sp['indices']),
+                                 target.accessor(tp['indices']))
+                for sm,tm in zip(sp['targets'],tp['targets']):
+                    self.assertEqual(source.accessor(sm['POSITION']),
+                                     target.accessor(tm['POSITION']))
+            self.assertEqual(palm924._oriented(
+                old_positions,new_positions,
+                palm924._triangles(source,len(old_positions))),0)
+        self.assertTrue((out/'palm_thenar_surface_v924_report.json').is_file())
+
+    def test_v924_rejects_approved_and_already_modified_mesh(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/
+              'skin_v919'/'hand_v920'/'topology_v922')
+        if not (root/'ex_squat_v922_fingertip_mesh_mobile_qa.glb').exists():
+            topology922.build(root.parent,root)
+        original=(root/'ex_squat_v922_fingertip_mesh_mobile_qa.glb').read_bytes()
+        denied=rig.GLB(original,expected_sha=None)
+        denied.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            palm924.sculpt(denied.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            palm924.sculpt(original,'not_real')
+        output,report=palm924.sculpt(original,'ex_squat')
+        self.assertFalse(report['approved'])
+        with self.assertRaises(ValueError):
+            palm924.sculpt(output,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
