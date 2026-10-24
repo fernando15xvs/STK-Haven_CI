@@ -31,6 +31,7 @@ import refine_palm_thumb_web_v925 as web925
 import optimize_finger_grip_v926 as grip926
 import audit_grip_temporal_v927 as temporal927
 import stabilize_grip_v928 as stabilize928
+import optimize_two_joint_grip_v929 as twojoint929
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1760,6 +1761,122 @@ class Master55ExercisePilotTest(unittest.TestCase):
             stabilize928.stabilize(original,forged.bytes(),'ex_squat')
         with self.assertRaises(ValueError):
             stabilize928.stabilize(original,modified,'bogus')
+
+
+    def test_v929_two_joint_safety_gate_rejects_bad_60hz_motion(self):
+        stat={
+            'frames':241,'regressionFrames':0,
+            'introducedDeep':0,'deepBefore':5,'deepAfter':5,
+            'gapBefore':.03,'gapAfter':.027,
+        }
+        self.assertTrue(twojoint929.gate(None,stat,True)[0])
+        self.assertFalse(twojoint929.gate(None,stat,False)[0])
+        self.assertFalse(twojoint929.gate(
+            None,dict(stat,regressionFrames=2),True)[0])
+        self.assertFalse(twojoint929.gate(
+            None,dict(stat,introducedDeep=1),True)[0])
+        self.assertFalse(twojoint929.gate(
+            None,dict(stat,deepAfter=6),True)[0])
+        self.assertFalse(twojoint929.gate(
+            None,dict(stat,gapAfter=.029999),True)[0])
+        with self.assertRaises(ValueError):
+            twojoint929.gate(None,dict(stat,frames=121),True)
+        with self.assertRaises(ValueError):
+            twojoint929.gate(
+                None,dict(stat,gapBefore=float('nan')),True)
+
+    def test_v929_real_two_joint_solver_three_unapproved_mobile_pilots(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925')
+        if not (root/'ex_squat_v925_palm_web_topology_mobile_qa.glb').exists():
+            web925.build(root.parent,root)
+        output=root/'two_joint_v929'
+        summary=twojoint929.build(root,output)
+        self.assertEqual(summary['pilotCount'],3)
+        self.assertEqual(summary['maxJointTracksPerFinger'],2)
+        self.assertEqual(summary['sampledFrames'],241)
+        self.assertFalse(summary['approved'])
+        self.assertFalse(summary['fullContactIKComplete'])
+        for pilot in summary['pilots']:
+            exercise=pilot['exerciseId']
+            baseline=rig.GLB(
+                (root/(exercise+'_v925_palm_web_topology_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            output_glb=rig.GLB(
+                (output/(exercise+'_v929_two_joint_grip_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            for name in ('nodes','meshes','skins','materials','animations'):
+                self.assertEqual(baseline.doc[name],output_glb.doc[name])
+            self.assertFalse(output_glb.doc['extras']['approved'])
+            self.assertFalse(output_glb.doc['extras']['enabled'])
+            self.assertEqual(
+                output_glb.doc['extras']['twoJointGripCandidateVersion'],929)
+            self.assertEqual(pilot['sampledFrames'],241)
+            self.assertEqual(len(pilot['jointSearch']),10)
+            self.assertEqual(len(pilot['gateDecisions']),10)
+            self.assertLessEqual(pilot['keptModifiedTracks'],20)
+            self.assertEqual(pilot['keptModifiedTracks']%2,0)
+            self.assertLess(pilot['outputBytes'],
+                            twojoint929.MAX_MOBILE_BYTES+1)
+            self.assertFalse(pilot['anatomicalIKComplete'])
+            for item in pilot['jointSearch'].values():
+                self.assertEqual(item['considered'],12)
+                self.assertLessEqual(len(item['jointNames']),2)
+                self.assertLessEqual(len(item['degrees']),2)
+                self.assertTrue(all(
+                    abs(d)<=twojoint929.MAX_JOINT_DEGREES
+                    for d in item['degrees']))
+            source_parts=baseline.doc['meshes'][0]['primitives']
+            new_parts=output_glb.doc['meshes'][0]['primitives']
+            for p1,p2 in zip(source_parts,new_parts):
+                self.assertEqual(
+                    baseline.accessor(p1['indices']),
+                    output_glb.accessor(p2['indices']))
+                for channel in ('POSITION','NORMAL','JOINTS_0','WEIGHTS_0'):
+                    self.assertEqual(
+                        baseline.accessor(p1['attributes'][channel]),
+                        output_glb.accessor(p2['attributes'][channel]))
+                for m1,m2 in zip(p1['targets'],p2['targets']):
+                    self.assertEqual(
+                        baseline.accessor(m1['POSITION']),
+                        output_glb.accessor(m2['POSITION']))
+            old=surface._samplers(baseline)
+            new=surface._samplers(output_glb)
+            self.assertEqual(old.keys(),new.keys())
+            changed=[key for key in old if old[key]!=new[key]]
+            self.assertEqual(len(changed),pilot['keptModifiedTracks'])
+            self.assertTrue(all(
+                key[1]=='rotation' and any(
+                    key[0]==baseline.by_name[
+                        f'{digit}_0{k}_{side}']
+                    for side in ('l','r')
+                    for digit in ('thumb','index','middle','ring','pinky')
+                    for k in (1,2,3))
+                for key in changed))
+            self.assertTrue(all(
+                old[key][0]==new[key][0] and old[key][-1]==new[key][-1]
+                for key in changed))
+        self.assertTrue((output/'two_joint_grip_v929_report.json').exists())
+
+    def test_v929_refuses_approved_or_double_optimization(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925')
+        if not (root/'ex_squat_v925_palm_web_topology_mobile_qa.glb').exists():
+            web925.build(root.parent,root)
+        source=(root/'ex_squat_v925_palm_web_topology_mobile_qa.glb'
+                ).read_bytes()
+        forged=rig.GLB(source,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            twojoint929.optimize(forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            twojoint929.optimize(source,'invalid_exercise')
+        output,report=twojoint929.optimize(source,'ex_squat')
+        self.assertFalse(report['approved'])
+        with self.assertRaises(ValueError):
+            twojoint929.optimize(output,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
