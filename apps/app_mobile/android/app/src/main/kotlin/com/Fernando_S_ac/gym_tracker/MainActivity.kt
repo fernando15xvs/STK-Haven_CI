@@ -40,6 +40,17 @@ class MainActivity : FlutterActivity(), SensorEventListener {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Disabled-by-default experimental native GPU rasterizer for static
+        // anatomical GLB review. Never instantiated by workout screens.
+        flutterEngine.platformViewsController.registry.registerViewFactory(
+            "stk_haven/anatomy_gpu_static",
+            StkAnatomyGpuReviewFactory(flutterEngine.dartExecutor.binaryMessenger),
+        )
+        // Separate GLES3 shader-skinned pilot, never selected in production.
+        flutterEngine.platformViewsController.registry.registerViewFactory(
+            "stk_haven/anatomy_gpu_skinning",
+            StkAnatomyGpuSkinnedFactory(flutterEngine.dartExecutor.binaryMessenger),
+        )
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
         MethodChannel(
