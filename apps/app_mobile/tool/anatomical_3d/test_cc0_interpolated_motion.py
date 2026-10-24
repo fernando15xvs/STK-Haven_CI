@@ -25,6 +25,7 @@ import review_fingertip_mesh_v919 as skin919
 import sculpt_finger_pads_v920 as pads920
 import audit_finger_triangles_v921 as triangles921
 import refine_fingertip_topology_v922 as topology922
+import audit_finger_contact_bounds_v923 as contact923
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1299,6 +1300,62 @@ class Master55ExercisePilotTest(unittest.TestCase):
         candidate,_=topology922.retopologize(raw,'ex_squat')
         with self.assertRaises(ValueError):
             topology922.retopologize(candidate,'ex_squat')
+
+
+    def test_v923_conservative_bounds_on_real_triangle_surfaces(self):
+        far = contact923.bounded_triangle(
+            (0., .40, .0), (.002, .40, .0), (0., .402, 0.))
+        self.assertEqual(far['classification'], 'separated_at_sampled_pose')
+        self.assertGreater(far['lower'], 0.)
+        crossing = contact923.bounded_triangle(
+            (0., -.06, 0.), (0., .06, 0.), (.008, 0., 0.))
+        self.assertEqual(crossing['classification'], 'sampled_penetration')
+        self.assertLess(crossing['upper'], 0.)
+        self.assertLessEqual(crossing['lower'], crossing['upper'])
+        with self.assertRaises(ValueError):
+            contact923.bounded_triangle(
+                (float('nan'), 0., 0.), (0., 0., 0.), (0., .1, 0.))
+        with self.assertRaises(ValueError):
+            contact923.bounded_triangle(
+                (0., .1, 0.), (0., .2, 0.), (0., .3, 0.), depth=-1)
+
+    def test_v923_bounded_real_finger_contact_remains_qa_only(self):
+        parent=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917'/'contact_v918'/
+                'skin_v919'/'hand_v920')
+        src=parent/'topology_v922'
+        if not (src/'ex_squat_v922_fingertip_mesh_mobile_qa.glb').exists():
+            topology922.build(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                              'torso_v916'/'hand_v917', src)
+        out=src/'contact_bounds_v923'
+        result=contact923.build(src, out)
+        self.assertEqual(result['pilotCount'], 3)
+        self.assertEqual(result['sampledPoseCount'], 9)
+        self.assertFalse(result['continuousTimeCollisionCertified'])
+        self.assertFalse(result['fingerIKSolved'])
+        self.assertFalse(result['approved'])
+        self.assertFalse(result['enabled'])
+        for pilot in result['pilots']:
+            self.assertEqual(pilot['rigJoints'], 55)
+            self.assertEqual(len(pilot['fingerRegions']), 10)
+            self.assertFalse(pilot['contactIKCompleted'])
+            self.assertEqual(pilot['sampledFrames'], list(range(0,121,15)))
+            for finger in pilot['fingerRegions'].values():
+                self.assertGreater(finger['trianglesPerFrame'], 0)
+                self.assertEqual(finger['evaluatedTriangles'],
+                                 9*finger['trianglesPerFrame'])
+                self.assertEqual(
+                    sum(finger[k] for k in (
+                        'sampledPenetrationFrames', 'separatedFrames',
+                        'unresolvedFrames')), 9)
+        self.assertTrue((out/'finger_contact_bounds_v923.json').is_file())
+        raw=(src/'ex_squat_v922_fingertip_mesh_mobile_qa.glb').read_bytes()
+        forged=rig.GLB(raw, expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            contact923.audit(forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            contact923.audit(raw,'fake_exercise')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
