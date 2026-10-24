@@ -28,6 +28,7 @@ import refine_fingertip_topology_v922 as topology922
 import audit_finger_contact_bounds_v923 as contact923
 import sculpt_palm_thenar_v924 as palm924
 import refine_palm_thumb_web_v925 as web925
+import optimize_finger_grip_v926 as grip926
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1522,6 +1523,101 @@ class Master55ExercisePilotTest(unittest.TestCase):
         output,_=web925.retopologize(raw,'ex_squat')
         with self.assertRaises(ValueError):
             web925.retopologize(output,'ex_squat')
+
+
+    def test_v926_finger_rotation_candidate_is_bounded_and_loop_safe(self):
+        self.assertEqual(grip926.envelope(0.),0)
+        self.assertEqual(grip926.envelope(4.),0)
+        self.assertAlmostEqual(grip926.envelope(2.),1.)
+        self.assertAlmostEqual(grip926.envelope(1.),.5)
+        with self.assertRaises(ValueError):
+            grip926.envelope(float('nan'))
+        identity=[(0.,0.,0.,1.) for _ in range(41)]
+        candidate=grip926.corrected_track(identity,3.)
+        self.assertEqual(candidate[0],identity[0])
+        self.assertEqual(candidate[-1],identity[-1])
+        self.assertAlmostEqual(hand917.quaternion_distance_degrees(
+            identity[20],candidate[20]),3.,places=4)
+        with self.assertRaises(ValueError):
+            grip926.corrected_track(identity,5.)
+        with self.assertRaises(ValueError):
+            grip926.corrected_track(identity[:4],1.)
+
+    def test_v926_real_skinned_grip_candidate_does_not_change_rig_or_assets(self):
+        parent=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+                'hand_v920'/'topology_v922'/'palm_v924')
+        web=parent/'web_v925'
+        if not (web/'ex_squat_v925_palm_web_topology_mobile_qa.glb').is_file():
+            web925.build(parent,web)
+        dest=web/'grip_v926'
+        report=grip926.build(web,dest)
+        self.assertEqual(report['pilotCount'],3)
+        self.assertFalse(report['fullContactIKCompleted'])
+        self.assertFalse(report['approved'])
+        for pilot in report['pilots']:
+            exercise=pilot['exerciseId']
+            before=rig.GLB(
+                (web/(exercise+'_v925_palm_web_topology_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            after=rig.GLB(
+                (dest/(exercise+'_v926_grip_optimized_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            for name in ('skins','nodes','meshes','animations','materials'):
+                self.assertEqual(before.doc[name],after.doc[name])
+            self.assertEqual(
+                after.doc['extras']['fingerContactOptimizerVersion'],926)
+            self.assertFalse(after.doc['extras']['approved'])
+            self.assertFalse(after.doc['extras']['enabled'])
+            self.assertEqual(pilot['fingerTracksPreserved'],30)
+            self.assertEqual(pilot['fingersEvaluated'],10)
+            self.assertLessEqual(pilot['editedTracks'],10)
+            self.assertFalse(pilot['fullContactIKCompleted'])
+            self.assertLessEqual(pilot['outputBytes'],grip926.MAX_MOBILE_BYTES)
+            self.assertEqual(len(pilot['fingerReports']),10)
+            for record in pilot['fingerReports'].values():
+                self.assertEqual(record['candidatesConsidered'],12)
+                self.assertEqual(record['sampledFrames'],[10,20,30])
+                if record['accepted']:
+                    self.assertLess(record['candidateScore'],
+                                    record['baselineScore'])
+                    self.assertLessEqual(abs(record['degrees']),
+                                         grip926.MAX_EXTRA_DEGREES)
+                    self.assertGreaterEqual(
+                        record['candidateWorstSignedMeters']+
+                        grip926.MAX_DEEPER_METERS,
+                        record['baselineWorstSignedMeters']-1e-8)
+            for part_b,part_a in zip(before.doc['meshes'][0]['primitives'],
+                                     after.doc['meshes'][0]['primitives']):
+                self.assertEqual(before.accessor(part_b['indices']),
+                                 after.accessor(part_a['indices']))
+                for attribute in ('POSITION','NORMAL','JOINTS_0','WEIGHTS_0'):
+                    self.assertEqual(
+                        before.accessor(part_b['attributes'][attribute]),
+                        after.accessor(part_a['attributes'][attribute]))
+                for x,y in zip(part_b['targets'],part_a['targets']):
+                    self.assertEqual(before.accessor(x['POSITION']),
+                                     after.accessor(y['POSITION']))
+        self.assertTrue((dest/'grip_optimizer_v926_report.json').is_file())
+
+    def test_v926_rejects_non_pilot_and_already_corrected_files(self):
+        folder=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+                'hand_v920'/'topology_v922'/'palm_v924'/'web_v925')
+        if not (folder/'ex_squat_v925_palm_web_topology_mobile_qa.glb').exists():
+            web925.build(folder.parent,folder)
+        raw=(folder/'ex_squat_v925_palm_web_topology_mobile_qa.glb'
+             ).read_bytes()
+        forged=rig.GLB(raw,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            grip926.optimize(forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            grip926.optimize(raw,'bogus')
+        candidate,details=grip926.optimize(raw,'ex_squat')
+        self.assertFalse(details['approved'])
+        with self.assertRaises(ValueError):
+            grip926.optimize(candidate,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
