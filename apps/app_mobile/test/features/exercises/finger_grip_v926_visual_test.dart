@@ -36,7 +36,7 @@ void main() {
       expect(scene.containsRigidEquipment,true);
       for(final dark in [true,false]) {
         for(final accent in _colors) {
-          for(final second in [0.,1.,2.,3.,4.]) {
+          for(final second in [0.0,1.0,2.0,3.0,4.0]) {
             final f=scene.frame(second,size,{
               'STK_REGION_pectoralis_major':accent,
               'STK_REGION_anterior_deltoid':accent,
