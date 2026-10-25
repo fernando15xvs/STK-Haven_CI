@@ -32,6 +32,7 @@ import optimize_finger_grip_v926 as grip926
 import audit_grip_temporal_v927 as temporal927
 import stabilize_grip_v928 as stabilize928
 import optimize_two_joint_grip_v929 as twojoint929
+import sculpt_finger_knuckles_v930 as knuckle930
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1877,6 +1878,88 @@ class Master55ExercisePilotTest(unittest.TestCase):
         self.assertFalse(report['approved'])
         with self.assertRaises(ValueError):
             twojoint929.optimize(output,'ex_squat')
+
+
+    def test_v930_real_knuckle_mesh_sculpt_three_pilots(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925')
+        joints=root/'two_joint_v929'
+        if not (joints/'ex_squat_v929_two_joint_grip_mobile_qa.glb').exists():
+            twojoint929.build(root,joints)
+        dest=joints/'knuckle_v930'
+        report=knuckle930.build(joints,dest)
+        self.assertEqual(report['pilotCount'],3)
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['fullIKComplete'])
+        for item in report['pilots']:
+            exercise=item['exerciseId']
+            original=rig.GLB((joints/(
+                exercise+'_v929_two_joint_grip_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            improved=rig.GLB((dest/(
+                exercise+'_v930_knuckle_volume_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            for key in ('nodes','skins','animations','materials','meshes'):
+                self.assertEqual(original.doc[key],improved.doc[key])
+            self.assertEqual(improved.doc['extras']['fingerKnuckleVolumeVersion'],930)
+            self.assertFalse(improved.doc['extras']['approved'])
+            self.assertFalse(improved.doc['extras']['enabled'])
+            self.assertGreater(item['verticesEdited'],9)
+            self.assertGreaterEqual(item['knuckleGroupsWithEdits'],2)
+            self.assertLessEqual(item['maxDisplacementMeters'],
+                                 knuckle930.MAX_KNUCKLE_DELTA_METERS+.0000002)
+            self.assertLessEqual(item['maxWorsenedSignedDistanceMeters'],
+                                 knuckle930.MAX_CONTACT_DELTA_METERS)
+            self.assertEqual(item['sampledContactFrames'],9)
+            self.assertEqual(item['rigJoints'],55)
+            self.assertEqual(item['morphTargets'],8)
+            self.assertLessEqual(item['assetBytes'],knuckle930.MAX_MOBILE_BYTES)
+            a=original.doc['meshes'][0]['primitives'][0]['attributes']
+            b=improved.doc['meshes'][0]['primitives'][0]['attributes']
+            self.assertEqual(a,b)
+            self.assertEqual(
+                len(original.accessor(a['POSITION'])),
+                len(improved.accessor(b['POSITION'])))
+            self.assertNotEqual(
+                original.accessor(a['POSITION']),
+                improved.accessor(b['POSITION']))
+            self.assertNotEqual(
+                original.accessor(a['NORMAL']),
+                improved.accessor(b['NORMAL']))
+            for key in ('JOINTS_0','WEIGHTS_0'):
+                self.assertEqual(
+                    original.accessor(a[key]),improved.accessor(b[key]))
+            for before,after in zip(
+                    original.doc['meshes'][0]['primitives'],
+                    improved.doc['meshes'][0]['primitives']):
+                self.assertEqual(
+                    original.accessor(before['indices']),
+                    improved.accessor(after['indices']))
+                for ta,tb in zip(before['targets'],after['targets']):
+                    self.assertEqual(
+                        original.accessor(ta['POSITION']),
+                        improved.accessor(tb['POSITION']))
+        self.assertTrue((dest/'knuckle_surface_v930_report.json').is_file())
+
+    def test_v930_refuses_approved_and_already_sculpted_glbs(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925')
+        joints=root/'two_joint_v929'
+        if not (joints/'ex_squat_v929_two_joint_grip_mobile_qa.glb').exists():
+            twojoint929.build(root,joints)
+        input_bytes=(joints/'ex_squat_v929_two_joint_grip_mobile_qa.glb'
+                     ).read_bytes()
+        forged=rig.GLB(input_bytes,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            knuckle930.sculpt(forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            knuckle930.sculpt(input_bytes,'invented_exercise')
+        result,_=knuckle930.sculpt(input_bytes,'ex_squat')
+        with self.assertRaises(ValueError):
+            knuckle930.sculpt(result,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
