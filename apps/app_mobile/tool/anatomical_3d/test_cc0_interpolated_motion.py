@@ -2417,9 +2417,9 @@ class Master55ExercisePilotTest(unittest.TestCase):
         ids=naillod936._lod_indices()
         self.assertEqual(len(ids)//3,56)
         self.assertEqual(set(ids),set(range(30)))
-        self.assertEqual(len(naillod936._subsample(list(range(70)))),30)
+        self.assertEqual(len(naillod936._subsample([(float(i),0.,0.) for i in range(70)])),30)
         with self.assertRaises(ValueError):
-            naillod936._subsample(list(range(69)))
+            naillod936._subsample([(float(i),0.,0.) for i in range(69)])
 
     def test_v936_real_three_animated_pilot_nail_lods(self):
         root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
