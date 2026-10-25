@@ -40,6 +40,7 @@ import nail_plate_skin_proximity_v934 as nailproximity934
 import nail_plate_offsets_v935 as nailoffset935
 import build_nail_medium_lod_v936 as naillod936
 import fit_thumb_nail_skin_v937 as thumb937
+import optimize_left_thumb_nail_v938 as left938
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -2593,6 +2594,102 @@ class Master55ExercisePilotTest(unittest.TestCase):
         if after.exists():
             with self.assertRaises(ValueError):
                 thumb937.fit(after.read_bytes(),'ex_squat')
+
+
+    def test_v938_strict_left_nail_axis_and_contact_gate(self):
+        self.assertAlmostEqual(left938.qaxis((1,0,0),0)[3],1.)
+        with self.assertRaises(ValueError):
+            left938.qaxis((0,0,0),2)
+        with self.assertRaises(ValueError):
+            left938.qaxis((1,0,0),25)
+        with self.assertRaises(ValueError):
+            left938.qaxis((1,0,0),float('nan'))
+        prev={'embedded':2,'detached':100,'maxDistance':.014}
+        self.assertTrue(left938.gate(
+            prev,dict(prev,detached=99))[0])
+        self.assertFalse(left938.gate(
+            prev,dict(prev,embedded=3,detached=99))[0])
+
+    def test_v938_real_left_thumbnail_pose_fit_preserves_right(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933'/'offset_v935')
+        lod=root/'lod_v936'
+        if not (lod/'ex_squat_v936_nail_lod_mobile_qa.glb').exists():
+            naillod936.build(root,lod)
+        thumb=lod/'thumb_fit_v937'
+        if not (thumb/'ex_squat_v937_thumb_nail_fit_mobile_qa.glb').exists():
+            thumb937.build(lod,thumb)
+        out=thumb/'left_thumb_angle_v938'
+        report=left938.build(thumb,lod,out)
+        self.assertEqual(report['pilotCount'],3)
+        self.assertEqual(report['leftThumbsReviewed'],3)
+        self.assertFalse(report['approved'])
+        for row in report['pilots']:
+            eid=row['exerciseId']
+            a=rig.GLB((thumb/(
+                eid+'_v937_thumb_nail_fit_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            b=rig.GLB((out/(
+                eid+'_v938_left_thumb_angle_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            for k in ('skins','meshes','materials','animations'):
+                self.assertEqual(a.doc[k],b.doc[k])
+            self.assertFalse(b.doc['extras']['approved'])
+            self.assertFalse(b.doc['extras']['enabled'])
+            self.assertEqual(b.doc['extras'][
+                'leftThumbPlateContourFitVersion'],938)
+            self.assertEqual(row['fullSampledFrames'],241)
+            self.assertEqual(row['coarseSampledFrames'],9)
+            self.assertLessEqual(row['fullCandidatesChecked'],
+                                 left938.MAX_FULL_REVIEWS)
+            self.assertTrue(row['rightThumbV937Preserved'])
+            changed=a.by_name['STK_NAIL_PLATE_thumb_l']
+            for index,old in enumerate(a.doc['nodes']):
+                new=dict(b.doc['nodes'][index])
+                if index==changed:
+                    new['rotation']=old['rotation']
+                    new['translation']=old['translation']
+                self.assertEqual(new,old)
+            if row['leftThumbAdjusted']:
+                self.assertTrue(left938.gate(
+                    row['baseline'],row['final'])[0])
+                self.assertLessEqual(abs(row['leftThumbTiltDegrees']),18)
+                self.assertLessEqual(math.dist((0,0,0),
+                     row['leftThumbTranslationMeters']),.0120001)
+            else:
+                self.assertEqual(row['baseline'],row['final'])
+            self.assertLessEqual(row['outputBytes'],
+                                 left938.MAX_MOBILE_BYTES)
+        self.assertTrue((out/'left_thumb_angle_v938_report.json').is_file())
+
+    def test_v938_rejects_approved_and_second_processing(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933'/'offset_v935')
+        lod=root/'lod_v936'
+        if not (lod/'ex_squat_v936_nail_lod_mobile_qa.glb').exists():
+            naillod936.build(root,lod)
+        thumb=lod/'thumb_fit_v937'
+        if not (thumb/'ex_squat_v937_thumb_nail_fit_mobile_qa.glb').exists():
+            thumb937.build(lod,thumb)
+        raw=(thumb/'ex_squat_v937_thumb_nail_fit_mobile_qa.glb'
+             ).read_bytes()
+        neutral=(lod/'ex_squat_v936_nail_lod_mobile_qa.glb').read_bytes()
+        fake=rig.GLB(raw,expected_sha=None)
+        fake.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            left938.fit(fake.bytes(),neutral,'ex_squat')
+        with self.assertRaises(ValueError):
+            left938.fit(raw,neutral,'invented_exercise')
+        out=thumb/'left_thumb_angle_v938'/'ex_squat_v938_left_thumb_angle_mobile_qa.glb'
+        if out.exists():
+            with self.assertRaises(ValueError):
+                left938.fit(out.read_bytes(),neutral,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
