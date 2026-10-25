@@ -41,6 +41,7 @@ import nail_plate_offsets_v935 as nailoffset935
 import build_nail_medium_lod_v936 as naillod936
 import fit_thumb_nail_skin_v937 as thumb937
 import optimize_left_thumb_nail_v938 as left938
+import add_nail_cuticle_folds_v939 as cuticle939
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -2690,6 +2691,86 @@ class Master55ExercisePilotTest(unittest.TestCase):
         if out.exists():
             with self.assertRaises(ValueError):
                 left938.fit(out.read_bytes(),neutral,'ex_squat')
+
+
+    def test_v939_real_10_3d_uv_skin_cuticles_in_glb(self):
+        base=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933'/'offset_v935'/
+              'lod_v936'/'thumb_fit_v937')
+        source=base/'left_thumb_angle_v938'
+        if not (source/'ex_squat_v938_left_thumb_angle_mobile_qa.glb').exists():
+            left938.build(base,base.parent,source)
+        out=source/'cuticles_v939'
+        report=cuticle939.build(source,out)
+        self.assertEqual(report['pilotCount'],3)
+        self.assertEqual(report['totalExperimentalCuticleMeshes'],30)
+        self.assertFalse(report['approved'])
+        for item in report['pilots']:
+            eid=item['exerciseId']
+            before=rig.GLB((source/(eid+
+                '_v938_left_thumb_angle_mobile_qa.glb')).read_bytes(),
+                expected_sha=None)
+            after=rig.GLB((out/(eid+
+                '_v939_cuticle_fold_mobile_qa.glb')).read_bytes(),
+                expected_sha=None)
+            self.assertEqual(item['cuticleFoldMeshes'],10)
+            self.assertEqual(item['cuticleVerticesAdded'],400)
+            self.assertEqual(item['cuticleTrianglesAdded'],760)
+            self.assertTrue(item['animationInheritedFromNailNodes'])
+            self.assertLessEqual(item['bytes'],cuticle939.MAX_MOBILE_BYTES)
+            for key in ('skins','animations'):
+                self.assertEqual(before.doc[key],after.doc[key])
+            self.assertEqual(after.doc['extras']['cuticleFoldGeometryVersion'],939)
+            self.assertFalse(after.doc['extras']['approved'])
+            self.assertFalse(after.doc['extras']['enabled'])
+            self.assertEqual(after.doc['meshes'][:len(before.doc['meshes'])],
+                             before.doc['meshes'])
+            self.assertEqual(len(after.doc['nodes']),
+                             len(before.doc['nodes'])+10)
+            for part in item['folds']:
+                self.assertTrue(part['sealedMesh'])
+                self.assertTrue(part['UV0Complete'])
+                self.assertLessEqual(
+                    part['maxFoldToNailVertexDistanceMeters'],
+                    cuticle939.MAX_FOLD_VERTEX_GAP_METERS)
+                child=after.doc['nodes'][part['cuticleNode']]
+                parent=after.doc['nodes'][part['parentNailNode']]
+                self.assertIn(part['cuticleNode'],parent['children'])
+                self.assertEqual(child['name'],
+                    'STK_CUTICLE_FOLD_'+part['digit']+'_'+part['side'])
+                p=after.doc['meshes'][part['mesh']]['primitives'][0]
+                attr=p['attributes']
+                self.assertEqual(len(after.accessor(attr['POSITION'])),40)
+                self.assertEqual(len(after.accessor(attr['NORMAL'])),40)
+                uv=after.accessor(attr['TEXCOORD_0'])
+                self.assertEqual(len(uv),40)
+                self.assertTrue(all(0<=x<=1 for row in uv for x in row))
+                self.assertEqual(len(after.accessor(p['indices']))//3,76)
+        self.assertTrue((out/'cuticle_folds_v939_report.json').exists())
+
+    def test_v939_rejects_double_cuticles_and_approved_inputs(self):
+        base=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933'/'offset_v935'/
+              'lod_v936'/'thumb_fit_v937')
+        src=base/'left_thumb_angle_v938'
+        if not (src/'ex_squat_v938_left_thumb_angle_mobile_qa.glb').exists():
+            left938.build(base,base.parent,src)
+        raw=(src/'ex_squat_v938_left_thumb_angle_mobile_qa.glb').read_bytes()
+        forged=rig.GLB(raw,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            cuticle939.attach(forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            cuticle939.attach(raw,'fake_exercise')
+        derived,_=cuticle939.attach(raw,'ex_squat')
+        with self.assertRaises(ValueError):
+            cuticle939.attach(derived,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
