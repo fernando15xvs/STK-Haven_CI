@@ -307,6 +307,9 @@ jobs:
       - name: Validate v9.44 pixel visibility evidence schema
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_pixel_visibility_v944.py'
+      - name: Validate v9.45 focus camera evidence format
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_focus_v945.py'
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
@@ -316,6 +319,12 @@ jobs:
           python3 tool/anatomical_3d/check_pixel_visibility_v944.py
           --input build/cc0_master_v7_flutter_qa/pixel_visibility_v944_report.json
           --output build/cc0_master_v7_flutter_qa/pixel_visibility_v944_summary.json
+      - name: Validate real Flutter v9.45 anatomical focus captures
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/check_focus_v945.py
+          --input build/cc0_master_v7_flutter_qa/focus_v945_report.json
+          --output build/cc0_master_v7_flutter_qa/focus_v945_summary.json
       - name: Render 192 GLB video frames using Flutter QA
         working-directory: apps/app_mobile
         run: flutter test --dart-define=STK_CAPTURE_VIDEO_PILOTS=true test/features/exercises/anatomical_video_capture_test.dart
