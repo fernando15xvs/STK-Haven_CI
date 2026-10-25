@@ -33,6 +33,7 @@ import audit_grip_temporal_v927 as temporal927
 import stabilize_grip_v928 as stabilize928
 import optimize_two_joint_grip_v929 as twojoint929
 import sculpt_finger_knuckles_v930 as knuckle930
+import sculpt_finger_folds_v931 as fold931
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -1960,6 +1961,105 @@ class Master55ExercisePilotTest(unittest.TestCase):
         result,_=knuckle930.sculpt(input_bytes,'ex_squat')
         with self.assertRaises(ValueError):
             knuckle930.sculpt(result,'ex_squat')
+
+
+    def test_v931_joint_skin_fold_bounded_profile_and_invalid_inputs(self):
+        self.assertEqual(fold931.FRAME_COUNT,241)
+        self.assertLessEqual(abs(fold931.fold_profile(0.,.009,.03)),
+                             fold931.MAX_FOLD_METERS)
+        self.assertNotEqual(fold931.fold_profile(0.,.009,.03),0.)
+        with self.assertRaises(ValueError):
+            fold931.fold_profile(0.,-1.,.03)
+        with self.assertRaises(ValueError):
+            fold931.fold_profile(float('inf'),.01,.03)
+
+    def test_v931_real_three_pilot_fold_surface_and_60hz_contact(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929')
+        knuckles=root/'knuckle_v930'
+        if not (knuckles/'ex_squat_v930_knuckle_volume_mobile_qa.glb').exists():
+            knuckle930.build(root,knuckles)
+        folder=knuckles/'fold_v931'
+        report=fold931.build(knuckles,folder)
+        self.assertEqual(report['pilotCount'],3)
+        self.assertEqual(report['framesAt60Hz'],241)
+        self.assertFalse(report['approved'])
+        self.assertFalse(report['triangleContinuousCollisionCertified'])
+        self.assertEqual(report['acceptedFoldPilots']+
+                         report['fallbackPilots'],3)
+        for pilot in report['pilots']:
+            eid=pilot['exerciseId']
+            base=rig.GLB((knuckles/(
+                eid+'_v930_knuckle_volume_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            model=rig.GLB((folder/(
+                eid+'_v931_finger_fold_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            for field in ('skins','nodes','animations','meshes','materials'):
+                self.assertEqual(base.doc[field],model.doc[field])
+            self.assertEqual(model.doc['extras']['fingerFoldSculptVersion'],931)
+            self.assertFalse(model.doc['extras']['enabled'])
+            self.assertFalse(model.doc['extras']['approved'])
+            self.assertEqual(pilot['skinJointCount'],55)
+            self.assertEqual(pilot['morphTargets'],8)
+            self.assertEqual(pilot['unchangedFingerTracks'],30)
+            self.assertGreaterEqual(pilot['candidateFoldVertices'],12)
+            self.assertGreaterEqual(
+                sum(bool(v) for v in
+                    pilot['bilateralCandidateGroups'].values()),2)
+            self.assertLessEqual(
+                pilot['actualMaxDeltaMeters'],
+                fold931.MAX_FOLD_METERS+.0000001)
+            self.assertLessEqual(pilot['outputBytes'],fold931.MAX_MOBILE_BYTES)
+            aa=base.doc['meshes'][0]['primitives'][0]['attributes']
+            ab=model.doc['meshes'][0]['primitives'][0]['attributes']
+            for field in ('JOINTS_0','WEIGHTS_0'):
+                self.assertEqual(base.accessor(aa[field]),
+                                 model.accessor(ab[field]))
+            for prior,new in zip(base.doc['meshes'][0]['primitives'],
+                                 model.doc['meshes'][0]['primitives']):
+                self.assertEqual(
+                    base.accessor(prior['indices']),
+                    model.accessor(new['indices']))
+                for before,after in zip(prior['targets'],new['targets']):
+                    self.assertEqual(
+                        base.accessor(before['POSITION']),
+                        model.accessor(after['POSITION']))
+            observed=pilot['contactAudit60Hz']
+            self.assertEqual(observed['samplesPerClip'],241)
+            self.assertFalse(observed['continuousCollisionCertified'])
+            if pilot['accepted']:
+                self.assertGreater(pilot['editedFoldVertices'],9)
+                self.assertNotEqual(base.accessor(aa['POSITION']),
+                                    model.accessor(ab['POSITION']))
+                self.assertTrue(observed['passesSampledContactGuards'])
+            else:
+                self.assertEqual(base.accessor(aa['POSITION']),
+                                 model.accessor(ab['POSITION']))
+                self.assertEqual(pilot['editedFoldVertices'],0)
+        self.assertTrue((folder/'finger_fold_surface_v931_report.json').exists())
+
+    def test_v931_rejects_approved_or_repeated_sculpt(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929')
+        parent=root/'knuckle_v930'
+        if not (parent/'ex_squat_v930_knuckle_volume_mobile_qa.glb').exists():
+            knuckle930.build(root,parent)
+        original=(parent/'ex_squat_v930_knuckle_volume_mobile_qa.glb'
+                  ).read_bytes()
+        forged=rig.GLB(original,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            fold931.sculpt(forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            fold931.sculpt(original,'invalid_exercise')
+        candidate,_=fold931.sculpt(original,'ex_squat')
+        with self.assertRaises(ValueError):
+            fold931.sculpt(candidate,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
