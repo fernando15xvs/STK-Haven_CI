@@ -42,6 +42,7 @@ import build_nail_medium_lod_v936 as naillod936
 import fit_thumb_nail_skin_v937 as thumb937
 import optimize_left_thumb_nail_v938 as left938
 import add_nail_cuticle_folds_v939 as cuticle939
+import sculpt_lower_leg_anatomy_v940 as calf940
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -2771,6 +2772,101 @@ class Master55ExercisePilotTest(unittest.TestCase):
         derived,_=cuticle939.attach(raw,'ex_squat')
         with self.assertRaises(ValueError):
             cuticle939.attach(derived,'ex_squat')
+
+
+    def test_v940_bilateral_calf_profile_is_real_body_geometry(self):
+        self.assertEqual(calf940.HEADS,(
+            'gastrocnemius_medialis',
+            'gastrocnemius_lateralis','soleus'))
+        normal,out=calf940._cap_normals(
+            [(0,0,1.)],[(0,1.,0)], [True])
+        self.assertLessEqual(out,calf940.MAX_NORMAL_CHANGE_DEGREES+.001)
+        self.assertAlmostEqual(math.dist((0,0,0),normal[0]),1.,places=5)
+        unaffected,out=calf940._cap_normals(
+            [(0,0,1.)],[(0,1.,0)], [False])
+        self.assertEqual(unaffected[0],(0,0,1.))
+
+    def test_v940_real_skinned_gastrocnemius_soleus_three_pilots(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933'/'offset_v935'/
+              'lod_v936'/'thumb_fit_v937'/'left_thumb_angle_v938')
+        cuticles=root/'cuticles_v939'
+        if not (cuticles/'ex_squat_v939_cuticle_fold_mobile_qa.glb').exists():
+            cuticle939.build(root,cuticles)
+        out=cuticles/'lower_leg_v940'
+        result=calf940.build(cuticles,out)
+        self.assertEqual(result['pilotCount'],3)
+        self.assertEqual(result['calfContourFieldsPerSide'],3)
+        self.assertFalse(result['approved'])
+        for rec in result['pilots']:
+            eid=rec['exerciseId']
+            raw=(cuticles/(eid+'_v939_cuticle_fold_mobile_qa.glb')).read_bytes()
+            original=rig.GLB(raw,expected_sha=None)
+            changed=rig.GLB((out/(
+                eid+'_v940_lower_leg_anatomy_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            for field in ('skins','nodes','meshes','materials','animations'):
+                self.assertEqual(original.doc[field],changed.doc[field])
+            self.assertEqual(changed.doc['extras']['lowerLegContourVersion'],940)
+            self.assertFalse(changed.doc['extras']['approved'])
+            self.assertFalse(changed.doc['extras']['enabled'])
+            self.assertEqual(rec['jointCount'],55)
+            self.assertEqual(rec['morphTargets'],8)
+            self.assertGreater(rec['editedSkinnedBodyVertices'],0)
+            self.assertLessEqual(
+                rec['maxBodyDisplacementMeters'],
+                calf940.MAX_CONTACT_SKIN_DISPLACEMENT_METERS+.000001)
+            self.assertLessEqual(rec['maxBodyNormalChangeDegrees'],
+                                 calf940.MAX_NORMAL_CHANGE_DEGREES+.001)
+            self.assertEqual(rec['trianglesFlipped'],0)
+            self.assertLessEqual(rec['bytes'],calf940.MAX_MOBILE_BYTES)
+            a=original.doc['meshes'][0]['primitives'][0]['attributes']
+            b=changed.doc['meshes'][0]['primitives'][0]['attributes']
+            before=original.accessor(a['POSITION'])
+            after=changed.accessor(b['POSITION'])
+            self.assertEqual(len(before),len(after))
+            self.assertTrue(any(
+                math.dist(p,q)>.00000005 for p,q in zip(before,after)))
+            for part_a,part_b in zip(
+                    original.doc['meshes'][0]['primitives'],
+                    changed.doc['meshes'][0]['primitives']):
+                self.assertEqual(part_a,part_b)
+            self.assertEqual(
+                original.accessor(a['JOINTS_0']),
+                changed.accessor(b['JOINTS_0']))
+            self.assertEqual(
+                original.accessor(a['WEIGHTS_0']),
+                changed.accessor(b['WEIGHTS_0']))
+            for x,y in zip(original.doc['meshes'][0]['primitives'][0]['targets'],
+                           changed.doc['meshes'][0]['primitives'][0]['targets']):
+                self.assertEqual(original.accessor(x['POSITION']),
+                                 changed.accessor(y['POSITION']))
+        self.assertTrue(
+            (out/'lower_leg_contours_v940_report.json').is_file())
+
+    def test_v940_rejects_approved_or_repeated_anatomy_sculpt(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933'/'offset_v935'/
+              'lod_v936'/'thumb_fit_v937'/'left_thumb_angle_v938')
+        cuticles=root/'cuticles_v939'
+        if not (cuticles/'ex_squat_v939_cuticle_fold_mobile_qa.glb').exists():
+            cuticle939.build(root,cuticles)
+        raw=(cuticles/'ex_squat_v939_cuticle_fold_mobile_qa.glb').read_bytes()
+        forged=rig.GLB(raw,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            calf940.sculpt(forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            calf940.sculpt(raw,'not_in_catalog')
+        derived,_=calf940.sculpt(raw,'ex_squat')
+        with self.assertRaises(ValueError):
+            calf940.sculpt(derived,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
