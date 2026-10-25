@@ -37,6 +37,7 @@ import sculpt_finger_folds_v931 as fold931
 import sculpt_nail_beds_v932 as nail932
 import build_rig_nail_plates_v933 as nail933
 import nail_plate_skin_proximity_v934 as nailproximity934
+import nail_plate_offsets_v935 as nailoffset935
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -2319,6 +2320,96 @@ class Master55ExercisePilotTest(unittest.TestCase):
             nailproximity934.review(forged.bytes(),'ex_squat')
         with self.assertRaises(ValueError):
             nailproximity934.review(raw,'not_an_exercise')
+
+
+    def test_v935_contact_guard_fails_closed(self):
+        base={
+            'possibleEmbeddedVertexSamples':3,
+            'possiblyDetachedVertexSamples':8,
+            'largestObservedSeparationMeters':.010,
+        }
+        self.assertTrue(nailoffset935.risk_gate(base,dict(
+            base,possibleEmbeddedVertexSamples=2))[0])
+        self.assertFalse(nailoffset935.risk_gate(base,base)[0])
+        self.assertFalse(nailoffset935.risk_gate(base,dict(
+            base,possiblyDetachedVertexSamples=9))[0])
+        self.assertFalse(nailoffset935.risk_gate(base,dict(
+            base,possibleEmbeddedVertexSamples=4))[0])
+        self.assertFalse(nailoffset935.risk_gate(base,dict(
+            base,possibleEmbeddedVertexSamples=2,
+            largestObservedSeparationMeters=.011))[0])
+        with self.assertRaises(ValueError):
+            nailoffset935.risk_gate(base,dict(base,
+                 largestObservedSeparationMeters=float('nan')))
+
+    def test_v935_actual_nail_offset_search_three_mobile_pilots(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932')
+        nails=root/'nail_plates_v933'
+        if not (nails/'ex_squat_v933_rig_nail_plates_mobile_qa.glb').exists():
+            nail933.build(root,nails)
+        target=nails/'offset_v935'
+        report=nailoffset935.build(nails,target)
+        self.assertEqual(report['pilotCount'],3)
+        self.assertFalse(report['approved'])
+        self.assertEqual(report['verifiedFramesPerClip'],241)
+        for item in report['pilots']:
+            ex=item['exerciseId']
+            before=rig.GLB((nails/(ex+
+               '_v933_rig_nail_plates_mobile_qa.glb')).read_bytes(),
+               expected_sha=None)
+            after=rig.GLB((target/(ex+
+               '_v935_nail_contact_offset_mobile_qa.glb')).read_bytes(),
+               expected_sha=None)
+            for key in ('nodes','skins','meshes','animations','materials'):
+                self.assertEqual(before.doc[key],after.doc[key])
+            self.assertEqual(
+                after.doc['extras']['nailContactOffsetOptimizerVersion'],935)
+            self.assertEqual(item['nailPlatesReviewed'],10)
+            self.assertEqual(item['fullGateFrames'],241)
+            self.assertEqual(item['searchFrames'],9)
+            self.assertLessEqual(item['offsetsKept'],10)
+            self.assertLessEqual(item['assetBytes'],
+                                 nailoffset935.MAX_MOBILE_BYTES)
+            self.assertFalse(after.doc['extras']['approved'])
+            self.assertFalse(after.doc['extras']['enabled'])
+            for name,offset in item['selectedMeters'].items():
+                self.assertIn(name,item['candidateSearch'])
+                self.assertLessEqual(abs(offset),.0005)
+                before_skin=item['before60Hz'][name]
+                after_skin=item['after60Hz'][name]
+                self.assertLessEqual(after_skin['embedded'],
+                                     before_skin['embedded'])
+                self.assertLessEqual(after_skin['detached'],
+                                     before_skin['detached'])
+            self.assertEqual(item['offsetsKept'],
+                             len(item['selectedMeters']))
+        self.assertTrue((target/'nail_offsets_v935_report.json').is_file())
+
+    def test_v935_rejects_approved_reprocessing(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933')
+        if not (root/'ex_squat_v933_rig_nail_plates_mobile_qa.glb').exists():
+            nail933.build(root.parent,root)
+        raw=(root/'ex_squat_v933_rig_nail_plates_mobile_qa.glb').read_bytes()
+        forged=rig.GLB(raw,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            nailoffset935.optimize(forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            nailoffset935.optimize(raw,'wrong_exercise')
+        # The optimizer cannot authorize QA output as a subsequent input.
+        candidate=(root/'offset_v935'/
+                   'ex_squat_v935_nail_contact_offset_mobile_qa.glb')
+        if candidate.exists():
+            with self.assertRaises(ValueError):
+                nailoffset935.optimize(candidate.read_bytes(),'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
