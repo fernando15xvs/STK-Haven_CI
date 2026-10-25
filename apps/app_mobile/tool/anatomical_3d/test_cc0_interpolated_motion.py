@@ -36,6 +36,7 @@ import sculpt_finger_knuckles_v930 as knuckle930
 import sculpt_finger_folds_v931 as fold931
 import sculpt_nail_beds_v932 as nail932
 import build_rig_nail_plates_v933 as nail933
+import nail_plate_skin_proximity_v934 as nailproximity934
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -2239,6 +2240,85 @@ class Master55ExercisePilotTest(unittest.TestCase):
         result,_=nail933.build_one(raw,'ex_squat')
         with self.assertRaises(ValueError):
             nail933.build_one(result,'ex_squat')
+
+
+    def test_v934_real_triangle_closest_point_and_degeneracy(self):
+        a=(0.,0.,0.)
+        b=(1.,0.,0.)
+        c=(0.,1.,0.)
+        q=nailproximity934.closest_triangle((.25,.25,.002),a,b,c)
+        self.assertAlmostEqual(q[0],.25,places=6)
+        self.assertAlmostEqual(q[1],.25,places=6)
+        self.assertAlmostEqual(q[2],0.,places=6)
+        self.assertEqual(
+            nailproximity934.closest_triangle((-.5,-.5,0.),a,b,c),a)
+        self.assertEqual(
+            nailproximity934.closest_triangle((.6,.6,0.),a,b,c),
+            (.5,.5,0.))
+
+    def test_v934_actual_ten_nails_against_skinned_triangles_60hz(self):
+        source=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+                'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+                'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+                'nail_bed_v932')
+        nails=source/'nail_plates_v933'
+        if not (nails/'ex_squat_v933_rig_nail_plates_mobile_qa.glb').exists():
+            nail933.build(source,nails)
+        target=nails/'proximity_v934'
+        report=nailproximity934.build(nails,target)
+        self.assertEqual(report['pilotCount'],3)
+        self.assertEqual(report['nailsAudited'],30)
+        self.assertEqual(report['totalSurfaceProbeSamples'],3*241*10*9)
+        self.assertTrue(report['noContinuousTriangleCCD'])
+        self.assertFalse(report['approved'])
+        for item in report['pilots']:
+            self.assertEqual(item['pilotNailPlates'],10)
+            self.assertEqual(item['sampledFrames'],241)
+            self.assertEqual(item['sampleRateHz'],60)
+            self.assertFalse(item['allSampledSurfacesPerfect'])
+            self.assertFalse(item['continuousCollisionCertified'])
+            self.assertTrue(item['reviewRequired'])
+            self.assertEqual(item['nailSurfaceSamples'],241*90)
+            self.assertEqual(len(item['digits']),10)
+            for digit in item['digits'].values():
+                self.assertEqual(digit['sampledPoses'],241)
+                self.assertEqual(
+                    digit['closestDistancesEvaluated'],241*9)
+                self.assertGreaterEqual(
+                    digit['selectedSkinnedTriangles'],3)
+                self.assertLessEqual(
+                    digit['selectedSkinnedTriangles'],
+                    nailproximity934.MAX_FACES_PER_FINGER)
+                self.assertTrue(math.isfinite(
+                    digit['minimumUnsignedDistanceMeters']))
+                self.assertLessEqual(
+                    digit['minimumUnsignedDistanceMeters'],
+                    digit['largestObservedSeparationMeters'])
+                self.assertGreaterEqual(
+                    digit['possibleEmbeddedVertexSamples'],0)
+                self.assertGreaterEqual(
+                    digit['possiblyDetachedVertexSamples'],0)
+        self.assertTrue(
+            (target/'nail_plate_skin_proximity_v934_report.json').exists())
+
+    def test_v934_rejects_wrong_provenance(self):
+        source=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+                'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+                'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+                'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+                'nail_bed_v932')
+        nails=source/'nail_plates_v933'
+        if not (nails/'ex_squat_v933_rig_nail_plates_mobile_qa.glb').exists():
+            nail933.build(source,nails)
+        raw=(nails/'ex_squat_v933_rig_nail_plates_mobile_qa.glb'
+             ).read_bytes()
+        forged=rig.GLB(raw,expected_sha=None)
+        forged.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            nailproximity934.review(forged.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            nailproximity934.review(raw,'not_an_exercise')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
