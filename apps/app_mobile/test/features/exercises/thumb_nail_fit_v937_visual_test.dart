@@ -65,7 +65,7 @@ void main() {
           'STK_REGION_quadriceps_femoris':const Color(0xFF2962FF),
         },dark:dark,poseNormals:true,depthSlices:6,zoom:1.2);
         await tester.pumpWidget(MaterialApp(home:Scaffold(body:Center(
-          child:RepaintBoundary(key:const Key('v936_capture'),
+          child:RepaintBoundary(key:const Key('v937_capture'),
             child:SizedBox(width:360,height:360,child:CustomPaint(
               painter:GlbSkinnedPainter(frame,dark
                   ?const Color(0xFF111722):const Color(0xFFF2F5F8)),
@@ -75,11 +75,11 @@ void main() {
         await tester.pump();
         await tester.runAsync(() async {
           final boundary=tester.renderObject<RenderRepaintBoundary>(
-              find.byKey(const Key('v936_capture')));
+              find.byKey(const Key('v937_capture')));
           final image=await boundary.toImage(pixelRatio:1);
           final bytes=await image.toByteData(format:ui.ImageByteFormat.png);
           expect(bytes,isNotNull);
-          File('build/cc0_master_v7_flutter_qa/v936_'+id+'_'
+          File('build/cc0_master_v7_flutter_qa/v937_'+id+'_'
               +(dark?'dark':'light')+'.png')
               .writeAsBytesSync(bytes!.buffer.asUint8List());
           image.dispose();
