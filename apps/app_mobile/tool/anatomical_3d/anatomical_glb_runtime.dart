@@ -169,6 +169,8 @@ class GlbSkinnedScene {
     final nodes=(doc['nodes'] as List).cast<Map<String,dynamic>>();
     final meshDefs=(doc['meshes'] as List).cast<Map<String,dynamic>>();
     final materials=(doc['materials'] as List).cast<Map<String,dynamic>>();
+    final nailPilot=exercise && doc['extras'] is Map &&
+        (doc['extras'] as Map)['nailPlatePrototypeVersion']==933;
     if(master) {
       final extras=doc['extras'];
       final skins=(doc['skins'] as List);
@@ -182,7 +184,8 @@ class GlbSkinnedScene {
         (pilots.contains(exerciseId)&&
          extras is Map&&extras['masterExercisePilotVersion']==910&&
          extras['exerciseId']==exerciseId&&
-         meshDefs.length==(exerciseId=='ex_bench_press'?3:2)&&
+         meshDefs.length==(exerciseId=='ex_bench_press'?3:2)+
+             (nailPilot?10:0)&&
          (doc['animations'] as List).length==1&&
          (doc['animations'][0] as Map)['name']==
            'STK_MASTER_55_${exerciseId}_V910_IK_UNAPPROVED'):true;
@@ -203,7 +206,8 @@ class GlbSkinnedScene {
       }
     }
     if(nodes.length>128||views.length>600||accessors.length>600||
-       meshDefs.length>8||raw.length>(exercise?1400:850)*1024) {
+       meshDefs.length>(nailPilot?18:8)||
+       raw.length>(exercise?1400:850)*1024) {
       throw const FormatException('GLB complexity budget exceeded');
     }
     List<List<num>> access(int i,int dim,{required bool integer}) {
@@ -266,6 +270,25 @@ class GlbSkinnedScene {
         }
         parents[c]=i;
       }
+    }
+    if(nailPilot) {
+      const fingers={'thumb','index','middle','ring','pinky'};
+      final found=<String>{};
+      for(var index=0;index<nodes.length;index++) {
+        final name=nodes[index]['name'] as String? ?? '';
+        if(!name.startsWith('STK_NAIL_PLATE_'))continue;
+        final suffix=name.substring('STK_NAIL_PLATE_'.length);
+        if(suffix.length<3)throw const FormatException('Invalid nail name');
+        final side=suffix.substring(suffix.length-1);
+        final digit=suffix.substring(0,suffix.length-2);
+        if(!fingers.contains(digit)||(side!='l'&&side!='r')||
+           !found.add(suffix)||parents[index]<0||
+           nodes[parents[index]]['name']!=digit+'_03_'+side||
+           nodes[index]['skin']!=null) {
+          throw const FormatException('Unsafe nail attachment');
+        }
+      }
+      if(found.length!=10)throw const FormatException('Missing nail plates');
     }
     final skin=(doc['skins'] as List).single as Map<String,dynamic>;
     final joints=(skin['joints'] as List).cast<int>();
@@ -388,9 +411,15 @@ class GlbSkinnedScene {
     if(exercise) {
       final rigid=instances.where((item)=>!item.skin).toList();
       final skins=instances.where((item)=>item.skin).toList();
-      if(skins.length!=1||rigid.length!=(exerciseId=='ex_bench_press'?2:1)||
+      final equipmentCount=exerciseId=='ex_bench_press'?2:1;
+      final nailCount=rigid.where((item)=>item.primitives.every((p)=>
+          p.material=='STK_NAIL_KERATIN_QA')).length;
+      if(skins.length!=1||rigid.length!=equipmentCount+(nailPilot?10:0)||
+         nailCount!=(nailPilot?10:0)||
          !rigid.every((item)=>item.primitives.every((p)=>
-           p.material.startsWith('STK_PILOT_')&&p.morphs.isEmpty))) {
+           (p.material.startsWith('STK_PILOT_')||
+            (nailPilot&&p.material=='STK_NAIL_KERATIN_QA'))&&
+            p.morphs.isEmpty))) {
         throw const FormatException('Missing isolated QA bar/bench geometry');
       }
     }
@@ -904,6 +933,8 @@ class GlbSkinnedScene {
       ?const Color(0xFFADB7C6):const Color(0xFF697584),
     'STK_PILOT_STK_CUSHION' => dark
       ?const Color(0xFF66717E):const Color(0xFF495867),
+    'STK_NAIL_KERATIN_QA' => dark
+      ?const Color(0xFFE7C9C0):const Color(0xFFB88C83),
     'STK_PLATE' => const Color(0xFF414852),
     'STK_CUSHION' => const Color(0xFF353B46),
     _ => const Color(0xFF9099A4),

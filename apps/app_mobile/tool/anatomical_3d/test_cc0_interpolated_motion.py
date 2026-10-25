@@ -35,6 +35,7 @@ import optimize_two_joint_grip_v929 as twojoint929
 import sculpt_finger_knuckles_v930 as knuckle930
 import sculpt_finger_folds_v931 as fold931
 import sculpt_nail_beds_v932 as nail932
+import build_rig_nail_plates_v933 as nail933
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -2162,6 +2163,82 @@ class Master55ExercisePilotTest(unittest.TestCase):
         new,_=nail932.sculpt(data,'ex_squat')
         with self.assertRaises(ValueError):
             nail932.sculpt(new,'ex_squat')
+
+
+    def test_v933_rejects_invalid_uv(self):
+        with self.assertRaises(ValueError):
+            nail933.append_uv(None,[])
+        with self.assertRaises(ValueError):
+            nail933.append_uv(None,[(float('nan'),.5)])
+        with self.assertRaises(ValueError):
+            nail933.append_uv(None,[(1.1,.5)])
+
+    def test_v933_real_10_bone_attached_uv_nail_plates(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931')
+        source=root/'nail_bed_v932'
+        if not (source/'ex_squat_v932_nail_bed_mobile_qa.glb').exists():
+            nail932.build(root,source)
+        target=source/'nail_plates_v933'
+        data=nail933.build(source,target)
+        self.assertEqual(data['pilotCount'],3)
+        self.assertFalse(data['approved'])
+        for item in data['pilots']:
+            exercise=item['exerciseId']
+            a=rig.GLB((source/(exercise+'_v932_nail_bed_mobile_qa.glb'))
+                      .read_bytes(),expected_sha=None)
+            c=rig.GLB((target/(exercise+'_v933_rig_nail_plates_mobile_qa.glb'))
+                      .read_bytes(),expected_sha=None)
+            self.assertEqual(a.doc['skins'],c.doc['skins'])
+            self.assertEqual(a.doc['animations'],c.doc['animations'])
+            self.assertEqual(a.doc['meshes'],c.doc['meshes'][:len(a.doc['meshes'])])
+            self.assertEqual(len(c.doc['meshes']),len(a.doc['meshes'])+10)
+            self.assertEqual(len(c.doc['nodes']),len(a.doc['nodes'])+10)
+            self.assertEqual(c.doc['extras']['nailPlatePrototypeVersion'],933)
+            self.assertFalse(c.doc['extras']['approved'])
+            self.assertFalse(c.doc['extras']['enabled'])
+            self.assertTrue(item['phalanxAttachmentsVerified'])
+            self.assertEqual(item['nailPlateNodes'],10)
+            self.assertEqual(item['nailUVSets'],10)
+            self.assertEqual(item['nailTriangles'],1360)
+            for detail in item['plates']:
+                child=c.doc['nodes'][detail['node']]
+                parent=c.doc['nodes'][detail['bone']]
+                self.assertIn(detail['node'],parent['children'])
+                self.assertEqual(child['name'],
+                                 'STK_NAIL_PLATE_'+detail['digit']+
+                                 '_'+detail['side'])
+                mesh=c.doc['meshes'][detail['mesh']]['primitives'][0]
+                attr=mesh['attributes']
+                self.assertEqual(len(c.accessor(attr['POSITION'])),70)
+                self.assertEqual(len(c.accessor(attr['NORMAL'])),70)
+                uv=c.accessor(attr['TEXCOORD_0'])
+                self.assertEqual(len(uv),70)
+                self.assertTrue(all(0<=x<=1 for row in uv for x in row))
+                self.assertEqual(len(c.accessor(mesh['indices']))//3,136)
+            self.assertLessEqual(item['bytes'],nail933.MAX_MOBILE_BYTES)
+        self.assertTrue((target/'nail_plates_v933_report.json').is_file())
+
+    def test_v933_rejects_approved_and_double_attachment(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931')
+        source=root/'nail_bed_v932'
+        if not (source/'ex_squat_v932_nail_bed_mobile_qa.glb').exists():
+            nail932.build(root,source)
+        raw=(source/'ex_squat_v932_nail_bed_mobile_qa.glb').read_bytes()
+        approved=rig.GLB(raw,expected_sha=None)
+        approved.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            nail933.build_one(approved.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            nail933.build_one(raw,'not_real')
+        result,_=nail933.build_one(raw,'ex_squat')
+        with self.assertRaises(ValueError):
+            nail933.build_one(result,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
