@@ -298,6 +298,9 @@ jobs:
       - name: Sculpt and audit unapproved v9.41 torso geometry (3 GLB)
         working-directory: apps/app_mobile
         run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_torso_volume_v941.py'
+      - name: Sculpt and audit unapproved v9.42 upper-body GLB (3 pilots)
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_upper_torso_v942.py'
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
