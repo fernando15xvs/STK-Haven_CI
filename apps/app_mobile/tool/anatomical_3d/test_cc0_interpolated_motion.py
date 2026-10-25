@@ -38,6 +38,7 @@ import sculpt_nail_beds_v932 as nail932
 import build_rig_nail_plates_v933 as nail933
 import nail_plate_skin_proximity_v934 as nailproximity934
 import nail_plate_offsets_v935 as nailoffset935
+import build_nail_medium_lod_v936 as naillod936
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -2410,6 +2411,93 @@ class Master55ExercisePilotTest(unittest.TestCase):
         if candidate.exists():
             with self.assertRaises(ValueError):
                 nailoffset935.optimize(candidate.read_bytes(),'ex_squat')
+
+
+    def test_v936_nail_medium_lod_grid_is_closed_and_reduced(self):
+        ids=naillod936._lod_indices()
+        self.assertEqual(len(ids)//3,56)
+        self.assertEqual(set(ids),set(range(30)))
+        self.assertEqual(len(naillod936._subsample(list(range(70)))),30)
+        with self.assertRaises(ValueError):
+            naillod936._subsample(list(range(69)))
+
+    def test_v936_real_three_animated_pilot_nail_lods(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933')
+        source=root/'offset_v935'
+        if not (source/'ex_squat_v935_nail_contact_offset_mobile_qa.glb').exists():
+            nailoffset935.build(root,source)
+        output=source/'lod_v936'
+        result=naillod936.build(source,output)
+        self.assertEqual(result['pilotCount'],3)
+        self.assertEqual(result['nailTrianglesBeforePerPilot'],1360)
+        self.assertEqual(result['nailTrianglesAfterPerPilot'],560)
+        self.assertFalse(result['approved'])
+        for row in result['pilots']:
+            exercise=row['exerciseId']
+            original=rig.GLB((source/(exercise+
+                '_v935_nail_contact_offset_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            revised=rig.GLB((output/(exercise+
+                '_v936_nail_lod_mobile_qa.glb'))
+                .read_bytes(),expected_sha=None)
+            self.assertEqual(original.doc['skins'],revised.doc['skins'])
+            self.assertEqual(original.doc['nodes'],revised.doc['nodes'])
+            self.assertEqual(original.doc['animations'],
+                             revised.doc['animations'])
+            self.assertEqual(original.doc['meshes'][0],
+                             revised.doc['meshes'][0])
+            self.assertEqual(revised.doc['extras']['nailLodPrototypeVersion'],936)
+            self.assertFalse(revised.doc['extras']['approved'])
+            self.assertFalse(revised.doc['extras']['enabled'])
+            self.assertFalse(row['sampledContactRetestCompleted'])
+            self.assertFalse(row['newGpuBenchmarkCompleted'])
+            self.assertEqual(row['reducedNailMeshCount'],10)
+            self.assertEqual(row['originalNailTriangles'],1360)
+            self.assertEqual(row['lodNailTriangles'],560)
+            self.assertGreater(row['nailTriangleReductionPercent'],58)
+            self.assertLessEqual(
+                row['maximumSourceVertexErrorMeters'],
+                naillod936.MAX_VERTEX_TO_SURFACE_ERROR_METERS)
+            self.assertLessEqual(row['assetBytes'],naillod936.MAX_MOBILE_BYTES)
+            self.assertEqual(row['materialExperimentRoughness'],.46)
+            for entry in row['plates']:
+                part=revised.doc['meshes'][entry['meshIndex']]['primitives'][0]
+                attr=part['attributes']
+                self.assertEqual(len(revised.accessor(attr['POSITION'])),30)
+                self.assertEqual(len(revised.accessor(attr['NORMAL'])),30)
+                uv=revised.accessor(attr['TEXCOORD_0'])
+                self.assertEqual(len(uv),30)
+                self.assertTrue(all(0<=x<=1 for u in uv for x in u))
+                self.assertEqual(len(revised.accessor(part['indices']))//3,56)
+                self.assertLessEqual(
+                    entry['maxOriginalVertexToLodSurfaceMeters'],
+                    naillod936.MAX_VERTEX_TO_SURFACE_ERROR_METERS)
+        self.assertTrue((output/'nail_lod_v936_report.json').exists())
+
+    def test_v936_rejects_approved_or_repeated_lod_derivation(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933')
+        source=root/'offset_v935'
+        if not (source/'ex_squat_v935_nail_contact_offset_mobile_qa.glb').exists():
+            nailoffset935.build(root,source)
+        raw=(source/'ex_squat_v935_nail_contact_offset_mobile_qa.glb'
+             ).read_bytes()
+        bad=rig.GLB(raw,expected_sha=None)
+        bad.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            naillod936.reduce_one(bad.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            naillod936.reduce_one(raw,'invented_exercise')
+        candidate,_=naillod936.reduce_one(raw,'ex_squat')
+        with self.assertRaises(ValueError):
+            naillod936.reduce_one(candidate,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
