@@ -156,7 +156,7 @@ void main() {
         final background=dark
             ?const Color(0xFF111722):const Color(0xFFF2F5F8);
         for(final seconds in [0,2,4]) {
-          const size=Size(_side.toDouble(),_side.toDouble());
+          const size=Size(360,360);
           final f0=a.frame(seconds.toDouble(),size,_colors,
               dark:dark,poseNormals:true,depthSlices:6,zoom:1.2);
           final f1=b.frame(seconds.toDouble(),size,_colors,
