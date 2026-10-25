@@ -39,6 +39,7 @@ import build_rig_nail_plates_v933 as nail933
 import nail_plate_skin_proximity_v934 as nailproximity934
 import nail_plate_offsets_v935 as nailoffset935
 import build_nail_medium_lod_v936 as naillod936
+import fit_thumb_nail_skin_v937 as thumb937
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -2498,6 +2499,100 @@ class Master55ExercisePilotTest(unittest.TestCase):
         candidate,_=naillod936.reduce_one(raw,'ex_squat')
         with self.assertRaises(ValueError):
             naillod936.reduce_one(candidate,'ex_squat')
+
+
+    def test_v937_rejects_worsening_thumb_contact_metrics(self):
+        base={'embedded':2,'detached':100,'maxDistance':.015}
+        self.assertTrue(thumb937.gate(
+            base,dict(base,detached=90))[0])
+        self.assertFalse(thumb937.gate(base,base)[0])
+        self.assertFalse(thumb937.gate(
+            base,dict(base,embedded=3,detached=90))[0])
+        self.assertFalse(thumb937.gate(
+            base,dict(base,detached=90,maxDistance=.016))[0])
+        with self.assertRaises(ValueError):
+            thumb937.gate(
+                base,dict(base,maxDistance=float('nan')))
+
+    def test_v937_retargets_actual_thumb_nail_nodes_with_full_60hz_guards(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933'/
+              'offset_v935')
+        source=root/'lod_v936'
+        if not (source/'ex_squat_v936_nail_lod_mobile_qa.glb').exists():
+            naillod936.build(root,source)
+        folder=source/'thumb_fit_v937'
+        report=thumb937.build(source,folder)
+        self.assertEqual(report['pilotCount'],3)
+        self.assertEqual(report['thumbsReviewed'],6)
+        self.assertEqual(report['thumbsAdjusted']+
+                         report['thumbsUnresolved'],6)
+        self.assertFalse(report['approved'])
+        for rec in report['pilots']:
+            eid=rec['exerciseId']
+            prior=rig.GLB((source/(
+                eid+'_v936_nail_lod_mobile_qa.glb')).read_bytes(),
+                expected_sha=None)
+            current=rig.GLB((folder/(
+                eid+'_v937_thumb_nail_fit_mobile_qa.glb')).read_bytes(),
+                expected_sha=None)
+            for key in ('meshes','skins','materials','animations'):
+                self.assertEqual(prior.doc[key],current.doc[key])
+            self.assertEqual(current.doc['extras']['thumbNail3dFitVersion'],937)
+            self.assertFalse(current.doc['extras']['approved'])
+            self.assertFalse(current.doc['extras']['enabled'])
+            self.assertEqual(rec['sampledFullFrames'],241)
+            self.assertEqual(rec['sampledRateHz'],60)
+            self.assertEqual(len(rec['thumbRecords']),2)
+            self.assertEqual(rec['thumbsReviewed'],2)
+            self.assertEqual(rec['unchangedRigJoints'],55)
+            self.assertEqual(rec['unchangedMorphTargets'],8)
+            self.assertLessEqual(rec['outputBytes'],thumb937.MAX_MOBILE_BYTES)
+            changed={current.by_name['STK_NAIL_PLATE_'+k]
+                     for k in rec['acceptedOffsetsMeters']}
+            for index,old in enumerate(prior.doc['nodes']):
+                now=current.doc['nodes'][index]
+                if index in changed:
+                    revised=dict(now)
+                    revised['translation']=old['translation']
+                    self.assertEqual(revised,old)
+                else:
+                    self.assertEqual(now,old)
+            for name,detail in rec['thumbRecords'].items():
+                self.assertEqual(detail['baseline']['frames'],241)
+                if detail['accepted']:
+                    self.assertTrue(thumb937.gate(
+                        detail['baseline'],detail['candidate'])[0])
+                    self.assertLessEqual(
+                        math.dist((0,0,0),rec['acceptedOffsetsMeters'][name]),
+                        thumb937.MAX_MOVE+.0000001)
+                else:
+                    self.assertNotIn(name,rec['acceptedOffsetsMeters'])
+        self.assertTrue((folder/'thumb_nail_fit_v937_report.json').is_file())
+
+    def test_v937_refuses_approved_models_and_reprocessing(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930'/'fold_v931'/
+              'nail_bed_v932'/'nail_plates_v933'/'offset_v935')
+        src=root/'lod_v936'
+        if not (src/'ex_squat_v936_nail_lod_mobile_qa.glb').exists():
+            naillod936.build(root,src)
+        raw=(src/'ex_squat_v936_nail_lod_mobile_qa.glb').read_bytes()
+        fake=rig.GLB(raw,expected_sha=None)
+        fake.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            thumb937.fit(fake.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            thumb937.fit(raw,'fake_exercise')
+        after=src/'thumb_fit_v937'/'ex_squat_v937_thumb_nail_fit_mobile_qa.glb'
+        if after.exists():
+            with self.assertRaises(ValueError):
+                thumb937.fit(after.read_bytes(),'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
