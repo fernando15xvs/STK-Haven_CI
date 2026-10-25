@@ -34,6 +34,7 @@ import stabilize_grip_v928 as stabilize928
 import optimize_two_joint_grip_v929 as twojoint929
 import sculpt_finger_knuckles_v930 as knuckle930
 import sculpt_finger_folds_v931 as fold931
+import sculpt_nail_beds_v932 as nail932
 
 OUT = Path(os.environ.get("STK_CC0_RETARGET", "build/cc0_53bone_retarget"))
 FPS = 30
@@ -2060,6 +2061,107 @@ class Master55ExercisePilotTest(unittest.TestCase):
         candidate,_=fold931.sculpt(original,'ex_squat')
         with self.assertRaises(ValueError):
             fold931.sculpt(candidate,'ex_squat')
+
+
+    def test_v932_limited_nail_bed_profile_and_invalid_coords(self):
+        self.assertEqual(nail932.MAX_BED_RELIEF_METERS,.00030)
+        self.assertGreater(nail932.nail_bed_profile(.004,0.,.007,.026),0.)
+        self.assertEqual(nail932.nail_bed_profile(.5,0.,.007,.026),0.)
+        self.assertEqual(nail932.nail_bed_profile(0.,.040,.007,.026),0.)
+        with self.assertRaises(ValueError):
+            nail932.nail_bed_profile(0.,.0,float('nan'),.02)
+        with self.assertRaises(ValueError):
+            nail932.nail_bed_profile(0.,0.,.005,0.)
+
+    def test_v932_three_real_skinned_nail_bed_pilots_remain_disabled(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930')
+        source=root/'fold_v931'
+        if not (source/'ex_squat_v931_finger_fold_mobile_qa.glb').exists():
+            fold931.build(root,source)
+        destination=source/'nail_bed_v932'
+        result=nail932.build(source,destination)
+        self.assertEqual(result['pilotCount'],3)
+        self.assertEqual(result['acceptedPilots']+result['fallbackPilots'],3)
+        self.assertFalse(result['nailPlateMeshComplete'])
+        self.assertFalse(result['approved'])
+        for item in result['pilots']:
+            eid=item['exerciseId']
+            original=rig.GLB((source/(eid+'_v931_finger_fold_mobile_qa.glb'))
+                             .read_bytes(),expected_sha=None)
+            updated=rig.GLB((destination/(
+                eid+'_v932_nail_bed_mobile_qa.glb')).read_bytes(),
+                expected_sha=None)
+            for field in ('skins','nodes','meshes','animations','materials'):
+                self.assertEqual(original.doc[field],updated.doc[field])
+            self.assertEqual(
+                updated.doc['extras']['distalNailBedVersion'],932)
+            self.assertFalse(updated.doc['extras']['nailPlateMeshComplete'])
+            self.assertFalse(updated.doc['extras']['approved'])
+            self.assertFalse(updated.doc['extras']['enabled'])
+            self.assertEqual(item['jointCount'],55)
+            self.assertEqual(item['morphCount'],8)
+            self.assertEqual(item['fingerChannelsPreserved'],30)
+            self.assertLessEqual(
+                item['maxActualDisplacementMeters'],
+                nail932.MAX_BED_RELIEF_METERS+.0000001)
+            self.assertLessEqual(item['outputBytes'],nail932.MAX_MOBILE_BYTES)
+            self.assertEqual(len(item['regionCandidates']),10)
+            before=original.doc['meshes'][0]['primitives'][0]['attributes']
+            after=updated.doc['meshes'][0]['primitives'][0]['attributes']
+            self.assertEqual(
+                original.accessor(before['JOINTS_0']),
+                updated.accessor(after['JOINTS_0']))
+            self.assertEqual(
+                original.accessor(before['WEIGHTS_0']),
+                updated.accessor(after['WEIGHTS_0']))
+            for old_part,new_part in zip(
+                    original.doc['meshes'][0]['primitives'],
+                    updated.doc['meshes'][0]['primitives']):
+                self.assertEqual(
+                    original.accessor(old_part['indices']),
+                    updated.accessor(new_part['indices']))
+                for old_target,new_target in zip(
+                        old_part['targets'],new_part['targets']):
+                    self.assertEqual(
+                        original.accessor(old_target['POSITION']),
+                        updated.accessor(new_target['POSITION']))
+            if item['candidateAccepted']:
+                self.assertGreaterEqual(item['editedNailBedVertices'],8)
+                self.assertNotEqual(
+                    original.accessor(before['POSITION']),
+                    updated.accessor(after['POSITION']))
+                self.assertTrue(
+                    item['sampledContactAudit']['passesSampledContactGuards'])
+                self.assertEqual(
+                    item['sampledContactAudit']['samplesPerClip'],241)
+            else:
+                self.assertEqual(item['editedNailBedVertices'],0)
+                self.assertEqual(
+                    original.accessor(before['POSITION']),
+                    updated.accessor(after['POSITION']))
+        self.assertTrue((destination/'nail_bed_v932_report.json').is_file())
+
+    def test_v932_refuses_approved_or_double_nail_bed_sculpt(self):
+        root=(self.MASTER/'v8_authoring'/'detail_bake_v915'/
+              'torso_v916'/'hand_v917'/'contact_v918'/'skin_v919'/
+              'hand_v920'/'topology_v922'/'palm_v924'/'web_v925'/
+              'two_joint_v929'/'knuckle_v930')
+        source=root/'fold_v931'
+        if not (source/'ex_squat_v931_finger_fold_mobile_qa.glb').exists():
+            fold931.build(root,source)
+        data=(source/'ex_squat_v931_finger_fold_mobile_qa.glb').read_bytes()
+        glb=rig.GLB(data,expected_sha=None)
+        glb.doc['extras']['approved']=True
+        with self.assertRaises(ValueError):
+            nail932.sculpt(glb.bytes(),'ex_squat')
+        with self.assertRaises(ValueError):
+            nail932.sculpt(data,'made_up_exercise')
+        new,_=nail932.sculpt(data,'ex_squat')
+        with self.assertRaises(ValueError):
+            nail932.sculpt(new,'ex_squat')
 
     def test_v918_rejects_unsafe_or_approved_sources(self):
         self.assertRaises(ValueError,contact918.grip_pose,
