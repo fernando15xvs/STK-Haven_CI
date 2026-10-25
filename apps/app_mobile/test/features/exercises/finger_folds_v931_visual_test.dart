@@ -9,7 +9,7 @@ import '../../../tool/anatomical_3d/anatomical_glb_runtime.dart';
 const _folder='build/cc0_master_surface_v7/v8_authoring/'
     'detail_bake_v915/torso_v916/hand_v917/contact_v918/'
     'skin_v919/hand_v920/topology_v922/palm_v924/web_v925/'
-    'two_joint_v929/knuckle_v931';
+    'two_joint_v929/knuckle_v930/fold_v931';
 const _ids=['ex_bench_press','ex_barbell_row','ex_squat'];
 const _accents=<Color>[
   Color(0xFF2962FF),Color(0xFF00A3A3),Color(0xFFE67722),
