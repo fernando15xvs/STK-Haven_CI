@@ -117,6 +117,32 @@ jobs:
           supabase/functions/food-vision-ai/index.ts
           supabase/functions/web-push-test/index.ts
 
+  anatomical-master-v10:
+    name: New anatomical master v10 (QA)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install offline anatomical authoring dependencies
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python -m pip install -r requirements-authoring.txt
+      - name: Test new master anatomy and quarantined GLB
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python -m unittest test_master_silhouette_v10.py -v
+      - name: Build independent v10 master silhouette (unapproved)
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python build_master_silhouette_v10.py --output build/master-v10-review --pitch .012
+      - name: Upload unapproved master v10 for human art review
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-master-v10-silhouette-qa
+          path: apps/app_mobile/tool/anatomical_3d/master_v10/build/master-v10-review/
+          if-no-files-found: error
+          retention-days: 14
+
   mobile-tests:
     name: Mobile tests
     runs-on: ubuntu-latest
