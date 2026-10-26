@@ -147,6 +147,19 @@ jobs:
       - name: Build independent v10.3 master with arms and hands (disabled)
         working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
         run: python sculpt_arms_hands_v103.py --output build/master-v103-review --pitch .012
+      - name: Test v10.4 natural athletic silhouette and lower body
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python -m unittest test_aesthetic_lower_body_v104.py -v
+      - name: Build new v10.4 aesthetically proportioned master (QA-only)
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python sculpt_aesthetic_lower_body_v104.py --output build/master-v104-review --pitch .012
+      - name: Upload v10.4 unapproved athletic body and geometry report
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-master-v104-athletic-qa
+          path: apps/app_mobile/tool/anatomical_3d/master_v10/build/master-v104-review/
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload unapproved v10.3 anatomy and report (no catalog assets)
         uses: actions/upload-artifact@v4
         with:
