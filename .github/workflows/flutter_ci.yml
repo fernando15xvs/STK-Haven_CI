@@ -135,6 +135,19 @@ jobs:
       - name: Build independent v10 master silhouette (unapproved)
         working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
         run: python build_master_silhouette_v10.py --output build/master-v10-review --pitch .012
+      - name: Test NEW v10.2 torso/back geometry, symmetry and disabled state
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python -m unittest test_torso_back_v102.py -v
+      - name: Build REAL v10.2 static sculpt GLB, no production registration
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python sculpt_torso_back_v102.py --output build/master-v102-review --pitch .012
+      - name: Upload NEW unapproved v10.2 torso/back for visual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-master-v102-torso-back-qa
+          path: apps/app_mobile/tool/anatomical_3d/master_v10/build/master-v102-review/
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload unapproved master v10 for human art review
         uses: actions/upload-artifact@v4
         with:
