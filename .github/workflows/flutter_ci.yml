@@ -141,6 +141,19 @@ jobs:
       - name: Build REAL v10.2 static sculpt GLB, no production registration
         working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
         run: python sculpt_torso_back_v102.py --output build/master-v102-review --pitch .012
+      - name: Test v10.3 real bilateral arms and finger anatomy (QA only)
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python -m unittest test_arms_hands_v103.py -v
+      - name: Build independent v10.3 master with arms and hands (disabled)
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python sculpt_arms_hands_v103.py --output build/master-v103-review --pitch .012
+      - name: Upload unapproved v10.3 anatomy and report (no catalog assets)
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-master-v103-arms-hands-qa
+          path: apps/app_mobile/tool/anatomical_3d/master_v10/build/master-v103-review/
+          if-no-files-found: error
+          retention-days: 14
       - name: Upload NEW unapproved v10.2 torso/back for visual review
         uses: actions/upload-artifact@v4
         with:
