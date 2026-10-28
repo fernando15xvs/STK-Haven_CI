@@ -195,6 +195,12 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Generate 12 transparent PNG exercise pilots (offline, original)
+        working-directory: apps/app_mobile
+        run: |
+          python3 -m pip install --quiet Pillow==11.3.0
+          python3 tool/exercise_png_pilots/generate_pilots.py
+          python3 -m unittest discover -s tool/exercise_png_pilots -p 'test_generate_pilots.py'
       - name: Build unapproved anatomical v2 candidates
         working-directory: apps/app_mobile
         run: python3 tool/build_anatomical_v2.py --output build/anatomical_v2
@@ -378,6 +384,11 @@ jobs:
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
+      - name: Test 3 real catalog PNG carousels with QA flag and all 12 PNGs
+        working-directory: apps/app_mobile
+        run: >-
+          flutter test --dart-define=STK_PNG_PILOTS=true
+          test/features/exercises/exercise_png_pilot_test.dart
       - name: Audit actual v9.44 Flutter raster pixel visibility evidence
         working-directory: apps/app_mobile
         run: >-
@@ -493,6 +504,12 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Generate 12 transparent PNG exercise pilots (offline, original)
+        working-directory: apps/app_mobile
+        run: |
+          python3 -m pip install --quiet Pillow==11.3.0
+          python3 tool/exercise_png_pilots/generate_pilots.py
+          python3 -m unittest discover -s tool/exercise_png_pilots -p 'test_generate_pilots.py'
       - name: Build debug APK
         working-directory: apps/app_mobile
         run: flutter build apk --debug --target lib/main_android.dart
@@ -515,6 +532,9 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -522,15 +542,21 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Generate 12 transparent PNG exercise pilots (offline, original)
+        working-directory: apps/app_mobile
+        run: |
+          python3 -m pip install --quiet Pillow==11.3.0
+          python3 tool/exercise_png_pilots/generate_pilots.py
+          python3 -m unittest discover -s tool/exercise_png_pilots -p 'test_generate_pilots.py'
       - name: Install CocoaPods
         working-directory: apps/app_mobile/ios
         run: pod install
       - name: Build iOS profile without signing
         working-directory: apps/app_mobile
-        run: flutter build ios --profile --no-codesign --target lib/main_ios.dart
+        run: flutter build ios --profile --no-codesign --target lib/main_ios.dart --dart-define=STK_PNG_PILOTS=true
       - name: Build iOS release without signing
         working-directory: apps/app_mobile
-        run: flutter build ios --release --no-codesign --target lib/main_ios.dart
+        run: flutter build ios --release --no-codesign --target lib/main_ios.dart --dart-define=STK_PNG_PILOTS=true
       - name: Package unsigned iOS IPA
         working-directory: apps/app_mobile
         run: |
