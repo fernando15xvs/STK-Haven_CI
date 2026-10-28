@@ -73,7 +73,7 @@ def torso(d,shoulder,hip,half=38):
              (hx+half*.65,hy+13),(hx-half*.65,hy+13)],SKIN)
 
 def bench(d,t):
-    floor(d); height=(121,158,112,158)[t]
+    floor(d); height=(121,158,112,144)[t]
     # Freestanding bench, stable feet.
     d.rounded_rectangle((*pt((84,291)),*pt((378,305))),radius=5*S,
                         fill=METAL,outline=INK,width=2*S)
