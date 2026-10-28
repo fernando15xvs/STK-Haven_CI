@@ -53,6 +53,7 @@ flutter:
 
   assets:
     - assets/imagenes/
+    - assets/exercise_media/png_pilots/
 
 flutter_launcher_icons:
   android: true
