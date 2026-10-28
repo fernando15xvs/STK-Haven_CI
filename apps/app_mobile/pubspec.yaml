@@ -53,7 +53,9 @@ flutter:
 
   assets:
     - assets/imagenes/
-    - assets/exercise_media/png_pilots/
+    - assets/exercise_media/png_pilots/ex_bench_press/
+    - assets/exercise_media/png_pilots/ex_barbell_row/
+    - assets/exercise_media/png_pilots/ex_squat/
 
 flutter_launcher_icons:
   android: true
