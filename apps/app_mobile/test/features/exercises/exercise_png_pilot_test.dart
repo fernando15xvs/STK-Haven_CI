@@ -6,6 +6,16 @@ import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_png
 import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_demonstration_card.dart';
 
 void main() {
+  // The normal app intentionally hides these unapproved QA-only assets.
+  // Run the remaining tests separately using --dart-define=STK_PNG_PILOTS=true.
+  if (!PngPilotLibrary.enabled) {
+    test('all unapproved PNG pilots are disabled in ordinary builds', () {
+      expect(PngPilotLibrary.forId('ex_bench_press'),isNull);
+      expect(PngPilotLibrary.forId('ex_barbell_row'),isNull);
+      expect(PngPilotLibrary.forId('ex_squat'),isNull);
+    });
+    return;
+  }
   test('pilots require explicit QA compilation and correct exercise IDs',(){
     expect(PngPilotLibrary.enabled,isTrue,
       reason:'Run only with --dart-define=STK_PNG_PILOTS=true');

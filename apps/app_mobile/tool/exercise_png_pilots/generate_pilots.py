@@ -126,7 +126,7 @@ def squat(d,t):
     limb(d,[(275,yhip),(kneeR,kneeY),(313,431)],31)
     for x in (163,316): ellipse(d,(x,440),(24,10),LIGHT)
     torso(d,(244,yshoulder),(243,yhip),48)
-    head(d,246,yshoulder-79,25)
+    head(d,246,yshoulder-48,25)
     muscle(d,[(209,yhip+2,24,25),(276,yhip+4,24,24),
               (kneeL+21,kneeY-29,15,27),
               (kneeR-20,kneeY-30,15,27)],RED)
