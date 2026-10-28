@@ -195,12 +195,11 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
-      - name: Generate 12 transparent PNG exercise pilots (offline, original)
+      - name: Verify 12 sha-pinned original realistic transparent anatomy PNGs
         working-directory: apps/app_mobile
         run: |
           python3 -m pip install --quiet Pillow==11.3.0
-          python3 tool/exercise_png_pilots/generate_pilots.py
-          python3 -m unittest discover -s tool/exercise_png_pilots -p 'test_generate_pilots.py'
+          python3 tool/exercise_png_pilots/verify_realistic_pilots.py
       - name: Build unapproved anatomical v2 candidates
         working-directory: apps/app_mobile
         run: python3 tool/build_anatomical_v2.py --output build/anatomical_v2
@@ -504,12 +503,11 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
-      - name: Generate 12 transparent PNG exercise pilots (offline, original)
+      - name: Verify 12 sha-pinned original realistic transparent anatomy PNGs
         working-directory: apps/app_mobile
         run: |
           python3 -m pip install --quiet Pillow==11.3.0
-          python3 tool/exercise_png_pilots/generate_pilots.py
-          python3 -m unittest discover -s tool/exercise_png_pilots -p 'test_generate_pilots.py'
+          python3 tool/exercise_png_pilots/verify_realistic_pilots.py
       - name: Build debug APK
         working-directory: apps/app_mobile
         run: flutter build apk --debug --target lib/main_android.dart
@@ -542,12 +540,11 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
-      - name: Generate 12 transparent PNG exercise pilots (offline, original)
+      - name: Verify 12 sha-pinned original realistic transparent anatomy PNGs
         working-directory: apps/app_mobile
         run: |
           python3 -m pip install --quiet Pillow==11.3.0
-          python3 tool/exercise_png_pilots/generate_pilots.py
-          python3 -m unittest discover -s tool/exercise_png_pilots -p 'test_generate_pilots.py'
+          python3 tool/exercise_png_pilots/verify_realistic_pilots.py
       - name: Install CocoaPods
         working-directory: apps/app_mobile/ios
         run: pod install

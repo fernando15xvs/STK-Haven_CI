@@ -1,3 +1,3 @@
-# ex_bench_press — PNG QA
+# Realistic PNG pilot ex_bench_press
 
-The four actual .png frames in this directory are generated deterministically before Flutter build by `python3 tool/exercise_png_pilots/generate_pilots.py` from apps/app_mobile. Original illustrative pilot, not anatomy-certified. Do not publish as final media.
+Four original transparent anatomical illustrations. Experimental; anatomy, step correctness and visual crops require approval. Do not run old geometry generation.
