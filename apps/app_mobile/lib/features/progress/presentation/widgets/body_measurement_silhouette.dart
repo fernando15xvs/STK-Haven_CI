@@ -311,7 +311,18 @@ class _AnatomyPainter extends CustomPainter {
       ..style=PaintingStyle.stroke;
 
     void shape(List<Offset> points,{Color? color}) {
-      final path=Path()..addPolygon(points,true);
+      // Rounded anatomical contours: avoid rigid polygonal mannequin limbs.
+      final last=points.last;
+      final first=points.first;
+      final path=Path()
+        ..moveTo((last.dx+first.dx)/2,(last.dy+first.dy)/2);
+      for(var i=0;i<points.length;i++) {
+        final current=points[i];
+        final next=points[(i+1)%points.length];
+        path.quadraticBezierTo(current.dx,current.dy,
+          (current.dx+next.dx)/2,(current.dy+next.dy)/2);
+      }
+      path.close();
       canvas.drawPath(path,Paint()..color=(color??filled)..isAntiAlias=true);
       canvas.drawPath(path,stroke);
     }
