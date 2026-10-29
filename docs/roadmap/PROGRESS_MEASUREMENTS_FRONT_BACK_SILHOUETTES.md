@@ -32,3 +32,32 @@ Prueba móvil `test/features/progress/body_measurement_silhouette_test.dart`: da
 Sin migraciones, cambios en Supabase, web o modelo Hive. Sin nuevas dependencias, archivos de fuentes o imágenes de terceros. Los historiales, IDs, recordatorios y gráfica preexistente permanecen conservados.
 
 Pendiente potencial: si en un futuro se agregan medidas específicas de cuello, antebrazo o pantorrilla por lado, debe aprobarse primero la evolución de esquema Hive, validaciones y migraciones, no inferirlas de los datos existentes.
+
+
+## Revisión visual v2 — silueta como referencia (29-10-2026)
+
+La primera silueta geométrica resultó visualmente insuficiente y fue reemplazada,
+no ampliada. El cuerpo ahora utiliza **arte anatómico vectorial original**:
+figura de tinta negro intenso, separaciones musculares blancas, anatomía de
+pectorales/abdomen/deltoides/cuádriceps y, desde atrás, trapecio/dorsales,
+glúteos/isquios/pantorrillas. Los SVG editables son
+`apps/app_mobile/assets/measurement_anatomy/stk_anatomy_front.svg`
+y `stk_anatomy_back.svg`. Se basan en vectores propios y NO incluyen ni
+reproducen los archivos de Shutterstock compartidos como inspiración.
+
+La app interpreta exactamente esos mismos caminos en Flutter Canvas (sin
+`flutter_svg`, cambios en `pubspec.lock` o rasterización borrosa) desde
+`body_anatomy_vector_data.dart`. La prueba verifica 1:1 los caminos SVG
+y Dart, carga de ambos assets, mapa en 320 dp, modos claro y oscuro,
+registro histórico y captura de pantalla real. Se usan fondos claros dentro
+de las dos figuras aun en modo oscuro para conservar el contraste
+negro/blanco, sin alterar el tema de la tarjeta.
+
+Selección en el mapa: un contorno suave con el color de acento y un punto
+táctil accesible. Los mismos nueve perímetros ya existentes son la fuente
+de verdad. **No** son medidas aisladas de cada músculo del dibujo y
+ningún nuevo campo ha sido agregado a Hive o Supabase.
+
+**Validación específica:** [Measurement Map QA #9](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/40967241248) aprobó test Flutter y analyzer,
+generando dos capturas de pantalla de la UI real para revisión. Este verde
+no implica un merge del PR #43 ni valida por sí solo los demás módulos.
