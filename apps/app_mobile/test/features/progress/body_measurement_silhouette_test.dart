@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/body_measurement_silhouette.dart';
 
