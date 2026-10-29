@@ -309,8 +309,6 @@ class _AnatomyPainter extends CustomPainter {
       ..strokeWidth=1.5
       ..strokeCap=StrokeCap.round
       ..style=PaintingStyle.stroke;
-    final body=Paint()..color=filled..isAntiAlias=true;
-    final inner=Paint()..color=low..isAntiAlias=true;
 
     void shape(List<Offset> points,{Color? color}) {
       final path=Path()..addPolygon(points,true);
@@ -325,7 +323,9 @@ class _AnatomyPainter extends CustomPainter {
     }
     void vein(List<Offset> pts) {
       final p=Path()..moveTo(pts.first.dx,pts.first.dy);
-      for(final point in pts.skip(1))p.lineTo(point.dx,point.dy);
+      for (final point in pts.skip(1)) {
+        p.lineTo(point.dx,point.dy);
+      }
       canvas.drawPath(p,stroke);
     }
 

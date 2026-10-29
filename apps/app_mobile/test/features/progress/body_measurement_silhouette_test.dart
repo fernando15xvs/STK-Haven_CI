@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:flutter/material.dart';
@@ -90,6 +92,54 @@ void main() {
       expect(selected,MeasurementMetric.rightLeg);
       expect(find.textContaining('Anterior: 56.0 cm'),findsOneWidget);
       expect(tester.takeException(),isNull);
+    });
+  }
+
+
+  for (final dark in [false, true]) {
+    testWidgets('capture real Flutter front/back figure for artistic QA $dark',
+        (tester) async {
+      tester.view.physicalSize = const Size(390, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(
+          brightness: dark ? Brightness.dark : Brightness.light,
+          colorSchemeSeed: Colors.indigo),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: RepaintBoundary(
+              key: const ValueKey('progress_measurement_map_snapshot'),
+              child: BodyMeasurementSilhouette(
+                measurements: [_older, _newer, _latestPartial],
+                selected: MeasurementMetric.chest,
+                onSelected: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        final boundary = tester.renderObject<RenderRepaintBoundary>(
+          find.byKey(const ValueKey('progress_measurement_map_snapshot')));
+        final image = await boundary.toImage(pixelRatio: 2);
+        try {
+          final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+          if (bytes == null) throw StateError('Failed to capture measurement figure');
+          final dir = Directory('build/measurement_silhouette_qa')
+            ..createSync(recursive: true);
+          final file = File('${dir.path}/measurement_silhouette_${dark ? 'dark' : 'light'}.png');
+          file.writeAsBytesSync(
+            bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
+          );
+          expect(file.lengthSync(), greaterThan(5000));
+        } finally {
+          image.dispose();
+        }
+      });
+      expect(tester.takeException(), isNull);
     });
   }
 
