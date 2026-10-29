@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 440" width="600" height="1320">
+<title>STK Haven Frente — silueta anatómica original</title>
+<g stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="100" cy="34" rx="16" ry="23" fill="#111318"/>
+<path d="M 82 61 Q 91 67 100 68 Q 109 67 118 61 L 121 72 Q 116 84 100 87 Q 84 84 79 72 Z" fill="#111318" stroke="#F6F8FA" stroke-width="0.7"/>
+<path d="M 60 77 Q 64 67 83 67 Q 100 70 117 67 Q 136 67 140 77 Q 146 94 141 114 L 132 137 Q 122 157 118 174 Q 119 183 128 198 Q 119 214 100 215 Q 81 214 72 198 Q 81 183 82 174 Q 78 157 68 137 L 59 114 Q 54 94 60 77 Z" fill="#111318" stroke="#F6F8FA" stroke-width="0.7"/>
+<path d="M 60 76 Q 51 72 44 78 Q 36 88 38 108 Q 41 127 45 148 Q 43 156 39 169 Q 35 186 32 204 L 27 214 Q 23 226 22 231 L 27 233 L 32 222 L 33 240 L 38 240 L 38 225 L 42 241 L 47 239 L 43 217 Q 49 207 51 194 L 57 167 Q 59 154 56 143 Q 63 127 65 110 Q 67 90 60 76 Z" fill="#111318" stroke="#F6F8FA" stroke-width="0.7"/>
+<path d="M 140 76 Q 149 72 156 78 Q 164 88 162 108 Q 159 127 155 148 Q 157 156 161 169 Q 165 186 168 204 L 173 214 Q 177 226 178 231 L 173 233 L 168 222 L 167 240 L 162 240 L 162 225 L 158 241 L 153 239 L 157 217 Q 151 207 149 194 L 143 167 Q 141 154 144 143 Q 137 127 135 110 Q 133 90 140 76 Z" fill="#111318" stroke="#F6F8FA" stroke-width="0.7"/>
+<path d="M 74 199 Q 86 195 97 214 Q 97 235 92 254 L 89 278 Q 90 293 86 315 Q 89 332 87 351 L 85 390 Q 86 408 85 418 Q 91 424 93 431 Q 92 438 85 438 L 66 438 Q 60 436 66 426 Q 69 422 69 415 L 65 389 Q 62 368 64 348 Q 61 327 63 312 Q 67 292 65 277 L 64 242 Q 64 218 74 199 Z" fill="#111318" stroke="#F6F8FA" stroke-width="0.7"/>
+<path d="M 74 199 Q 86 195 97 214 Q 97 235 92 254 L 89 278 Q 90 293 86 315 Q 89 332 87 351 L 85 390 Q 86 408 85 418 Q 91 424 93 431 Q 92 438 85 438 L 66 438 Q 60 436 66 426 Q 69 422 69 415 L 65 389 Q 62 368 64 348 Q 61 327 63 312 Q 67 292 65 277 L 64 242 Q 64 218 74 199 Z" fill="#111318" stroke="#F6F8FA" stroke-width="0.7" transform="translate(200,0) scale(-1,1)"/>
+<path d="M 63 82 Q 80 76 98 86 Q 87 93 83 106 Q 72 110 59 99" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 137 82 Q 120 76 102 86 Q 113 93 117 106 Q 128 110 141 99" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 100 86 L 100 119" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 60 111 Q 77 122 94 112 L 99 117" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 140 111 Q 123 122 106 112 L 101 117" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 77 68 Q 91 72 100 82 Q 109 72 123 68" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 95 122 Q 92 129 90 137 L 90 179 Q 94 194 100 196 Q 106 194 110 179 L 110 137 Q 108 129 105 122" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 100 122 L 100 194" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 90 142 Q 100 147 110 142 M 90 158 Q 100 162 110 158 M 91 175 Q 100 178 109 175" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 71 128 Q 82 136 88 142 M 76 145 Q 81 153 89 159 M 80 161 Q 84 171 90 178" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 129 128 Q 118 136 112 142 M 124 145 Q 119 153 111 159 M 120 161 Q 116 171 110 178" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 78 186 Q 85 191 92 192 M 122 186 Q 115 191 108 192" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 60 81 Q 46 86 41 111 Q 51 108 62 116 L 67 98" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 140 81 Q 154 86 159 111 Q 149 108 138 116 L 133 98" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 47 113 Q 50 122 51 136 L 46 150 M 54 117 Q 63 129 56 146" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 153 113 Q 150 122 149 136 L 154 150 M 146 117 Q 137 129 144 146" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 44 152 Q 48 167 41 185 M 48 169 Q 52 183 42 201" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 156 152 Q 152 167 159 185 M 152 169 Q 148 183 158 201" fill="none" stroke="#F6F8FA" stroke-width="1.45"/>
+<path d="M 75 216 Q 71 238 76 270 Q 82 291 87 301" fill="none" stroke="#F6F8FA" stroke-width="1.35"/>
+<path d="M 75 216 Q 71 238 76 270 Q 82 291 87 301" fill="none" stroke="#F6F8FA" stroke-width="1.35" transform="translate(200,0) scale(-1,1)"/>
+<path d="M 91 218 Q 91 244 84 276 L 80 299" fill="none" stroke="#F6F8FA" stroke-width="1.35"/>
+<path d="M 91 218 Q 91 244 84 276 L 80 299" fill="none" stroke="#F6F8FA" stroke-width="1.35" transform="translate(200,0) scale(-1,1)"/>
+<path d="M 66 270 Q 72 284 72 300 M 69 305 Q 79 317 88 307" fill="none" stroke="#F6F8FA" stroke-width="1.35"/>
+<path d="M 66 270 Q 72 284 72 300 M 69 305 Q 79 317 88 307" fill="none" stroke="#F6F8FA" stroke-width="1.35" transform="translate(200,0) scale(-1,1)"/>
+<path d="M 72 323 Q 80 336 86 322" fill="none" stroke="#F6F8FA" stroke-width="1.35"/>
+<path d="M 72 323 Q 80 336 86 322" fill="none" stroke="#F6F8FA" stroke-width="1.35" transform="translate(200,0) scale(-1,1)"/>
+<path d="M 70 341 Q 78 357 77 377 M 85 342 Q 83 363 78 383" fill="none" stroke="#F6F8FA" stroke-width="1.35"/>
+<path d="M 70 341 Q 78 357 77 377 M 85 342 Q 83 363 78 383" fill="none" stroke="#F6F8FA" stroke-width="1.35" transform="translate(200,0) scale(-1,1)"/>
+<path d="M 74 390 Q 78 408 76 417 M 70 428 Q 81 432 89 429" fill="none" stroke="#F6F8FA" stroke-width="1.35"/>
+<path d="M 74 390 Q 78 408 76 417 M 70 428 Q 81 432 89 429" fill="none" stroke="#F6F8FA" stroke-width="1.35" transform="translate(200,0) scale(-1,1)"/>
+<path d="M 88 19 Q 100 10 112 19 M 90 45 Q 100 48 110 45" fill="none" stroke="#F6F8FA" stroke-width="1"/>
+</g>
+</svg>
