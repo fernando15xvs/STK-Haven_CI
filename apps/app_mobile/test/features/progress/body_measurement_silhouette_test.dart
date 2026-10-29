@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:gym_tracker/features/progress/presentation/widgets/body_anatomy_vector_data.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/body_measurement_silhouette.dart';
@@ -20,6 +22,26 @@ final _latestPartial=BodyMeasurement(
   weightKg:78,bodyFatPercentage:17.2,waistCm:80);
 
 void main() {
+  test('original 2D anatomy has real SVG assets and matching native contours',
+      () async {
+    expect(anatomyFrontContours.length, greaterThan(30));
+    expect(anatomyBackContours.length, greaterThan(30));
+    for (final side in ['front','back']) {
+      final svg = await rootBundle.loadString(
+          'assets/measurement_anatomy/stk_anatomy_$side.svg');
+      expect(svg,contains('<svg'));
+      expect(svg,contains('viewBox="0 0 200 440"'));
+      expect(svg,contains('fill="#111318"'));
+      expect(svg,contains('stroke="#F6F8FA"'));
+      final contours = side == 'front' ?
+        anatomyFrontContours : anatomyBackContours;
+      for (final contour in contours) {
+        expect(svg.contains('d="${contour.d}"'),isTrue,
+            reason:'SVG artwork and Flutter native vector must agree');
+      }
+    }
+  });
+
   test('latest valid non-null measurement is selected independently', () {
     const get=SilhouetteMeasurementData.latest;
     final samples=[_older,_newer,_latestPartial];
