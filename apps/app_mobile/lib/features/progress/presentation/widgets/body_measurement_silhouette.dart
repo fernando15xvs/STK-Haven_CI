@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'body_anatomy_vector_data.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:core/domain/models/body_measurement.dart';
@@ -74,25 +75,25 @@ class _Spot {
 // The user's left appears on screen-right in the *front* view, and
 // on screen-left in the *rear* view. Never swap stored left/right IDs.
 const _frontSpots = <_Spot>[
-  _Spot(MeasurementMetric.shoulders, 80, 82),
-  _Spot(MeasurementMetric.chest, 80, 116),
-  _Spot(MeasurementMetric.leftArm, 124, 139),
-  _Spot(MeasurementMetric.rightArm, 36, 139),
-  _Spot(MeasurementMetric.waist, 80, 169),
-  _Spot(MeasurementMetric.hips, 80, 202),
-  _Spot(MeasurementMetric.leftLeg, 100, 244),
-  _Spot(MeasurementMetric.rightLeg, 60, 244),
-  _Spot(MeasurementMetric.calves, 61, 298),
+  _Spot(MeasurementMetric.shoulders,100,85),
+  _Spot(MeasurementMetric.chest,100,114),
+  _Spot(MeasurementMetric.leftArm,153,152),
+  _Spot(MeasurementMetric.rightArm,47,152),
+  _Spot(MeasurementMetric.waist,100,177),
+  _Spot(MeasurementMetric.hips,100,210),
+  _Spot(MeasurementMetric.leftLeg,123,270),
+  _Spot(MeasurementMetric.rightLeg,77,270),
+  _Spot(MeasurementMetric.calves,77,366),
 ];
 const _backSpots = <_Spot>[
-  _Spot(MeasurementMetric.shoulders, 80, 82),
-  _Spot(MeasurementMetric.leftArm, 36, 139),
-  _Spot(MeasurementMetric.rightArm, 124, 139),
-  _Spot(MeasurementMetric.waist, 80, 169),
-  _Spot(MeasurementMetric.hips, 80, 203),
-  _Spot(MeasurementMetric.leftLeg, 61, 245),
-  _Spot(MeasurementMetric.rightLeg, 99, 245),
-  _Spot(MeasurementMetric.calves, 99, 298),
+  _Spot(MeasurementMetric.shoulders,100,85),
+  _Spot(MeasurementMetric.leftArm,47,152),
+  _Spot(MeasurementMetric.rightArm,153,152),
+  _Spot(MeasurementMetric.waist,100,177),
+  _Spot(MeasurementMetric.hips,100,210),
+  _Spot(MeasurementMetric.leftLeg,77,270),
+  _Spot(MeasurementMetric.rightLeg,123,270),
+  _Spot(MeasurementMetric.calves,123,366),
 ];
 
 /// Front and back visible simultaneously. Zones are interactive,
@@ -230,24 +231,29 @@ class _BodyView extends StatelessWidget {
       Text(label,style:Theme.of(context).textTheme.labelLarge),
       const SizedBox(height: 5),
       AspectRatio(
-        aspectRatio: 160/340,
+        aspectRatio: 200/440,
         child: LayoutBuilder(builder: (context, constraints) {
           final width = constraints.maxWidth;
           final height = constraints.maxHeight;
           return Stack(clipBehavior: Clip.none, children: [
+            Positioned.fill(child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E5E9)),
+              ),
+            )),
             Positioned.fill(child: CustomPaint(
               painter: _AnatomyPainter(
                 back: back, selected: selected,
                 accent: scheme.primary,
-                filled: scheme.onSurface.withValues(alpha:0.81),
-                seam: scheme.surface,
-                low: scheme.onSurface.withValues(alpha:0.13),
+
               ),
             )),
             for (final spot in spots)
               Positioned(
-                left: math.max(0, math.min(width-28, width*spot.x/160-14)),
-                top: math.max(0, math.min(height-28, height*spot.y/340-14)),
+                left: math.max(0, math.min(width-28, width*spot.x/200-14)),
+                top: math.max(0, math.min(height-28, height*spot.y/440-14)),
                 width:28, height:28,
                 child: Semantics(
                   button: true,
@@ -262,8 +268,8 @@ class _BodyView extends StatelessWidget {
                       onTap: ()=>onSelected(spot.metric),
                       child: Center(child: AnimatedContainer(
                         duration: const Duration(milliseconds: 130),
-                        width: spot.metric==selected ? 17:12,
-                        height: spot.metric==selected ? 17:12,
+                        width: spot.metric==selected ? 15:9,
+                        height: spot.metric==selected ? 15:9,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color:spot.metric==selected ? scheme.primary
@@ -288,142 +294,121 @@ class _BodyView extends StatelessWidget {
   }
 }
 
-/// Original anatomical vector silhouette, drawn entirely in Flutter.
-/// No Shutterstock/stock image or external copyrighted asset is embedded.
+/// The source SVG files in assets/measurement_anatomy are original artwork.
+/// Paths are interpreted natively with Flutter Canvas to avoid raster blur or
+/// adding an SVG rendering dependency to the shipped application.
+/// Only absolute SVG M, L, Q and Z commands are allowed.
 class _AnatomyPainter extends CustomPainter {
   final bool back;
   final MeasurementMetric selected;
-  final Color accent, filled, seam, low;
-  const _AnatomyPainter({
-    required this.back,required this.selected,
-    required this.accent,required this.filled,
-    required this.seam,required this.low,
+  final Color accent;
+  const _AnatomyPainter({required this.back, required this.selected,
+    required this.accent});
+
+  static final Map<String,Path> _pathCache = <String,Path>{};
+  static final RegExp _tokens = RegExp(r'[MLQZ]|-?(?:\d+(?:\.\d+)?|\.\d+)');
+
+  static Path _pathFromSvg(String data) => _pathCache.putIfAbsent(data, () {
+    final values = _tokens.allMatches(data).map((m) => m.group(0)!).toList();
+    final path = Path();
+    var i = 0;
+    while (i < values.length) {
+      final command = values[i++];
+      switch (command) {
+        case 'M':
+          path.moveTo(double.parse(values[i++]),double.parse(values[i++]));
+        case 'L':
+          path.lineTo(double.parse(values[i++]),double.parse(values[i++]));
+        case 'Q':
+          final x1 = double.parse(values[i++]);
+          final y1 = double.parse(values[i++]);
+          path.quadraticBezierTo(x1,y1,double.parse(values[i++]),
+            double.parse(values[i++]));
+        case 'Z':
+          path.close();
+        default:
+          throw FormatException('Unsupported anatomical SVG path token: $command');
+      }
+    }
+    return path;
   });
 
   @override
-  void paint(Canvas canvas,Size size) {
+  void paint(Canvas canvas, Size size) {
     canvas.save();
-    canvas.scale(size.width/160,size.height/340);
-    final stroke=Paint()
-      ..color=seam.withValues(alpha:0.80)
-      ..strokeWidth=1.5
-      ..strokeCap=StrokeCap.round
-      ..style=PaintingStyle.stroke;
+    canvas.scale(size.width / 200, size.height / 440);
+    final anatomyInk = const Color(0xFF111318);
+    final seam = const Color(0xFFF6F8FA);
+    final shapePaint = Paint()
+      ..color = anatomyInk
+      ..style = PaintingStyle.fill
+      ..isAntiAlias = true;
+    final borderPaint = Paint()
+      ..color = seam
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.7
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..isAntiAlias = true;
 
-    void shape(List<Offset> points,{Color? color}) {
-      // Rounded anatomical contours: avoid rigid polygonal mannequin limbs.
-      final last=points.last;
-      final first=points.first;
-      final path=Path()
-        ..moveTo((last.dx+first.dx)/2,(last.dy+first.dy)/2);
-      for(var i=0;i<points.length;i++) {
-        final current=points[i];
-        final next=points[(i+1)%points.length];
-        path.quadraticBezierTo(current.dx,current.dy,
-          (current.dx+next.dx)/2,(current.dy+next.dy)/2);
+    // The character head is a single clean silhouette: no placeholder
+    // geometric limbs. Every muscle contour below is vector path art.
+    canvas.drawOval(const Rect.fromLTWH(84,11,32,46),shapePaint);
+    final contours = back ? anatomyBackContours : anatomyFrontContours;
+    for (final contour in contours) {
+      canvas.save();
+      if (contour.mirrored) {
+        canvas.translate(200,0);
+        canvas.scale(-1,1);
       }
-      path.close();
-      canvas.drawPath(path,Paint()..color=(color??filled)..isAntiAlias=true);
-      canvas.drawPath(path,stroke);
-    }
-    Offset o(double x,double y)=>Offset(x,y);
-    void oval(double x,double y,double w,double h,{Color? color}) {
-      final rect=Rect.fromCenter(center:o(x,y),width:w,height:h);
-      canvas.drawOval(rect,Paint()..color=(color??filled)..isAntiAlias=true);
-      canvas.drawOval(rect,stroke);
-    }
-    void vein(List<Offset> pts) {
-      final p=Path()..moveTo(pts.first.dx,pts.first.dy);
-      for (final point in pts.skip(1)) {
-        p.lineTo(point.dx,point.dy);
+      final path = _pathFromSvg(contour.d);
+      if (contour.solid) {
+        canvas.drawPath(path,shapePaint);
       }
-      canvas.drawPath(p,stroke);
+      borderPaint.strokeWidth = contour.width;
+      canvas.drawPath(path,borderPaint);
+      canvas.restore();
     }
 
-    // All paths are mirrored around the midline and share a 160x340
-    // coordinate system. Fingers and toes are distinct from limb tubes.
-    oval(80,29,38,46);
-    shape([o(73,49),o(87,49),o(91,68),o(69,68)]);
-    for(final side in [-1.0,1.0]) {
-      double x(double offset)=>80+side*offset;
-      // Arm: deltoid, biceps/triceps, forearm and separated hand.
-      shape([o(x(38),76),o(x(52),80),o(x(57),100),
-        o(x(59),123),o(x(50),131),o(x(43),111),o(x(35),97)]);
-      shape([o(x(50),124),o(x(60),125),o(x(64),159),
-        o(x(59),171),o(x(50),165),o(x(45),142)]);
-      shape([o(x(58),170),o(x(67),168),o(x(70),192),
-        o(x(68),213),o(x(62),220),o(x(60),210),o(x(56),188)]);
-      // Five fingers are implicit, but still individually articulated by seams.
-      vein([o(x(63),201),o(x(65),216)]);
-      vein([o(x(66),201),o(x(68),213)]);
-      // Thigh and knee.
-      shape([o(x(7),190),o(x(33),190),o(x(34),222),
-        o(x(26),265),o(x(15),270),o(x(8),248)]);
-      oval(x(21),267,19,15);
-      // Calf, Achilles and foot.
-      shape([o(x(13),275),o(x(28),274),o(x(30),296),
-        o(x(25),322),o(x(24),329),o(x(17),329),
-        o(x(16),306)]);
-      shape([o(x(16),324),o(x(25),324),o(x(33),335),
-        o(x(31),339),o(x(12),339),o(x(11),334)]);
-    }
-    // Torso, rib cage, waist and pelvis.
-    shape([o(47,72),o(65,64),o(95,64),o(113,72),o(118,103),
-      o(105,136),o(100,165),o(113,191),o(108,210),
-      o(83,217),o(77,217),o(52,210),o(47,191),
-      o(60,165),o(55,136),o(42,103)]);
-    // Neck to clavicle or trapezius: different anatomical surfaces.
-    if(back) {
-      shape([o(73,62),o(87,62),o(108,77),
-        o(92,107),o(80,119),o(68,107),o(52,77)],color:low);
-      shape([o(43,111),o(63,115),o(78,127),o(68,159),
-        o(54,150)],color:low);
-      shape([o(117,111),o(97,115),o(82,127),o(92,159),
-        o(106,150)],color:low);
-      vein([o(80,66),o(80,180)]);
-      oval(63,199,39,32,color:low);
-      oval(97,199,39,32,color:low);
-      vein([o(53,188),o(80,181),o(107,188)]);
-    }else{
-      shape([o(49,86),o(75,94),o(77,121),o(66,132),
-        o(48,111)],color:low);
-      shape([o(111,86),o(85,94),o(83,121),o(94,132),
-        o(112,111)],color:low);
-      vein([o(80,93),o(80,142)]);
-      for(final y in [143.0,155.0,167.0]) {
-        vein([o(69,y),o(80,y+2),o(91,y)]);
-      }
-      vein([o(64,137),o(58,167),o(75,182)]);
-      vein([o(96,137),o(102,167),o(85,182)]);
-      vein([o(80,183),o(80,211)]);
-    }
-    // Highlight the selected recorded perimeter zone, not an anatomical
-    // muscle size. Do not change geometric scale based on circumference.
-    final highlight=Paint()
-      ..color=accent.withValues(alpha:0.26)
-      ..style=PaintingStyle.fill;
-    final regions=<MeasurementMetric,Rect>{
-      MeasurementMetric.shoulders:Rect.fromCenter(center:o(80,82),width:77,height:18),
-      MeasurementMetric.chest:Rect.fromCenter(center:o(80,112),width:72,height:32),
-      MeasurementMetric.waist:Rect.fromCenter(center:o(80,169),width:48,height:27),
-      MeasurementMetric.hips:Rect.fromCenter(center:o(80,201),width:65,height:29),
-      MeasurementMetric.leftArm:Rect.fromCenter(
-        center:o(back?38:122,139),width:21,height:56),
-      MeasurementMetric.rightArm:Rect.fromCenter(
-        center:o(back?122:38,139),width:21,height:56),
-      MeasurementMetric.leftLeg:Rect.fromCenter(
-        center:o(back?61:99,242),width:23,height:50),
-      MeasurementMetric.rightLeg:Rect.fromCenter(
-        center:o(back?99:61,242),width:23,height:50),
-      MeasurementMetric.calves:Rect.fromCenter(center:o(80,297),width:79,height:43),
+    // Small transparent outline, not a painted muscle or fake change in
+    // actual body shape. Uses the existing saved circumferences only.
+    final regions = <MeasurementMetric,Rect>{
+      MeasurementMetric.shoulders:
+        Rect.fromCenter(center:const Offset(100,85),width:81,height:28),
+      MeasurementMetric.chest:
+        Rect.fromCenter(center:const Offset(100,114),width:74,height:30),
+      MeasurementMetric.waist:
+        Rect.fromCenter(center:const Offset(100,177),width:48,height:29),
+      MeasurementMetric.hips:
+        Rect.fromCenter(center:const Offset(100,210),width:62,height:32),
+      MeasurementMetric.leftArm:
+        Rect.fromCenter(center:Offset(back?47:153,153),width:21,height:47),
+      MeasurementMetric.rightArm:
+        Rect.fromCenter(center:Offset(back?153:47,153),width:21,height:47),
+      MeasurementMetric.leftLeg:
+        Rect.fromCenter(center:Offset(back?77:123,270),width:30,height:53),
+      MeasurementMetric.rightLeg:
+        Rect.fromCenter(center:Offset(back?123:77,270),width:30,height:53),
+      MeasurementMetric.calves:
+        Rect.fromCenter(center:const Offset(100,365),width:79,height:38),
     };
-    final rect=regions[selected];
-    if(rect!=null)canvas.drawOval(rect,highlight);
+    final region = regions[selected];
+    if (region != null) {
+      canvas.drawOval(region,Paint()
+        ..color = accent.withValues(alpha:0.13)
+        ..style = PaintingStyle.fill);
+      canvas.drawOval(region,Paint()
+        ..color = accent.withValues(alpha:0.8)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.4
+        ..isAntiAlias = true);
+    }
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_AnatomyPainter old)=>
-    old.back!=back||old.selected!=selected||old.accent!=accent||
-    old.filled!=filled||old.seam!=seam||old.low!=low;
+  bool shouldRepaint(covariant _AnatomyPainter previous) =>
+      previous.back != back ||
+      previous.selected != selected ||
+      previous.accent != accent;
 }
