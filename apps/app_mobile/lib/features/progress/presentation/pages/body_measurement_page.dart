@@ -1,4 +1,6 @@
 import 'measurement_progress_panel.dart';
+import '../widgets/body_measurement_silhouette.dart';
+import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -21,6 +23,7 @@ class BodyMeasurementPage extends ConsumerStatefulWidget {
 }
 
 class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
+  MeasurementMetric _selectedMeasurement = MeasurementMetric.chest;
   void _showAddMeasurementModal(
     BuildContext context, [
     BodyMeasurement? existing,
@@ -56,7 +59,16 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
           if (index == 0)
             return Column(
               children: [
-                MeasurementProgressPanel(measurements: measurements),
+                BodyMeasurementSilhouette(
+                  measurements: measurements,
+                  selected: _selectedMeasurement,
+                  onSelected: (metric) => setState(() => _selectedMeasurement = metric),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                MeasurementProgressPanel(
+                  measurements: measurements,
+                  selectedMetric: _selectedMeasurement,
+                ),
                 if (measurements.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(16),
