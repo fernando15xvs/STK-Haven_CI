@@ -158,6 +158,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Sin registro'),findsWidgets);
     expect(find.textContaining('Todavía no has registrado'),findsOneWidget);
+    await tester.ensureVisible(find.byKey(const ValueKey('measure_chip_hips')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('measure_chip_hips')));
     await tester.pumpAndSettle();
     expect(selected,MeasurementMetric.hips);
