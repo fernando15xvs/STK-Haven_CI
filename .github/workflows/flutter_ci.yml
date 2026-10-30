@@ -182,8 +182,41 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  # Mobile UI tests must not depend on the obsolete CC0 remote rig.
+  # Its pinned hash is a separate hard-fail *manual* audit below, not bypassed.
   mobile-tests:
     name: Mobile tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Resolve pinned workspace
+        run: flutter pub get --enforce-lockfile
+      - name: Verify 12 sha-pinned original realistic transparent anatomy PNGs
+        working-directory: apps/app_mobile
+        run: |
+          python3 -m pip install --quiet Pillow==11.3.0
+          python3 tool/exercise_png_pilots/verify_realistic_pilots.py
+      - name: Test mobile Flutter widgets, measurements and local PNGs
+        working-directory: apps/app_mobile
+        run: flutter test
+      - name: Test 3 real catalog PNG carousels under QA flag
+        working-directory: apps/app_mobile
+        run: >-
+          flutter test --dart-define=STK_PNG_PILOTS=true
+          test/features/exercises/exercise_png_pilot_test.dart
+
+  # Archived 3D experiments: run manually on workflow_dispatch only.
+  # IMPORTANT: the downloaded CC0 asset stays hash-pinned and any mismatch
+  # still fails this job. The model is NEVER shipped as approved media.
+  anatomical-3d-qa:
+    name: Legacy 3D source integrity + animation QA (manual)
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
