@@ -85,7 +85,8 @@ void main() {
       expect(find.text('Nueva medida'),findsWidgets);
       expect(find.byKey(const Key('measurement_modal_close')),findsOneWidget);
       expect(find.byKey(const Key('measurement_modal_cancel')),findsOneWidget);
-      expect(find.text('Guardar medida'),findsOneWidget);
+      expect(find.byKey(const Key('measurement_modal_save')),findsOneWidget);
+      expect(find.text('Guardar'),findsOneWidget);
       expect(find.byKey(const Key('measurement_modal_scroll')),findsOneWidget);
       // Close must work without scrolling to the bottom of an 11-field form.
       await tester.tap(find.byKey(const Key('measurement_modal_close')));
