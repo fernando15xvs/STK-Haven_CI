@@ -99,7 +99,7 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
                         if (record.heightCm != null)
                           'Altura: ${record.heightCm!.toStringAsFixed(1)} cm',
                         if (record.chestCm != null)
-                          'Pecho: ${record.chestCm!.toStringAsFixed(1)} cm',
+                          'Tórax: ${record.chestCm!.toStringAsFixed(1)} cm',
                         if (record.waistCm != null)
                           'Cintura: ${record.waistCm!.toStringAsFixed(1)} cm',
                       ].join(' · ').isEmpty
@@ -110,7 +110,7 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
                           if (record.heightCm != null)
                             'Altura: ${record.heightCm!.toStringAsFixed(1)} cm',
                           if (record.chestCm != null)
-                            'Pecho: ${record.chestCm!.toStringAsFixed(1)} cm',
+                            'Tórax: ${record.chestCm!.toStringAsFixed(1)} cm',
                           if (record.waistCm != null)
                             'Cintura: ${record.waistCm!.toStringAsFixed(1)} cm',
                         ].join(' · ')),
@@ -246,6 +246,11 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
   late TextEditingController _leftLegCtrl;
   late TextEditingController _rightLegCtrl;
   late TextEditingController _calvesCtrl;
+  late TextEditingController _neckCtrl;
+  late TextEditingController _leftForearmCtrl;
+  late TextEditingController _rightForearmCtrl;
+  late TextEditingController _leftCalfCtrl;
+  late TextEditingController _rightCalfCtrl;
 
   @override
   void initState() {
@@ -294,6 +299,11 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
     _calvesCtrl = TextEditingController(
       text: m?.calvesCm != null ? _fmt(m!.calvesCm!) : '',
     );
+    _neckCtrl = TextEditingController(text: m?.neckCm != null ? _fmt(m!.neckCm!) : '');
+    _leftForearmCtrl = TextEditingController(text: m?.leftForearmCm != null ? _fmt(m!.leftForearmCm!) : '');
+    _rightForearmCtrl = TextEditingController(text: m?.rightForearmCm != null ? _fmt(m!.rightForearmCm!) : '');
+    _leftCalfCtrl = TextEditingController(text: m?.leftCalfCm != null ? _fmt(m!.leftCalfCm!) : '');
+    _rightCalfCtrl = TextEditingController(text: m?.rightCalfCm != null ? _fmt(m!.rightCalfCm!) : '');
   }
 
   String _fmt(double v) => v % 1 == 0 ? '${v.toInt()}' : '$v';
@@ -312,6 +322,11 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
     _leftLegCtrl.dispose();
     _rightLegCtrl.dispose();
     _calvesCtrl.dispose();
+    _neckCtrl.dispose();
+    _leftForearmCtrl.dispose();
+    _rightForearmCtrl.dispose();
+    _leftCalfCtrl.dispose();
+    _rightCalfCtrl.dispose();
     super.dispose();
   }
 
@@ -335,6 +350,11 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
       _leftLegCtrl,
       _rightLegCtrl,
       _calvesCtrl,
+      _neckCtrl,
+      _leftForearmCtrl,
+      _rightForearmCtrl,
+      _leftCalfCtrl,
+      _rightCalfCtrl,
     ];
     if (controllers.every((c) => c.text.trim().isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -363,6 +383,11 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
       leftLegCm: _parse(_leftLegCtrl.text),
       rightLegCm: _parse(_rightLegCtrl.text),
       calvesCm: _parse(_calvesCtrl.text),
+      neckCm: _parse(_neckCtrl.text),
+      leftForearmCm: _parse(_leftForearmCtrl.text),
+      rightForearmCm: _parse(_rightForearmCtrl.text),
+      leftCalfCm: _parse(_leftCalfCtrl.text),
+      rightCalfCm: _parse(_rightCalfCtrl.text),
     );
 
     setState(() => _saving = true);
@@ -490,10 +515,11 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
                       style:AppTypography.labelLarge.copyWith(
                         color:AppColors.of(context).primary)),
                     const SizedBox(height: AppSpacing.md),
+                    const Text('Frente · contornos completos'),
+                    const SizedBox(height:12),
+                    _buildField(context,'Cuello',_neckCtrl,'cm'),
                     _buildField(context,'Hombros',_shouldersCtrl,'cm'),
-                    _buildField(context,'Pecho',_chestCtrl,'cm'),
-                    _buildField(context,'Cintura',_waistCtrl,'cm'),
-                    _buildField(context,'Caderas o glúteos',_hipsCtrl,'cm'),
+                    _buildField(context,'Tórax',_chestCtrl,'cm'),
                     Row(children:[
                       Expanded(child:_buildField(
                         context,'Brazo izq.',_leftArmCtrl,'cm')),
@@ -502,13 +528,33 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
                         context,'Brazo der.',_rightArmCtrl,'cm')),
                     ]),
                     Row(children:[
-                      Expanded(child:_buildField(
-                        context,'Pierna izq.',_leftLegCtrl,'cm')),
+                      Expanded(child:_buildField(context,'Antebrazo izq.',_leftForearmCtrl,'cm')),
                       const SizedBox(width:AppSpacing.md),
-                      Expanded(child:_buildField(
-                        context,'Pierna der.',_rightLegCtrl,'cm')),
+                      Expanded(child:_buildField(context,'Antebrazo der.',_rightForearmCtrl,'cm')),
                     ]),
-                    _buildField(context,'Gemelos',_calvesCtrl,'cm'),
+                    Row(children:[
+                      Expanded(child:_buildField(context,'Muslo izq.',_leftLegCtrl,'cm')),
+                      const SizedBox(width:AppSpacing.md),
+                      Expanded(child:_buildField(context,'Muslo der.',_rightLegCtrl,'cm')),
+                    ]),
+                    Divider(height:32,color:AppColors.of(context).surfaceBorder),
+                    Text('Espalda · contornos',style:AppTypography.labelLarge.copyWith(
+                      color:AppColors.of(context).primary)),
+                    const SizedBox(height:12),
+                    _buildField(context,'Cintura',_waistCtrl,'cm'),
+                    _buildField(context,'Cadera',_hipsCtrl,'cm'),
+                    Row(children:[
+                      Expanded(child:_buildField(context,'Pantorrilla izq.',_leftCalfCtrl,'cm')),
+                      const SizedBox(width:AppSpacing.md),
+                      Expanded(child:_buildField(context,'Pantorrilla der.',_rightCalfCtrl,'cm')),
+                    ]),
+                    if (widget.existingMeasurement?.calvesCm != null) ...[
+                      const Text('Registro antiguo general, sin lado. '
+                        'No se asigna automáticamente a una pierna.'),
+                      _buildField(context,'Pantorrillas (antiguo)',_calvesCtrl,'cm'),
+                    ],
+                    const Text('La cinta mide contornos completos, no músculos aislados. '
+                      'Repite postura y posición de la cinta.'),
                     Divider(height:32,
                       color:AppColors.of(context).surfaceBorder),
                     MeasurementReminderControls(

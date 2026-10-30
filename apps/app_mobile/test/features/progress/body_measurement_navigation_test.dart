@@ -150,6 +150,25 @@ void main() {
     },
   );
 
+  testWidgets('register neck and forearm on scrollable measurement form',
+    (tester) async {
+      tester.view.physicalSize=const Size(390,900);
+      tester.view.devicePixelRatio=1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await _open(tester);
+      await tester.tap(find.byKey(const Key('measurement_add_button')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextFormField,'Cuello'),'39');
+      await tester.ensureVisible(find.widgetWithText(TextFormField,'Antebrazo izq.'));
+      await tester.enterText(find.widgetWithText(TextFormField,'Antebrazo izq.'),'30');
+      await tester.tap(find.byKey(const Key('measurement_modal_save')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('measurement_modal_close')),findsNothing);
+      expect(tester.takeException(),isNull);
+    },
+  );
+
   testWidgets('history is separate, edit and delete stay accessible',
     (tester) async {
       await _open(tester);

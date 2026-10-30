@@ -24,15 +24,19 @@ class SilhouetteMeasurementData {
   const SilhouetteMeasurementData._();
 
   static const metrics = <MeasurementMetric>[
+    MeasurementMetric.neck,
     MeasurementMetric.shoulders,
     MeasurementMetric.chest,
-    MeasurementMetric.waist,
-    MeasurementMetric.hips,
     MeasurementMetric.leftArm,
     MeasurementMetric.rightArm,
+    MeasurementMetric.leftForearm,
+    MeasurementMetric.rightForearm,
     MeasurementMetric.leftLeg,
     MeasurementMetric.rightLeg,
-    MeasurementMetric.calves,
+    MeasurementMetric.waist,
+    MeasurementMetric.hips,
+    MeasurementMetric.leftCalf,
+    MeasurementMetric.rightCalf,
   ];
 
   static SilhouetteMeasurement? latest(
@@ -75,27 +79,24 @@ class _Callout {
       this.row, this.anchor);
 }
 
+// Independent front/rear tape contours; avoid duplicated measurements.
 const _front = <_Callout>[
-  _Callout(MeasurementMetric.shoulders, 'Hombros', true, .135, Offset(.37,.20)),
-  _Callout(MeasurementMetric.chest, 'Pecho', false, .218, Offset(.52,.285)),
-  _Callout(MeasurementMetric.rightArm, 'Brazo der.', true, .330, Offset(.24,.345)),
-  _Callout(MeasurementMetric.leftArm, 'Brazo izq.', false, .400, Offset(.76,.345)),
-  _Callout(MeasurementMetric.waist, 'Cintura', true, .502, Offset(.42,.455)),
-  _Callout(MeasurementMetric.hips, 'Caderas', false, .563, Offset(.57,.518)),
-  _Callout(MeasurementMetric.rightLeg, 'Pierna der.', true, .682, Offset(.41,.648)),
-  _Callout(MeasurementMetric.leftLeg, 'Pierna izq.', false, .750, Offset(.59,.648)),
-  _Callout(MeasurementMetric.calves, 'Gemelos', true, .880, Offset(.41,.825)),
+  _Callout(MeasurementMetric.neck, 'Cuello', true, .085, Offset(.50,.166)),
+  _Callout(MeasurementMetric.shoulders, 'Hombros', false, .155, Offset(.68,.225)),
+  _Callout(MeasurementMetric.chest, 'Tórax', true, .270, Offset(.50,.296)),
+  _Callout(MeasurementMetric.rightArm, 'Brazo der.', true, .390, Offset(.225,.352)),
+  _Callout(MeasurementMetric.leftArm, 'Brazo izq.', false, .355, Offset(.775,.352)),
+  _Callout(MeasurementMetric.rightForearm, 'Ant. der.', true, .535, Offset(.165,.432)),
+  _Callout(MeasurementMetric.leftForearm, 'Ant. izq.', false, .505, Offset(.835,.432)),
+  _Callout(MeasurementMetric.rightLeg, 'Muslo der.', true, .725, Offset(.418,.655)),
+  _Callout(MeasurementMetric.leftLeg, 'Muslo izq.', false, .725, Offset(.582,.655)),
 ];
 
 const _rear = <_Callout>[
-  _Callout(MeasurementMetric.shoulders, 'Hombros', false, .135, Offset(.64,.20)),
-  _Callout(MeasurementMetric.rightArm, 'Brazo der.', false, .285, Offset(.72,.365)),
-  _Callout(MeasurementMetric.leftArm, 'Brazo izq.', true, .365, Offset(.27,.365)),
-  _Callout(MeasurementMetric.waist, 'Cintura', false, .470, Offset(.57,.457)),
-  _Callout(MeasurementMetric.hips, 'Caderas', true, .548, Offset(.41,.517)),
-  _Callout(MeasurementMetric.rightLeg, 'Pierna der.', false, .668, Offset(.60,.67)),
-  _Callout(MeasurementMetric.leftLeg, 'Pierna izq.', true, .743, Offset(.40,.67)),
-  _Callout(MeasurementMetric.calves, 'Gemelos', true, .866, Offset(.40,.824)),
+  _Callout(MeasurementMetric.waist, 'Cintura', true, .395, Offset(.50,.472)),
+  _Callout(MeasurementMetric.hips, 'Cadera', false, .540, Offset(.54,.550)),
+  _Callout(MeasurementMetric.rightCalf, 'Pant. der.', false, .780, Offset(.60,.820)),
+  _Callout(MeasurementMetric.leftCalf, 'Pant. izq.', true, .835, Offset(.40,.820)),
 ];
 
 /// A single authentic anatomical PNG, side labels and leader-lines.
@@ -277,7 +278,7 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
           Text('Toca una etiqueta o un punto para ver su imagen, medida e historial.',
             style:Theme.of(context).textTheme.bodySmall),
           Text('Los valores corresponden a perímetros registrados. '
-            'Los gemelos tienen una medida general, no un valor por pierna.',
+            'Las pantorrillas nuevas se registran por lado. El valor antiguo general sigue en el historial.',
             style:Theme.of(context).textTheme.bodySmall),
         ]),
       ),
@@ -379,7 +380,7 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
       MeasurementMetric.leftLeg => 'left_leg',
       MeasurementMetric.rightLeg => 'right_leg',
       MeasurementMetric.calves => 'calves',
-      _ => throw ArgumentError.value(metric, 'metric'),
+      _ => null, // New metric image is the complete original anatomy.
     };
     return Scaffold(
       appBar:AppBar(title:Text(metric.label)),
@@ -393,7 +394,11 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
                 ? const Color(0xFF101722):const Color(0xFFF4F6F9),
             borderRadius:BorderRadius.circular(18)),
           child:Image.asset(
-            'assets/measurement_anatomy/png/detail_$detailKey.png',
+            detailKey == null
+               ? (metric == MeasurementMetric.leftCalf || metric == MeasurementMetric.rightCalf
+                   ? 'assets/measurement_anatomy/png/body_back.png'
+                   : 'assets/measurement_anatomy/png/body_front.png')
+               : 'assets/measurement_anatomy/png/detail_$detailKey.png',
             semanticLabel:'Región anatómica destacada: ${metric.label}',
             fit:BoxFit.contain,
           ),
@@ -441,7 +446,9 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
           ]),
         )),
         const SizedBox(height:12),
-        Text('Se muestra el perímetro que registraste, no el tamaño '
+        Text(_measureInstructions(metric),style:Theme.of(context).textTheme.bodyMedium),
+         const SizedBox(height:8),
+         Text('Se muestra el perímetro que registraste, no el tamaño '
           'individual de un músculo. Más centímetros no siempre implican '
           'ganancia muscular.',
           style:Theme.of(context).textTheme.bodySmall),
@@ -481,3 +488,18 @@ class _MetricHistoryPainter extends CustomPainter {
   bool shouldRepaint(covariant _MetricHistoryPainter old) =>
     old.color!=color||old.points!=points;
 }
+
+/// A tape records full contours, not the size of individual muscles.
+String _measureInstructions(MeasurementMetric metric) => switch (metric) {
+  MeasurementMetric.neck => 'Mide el cuello por debajo de la laringe sin comprimir la cinta.',
+  MeasurementMetric.shoulders => 'Rodea deltoides y espalda alta; no mide trapecios por separado.',
+  MeasurementMetric.chest => 'Tórax: rodea pecho y espalda a la altura del pecho, tras exhalar normalmente.',
+  MeasurementMetric.leftArm || MeasurementMetric.rightArm => 'Mide a mitad entre hombro y codo con el brazo relajado.',
+  MeasurementMetric.leftForearm || MeasurementMetric.rightForearm => 'Mide el contorno máximo del antebrazo, sin contraerlo.',
+  MeasurementMetric.leftLeg || MeasurementMetric.rightLeg => 'Mide a mitad del muslo; incluye cuádriceps, isquios y aductores.',
+  MeasurementMetric.waist => 'Mide la cintura siempre en el mismo punto, sin apretar la cinta.',
+  MeasurementMetric.hips => 'Mide la máxima circunferencia de caderas y glúteos.',
+  MeasurementMetric.leftCalf || MeasurementMetric.rightCalf => 'Mide la circunferencia máxima de cada pantorrilla, por separado.',
+  MeasurementMetric.calves => 'Dato antiguo general de gemelos, sin distinción de lado.',
+  _ => 'Registra bajo condiciones similares; no equivale a tamaño de músculo.',
+};

@@ -12,11 +12,12 @@ import 'package:gym_tracker/features/progress/presentation/widgets/body_measurem
 final _older=BodyMeasurement(
   id:'old',date:DateTime(2026,1,5),
   chestCm:97,shouldersCm:114,leftArmCm:32,rightArmCm:33,
-  leftLegCm:55,rightLegCm:56,calvesCm:37);
+  leftLegCm:55,rightLegCm:56,calvesCm:37,
+  neckCm:38,leftForearmCm:28,rightForearmCm:29,leftCalfCm:34,rightCalfCm:35);
 final _newer=BodyMeasurement(
   id:'new',date:DateTime(2026,3,5),
   chestCm:101,leftArmCm:34,rightLegCm:57,
-  waistCm:81,hipsCm:97,calvesCm:39);
+  waistCm:81,hipsCm:97,calvesCm:39,rightCalfCm:38);
 final _latestPartial=BodyMeasurement(
   id:'partial',date:DateTime(2026,4,5),
   weightKg:78,bodyFatPercentage:17.2,waistCm:80);
@@ -55,6 +56,10 @@ void main() {
     expect(get(samples,MeasurementMetric.leftLeg)!.value,55);
     expect(get(samples,MeasurementMetric.rightLeg)!.value,57);
     expect(get(samples,MeasurementMetric.calves)!.value,39);
+    expect(get(samples,MeasurementMetric.leftCalf)!.value,34);
+    expect(get(samples,MeasurementMetric.rightCalf)!.value,38);
+    expect(get(samples,MeasurementMetric.rightCalf)!.previous,35);
+    expect(get(samples,MeasurementMetric.neck)!.value,38);
     expect(get([],MeasurementMetric.chest),isNull);
     expect(SilhouetteMeasurementData.metrics, isNot(contains(MeasurementMetric.weight)));
     expect(SilhouetteMeasurementData.metrics, isNot(contains(MeasurementMetric.bodyFat)));
@@ -117,6 +122,9 @@ void main() {
       expect(find.byKey(const Key('silhouette_front')),findsOneWidget);
       expect(find.byKey(const Key('silhouette_back')),findsNothing);
       expect(find.byKey(const Key('measurement_anatomy_png')),findsOneWidget);
+      expect(find.byKey(const Key('measure_chip_neck')),findsOneWidget);
+      expect(find.byKey(const Key('measure_chip_leftForearm')),findsOneWidget);
+      expect(find.byKey(const Key('measure_chip_leftCalf')),findsNothing);
       expect(find.text('101.0 cm'),findsWidgets);
       await tester.ensureVisible(find.byKey(const Key('measure_chip_chest')));
       await tester.tap(find.byKey(const Key('measure_chip_chest')));
@@ -131,12 +139,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('silhouette_back')),findsOneWidget);
       expect(find.byKey(const Key('silhouette_front')),findsNothing);
-      await tester.ensureVisible(find.byKey(const Key('measure_chip_rightLeg')));
-      await tester.tap(find.byKey(const Key('measure_chip_rightLeg')));
+      expect(find.byKey(const Key('measure_chip_chest')),findsNothing);
+      expect(find.byKey(const Key('measure_chip_calves')),findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('measure_chip_rightCalf')));
+      await tester.tap(find.byKey(const Key('measure_chip_rightCalf')));
       await tester.pumpAndSettle();
-      expect(selected,MeasurementMetric.rightLeg);
-      expect(find.text('57.0 cm'),findsWidgets);
-      expect(find.textContaining('Anterior: 56.0 cm'),findsOneWidget);
+      expect(selected,MeasurementMetric.rightCalf);
+      expect(find.text('38.0 cm'),findsWidgets);
+      expect(find.textContaining('Anterior: 35.0 cm'),findsOneWidget);
       expect(tester.takeException(),isNull);
     });
   }
