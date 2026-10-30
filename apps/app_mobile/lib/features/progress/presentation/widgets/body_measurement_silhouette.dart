@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:flutter/material.dart';
+import 'package:core/core/theme/app_palette.dart';
 import 'package:intl/intl.dart';
 
 /// Only actual recorded circumferences are allowed here.
@@ -134,6 +135,7 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final accent = AppColors.of(context);
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
@@ -163,7 +165,10 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               visualDensity: VisualDensity.compact,
               backgroundColor: WidgetStateProperty.resolveWith(
                 (states) => states.contains(WidgetState.selected)
-                    ? colors.primaryContainer : colors.surfaceContainerHighest),
+                    ? accent.primaryFaded : colors.surfaceContainerHighest),
+              foregroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? accent.primary : colors.onSurface),
             ),
           ),
           const SizedBox(height: 12),
@@ -184,8 +189,7 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               final figureLeft = (w - figureWidth) / 2;
               final figureTop = (h - figureHeight) / 2;
               final positions = _back ? _rear : _front;
-              final ink = colors.brightness == Brightness.dark
-                  ? const Color(0xFF7CB0FF) : const Color(0xFF1565EE);
+              final ink = accent.primary;
               const labelWidthFactor = .265;
               final badgeWidth = w * labelWidthFactor;
               final labelHeight = 42.0;
@@ -311,13 +315,13 @@ class _MeasureCalloutBadge extends StatelessWidget {
             children:[
               Text(shortName,maxLines:1,overflow:TextOverflow.ellipsis,
                 style:TextStyle(fontSize:10.0,fontWeight:FontWeight.w500,
-                  color:selected?Colors.white:
+                  color:selected?AppColors.of(context).onPrimary:
                     bright?Colors.white:const Color(0xFF192132))),
               const SizedBox(height:2),
               Text(value==null?'—':'${value!.value.toStringAsFixed(1)} cm',
                 maxLines:1,style:TextStyle(
                   fontSize:12,fontWeight:FontWeight.w800,
-                  color:selected?Colors.white:color)),
+                  color:selected?AppColors.of(context).onPrimary:color)),
             ]),
         ),
       ),
@@ -422,7 +426,7 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
             if(records.length>1)
               SizedBox(height:130,child:CustomPaint(
                 key:const Key('measurement_detail_chart'),
-                painter:_MetricHistoryPainter(records,scheme.primary),
+                painter:_MetricHistoryPainter(records,AppColors.of(context).primary),
                 child:const SizedBox.expand(),
               ))
             else const Text('Registra esta medida en dos fechas para ver su evolución.'),
