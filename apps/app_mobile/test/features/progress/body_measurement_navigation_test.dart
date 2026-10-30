@@ -122,6 +122,30 @@ void main() {
     },
   );
 
+  testWidgets('entering height alone saves and updates summary without modifying weight',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 850);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await _open(tester);
+      await tester.tap(find.byKey(const Key('measurement_add_button')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Altura'), '178',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('measurement_modal_save')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('measurement_modal_close')), findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('summary_height')));
+      await tester.pumpAndSettle();
+      expect(find.text('178.0 cm'), findsOneWidget);
+      expect(find.text('85.0 kg'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('history is separate, edit and delete stay accessible',
     (tester) async {
       await _open(tester);
