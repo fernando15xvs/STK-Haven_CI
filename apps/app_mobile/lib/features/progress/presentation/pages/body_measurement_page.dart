@@ -7,7 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/components/primary_button.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/body_measurement.dart';
-import 'package:core/domain/models/settings_state.dart';
+import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
@@ -63,6 +63,7 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
         builder: (context, scrollController) => Consumer(
           builder: (context, ref, _) {
             final records = ref.watch(bodyMeasurementProvider);
+            final weightUnit = ref.watch(settingsProvider).weightUnit;
             return Column(children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -93,7 +94,7 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
                         .format(record.date)),
                       subtitle: Text([
                         if (record.weightKg != null)
-                          'Peso: ${record.weightKg!.toStringAsFixed(1)} kg',
+                          'Peso: ${FitnessFormatter.formatWeight(record.weightKg!, weightUnit)}',
                         if (record.chestCm != null)
                           'Pecho: ${record.chestCm!.toStringAsFixed(1)} cm',
                         if (record.waistCm != null)
@@ -101,13 +102,13 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
                       ].join(' · ').isEmpty
                         ? 'Medidas corporales registradas'
                         : [
-                            if (record.weightKg != null)
-                              'Peso: ${record.weightKg!.toStringAsFixed(1)} kg',
-                            if (record.chestCm != null)
-                              'Pecho: ${record.chestCm!.toStringAsFixed(1)} cm',
-                            if (record.waistCm != null)
-                              'Cintura: ${record.waistCm!.toStringAsFixed(1)} cm',
-                          ].join(' · ')),
+                          if (record.weightKg != null)
+                            'Peso: ${FitnessFormatter.formatWeight(record.weightKg!, weightUnit)}',
+                          if (record.chestCm != null)
+                            'Pecho: ${record.chestCm!.toStringAsFixed(1)} cm',
+                          if (record.waistCm != null)
+                            'Cintura: ${record.waistCm!.toStringAsFixed(1)} cm',
+                        ].join(' · ')),
                       trailing: Row(mainAxisSize: MainAxisSize.min,children: [
                         IconButton(
                           tooltip: 'Editar registro',
