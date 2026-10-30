@@ -18,13 +18,19 @@ class BarbellCalculatorModal extends ConsumerStatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: BarbellCalculatorModal(initialTargetWeight: initialTargetWeight),
-      ),
+      builder: (sheetContext) {
+        final keyboard = MediaQuery.viewInsetsOf(sheetContext).bottom;
+        final available = MediaQuery.sizeOf(sheetContext).height - keyboard;
+        return Padding(
+          padding: EdgeInsets.only(bottom: keyboard),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: available * .86),
+            child: BarbellCalculatorModal(initialTargetWeight: initialTargetWeight),
+          ),
+        );
+      },
     );
   }
 
@@ -108,86 +114,64 @@ class _BarbellCalculatorModalState
   Widget build(BuildContext context) {
     final unit = ref.watch(settingsProvider).weightUnit;
     final isLb = unit == WeightUnit.lb;
-
     return Container(
       decoration: BoxDecoration(
         color: AppColors.of(context).surfaceHigh,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.of(context).textSecondary.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Calculadora de Discos',
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Row(children: [
+          Expanded(child: Text('Calculadora de discos',
             style: AppTypography.headlineMedium.copyWith(
-              color: AppColors.of(context).primary,
-            ),
+              color: AppColors.of(context).primary))),
+          IconButton(
+            key: const Key('barbell_calculator_close'),
+            tooltip: 'Cerrar calculadora',
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _weightCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  style: AppTypography.headlineLarge,
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(
-                    labelText: 'Peso total esperado (${unit.label})',
-                    border: const OutlineInputBorder(),
-                  ),
-                  onChanged: (_) => _calculate(),
-                ),
-              ),
+        ]),
+        const Divider(height: 1),
+        Flexible(child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: _weightCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: AppTypography.headlineLarge,
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                labelText: 'Peso total esperado (${unit.label})',
+                border: const OutlineInputBorder()),
+              onChanged: (_) => _calculate(),
+            ),
+            const SizedBox(height: 16),
+            if (_result != null) ...[
+              Text('Barra: ${_result!.barWeight} ${unit.label}',
+                style: AppTypography.bodyMedium),
+              const SizedBox(height: 12),
+              if (_result!.platesPerSide.isEmpty)
+                Text('Usa solo la barra vacía',
+                  style: AppTypography.headlineSmall.copyWith(
+                    color: AppColors.of(context).textSecondary))
+              else
+                _buildVisualizer(context, _result!, isLb),
+              const SizedBox(height: 12),
+              if (_result!.remainder > 0)
+                Text('Sobran ${_result!.remainder.toStringAsFixed(1)} ${unit.label}',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.of(context).warning)),
             ],
-          ),
-          const SizedBox(height: 24),
-
-          if (_result != null) ...[
-            Text(
-              'Barra: ${_result!.barWeight} ${unit.label}',
-              style: AppTypography.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            if (_result!.platesPerSide.isEmpty)
-              Text(
-                'Usa solo la barra vacía',
-                style: AppTypography.headlineSmall.copyWith(
-                  color: AppColors.of(context).textSecondary,
-                ),
-              )
-            else
-              _buildVisualizer(context, _result!, isLb),
-
-            const SizedBox(height: 16),
-            if (_result!.remainder > 0)
-              Text(
-                'Sobran ${_result!.remainder.toStringAsFixed(1)} ${unit.label}',
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.of(context).warning,
-                ),
-              ),
-          ],
-
-          const SizedBox(height: 24),
-          PrimaryButton(
-            label: 'Cerrar',
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
-      ),
+          ]),
+        )),
+        const SizedBox(height: 8),
+        PrimaryButton(
+          label: 'Cerrar',
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ]),
     );
   }
 

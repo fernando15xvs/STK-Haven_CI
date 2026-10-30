@@ -11,7 +11,8 @@ import 'package:core/features/progress/services/measurement_reminder_service.dar
 
 class MeasurementProgressPanel extends ConsumerStatefulWidget {
   final List<BodyMeasurement> measurements;
-  const MeasurementProgressPanel({super.key, required this.measurements});
+  final MeasurementMetric? selectedMetric;
+  const MeasurementProgressPanel({super.key, required this.measurements, this.selectedMetric});
   @override
   ConsumerState<MeasurementProgressPanel> createState() =>
       _MeasurementProgressPanelState();
@@ -26,7 +27,17 @@ class _MeasurementProgressPanelState
   @override
   void initState() {
     super.initState();
+    _metric = widget.selectedMetric ?? MeasurementMetric.leftArm;
     _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant MeasurementProgressPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedMetric != null &&
+        widget.selectedMetric != oldWidget.selectedMetric) {
+      _metric = widget.selectedMetric!;
+    }
   }
 
   Future<void> _load() async {

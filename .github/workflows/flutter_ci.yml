@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: public-ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   FLUTTER_VERSION: "3.38.9"
@@ -70,6 +70,20 @@ jobs:
           ls -1 supabase/migrations
           echo "Roadmap 3/4 staged migrations:"
           ls -1 /tmp/stk-post-roadmap2-migrations
+      - name: Select isolated ports for every local Supabase test service
+        run: |
+          # GitHub runners may already occupy Supabase's DEFAULT Inbucket
+          # port 54324. Isolate the entire local port bundle, not just db.
+          # This config change exists ONLY in CI's disposable checkout.
+          base=$((56000 + (GITHUB_RUN_ID % 700) * 10))
+          printf '\n[db]\nport = %s\nshadow_port = %s\n' \
+            "$base" "$((base+1))" >> supabase/config.toml
+          printf '\n[api]\nport = %s\n' \
+            "$((base+2))" >> supabase/config.toml
+          printf '\n[inbucket]\nport = %s\nsmtp_port = %s\npop3_port = %s\n' \
+            "$((base+3))" "$((base+4))" "$((base+5))" \
+            >> supabase/config.toml
+          echo "CI-only Supabase ports: db=$base, api=$((base+2)), inbucket=$((base+3))"
       - name: Start isolated Supabase at Roadmap 2 baseline
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
       - name: Rebuild Roadmap 2 baseline
@@ -103,6 +117,73 @@ jobs:
           supabase/functions/food-vision-ai/index.ts
           supabase/functions/web-push-test/index.ts
 
+  anatomical-master-v10:
+    name: New anatomical master v10 (QA)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install offline anatomical authoring dependencies
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python -m pip install -r requirements-authoring.txt
+      - name: Test new master anatomy and quarantined GLB
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python -m unittest test_master_silhouette_v10.py -v
+      - name: Build independent v10 master silhouette (unapproved)
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python build_master_silhouette_v10.py --output build/master-v10-review --pitch .012
+      - name: Test NEW v10.2 torso/back geometry, symmetry and disabled state
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python -m unittest test_torso_back_v102.py -v
+      - name: Build REAL v10.2 static sculpt GLB, no production registration
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python sculpt_torso_back_v102.py --output build/master-v102-review --pitch .012
+      - name: Test v10.3 real bilateral arms and finger anatomy (QA only)
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python -m unittest test_arms_hands_v103.py -v
+      - name: Build independent v10.3 master with arms and hands (disabled)
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python sculpt_arms_hands_v103.py --output build/master-v103-review --pitch .012
+      - name: Test v10.4 natural athletic silhouette and lower body
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python -m unittest test_aesthetic_lower_body_v104.py -v
+      - name: Build new v10.4 aesthetically proportioned master (QA-only)
+        working-directory: apps/app_mobile/tool/anatomical_3d/master_v10
+        run: python sculpt_aesthetic_lower_body_v104.py --output build/master-v104-review --pitch .012
+      - name: Upload v10.4 unapproved athletic body and geometry report
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-master-v104-athletic-qa
+          path: apps/app_mobile/tool/anatomical_3d/master_v10/build/master-v104-review/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload unapproved v10.3 anatomy and report (no catalog assets)
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-master-v103-arms-hands-qa
+          path: apps/app_mobile/tool/anatomical_3d/master_v10/build/master-v103-review/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload NEW unapproved v10.2 torso/back for visual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-master-v102-torso-back-qa
+          path: apps/app_mobile/tool/anatomical_3d/master_v10/build/master-v102-review/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload unapproved master v10 for human art review
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-master-v10-silhouette-qa
+          path: apps/app_mobile/tool/anatomical_3d/master_v10/build/master-v10-review/
+          if-no-files-found: error
+          retention-days: 14
+
+  # Mobile UI tests must not depend on the obsolete CC0 remote rig.
+  # Its pinned hash is a separate hard-fail *manual* audit below, not bypassed.
   mobile-tests:
     name: Mobile tests
     runs-on: ubuntu-latest
@@ -114,11 +195,334 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+      - name: Resolve pinned workspace
+        run: flutter pub get --enforce-lockfile
+      - name: Verify 12 sha-pinned original realistic transparent anatomy PNGs
+        working-directory: apps/app_mobile
+        run: |
+          python3 -m pip install --quiet Pillow==11.3.0
+          python3 tool/exercise_png_pilots/verify_realistic_pilots.py
+      # Pure UI and state tests must pass without staging abandoned CC0 3D
+      # prototypes. The full historic 3D Flutter suite remains in the strict
+      # manual anatomical-3d-qa job below, after its verified GLB staging.
+      - name: Test mobile product UI, measurement history and exercise pickers
+        working-directory: apps/app_mobile
+        run: >-
+          flutter test
+          test/core
+          test/features/workout
+          test/features/progress
+          test/measurement_progress_panel_test.dart
+          test/muscle_balance_panel_test.dart
+          test/progress_insights_panel_test.dart
+          test/progress_unified_exercises_test.dart
+          test/widget_test.dart
+          test/features/exercises/advanced_exercise_filter_sheet_test.dart
+          test/features/exercises/exercise_demonstration_card_test.dart
+          test/features/exercises/exercise_selection_preview_test.dart
+          test/features/exercises/muscle_hierarchy_picker_test.dart
+          test/features/exercises/mobile_lottie_production_plan_test.dart
+      - name: Test 3 real catalog PNG carousels under QA flag
+        working-directory: apps/app_mobile
+        run: >-
+          flutter test --dart-define=STK_PNG_PILOTS=true
+          test/features/exercises/exercise_png_pilot_test.dart
+
+  # Archived 3D experiments: run manually on workflow_dispatch only.
+  # IMPORTANT: the downloaded CC0 asset stays hash-pinned and any mismatch
+  # still fails this job. The model is NEVER shipped as approved media.
+  anatomical-3d-qa:
+    name: Legacy 3D source integrity + animation QA (manual)
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Verify 12 sha-pinned original realistic transparent anatomy PNGs
+        working-directory: apps/app_mobile
+        run: |
+          python3 -m pip install --quiet Pillow==11.3.0
+          python3 tool/exercise_png_pilots/verify_realistic_pilots.py
+      - name: Build unapproved anatomical v2 candidates
+        working-directory: apps/app_mobile
+        run: python3 tool/build_anatomical_v2.py --output build/anatomical_v2
+      - name: Generate skinned GLB v3 candidates (unapproved)
+        working-directory: apps/app_mobile
+        run: python3 tool/anatomical_3d/build_refined_anatomical_glb.py --output build/anatomical_3d_glb
+      - name: Test glTF 2.0 rig, skinning and animation
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_anatomical_glb.py'
+      - name: Test v3.2 anatomical mesh junctions and weighted deformation
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_refined_anatomical_glb.py'
+      - name: Test GLB grip, stance and motion contacts
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_kinematic_contact.py'
+      - name: Audit CC0 model staging rules without network
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_cc0_humanoid.py'
+      - name: Ensure FFmpeg and ffprobe for experimental offline video QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          # On the GitHub Ubuntu 26 image apt-get may hang even with a cached
+          # index (CI #530, exit 124). Avoid distro mirrors in this QA step.
+          if command -v ffmpeg >/dev/null 2>&1 && command -v ffprobe >/dev/null 2>&1 \
+              && ffmpeg -hide_banner -encoders 2>/dev/null | grep -q 'libx264'; then
+            echo "Using available FFmpeg with libx264"
+          else
+            # Pinned immutable upstream BtbN GPL static release: includes
+            # ffmpeg, ffprobe and libx264, without runtime apt dependencies.
+            # Download its published SHA256 file from the SAME release.
+            version='autobuild-2026-10-22-13-06'
+            archive='ffmpeg-N-127941-g303510f9d1-linux64-gpl.tar.xz'
+            url="https://github.com/BtbN/FFmpeg-Builds/releases/download/${version}"
+            mkdir -p "$RUNNER_TEMP/stk-ffmpeg"
+            cd "$RUNNER_TEMP/stk-ffmpeg"
+            curl --fail --location --silent --show-error --retry 3 \
+              --retry-all-errors --connect-timeout 20 --max-time 240 \
+              "$url/$archive" -o "$archive"
+            curl --fail --location --silent --show-error --retry 3 \
+              --retry-all-errors --connect-timeout 20 --max-time 60 \
+              "$url/checksums.sha256" -o checksums.sha256
+            # Inspect exactly one expected checksum entry (no unverified
+            # executable allowed); tolerate standard sha256sum *filename.
+            matches="$(grep -F "$archive" checksums.sha256 || true)"
+            if [ "$(printf '%s\n' "$matches" | grep -c .)" -ne 1 ]; then
+              echo "Missing or ambiguous pinned upstream SHA256" >&2
+              exit 1
+            fi
+            checksum="$(printf '%s\n' "$matches" | awk '{print $1}')"
+            if ! [[ "$checksum" =~ ^[a-fA-F0-9]{64}$ ]]; then
+              echo "Invalid upstream SHA256 checksum format" >&2
+              exit 1
+            fi
+            printf '%s  %s\n' "$checksum" "$archive" | sha256sum -c -
+            mkdir -p unpack
+            tar -xJf "$archive" -C unpack
+            binary="$(find unpack -type f -path '*/bin/ffmpeg' -print -quit)"
+            if [ -z "$binary" ] || [ ! -x "$binary" ]; then
+              echo "Static FFmpeg executable missing" >&2
+              exit 1
+            fi
+            dirname="$(dirname "$(realpath "$binary")")"
+            if [ ! -x "$dirname/ffprobe" ]; then
+              echo "Static ffprobe executable missing" >&2
+              exit 1
+            fi
+            echo "$dirname" >> "$GITHUB_PATH"
+            export PATH="$dirname:$PATH"
+          fi
+          ffmpeg -hide_banner -encoders 2>/dev/null | grep -F 'libx264'
+          ffmpeg -version | sed -n '1p'
+          ffprobe -version | sed -n '1p'
+      - name: Test H264 encoder from synthetic fixtures
+        working-directory: apps/app_mobile
+        run: |
+          command -v ffmpeg
+          command -v ffprobe
+          python3 -m unittest discover -s tool/anatomical_3d -p 'test_video_comparison.py'
+      - name: Download and hash-verify 53-bone CC0 source for QA
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/stage_cc0_humanoid.py
+          --download --output build/cc0_model_stage
+      - name: Generate neutral master human with 55-joint shoulder-girdle rig
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_character.py
+          --input build/cc0_model_stage/human-base-rigged-cc0.glb
+          --output build/cc0_master_character
+      - name: Verify master rest-pose invariant, 11 muscle regions and separate scapular controls
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_character.py'
+      - name: Generate 55-joint master v2 anatomical relief + eight inactive correctives
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_surface_v2.py
+          --input build/cc0_master_character/stk_haven_master_55_unapproved.glb
+          --output build/cc0_master_surface_v2
+      - name: Audit master v2 mesh/rig parity, no face inversions, and 8 unilateral shape keys
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_surface_v2.py'
+      - name: Generate seven master motion families with animated corrective morphs
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_motion_v3.py
+          --input build/cc0_master_surface_v2/stk_haven_master_surface_v2_unapproved.glb
+          --output build/cc0_master_motion_v3
+      - name: Test master 55-joint motion library and glTF morph animation
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_motion_v3.py'
+      - name: Generate optimized 55-joint mobile master with seven clips and eight morphs
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_mobile_v4.py
+          --input build/cc0_master_motion_v3/stk_master_55_motion_lab_v3_unapproved.glb
+          --output build/cc0_master_mobile_v4
+      - name: Check v4 mobile LOD size and exact glTF motion/morph preservation
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_mobile_v4.py'
+      - name: Build contact constrained master with separately animated overhead bar
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_contacts_v5.py
+          --input build/cc0_master_mobile_v4/stk_master_v4_mobile_morph_lod_unapproved.glb
+          --output build/cc0_master_contacts_v5
+      - name: Validate 121 in-between frames with wrist and foot targets
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_contacts_v5.py'
+      - name: Generate unapproved v6 master joint-surface continuity GLB
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_surface_v6.py
+          --input build/cc0_master_contacts_v5/stk_master_v5_contact_review.glb
+          --output build/cc0_master_surface_v6
+      - name: Validate CC0 v6 morph junction continuity and unchanged skin
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_surface_v6.py'
+      - name: Sculpt optional v7 pectoral deltoid and back master surface
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/build_master_surface_v7.py
+          --input build/cc0_master_surface_v6/stk_master_v6_joint_surface_review.glb
+          --output build/cc0_master_surface_v7
+      - name: Test v7 bilateral muscle relief and mobile GLB safety invariants
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_master_surface_v7.py'
+      - name: Retarget three CC0 exercises to full GLB and mobile LOD
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/retarget_cc0_glb.py
+          --input build/cc0_model_stage/human-base-rigged-cc0.glb
+          --output build/cc0_53bone_retarget
+      - name: Test 53-bone CC0 retargeting, provenance and skin weights
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_retarget_cc0.py'
+      - name: Check distinct CC0 muscle regions and bilateral symmetry
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_muscle_region_atlas.py'
+      - name: Audit bench support and three pose constraints at 81 samples
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_cc0_posture.py'
+      - name: Check actual GLB linear interpolation and planted contacts at 30 FPS
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_cc0_interpolated_motion.py'
+      - name: Sculpt and audit unapproved v9.41 torso geometry (3 GLB)
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_torso_volume_v941.py'
+      - name: Sculpt and audit unapproved v9.42 upper-body GLB (3 pilots)
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_upper_torso_v942.py'
+      - name: Audit v9.43 actual skinned torso motion and rigid-contact bounds at 60 Hz
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_dynamic_torso_v943.py'
+      - name: Validate v9.44 pixel visibility evidence schema
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_pixel_visibility_v944.py'
+      - name: Validate v9.45 focus camera evidence format
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool/anatomical_3d -p 'test_focus_v945.py'
       - name: Test mobile
         working-directory: apps/app_mobile
         run: flutter test
+      - name: Test 3 real catalog PNG carousels with QA flag and all 12 PNGs
+        working-directory: apps/app_mobile
+        run: >-
+          flutter test --dart-define=STK_PNG_PILOTS=true
+          test/features/exercises/exercise_png_pilot_test.dart
+      - name: Audit actual v9.44 Flutter raster pixel visibility evidence
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/check_pixel_visibility_v944.py
+          --input build/cc0_master_v7_flutter_qa/pixel_visibility_v944_report.json
+          --output build/cc0_master_v7_flutter_qa/pixel_visibility_v944_summary.json
+      - name: Validate real Flutter v9.45 anatomical focus captures
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/check_focus_v945.py
+          --input build/cc0_master_v7_flutter_qa/focus_v945_report.json
+          --output build/cc0_master_v7_flutter_qa/focus_v945_summary.json
+      - name: Render 192 GLB video frames using Flutter QA
+        working-directory: apps/app_mobile
+        run: flutter test --dart-define=STK_CAPTURE_VIDEO_PILOTS=true test/features/exercises/anatomical_video_capture_test.dart
+      - name: Encode three offline MP4 review candidates
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/encode_video_comparison.py
+          --frames build/video_comparison/frames
+          --glb build/anatomical_3d_glb
+          --output build/video_comparison/mp4
+      - name: Capture three REAL CC0 53-bone LOD cycles for MP4 comparison
+        working-directory: apps/app_mobile
+        run: flutter test --dart-define=STK_CAPTURE_CC0_VIDEO=true test/features/exercises/cc0_video_capture_test.dart
+      - name: Encode the same 53-bone CC0 GLB animation as H264 MP4
+        working-directory: apps/app_mobile
+        run: >-
+          python3 tool/anatomical_3d/encode_video_comparison.py
+          --frames build/cc0_video_comparison/frames
+          --glb build/cc0_53bone_retarget
+          --glb-suffix _mobile_lod
+          --source-label real_53_joint_CC0_humanoid_mobile_lod
+          --output build/cc0_video_comparison/mp4
+      - name: Test visual pilot geometry and reproducibility
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool -p 'test_visual_pilots.py'
+      - name: Test anatomical v2 candidate generation
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool -p 'test_anatomical_v2.py'
+      - name: Build visual pilot review viewer
+        working-directory: apps/app_mobile
+        run: python3 tool/build_visual_pilots.py --output build/visual_pilots
+      - name: Upload visual pilot rendering evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-visual-pilots
+          path: |
+            apps/app_mobile/build/visual_pilots/
+            apps/app_mobile/build/visual_pilots_flutter/
+            apps/app_mobile/build/anatomical_v2/
+            apps/app_mobile/build/rigged_anatomy_flutter/
+            apps/app_mobile/build/anatomical_3d_glb/
+            apps/app_mobile/build/anatomical_glb_flutter/
+            apps/app_mobile/build/video_comparison/mp4/
+            apps/app_mobile/build/cc0_model_stage/
+            apps/app_mobile/build/cc0_53bone_retarget/
+            apps/app_mobile/build/cc0_master_character/
+            apps/app_mobile/build/cc0_master_surface_v2/
+            apps/app_mobile/build/cc0_master_motion_v3/
+            apps/app_mobile/build/cc0_master_mobile_v4/
+            apps/app_mobile/build/cc0_master_contacts_v5/
+            apps/app_mobile/build/cc0_master_surface_v6/
+            apps/app_mobile/build/cc0_master_v6_flutter_qa/
+            apps/app_mobile/build/cc0_master_surface_v7/
+            apps/app_mobile/build/cc0_master_v7_flutter_qa/
+            apps/app_mobile/build/cc0_master_v5_flutter_qa/
+            apps/app_mobile/build/cc0_master_v4_flutter_qa/
+            apps/app_mobile/build/cc0_flutter_review/
+            apps/app_mobile/build/cc0_video_comparison/mp4/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Unit tests for offline Lottie reviewer
+        working-directory: apps/app_mobile
+        run: python3 -m unittest discover -s tool -p 'test_exercise_lottie_review.py'
+      - name: Audit 229 drafts and create offline SVG review sheets
+        working-directory: apps/app_mobile
+        run: python3 tool/exercise_lottie_review.py --output build/lottie_review
+      - name: Upload internal Lottie review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-lottie-review-229
+          path: apps/app_mobile/build/lottie_review/
+          retention-days: 7
+          if-no-files-found: error
 
   android:
     name: Android artifacts
@@ -149,6 +553,11 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Verify 12 sha-pinned original realistic transparent anatomy PNGs
+        working-directory: apps/app_mobile
+        run: |
+          python3 -m pip install --quiet Pillow==11.3.0
+          python3 tool/exercise_png_pilots/verify_realistic_pilots.py
       - name: Build debug APK
         working-directory: apps/app_mobile
         run: flutter build apk --debug --target lib/main_android.dart
@@ -171,6 +580,9 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -178,15 +590,20 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Verify 12 sha-pinned original realistic transparent anatomy PNGs
+        working-directory: apps/app_mobile
+        run: |
+          python3 -m pip install --quiet Pillow==11.3.0
+          python3 tool/exercise_png_pilots/verify_realistic_pilots.py
       - name: Install CocoaPods
         working-directory: apps/app_mobile/ios
         run: pod install
       - name: Build iOS profile without signing
         working-directory: apps/app_mobile
-        run: flutter build ios --profile --no-codesign --target lib/main_ios.dart
+        run: flutter build ios --profile --no-codesign --target lib/main_ios.dart --dart-define=STK_PNG_PILOTS=true
       - name: Build iOS release without signing
         working-directory: apps/app_mobile
-        run: flutter build ios --release --no-codesign --target lib/main_ios.dart
+        run: flutter build ios --release --no-codesign --target lib/main_ios.dart --dart-define=STK_PNG_PILOTS=true
       - name: Package unsigned iOS IPA
         working-directory: apps/app_mobile
         run: |
@@ -227,3 +644,4 @@ jobs:
             apps/app_mobile/build/ios_personal_test/STK-Haven-unsigned.ipa.sha256
           retention-days: 7
           if-no-files-found: error
+

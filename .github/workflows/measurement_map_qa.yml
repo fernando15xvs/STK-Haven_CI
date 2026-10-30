@@ -1,0 +1,76 @@
+name: STK Haven Mobile — Measurement Map QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/app_mobile/lib/features/progress/**'
+      - 'apps/app_mobile/test/features/progress/body_measurement_silhouette_test.dart'
+      - 'apps/app_mobile/test/measurement_progress_panel_test.dart'
+      - 'apps/app_mobile/test/features/progress/body_measurement_navigation_test.dart'
+      - 'apps/app_mobile/test/features/progress/body_measurement_summary_test.dart'
+      - 'packages/core/lib/database/hive/models/hive_body_measurement.dart'
+      - 'packages/core/lib/database/hive/models/hive_body_measurement.g.dart'
+      - 'packages/core/test/features/progress/measurement_height_hive_test.dart'
+      - 'apps/app_mobile/test/features/workout/closable_modal_sheets_test.dart'
+      - 'apps/app_mobile/lib/features/workout/presentation/widgets/barbell_calculator_modal.dart'
+      - 'apps/app_mobile/lib/features/onboarding/presentation/widgets/program_preview_modal.dart'
+      - 'packages/core/lib/features/progress/presentation/widgets/**'
+      - 'packages/core/lib/features/profile/presentation/pages/notifications_settings_page.dart'
+      - 'packages/core/lib/domain/models/body_measurement.dart'
+      - '.github/workflows/measurement_map_qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: measurement-map-qa-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  measurement-map:
+    name: Measurement silhouette Flutter QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: stable
+          cache: true
+      - name: Resolve pinned workspace
+        run: flutter pub get --enforce-lockfile
+      - name: Analyze modified measurement widgets
+        run: >-
+          flutter analyze --no-fatal-infos
+          apps/app_mobile/lib/features/progress/presentation/widgets/body_measurement_silhouette.dart
+          apps/app_mobile/lib/features/progress/presentation/widgets/body_measurement_summary.dart
+          packages/core/lib/database/hive/models/hive_body_measurement.dart
+          packages/core/lib/domain/models/body_measurement.dart
+          apps/app_mobile/lib/features/progress/presentation/pages/body_measurement_page.dart
+          apps/app_mobile/lib/features/progress/presentation/pages/measurement_progress_panel.dart
+          packages/core/lib/features/progress/presentation/widgets/measurement_reminder_controls.dart
+          packages/core/lib/features/profile/presentation/pages/notifications_settings_page.dart
+          apps/app_mobile/lib/features/workout/presentation/widgets/barbell_calculator_modal.dart
+          apps/app_mobile/lib/features/onboarding/presentation/widgets/program_preview_modal.dart
+      - name: Test saved values, both silhouettes, 320px, dark/light, existing trends
+        working-directory: apps/app_mobile
+        run: >-
+          flutter test --reporter expanded
+          test/features/progress/body_measurement_silhouette_test.dart
+          test/measurement_progress_panel_test.dart
+          test/features/progress/body_measurement_navigation_test.dart
+          test/features/progress/body_measurement_summary_test.dart
+          test/features/workout/closable_modal_sheets_test.dart
+      - name: Validate height storage compatibility with legacy records
+        working-directory: packages/core
+        run: flutter test test/features/progress/measurement_height_hive_test.dart
+      - name: Upload actual Flutter front/back screenshots for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-measurement-silhouettes-qa
+          path: apps/app_mobile/build/measurement_silhouette_qa/*.png
+          if-no-files-found: warn
+          retention-days: 14
