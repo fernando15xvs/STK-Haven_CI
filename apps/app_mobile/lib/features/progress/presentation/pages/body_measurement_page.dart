@@ -1,18 +1,17 @@
-import 'measurement_progress_panel.dart';
 import '../widgets/body_measurement_silhouette.dart';
-import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/components/primary_button.dart';
-import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
+import 'package:core/features/progress/domain/measurement_progress.dart';
+import 'package:core/features/progress/presentation/widgets/measurement_reminder_controls.dart';
 
 class BodyMeasurementPage extends ConsumerStatefulWidget {
   const BodyMeasurementPage({super.key});
@@ -24,286 +23,184 @@ class BodyMeasurementPage extends ConsumerStatefulWidget {
 
 class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
   MeasurementMetric _selectedMeasurement = MeasurementMetric.chest;
-  void _showAddMeasurementModal(
-    BuildContext context, [
-    BodyMeasurement? existing,
-  ]) {
-    showModalBottomSheet(
+
+  Future<void> _showAddMeasurementModal(BuildContext context,
+      [BodyMeasurement? existing]) {
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
+      enableDrag: true,
       backgroundColor: AppColors.of(context).surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
-      builder: (context) => _AddMeasurementModal(existingMeasurement: existing),
+      builder: (sheetContext) {
+        final keyboard = MediaQuery.viewInsetsOf(sheetContext).bottom;
+        final available = MediaQuery.sizeOf(sheetContext).height - keyboard;
+        return Padding(
+          padding: EdgeInsets.only(bottom: keyboard),
+          child: SizedBox(
+            height: available * .90,
+            child: _AddMeasurementModal(existingMeasurement: existing),
+          ),
+        );
+      },
     );
   }
+
+  Future<void> _showHistory(BuildContext context) =>
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: .70,
+        minChildSize: .35,
+        maxChildSize: .95,
+        builder: (context, scrollController) => Consumer(
+          builder: (context, ref, _) {
+            final records = ref.watch(bodyMeasurementProvider);
+            final unit = ref.watch(settingsProvider).weightUnit;
+            return Column(children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(children: [
+                  Expanded(child: Text('Historial de registros',
+                    style: Theme.of(context).textTheme.titleLarge)),
+                  IconButton(
+                    key: const Key('measurement_history_close'),
+                    tooltip: 'Cerrar historial',
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ]),
+              ),
+              Expanded(child: records.isEmpty
+                ? const Center(child: Text('Todavía no hay medidas registradas.'))
+                : ListView.separated(
+                  controller: scrollController,
+                  itemCount: records.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final record = records[index];
+                    return ListTile(
+                      key: ValueKey('measurement_record_${record.id}'),
+                      leading: Icon(Icons.straighten,
+                        color: AppColors.of(context).primary),
+                      title: Text(DateFormat('dd MMM yyyy, HH:mm', 'es')
+                        .format(record.date)),
+                      subtitle: Text([
+                        if (record.weightKg != null)
+                          'Peso: ${record.weightKg!.toStringAsFixed(1)} kg',
+                        if (record.chestCm != null)
+                          'Pecho: ${record.chestCm!.toStringAsFixed(1)} cm',
+                        if (record.waistCm != null)
+                          'Cintura: ${record.waistCm!.toStringAsFixed(1)} cm',
+                      ].join(' · ').isEmpty
+                        ? 'Medidas corporales registradas'
+                        : [
+                            if (record.weightKg != null)
+                              'Peso: ${record.weightKg!.toStringAsFixed(1)} kg',
+                            if (record.chestCm != null)
+                              'Pecho: ${record.chestCm!.toStringAsFixed(1)} cm',
+                            if (record.waistCm != null)
+                              'Cintura: ${record.waistCm!.toStringAsFixed(1)} cm',
+                          ].join(' · ')),
+                      trailing: Row(mainAxisSize: MainAxisSize.min,children: [
+                        IconButton(
+                          tooltip: 'Editar registro',
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () {
+                            Navigator.of(sheetContext).pop();
+                            _showAddMeasurementModal(this.context, record);
+                          },
+                        ),
+                        IconButton(
+                          tooltip: 'Eliminar registro',
+                          icon: Icon(Icons.delete_outline,
+                            color: Theme.of(context).colorScheme.error),
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (dialogContext) => AlertDialog(
+                                title: const Text('¿Eliminar este registro?'),
+                                content: const Text(
+                                  'Esta acción eliminará solo el registro '
+                                  'seleccionado y actualizará las medidas visibles.'),
+                                actions: [
+                                  TextButton(onPressed: () =>
+                                    Navigator.pop(dialogContext, false),
+                                    child: const Text('Cancelar')),
+                                  TextButton(onPressed: () =>
+                                    Navigator.pop(dialogContext, true),
+                                    child: const Text('Eliminar')),
+                                ],
+                              ),
+                            );
+                            if (confirmed != true) return;
+                            try {
+                              final warning = await ref
+                                .read(bodyMeasurementProvider.notifier)
+                                .deleteMeasurement(record.id);
+                              if (context.mounted && warning != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(warning)));
+                              }
+                            } catch (_) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content:
+                                    Text('No se pudo eliminar el registro.')));
+                              }
+                            }
+                          },
+                        ),
+                      ]),
+                    );
+                  },
+                )),
+            ]);
+          },
+        ),
+      ),
+    );
 
   @override
   Widget build(BuildContext context) {
     final measurements = ref.watch(bodyMeasurementProvider);
-
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: ListView.separated(
-        padding: const EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: 180,
-        ),
-        itemCount: measurements.length + 1,
-        separatorBuilder: (context, index) =>
-            const SizedBox(height: AppSpacing.md),
-        itemBuilder: (context, index) {
-          if (index == 0)
-            return Column(
-              children: [
-                BodyMeasurementSilhouette(
-                  measurements: measurements,
-                  selected: _selectedMeasurement,
-                  onSelected: (metric) => setState(() => _selectedMeasurement = metric),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                MeasurementProgressPanel(
-                  measurements: measurements,
-                  selectedMetric: _selectedMeasurement,
-                ),
-                if (measurements.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: PrimaryButton(
-                      label: 'Registrar primeras medidas',
-                      onPressed: () => _showAddMeasurementModal(context),
-                    ),
-                  ),
-              ],
-            );
-          final measurement = measurements[index - 1];
-          return _MeasurementCard(
-            measurement: measurement,
-            onTap: () => _showAddMeasurementModal(context, measurement),
-          );
-        },
-      ),
-      floatingActionButton: measurements.isNotEmpty
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 80.0),
-              child: FloatingActionButton(
-                onPressed: () => _showAddMeasurementModal(context),
-                backgroundColor: AppColors.of(context).primary,
-                child: Icon(Icons.add, color: AppColors.of(context).onPrimary),
-              ),
-            )
-          : null,
-    );
-  }
-}
-
-class _MeasurementCard extends ConsumerWidget {
-  final BodyMeasurement measurement;
-  final VoidCallback onTap;
-
-  const _MeasurementCard({required this.measurement, required this.onTap});
-
-  Widget _buildPill(
-    BuildContext context,
-    String label,
-    String value, {
-    bool highlight = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: highlight
-            ? AppColors.of(context).primaryFaded
-            : AppColors.of(context).surface,
-        borderRadius: AppRadius.sm_,
-        border: Border.all(
-          color: highlight
-              ? AppColors.of(context).primary.withValues(alpha: 0.3)
-              : AppColors.of(context).surfaceBorder,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: ListView(
+        key: const Key('body_measurement_main_list'),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
-          Text(
-            label,
-            style: AppTypography.labelSmall.copyWith(
-              color: highlight
-                  ? AppColors.of(context).primary
-                  : AppColors.of(context).textSecondary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: AppTypography.monoMedium.copyWith(
-              color: highlight
-                  ? AppColors.of(context).primary
-                  : AppColors.of(context).textPrimary,
-            ),
+          Row(children: [
+            Expanded(child: OutlinedButton.icon(
+              key: const Key('measurement_history_button'),
+              onPressed: measurements.isEmpty ? null
+                  : () => _showHistory(context),
+              icon: const Icon(Icons.history, size: 18),
+              label: const Text('Historial'),
+            )),
+            const SizedBox(width: 10),
+            Expanded(child: FilledButton.icon(
+              key: const Key('measurement_add_button'),
+              onPressed: () => _showAddMeasurementModal(context),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Nueva medida'),
+            )),
+          ]),
+          const SizedBox(height: AppSpacing.md),
+          BodyMeasurementSilhouette(
+            measurements: measurements,
+            selected: _selectedMeasurement,
+            onSelected: (metric) =>
+              setState(() => _selectedMeasurement = metric),
           ),
         ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsProvider);
-    final unit = settings.weightUnit;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.of(context).surfaceHigh,
-          borderRadius: AppRadius.lg_,
-          border: Border.all(color: AppColors.of(context).surfaceBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.straighten,
-                      size: 16,
-                      color: AppColors.of(context).primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      DateFormat(
-                        'dd MMM yyyy, HH:mm',
-                        'es',
-                      ).format(measurement.date),
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.of(context).primary,
-                      ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: AppColors.of(context).error,
-                    size: 20,
-                  ),
-                  onPressed: () async {
-                    final confirmed = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('¿Eliminar este registro?'),
-                        content: const Text(
-                          'La evolución y el recordatorio se recalcularán con las medidas restantes.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancelar'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Eliminar'),
-                          ),
-                        ],
-                      ),
-                    );
-                    if (confirmed != true) return;
-                    try {
-                      final warning = await ref
-                          .read(bodyMeasurementProvider.notifier)
-                          .deleteMeasurement(measurement.id);
-                      if (context.mounted && warning != null)
-                        ScaffoldMessenger.of(
-                          context,
-                        ).showSnackBar(SnackBar(content: Text(warning)));
-                    } catch (_) {
-                      if (context.mounted)
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('No se pudo eliminar el registro.'),
-                          ),
-                        );
-                    }
-                  },
-                  constraints: const BoxConstraints(),
-                  padding: EdgeInsets.zero,
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (measurement.weightKg != null)
-                  _buildPill(
-                    context,
-                    'Peso',
-                    FitnessFormatter.formatWeight(measurement.weightKg!, unit),
-                    highlight: true,
-                  ),
-                if (measurement.bodyFatPercentage != null)
-                  _buildPill(
-                    context,
-                    'Grasa',
-                    '${measurement.bodyFatPercentage!.toStringAsFixed(1)}%',
-                  ),
-                if (measurement.shouldersCm != null)
-                  _buildPill(
-                    context,
-                    'Hombros',
-                    '${measurement.shouldersCm!.toStringAsFixed(1)} cm',
-                  ),
-                if (measurement.chestCm != null)
-                  _buildPill(
-                    context,
-                    'Pecho',
-                    '${measurement.chestCm!.toStringAsFixed(1)} cm',
-                  ),
-                if (measurement.waistCm != null)
-                  _buildPill(
-                    context,
-                    'Cintura',
-                    '${measurement.waistCm!.toStringAsFixed(1)} cm',
-                  ),
-                if (measurement.hipsCm != null)
-                  _buildPill(
-                    context,
-                    'Caderas',
-                    '${measurement.hipsCm!.toStringAsFixed(1)} cm',
-                  ),
-                if (measurement.leftArmCm != null ||
-                    measurement.rightArmCm != null)
-                  _buildPill(
-                    context,
-                    'Brazos (I/D)',
-                    '${measurement.leftArmCm?.toStringAsFixed(1) ?? '-'} / ${measurement.rightArmCm?.toStringAsFixed(1) ?? '-'} cm',
-                  ),
-                if (measurement.leftLegCm != null ||
-                    measurement.rightLegCm != null)
-                  _buildPill(
-                    context,
-                    'Piernas (I/D)',
-                    '${measurement.leftLegCm?.toStringAsFixed(1) ?? '-'} / ${measurement.rightLegCm?.toStringAsFixed(1) ?? '-'} cm',
-                  ),
-                if (measurement.calvesCm != null)
-                  _buildPill(
-                    context,
-                    'Gemelos',
-                    '${measurement.calvesCm!.toStringAsFixed(1)} cm',
-                  ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
