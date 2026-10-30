@@ -63,7 +63,6 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
         builder: (context, scrollController) => Consumer(
           builder: (context, ref, _) {
             final records = ref.watch(bodyMeasurementProvider);
-            final unit = ref.watch(settingsProvider).weightUnit;
             return Column(children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -416,120 +415,102 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
   @override
   Widget build(BuildContext context) {
     final unit = ref.watch(settingsProvider).weightUnit;
-    final insets = MediaQuery.of(context).viewInsets;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: insets.bottom),
+    return PopScope(
+      canPop: !_saving,
       child: SafeArea(
-        child: Padding(
-          padding: AppSpacing.pagePadding,
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: AppSpacing.sm),
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.of(context).surfaceBorder,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+        top: false,
+        child: Form(
+          key: _formKey,
+          child: Column(children: [
+            // A persistent close action: long forms must never trap users.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 8, 8, 6),
+              child: Row(children: [
+                Expanded(child: Text(
+                  widget.existingMeasurement == null
+                    ? 'Nueva medida' : 'Editar medida',
+                  style: AppTypography.headlineMedium.copyWith(
+                    color: AppColors.of(context).textPrimary),
+                )),
+                IconButton(
+                  key: const Key('measurement_modal_close'),
+                  tooltip: 'Cerrar sin guardar',
+                  icon: const Icon(Icons.close),
+                  onPressed: _saving ? null
+                    : () => Navigator.of(context).pop(),
+                ),
+              ]),
+            ),
+            Divider(height: 1,color:AppColors.of(context).surfaceBorder),
+            Expanded(
+              child: SingleChildScrollView(
+                key: const Key('measurement_modal_scroll'),
+                keyboardDismissBehavior:
+                  ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Registra únicamente las medidas que tomaste.',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.of(context).textSecondary)),
+                    const SizedBox(height: AppSpacing.md),
+                    _buildField(context,'Peso',_weightCtrl,unit.label),
+                    _buildField(context,'Grasa corporal',_fatCtrl,'%'),
+                    Divider(height:32,
+                      color:AppColors.of(context).surfaceBorder),
+                    Text('Perímetros (cm)',
+                      style:AppTypography.labelLarge.copyWith(
+                        color:AppColors.of(context).primary)),
+                    const SizedBox(height: AppSpacing.md),
+                    _buildField(context,'Hombros',_shouldersCtrl,'cm'),
+                    _buildField(context,'Pecho',_chestCtrl,'cm'),
+                    _buildField(context,'Cintura',_waistCtrl,'cm'),
+                    _buildField(context,'Caderas o glúteos',_hipsCtrl,'cm'),
+                    Row(children:[
+                      Expanded(child:_buildField(
+                        context,'Brazo izq.',_leftArmCtrl,'cm')),
+                      const SizedBox(width:AppSpacing.md),
+                      Expanded(child:_buildField(
+                        context,'Brazo der.',_rightArmCtrl,'cm')),
+                    ]),
+                    Row(children:[
+                      Expanded(child:_buildField(
+                        context,'Pierna izq.',_leftLegCtrl,'cm')),
+                      const SizedBox(width:AppSpacing.md),
+                      Expanded(child:_buildField(
+                        context,'Pierna der.',_rightLegCtrl,'cm')),
+                    ]),
+                    _buildField(context,'Gemelos',_calvesCtrl,'cm'),
+                    Divider(height:32,
+                      color:AppColors.of(context).surfaceBorder),
+                    MeasurementReminderControls(
+                      compact:true,
+                      measurements:ref.watch(bodyMeasurementProvider),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  Text(
-                    widget.existingMeasurement == null
-                        ? 'Nueva Medida'
-                        : 'Editar Medida',
-                    style: AppTypography.headlineMedium.copyWith(
-                      color: AppColors.of(context).textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-
-                  _buildField(context, 'Peso', _weightCtrl, unit.label),
-                  _buildField(context, 'Grasa Corporal', _fatCtrl, '%'),
-
-                  Divider(
-                    height: 32,
-                    color: AppColors.of(context).surfaceBorder,
-                  ),
-                  Text(
-                    'Medidas (cm)',
-                    style: AppTypography.labelLarge.copyWith(
-                      color: AppColors.of(context).primary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-
-                  _buildField(context, 'Hombros', _shouldersCtrl, 'cm'),
-                  _buildField(context, 'Pecho', _chestCtrl, 'cm'),
-                  _buildField(context, 'Cintura', _waistCtrl, 'cm'),
-                  _buildField(context, 'Caderas o Glúteos', _hipsCtrl, 'cm'),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildField(
-                          context,
-                          'Brazo Izq',
-                          _leftArmCtrl,
-                          'cm',
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _buildField(
-                          context,
-                          'Brazo Der',
-                          _rightArmCtrl,
-                          'cm',
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildField(
-                          context,
-                          'Pierna Izq',
-                          _leftLegCtrl,
-                          'cm',
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: _buildField(
-                          context,
-                          'Pierna Der',
-                          _rightLegCtrl,
-                          'cm',
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  _buildField(context, 'Gemelos', _calvesCtrl, 'cm'),
-
-                  const SizedBox(height: AppSpacing.xl),
-                  PrimaryButton(
-                    label: _saving ? 'Guardando…' : 'Guardar',
-                    onPressed: () {
-                      if (!_saving) _save();
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
+            Divider(height:1,color:AppColors.of(context).surfaceBorder),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Row(children:[
+                OutlinedButton(
+                  key: const Key('measurement_modal_cancel'),
+                  onPressed: _saving ? null
+                    : () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+                const SizedBox(width:12),
+                Expanded(child: PrimaryButton(
+                  label:_saving?'Guardando…':'Guardar medida',
+                  onPressed:()=>{if(!_saving) _save()},
+                )),
+              ]),
+            ),
+          ]),
         ),
       ),
     );
