@@ -176,22 +176,26 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
         key: const Key('body_measurement_main_list'),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
-          Row(children: [
-            Expanded(child: OutlinedButton.icon(
-              key: const Key('measurement_history_button'),
-              onPressed: measurements.isEmpty ? null
-                  : () => _showHistory(context),
-              icon: const Icon(Icons.history, size: 18),
-              label: const Text('Historial'),
-            )),
-            const SizedBox(width: 10),
-            Expanded(child: FilledButton.icon(
-              key: const Key('measurement_add_button'),
-              onPressed: () => _showAddMeasurementModal(context),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Nueva medida'),
-            )),
-          ]),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                key: const Key('measurement_history_button'),
+                onPressed: measurements.isEmpty ? null
+                    : () => _showHistory(context),
+                icon: const Icon(Icons.history, size: 18),
+                label: const Text('Historial'),
+              ),
+              FilledButton.icon(
+                key: const Key('measurement_add_button'),
+                onPressed: () => _showAddMeasurementModal(context),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Nueva medida'),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.md),
           BodyMeasurementSilhouette(
             measurements: measurements,
