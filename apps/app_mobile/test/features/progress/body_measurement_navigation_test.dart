@@ -138,7 +138,11 @@ void main() {
       await tester.tap(find.byKey(const Key('measurement_modal_save')));
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('measurement_modal_close')), findsNothing);
-      await tester.ensureVisible(find.byKey(const Key('summary_height')));
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('summary_height')),
+        225.0,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       expect(find.text('178.0 cm'), findsOneWidget);
       expect(find.text('85.0 kg'), findsOneWidget);
