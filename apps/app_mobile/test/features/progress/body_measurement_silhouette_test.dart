@@ -73,18 +73,36 @@ void main() {
     expect(data.previous,isNull);
   });
 
-  for(final dark in [false,true]) {
-    testWidgets('front/back are simultaneously visible on 320px, theme $dark',
+
+  test('eleven transparent anatomical PNG assets are bundled', () async {
+    const files = [
+      'body_front','body_back','detail_chest','detail_shoulders',
+      'detail_waist','detail_hips','detail_left_arm',
+      'detail_right_arm','detail_left_leg','detail_right_leg','detail_calves',
+    ];
+    for (final name in files) {
+      final buffer = await rootBundle.load(
+        'assets/measurement_anatomy/png/$name.png',
+      );
+      final bytes = buffer.buffer.asUint8List(
+        buffer.offsetInBytes,buffer.lengthInBytes,
+      );
+      expect(bytes.length,greaterThan(10000),reason:name);
+      expect(bytes.sublist(0,8),[137,80,78,71,13,10,26,10],reason:name);
+    }
+  });
+
+  for (final dark in [false,true]) {
+    testWidgets('PNG front/back switch and muscle details on 320px $dark',
         (tester) async {
-      tester.view.physicalSize=const Size(320,800);
+      tester.view.physicalSize=const Size(320,850);
       tester.view.devicePixelRatio=1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       var selected=MeasurementMetric.chest;
       await tester.pumpWidget(MaterialApp(
-        theme:ThemeData(
-          brightness:dark?Brightness.dark:Brightness.light,
-          colorSchemeSeed:Colors.teal),
+        theme:ThemeData(brightness:dark?Brightness.dark:Brightness.light,
+          colorSchemeSeed:Colors.blue),
         home:Scaffold(body:SingleChildScrollView(
           child:StatefulBuilder(builder:(context,setState)=>
             BodyMeasurementSilhouette(
@@ -96,96 +114,95 @@ void main() {
         )),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('Frente'),findsOneWidget);
-      expect(find.text('Espalda'),findsOneWidget);
-      expect(find.text('101.0 cm'),findsWidgets);
       expect(find.byKey(const Key('silhouette_front')),findsOneWidget);
-      expect(find.byKey(const Key('silhouette_back')),findsOneWidget);
-      await tester.ensureVisible(find.byKey(
-        const ValueKey('map_front_leftArm')));
-      await tester.tap(find.byKey(const ValueKey('map_front_leftArm')));
+      expect(find.byKey(const Key('silhouette_back')),findsNothing);
+      expect(find.byKey(const Key('measurement_anatomy_png')),findsOneWidget);
+      expect(find.text('101.0 cm'),findsWidgets);
+      await tester.ensureVisible(find.byKey(const Key('measure_chip_chest')));
+      await tester.tap(find.byKey(const Key('measure_chip_chest')));
       await tester.pumpAndSettle();
-      expect(selected,MeasurementMetric.leftArm);
-      expect(find.text('34.0 cm'),findsWidgets);
-      expect(find.textContaining('+2.0 cm'),findsOneWidget);
-      await tester.ensureVisible(find.byKey(
-        const ValueKey('map_back_rightLeg')));
-      await tester.tap(find.byKey(const ValueKey('map_back_rightLeg')));
+      expect(find.byType(MeasurementMuscleDetailPage),findsOneWidget);
+      expect(find.text('101.0 cm'),findsWidgets);
+      expect(find.byKey(const Key('measurement_detail_chart')),findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Espalda').last);
+      await tester.tap(find.text('Espalda').last);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('silhouette_back')),findsOneWidget);
+      expect(find.byKey(const Key('silhouette_front')),findsNothing);
+      await tester.ensureVisible(find.byKey(const Key('measure_chip_rightLeg')));
+      await tester.tap(find.byKey(const Key('measure_chip_rightLeg')));
       await tester.pumpAndSettle();
       expect(selected,MeasurementMetric.rightLeg);
+      expect(find.text('57.0 cm'),findsWidgets);
       expect(find.textContaining('Anterior: 56.0 cm'),findsOneWidget);
       expect(tester.takeException(),isNull);
     });
   }
 
-
-  for (final dark in [false, true]) {
-    testWidgets('capture real Flutter front/back figure for artistic QA $dark',
+  for (final dark in [false,true]) {
+    testWidgets('capture both real PNG views from Flutter $dark',
         (tester) async {
-      tester.view.physicalSize = const Size(390, 1100);
+      tester.view.physicalSize = const Size(390,1100);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpWidget(MaterialApp(
-        theme: ThemeData(
-          brightness: dark ? Brightness.dark : Brightness.light,
-          colorSchemeSeed: Colors.indigo),
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: RepaintBoundary(
-              key: const ValueKey('progress_measurement_map_snapshot'),
-              child: BodyMeasurementSilhouette(
-                measurements: [_older, _newer, _latestPartial],
-                selected: MeasurementMetric.chest,
-                onSelected: (_) {},
-              ),
+        theme:ThemeData(brightness:dark?Brightness.dark:Brightness.light,
+          colorSchemeSeed:Colors.blue),
+        home:Scaffold(body:SingleChildScrollView(
+          child:RepaintBoundary(
+            key:const Key('progress_measurement_map_snapshot'),
+            child:BodyMeasurementSilhouette(
+              measurements:[_older,_newer,_latestPartial],
+              selected:MeasurementMetric.chest,
+              onSelected:(_){},
             ),
           ),
-        ),
+        )),
       ));
       await tester.pumpAndSettle();
-      await tester.runAsync(() async {
-        final boundary = tester.renderObject<RenderRepaintBoundary>(
-          find.byKey(const ValueKey('progress_measurement_map_snapshot')));
-        final image = await boundary.toImage(pixelRatio: 2);
+      for (final side in ['front','back']) {
+        if(side=='back') {
+          await tester.ensureVisible(find.text('Espalda').last);
+          await tester.tap(find.text('Espalda').last);
+          await tester.pumpAndSettle();
+        }
+        final boundary=tester.renderObject<RenderRepaintBoundary>(
+          find.byKey(const Key('progress_measurement_map_snapshot')));
+        final image=await boundary.toImage(pixelRatio:2);
         try {
-          final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-          if (bytes == null) throw StateError('Failed to capture measurement figure');
-          final dir = Directory('build/measurement_silhouette_qa')
-            ..createSync(recursive: true);
-          final file = File('${dir.path}/measurement_silhouette_${dark ? 'dark' : 'light'}.png');
-          file.writeAsBytesSync(
-            bytes.buffer.asUint8List(bytes.offsetInBytes, bytes.lengthInBytes),
-          );
-          expect(file.lengthSync(), greaterThan(5000));
+          final bytes=await image.toByteData(format:ui.ImageByteFormat.png);
+          expect(bytes,isNotNull);
+          final dir=Directory('build/measurement_silhouette_qa')
+            ..createSync(recursive:true);
+          final file=File('${dir.path}/measurement_png_${dark?'dark':'light'}_$side.png');
+          file.writeAsBytesSync(bytes!.buffer.asUint8List(
+            bytes.offsetInBytes,bytes.lengthInBytes));
+          expect(file.lengthSync(),greaterThan(5000));
         } finally {
           image.dispose();
         }
-      });
-      expect(tester.takeException(), isNull);
+      }
+      expect(tester.takeException(),isNull);
     });
   }
 
-  testWidgets('empty state shows no imaginary values and can select hips',
-      (tester) async {
-    var selected=MeasurementMetric.chest;
+  testWidgets('empty state does not invent a measurement', (tester) async {
     await tester.pumpWidget(MaterialApp(home:Scaffold(
-      body:SingleChildScrollView(child:StatefulBuilder(
-        builder:(context,change)=>BodyMeasurementSilhouette(
-          measurements:const [],selected:selected,
-          onSelected:(metric)=>change(()=>selected=metric),
-        ),
+      body:SingleChildScrollView(child:BodyMeasurementSilhouette(
+        measurements:const [],
+        selected:MeasurementMetric.chest,
+        onSelected:(_){},
       )),
     )));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Sin registro'),findsWidgets);
-    expect(find.textContaining('Todavía no has registrado'),findsOneWidget);
-    await tester.ensureVisible(find.byKey(const ValueKey('measure_chip_hips')));
+    expect(find.byKey(const Key('silhouette_front')),findsOneWidget);
+    await tester.ensureVisible(find.byKey(const Key('measure_chip_chest')));
+    await tester.tap(find.byKey(const Key('measure_chip_chest')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('measure_chip_hips')));
-    await tester.pumpAndSettle();
-    expect(selected,MeasurementMetric.hips);
-    expect(find.textContaining('Todavía no has registrado'),findsOneWidget);
+    expect(find.text('Sin registros todavía.'),findsOneWidget);
     expect(tester.takeException(),isNull);
   });
 }

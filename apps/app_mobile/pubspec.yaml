@@ -54,6 +54,7 @@ flutter:
   assets:
     - assets/imagenes/
     - assets/measurement_anatomy/
+    - assets/measurement_anatomy/png/
     - assets/exercise_media/png_pilots/ex_bench_press/
     - assets/exercise_media/png_pilots/ex_barbell_row/
     - assets/exercise_media/png_pilots/ex_squat/

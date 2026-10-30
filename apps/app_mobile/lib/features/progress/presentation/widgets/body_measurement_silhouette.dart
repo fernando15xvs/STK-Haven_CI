@@ -365,9 +365,18 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
     final value=SilhouetteMeasurementData.latest(measurements,metric);
     final progress=MeasurementProgress(measurements,metric);
     final records=progress.points.reversed.toList();
-    final chest=metric==MeasurementMetric.chest;
-    final back=metric==MeasurementMetric.hips ||
-        metric==MeasurementMetric.calves;
+    final detailKey = switch (metric) {
+      MeasurementMetric.shoulders => 'shoulders',
+      MeasurementMetric.chest => 'chest',
+      MeasurementMetric.waist => 'waist',
+      MeasurementMetric.hips => 'hips',
+      MeasurementMetric.leftArm => 'left_arm',
+      MeasurementMetric.rightArm => 'right_arm',
+      MeasurementMetric.leftLeg => 'left_leg',
+      MeasurementMetric.rightLeg => 'right_leg',
+      MeasurementMetric.calves => 'calves',
+      _ => throw ArgumentError.value(metric, 'metric'),
+    };
     return Scaffold(
       appBar:AppBar(title:Text(metric.label)),
       body:ListView(padding:const EdgeInsets.all(16),children:[
@@ -380,11 +389,8 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
                 ? const Color(0xFF101722):const Color(0xFFF4F6F9),
             borderRadius:BorderRadius.circular(18)),
           child:Image.asset(
-            chest ? 'assets/measurement_anatomy/png/detail_chest.png'
-              : back ? 'assets/measurement_anatomy/png/body_back.png'
-                     : 'assets/measurement_anatomy/png/body_front.png',
-            semanticLabel:chest?'Pectorales destacados en azul':
-              'Anatomía correspondiente a ${metric.label}',
+            'assets/measurement_anatomy/png/detail_$detailKey.png',
+            semanticLabel:'Región anatómica destacada: ${metric.label}',
             fit:BoxFit.contain,
           ),
         ),
@@ -425,7 +431,7 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
               ListTile(
                 dense:true,contentPadding:EdgeInsets.zero,
                 title:Text('${entry.value.toStringAsFixed(1)} cm'),
-                subtitle:Text(DateFormat('dd MMM yyyy','es')
+                subtitle:Text(DateFormat('dd/MM/yyyy')
                   .format(entry.date)),
               ),
           ]),
