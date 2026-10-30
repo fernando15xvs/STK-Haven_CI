@@ -44,11 +44,16 @@ class HiveBodyMeasurement extends HiveObject {
   @HiveField(12)
   final double? hipsCm;
 
+  /// Added without renumbering existing Hive fields.
+  @HiveField(13)
+  final double? heightCm;
+
   HiveBodyMeasurement({
     required this.id,
     required this.date,
     this.weightKg,
     this.bodyFatPercentage,
+    this.heightCm,
     this.shouldersCm,
     this.chestCm,
     this.waistCm,
@@ -66,6 +71,7 @@ class HiveBodyMeasurement extends HiveObject {
       date: m.date,
       weightKg: m.weightKg,
       bodyFatPercentage: m.bodyFatPercentage,
+      heightCm: m.heightCm,
       shouldersCm: m.shouldersCm,
       chestCm: m.chestCm,
       waistCm: m.waistCm,
@@ -84,6 +90,7 @@ class HiveBodyMeasurement extends HiveObject {
       date: date,
       weightKg: weightKg,
       bodyFatPercentage: bodyFatPercentage,
+      heightCm: heightCm,
       shouldersCm: shouldersCm,
       chestCm: chestCm,
       waistCm: waistCm,
