@@ -202,9 +202,26 @@ jobs:
         run: |
           python3 -m pip install --quiet Pillow==11.3.0
           python3 tool/exercise_png_pilots/verify_realistic_pilots.py
-      - name: Test mobile Flutter widgets, measurements and local PNGs
+      # Pure UI and state tests must pass without staging abandoned CC0 3D
+      # prototypes. The full historic 3D Flutter suite remains in the strict
+      # manual anatomical-3d-qa job below, after its verified GLB staging.
+      - name: Test mobile product UI, measurement history and exercise pickers
         working-directory: apps/app_mobile
-        run: flutter test
+        run: >-
+          flutter test
+          test/core
+          test/features/workout
+          test/features/progress
+          test/measurement_progress_panel_test.dart
+          test/muscle_balance_panel_test.dart
+          test/progress_insights_panel_test.dart
+          test/progress_unified_exercises_test.dart
+          test/widget_test.dart
+          test/features/exercises/advanced_exercise_filter_sheet_test.dart
+          test/features/exercises/exercise_demonstration_card_test.dart
+          test/features/exercises/exercise_selection_preview_test.dart
+          test/features/exercises/muscle_hierarchy_picker_test.dart
+          test/features/exercises/mobile_lottie_production_plan_test.dart
       - name: Test 3 real catalog PNG carousels under QA flag
         working-directory: apps/app_mobile
         run: >-
