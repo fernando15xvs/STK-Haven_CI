@@ -54,17 +54,19 @@ class ProgramPreviewModal extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          // Handle
-          Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.of(context).surfaceBorder,
-                borderRadius: BorderRadius.circular(2),
+          // Persistent close button: never force users to install a
+          // program or scroll to the bottom just to leave the preview.
+          SafeArea(
+            bottom: false,
+            child: Row(children: [
+              const Spacer(),
+              IconButton(
+                key: const Key('program_preview_close'),
+                tooltip: 'Cerrar vista previa',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close),
               ),
-            ),
+            ]),
           ),
 
           Expanded(
