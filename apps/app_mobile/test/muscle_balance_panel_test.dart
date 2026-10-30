@@ -113,7 +113,7 @@ void main() {
     // The ambiguous historical row sorts before Pecho; verify it before
     // moving down the lazy list so the test does not scroll past it.
     await tester.scrollUntilVisible(
-      find.text('Glúteos e isquios · por clasificar'), 120,
+      find.text('Glúteos e isquios · por clasificar'), -120,
     );
     expect(find.text('Glúteos e isquios · por clasificar'), findsOneWidget);
     await tester.ensureVisible(find.text('Glúteos e isquios · por clasificar'));
