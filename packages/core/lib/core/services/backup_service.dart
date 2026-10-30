@@ -347,6 +347,12 @@ class BackupService {
         'leftLegCm': measurement.leftLegCm,
         'rightLegCm': measurement.rightLegCm,
         'calvesCm': measurement.calvesCm,
+        'heightCm': measurement.heightCm,
+        'neckCm': measurement.neckCm,
+        'leftForearmCm': measurement.leftForearmCm,
+        'rightForearmCm': measurement.rightForearmCm,
+        'leftCalfCm': measurement.leftCalfCm,
+        'rightCalfCm': measurement.rightCalfCm,
       };
 
   Map<String, dynamic> _favVerseToMap(HiveFavoriteVerse verse) => {
@@ -554,6 +560,24 @@ class BackupService {
                     : null,
                 calvesCm: measurement['calvesCm'] != null
                     ? (measurement['calvesCm'] as num).toDouble()
+                    : null,
+                heightCm: measurement['heightCm'] != null
+                    ? (measurement['heightCm'] as num).toDouble()
+                    : null,
+                neckCm: measurement['neckCm'] != null
+                    ? (measurement['neckCm'] as num).toDouble()
+                    : null,
+                leftForearmCm: measurement['leftForearmCm'] != null
+                    ? (measurement['leftForearmCm'] as num).toDouble()
+                    : null,
+                rightForearmCm: measurement['rightForearmCm'] != null
+                    ? (measurement['rightForearmCm'] as num).toDouble()
+                    : null,
+                leftCalfCm: measurement['leftCalfCm'] != null
+                    ? (measurement['leftCalfCm'] as num).toDouble()
+                    : null,
+                rightCalfCm: measurement['rightCalfCm'] != null
+                    ? (measurement['rightCalfCm'] as num).toDouble()
                     : null,
               ),
             )

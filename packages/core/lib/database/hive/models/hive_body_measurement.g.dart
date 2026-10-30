@@ -31,13 +31,18 @@ class HiveBodyMeasurementAdapter extends TypeAdapter<HiveBodyMeasurement> {
       leftLegCm: fields[8] as double?,
       rightLegCm: fields[9] as double?,
       calvesCm: fields[10] as double?,
+      neckCm: fields[14] as double?,
+      leftForearmCm: fields[15] as double?,
+      rightForearmCm: fields[16] as double?,
+      leftCalfCm: fields[17] as double?,
+      rightCalfCm: fields[18] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveBodyMeasurement obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -65,7 +70,17 @@ class HiveBodyMeasurementAdapter extends TypeAdapter<HiveBodyMeasurement> {
       ..writeByte(12)
       ..write(obj.hipsCm)
       ..writeByte(13)
-      ..write(obj.heightCm);
+      ..write(obj.heightCm)
+      ..writeByte(14)
+      ..write(obj.neckCm)
+      ..writeByte(15)
+      ..write(obj.leftForearmCm)
+      ..writeByte(16)
+      ..write(obj.rightForearmCm)
+      ..writeByte(17)
+      ..write(obj.leftCalfCm)
+      ..writeByte(18)
+      ..write(obj.rightCalfCm);
   }
 
   @override

@@ -48,6 +48,18 @@ class HiveBodyMeasurement extends HiveObject {
   @HiveField(13)
   final double? heightCm;
 
+  // Additive indexes, preserve older Hive measurements.
+  @HiveField(14)
+  final double? neckCm;
+  @HiveField(15)
+  final double? leftForearmCm;
+  @HiveField(16)
+  final double? rightForearmCm;
+  @HiveField(17)
+  final double? leftCalfCm;
+  @HiveField(18)
+  final double? rightCalfCm;
+
   HiveBodyMeasurement({
     required this.id,
     required this.date,
@@ -63,6 +75,11 @@ class HiveBodyMeasurement extends HiveObject {
     this.leftLegCm,
     this.rightLegCm,
     this.calvesCm,
+    this.neckCm,
+    this.leftForearmCm,
+    this.rightForearmCm,
+    this.leftCalfCm,
+    this.rightCalfCm,
   });
 
   factory HiveBodyMeasurement.fromDomain(BodyMeasurement m) {
@@ -81,6 +98,11 @@ class HiveBodyMeasurement extends HiveObject {
       leftLegCm: m.leftLegCm,
       rightLegCm: m.rightLegCm,
       calvesCm: m.calvesCm,
+      neckCm: m.neckCm,
+      leftForearmCm: m.leftForearmCm,
+      rightForearmCm: m.rightForearmCm,
+      leftCalfCm: m.leftCalfCm,
+      rightCalfCm: m.rightCalfCm,
     );
   }
 
@@ -100,6 +122,11 @@ class HiveBodyMeasurement extends HiveObject {
       leftLegCm: leftLegCm,
       rightLegCm: rightLegCm,
       calvesCm: calvesCm,
+      neckCm: neckCm,
+      leftForearmCm: leftForearmCm,
+      rightForearmCm: rightForearmCm,
+      leftCalfCm: leftCalfCm,
+      rightCalfCm: rightCalfCm,
     );
   }
 }

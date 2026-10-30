@@ -27,6 +27,22 @@ void main() {
     expect(restored.chestCm, 103);
   });
 
+  test('new tape fields round-trip and legacy calves stay unsided', () {
+    final legacy=HiveBodyMeasurement(id:'old',date:DateTime(2025),calvesCm:38).toDomain();
+    expect(legacy.calvesCm,38);
+    expect(legacy.leftCalfCm,isNull);
+    expect(legacy.rightCalfCm,isNull);
+    final fresh=BodyMeasurement(id:'new',date:DateTime(2026),
+      neckCm:38.5,leftForearmCm:30,rightForearmCm:31,
+      leftCalfCm:36,rightCalfCm:37);
+    final restored=HiveBodyMeasurement.fromDomain(fresh).toDomain();
+    expect(restored.neckCm,38.5);
+    expect(restored.leftForearmCm,30);
+    expect(restored.rightForearmCm,31);
+    expect(restored.leftCalfCm,36);
+    expect(restored.rightCalfCm,37);
+  });
+
   test('height remains absent when only other circumferences are recorded', () {
     final restored = HiveBodyMeasurement.fromDomain(BodyMeasurement(
       id:'partial', date:DateTime(2026,10,30), leftArmCm:33,

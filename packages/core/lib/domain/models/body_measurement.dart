@@ -21,6 +21,12 @@ class BodyMeasurement {
   final double? leftLegCm;
   final double? rightLegCm;
   final double? calvesCm;
+  // Optional per-region fields; calvesCm retains legacy general meaning.
+  final double? neckCm;
+  final double? leftForearmCm;
+  final double? rightForearmCm;
+  final double? leftCalfCm;
+  final double? rightCalfCm;
 
   const BodyMeasurement({
     required this.id,
@@ -37,6 +43,11 @@ class BodyMeasurement {
     this.leftLegCm,
     this.rightLegCm,
     this.calvesCm,
+    this.neckCm,
+    this.leftForearmCm,
+    this.rightForearmCm,
+    this.leftCalfCm,
+    this.rightCalfCm,
   });
 
   BodyMeasurement copyWith({
@@ -54,6 +65,11 @@ class BodyMeasurement {
     double? leftLegCm,
     double? rightLegCm,
     double? calvesCm,
+    double? neckCm,
+    double? leftForearmCm,
+    double? rightForearmCm,
+    double? leftCalfCm,
+    double? rightCalfCm,
   }) {
     return BodyMeasurement(
       id: id ?? this.id,
@@ -70,6 +86,11 @@ class BodyMeasurement {
       leftLegCm: leftLegCm ?? this.leftLegCm,
       rightLegCm: rightLegCm ?? this.rightLegCm,
       calvesCm: calvesCm ?? this.calvesCm,
+      neckCm: neckCm ?? this.neckCm,
+      leftForearmCm: leftForearmCm ?? this.leftForearmCm,
+      rightForearmCm: rightForearmCm ?? this.rightForearmCm,
+      leftCalfCm: leftCalfCm ?? this.leftCalfCm,
+      rightCalfCm: rightCalfCm ?? this.rightCalfCm,
     );
   }
 }
