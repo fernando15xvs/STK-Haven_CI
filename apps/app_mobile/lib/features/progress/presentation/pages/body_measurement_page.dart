@@ -1,4 +1,5 @@
 import '../widgets/body_measurement_silhouette.dart';
+import '../widgets/body_measurement_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -95,6 +96,8 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
                       subtitle: Text([
                         if (record.weightKg != null)
                           'Peso: ${FitnessFormatter.formatWeight(record.weightKg!, weightUnit)}',
+                        if (record.heightCm != null)
+                          'Altura: ${record.heightCm!.toStringAsFixed(1)} cm',
                         if (record.chestCm != null)
                           'Pecho: ${record.chestCm!.toStringAsFixed(1)} cm',
                         if (record.waistCm != null)
@@ -104,6 +107,8 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
                         : [
                           if (record.weightKg != null)
                             'Peso: ${FitnessFormatter.formatWeight(record.weightKg!, weightUnit)}',
+                          if (record.heightCm != null)
+                            'Altura: ${record.heightCm!.toStringAsFixed(1)} cm',
                           if (record.chestCm != null)
                             'Pecho: ${record.chestCm!.toStringAsFixed(1)} cm',
                           if (record.waistCm != null)
@@ -171,6 +176,7 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
   @override
   Widget build(BuildContext context) {
     final measurements = ref.watch(bodyMeasurementProvider);
+    final weightUnit = ref.watch(settingsProvider).weightUnit;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: ListView(
@@ -204,6 +210,11 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
             onSelected: (metric) =>
               setState(() => _selectedMeasurement = metric),
           ),
+          const SizedBox(height: AppSpacing.md),
+          BodyMeasurementSummary(
+            measurements: measurements,
+            weightUnit: weightUnit,
+          ),
         ],
       ),
     );
@@ -225,6 +236,7 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
 
   late TextEditingController _weightCtrl;
   late TextEditingController _fatCtrl;
+  late TextEditingController _heightCtrl;
   late TextEditingController _shouldersCtrl;
   late TextEditingController _chestCtrl;
   late TextEditingController _waistCtrl;
@@ -251,6 +263,9 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
     );
     _fatCtrl = TextEditingController(
       text: m?.bodyFatPercentage != null ? _fmt(m!.bodyFatPercentage!) : '',
+    );
+    _heightCtrl = TextEditingController(
+      text: m?.heightCm != null ? _fmt(m!.heightCm!) : '',
     );
     _shouldersCtrl = TextEditingController(
       text: m?.shouldersCm != null ? _fmt(m!.shouldersCm!) : '',
@@ -287,6 +302,7 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
   void dispose() {
     _weightCtrl.dispose();
     _fatCtrl.dispose();
+    _heightCtrl.dispose();
     _shouldersCtrl.dispose();
     _chestCtrl.dispose();
     _waistCtrl.dispose();
@@ -309,6 +325,7 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
     final controllers = [
       _weightCtrl,
       _fatCtrl,
+      _heightCtrl,
       _shouldersCtrl,
       _chestCtrl,
       _waistCtrl,
@@ -336,6 +353,7 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
       date: widget.existingMeasurement?.date ?? DateTime.now(),
       weightKg: canonicalWeight,
       bodyFatPercentage: _parse(_fatCtrl.text),
+      heightCm: _parse(_heightCtrl.text),
       shouldersCm: _parse(_shouldersCtrl.text),
       chestCm: _parse(_chestCtrl.text),
       waistCm: _parse(_waistCtrl.text),
@@ -387,6 +405,8 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
             return 'Introduce un número mayor que cero';
           if (suffix == '%' && value > 100)
             return 'El porcentaje no puede superar 100';
+          if (label == 'Altura' && (value < 50 || value > 250))
+            return 'Introduce una altura entre 50 y 250 cm';
           return null;
         },
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -463,6 +483,7 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
                     const SizedBox(height: AppSpacing.md),
                     _buildField(context,'Peso',_weightCtrl,unit.label),
                     _buildField(context,'Grasa corporal',_fatCtrl,'%'),
+                    _buildField(context,'Altura',_heightCtrl,'cm'),
                     Divider(height:32,
                       color:AppColors.of(context).surfaceBorder),
                     Text('Perímetros (cm)',
