@@ -103,7 +103,7 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
               MaterialPageRoute<void>(
                 builder: (_) => const AnatomyAuditPage())),
             icon: const Icon(Icons.fact_check_outlined, size: 17),
-            label: const Text('Revisar historial'),
+            label: const Text('Revisar'),
           ),
         ]),
         Text('Ordenado por series directas; barra relativa al grupo '
