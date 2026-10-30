@@ -1,22 +1,21 @@
 import 'dart:math' as math;
-import 'body_anatomy_vector_data.dart';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
-/// Maps existing *circumference* fields, not invented individual muscle sizes.
-/// Weight and body-fat are deliberately not painted onto anatomical regions.
+/// Only actual recorded circumferences are allowed here.
+/// A given record may contain only one field: each metric uses its own
+/// most recent valid observation (never fabricated interpolations).
 class SilhouetteMeasurement {
   final MeasurementMetric metric;
   final double value;
   final DateTime date;
   final double? previous;
   final DateTime? previousDate;
-
   const SilhouetteMeasurement(this.metric, this.value, this.date,
       this.previous, this.previousDate);
-
   double? get delta => previous == null ? null : value - previous!;
 }
 
@@ -35,8 +34,6 @@ class SilhouetteMeasurementData {
     MeasurementMetric.calves,
   ];
 
-  /// Each field uses its own latest valid record: entries may be partial.
-  /// Compare against the previous distinct *date*, never another field.
   static SilhouetteMeasurement? latest(
       Iterable<BodyMeasurement> records, MeasurementMetric metric) {
     final values = <BodyMeasurement>[
@@ -47,61 +44,66 @@ class SilhouetteMeasurementData {
     ]..sort((a, b) => b.date.compareTo(a.date));
     if (values.isEmpty) return null;
     final newest = values.first;
-    BodyMeasurement? prior;
+    BodyMeasurement? previous;
     for (final record in values.skip(1)) {
       if (record.date.isBefore(newest.date)) {
-        prior = record;
+        previous = record;
         break;
       }
     }
     return SilhouetteMeasurement(
       metric, metric.value(newest)!, newest.date,
-      prior == null ? null : metric.value(prior),
-      prior?.date,
+      previous == null ? null : metric.value(previous),
+      previous?.date,
     );
   }
 
-  static String formatted(SilhouetteMeasurement? data) =>
-      data == null ? 'Sin registro' : '${data.value.toStringAsFixed(1)} cm';
+  static String formatted(SilhouetteMeasurement? value) =>
+      value == null ? 'Sin registro' : '${value.value.toStringAsFixed(1)} cm';
 }
 
-class _Spot {
+/// Geometry is normalized to the whole image area (transparent PNG).
+/// The user's LEFT is on the right when viewed from the FRONT.
+class _Callout {
   final MeasurementMetric metric;
-  final double x;
-  final double y;
-  const _Spot(this.metric, this.x, this.y);
+  final String shortName;
+  final bool labelLeft;
+  final double row;
+  final Offset anchor;
+  const _Callout(this.metric, this.shortName, this.labelLeft,
+      this.row, this.anchor);
 }
 
-// The user's left appears on screen-right in the *front* view, and
-// on screen-left in the *rear* view. Never swap stored left/right IDs.
-const _frontSpots = <_Spot>[
-  _Spot(MeasurementMetric.shoulders,100,85),
-  _Spot(MeasurementMetric.chest,100,114),
-  _Spot(MeasurementMetric.leftArm,153,152),
-  _Spot(MeasurementMetric.rightArm,47,152),
-  _Spot(MeasurementMetric.waist,100,177),
-  _Spot(MeasurementMetric.hips,100,210),
-  _Spot(MeasurementMetric.leftLeg,123,270),
-  _Spot(MeasurementMetric.rightLeg,77,270),
-  _Spot(MeasurementMetric.calves,77,366),
-];
-const _backSpots = <_Spot>[
-  _Spot(MeasurementMetric.shoulders,100,85),
-  _Spot(MeasurementMetric.leftArm,47,152),
-  _Spot(MeasurementMetric.rightArm,153,152),
-  _Spot(MeasurementMetric.waist,100,177),
-  _Spot(MeasurementMetric.hips,100,210),
-  _Spot(MeasurementMetric.leftLeg,77,270),
-  _Spot(MeasurementMetric.rightLeg,123,270),
-  _Spot(MeasurementMetric.calves,123,366),
+const _front = <_Callout>[
+  _Callout(MeasurementMetric.shoulders, 'Hombros', true, .135, Offset(.37,.20)),
+  _Callout(MeasurementMetric.chest, 'Pecho', false, .218, Offset(.52,.285)),
+  _Callout(MeasurementMetric.rightArm, 'Brazo der.', true, .330, Offset(.24,.345)),
+  _Callout(MeasurementMetric.leftArm, 'Brazo izq.', false, .400, Offset(.76,.345)),
+  _Callout(MeasurementMetric.waist, 'Cintura', true, .502, Offset(.42,.455)),
+  _Callout(MeasurementMetric.hips, 'Caderas', false, .563, Offset(.57,.518)),
+  _Callout(MeasurementMetric.rightLeg, 'Pierna der.', true, .682, Offset(.41,.648)),
+  _Callout(MeasurementMetric.leftLeg, 'Pierna izq.', false, .750, Offset(.59,.648)),
+  _Callout(MeasurementMetric.calves, 'Gemelos', true, .880, Offset(.41,.825)),
 ];
 
-/// Front and back visible simultaneously. Zones are interactive,
-/// keyboard/screen-reader accessible, and follow app light/dark/accent.
-class BodyMeasurementSilhouette extends StatelessWidget {
+const _rear = <_Callout>[
+  _Callout(MeasurementMetric.shoulders, 'Hombros', false, .135, Offset(.64,.20)),
+  _Callout(MeasurementMetric.rightArm, 'Brazo der.', false, .285, Offset(.72,.365)),
+  _Callout(MeasurementMetric.leftArm, 'Brazo izq.', true, .365, Offset(.27,.365)),
+  _Callout(MeasurementMetric.waist, 'Cintura', false, .470, Offset(.57,.457)),
+  _Callout(MeasurementMetric.hips, 'Caderas', true, .548, Offset(.41,.517)),
+  _Callout(MeasurementMetric.rightLeg, 'Pierna der.', false, .668, Offset(.60,.67)),
+  _Callout(MeasurementMetric.leftLeg, 'Pierna izq.', true, .743, Offset(.40,.67)),
+  _Callout(MeasurementMetric.calves, 'Gemelos', true, .866, Offset(.40,.824)),
+];
+
+/// A single authentic anatomical PNG, side labels and leader-lines.
+/// Nothing (including cm values) is baked into the PNG asset.
+class BodyMeasurementSilhouette extends StatefulWidget {
   final List<BodyMeasurement> measurements;
   final MeasurementMetric selected;
   final ValueChanged<MeasurementMetric> onSelected;
+
   const BodyMeasurementSilhouette({
     super.key,
     required this.measurements,
@@ -110,305 +112,363 @@ class BodyMeasurementSilhouette extends StatelessWidget {
   });
 
   @override
+  State<BodyMeasurementSilhouette> createState() =>
+      _BodyMeasurementSilhouetteState();
+}
+
+class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
+  bool _back = false;
+
+  void _open(MeasurementMetric metric) {
+    widget.onSelected(metric);
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MeasurementMuscleDetailPage(
+          metric: metric,
+          measurements: widget.measurements,
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final data = SilhouetteMeasurementData.latest(measurements, selected);
-    final history = MeasurementProgress(measurements, selected);
+    final colors = Theme.of(context).colorScheme;
+    final labelStyle = Theme.of(context).textTheme.labelMedium;
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text('Mapa de medidas corporales',
-            style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 5),
-          Text('Selecciona una zona. Se muestran perímetros registrados, '
-            'no el tamaño aislado de cada músculo.',
-            style: Theme.of(context).textTheme.bodySmall),
-          const SizedBox(height: 12),
-          Row(crossAxisAlignment: CrossAxisAlignment.start,children: [
-            Expanded(child: _BodyView(
-              key: const ValueKey('silhouette_front'),
-              label: 'Frente',
-              back: false,
-              spots: _frontSpots,
-              selected: selected,
-              measurements: measurements,
-              onSelected: onSelected,
-            )),
-            const SizedBox(width: 8),
-            Expanded(child: _BodyView(
-              key: const ValueKey('silhouette_back'),
-              label: 'Espalda',
-              back: true,
-              spots: _backSpots,
-              selected: selected,
-              measurements: measurements,
-              onSelected: onSelected,
-            )),
+          Row(children: [
+            Expanded(child: Text('Medidas corporales',
+              style: Theme.of(context).textTheme.titleMedium)),
+            Tooltip(
+              message:'Perímetros registrados; no tamaños individuales de músculos.',
+              child: Icon(Icons.info_outline, size: 19,
+                color: colors.onSurfaceVariant),
+            ),
           ]),
+          const SizedBox(height: 10),
+          SegmentedButton<bool>(
+            key: const Key('measurement_view_switch'),
+            segments: const [
+              ButtonSegment(value:false,label:Text('Frente')),
+              ButtonSegment(value:true,label:Text('Espalda')),
+            ],
+            selected: {_back},
+            onSelectionChanged: (values) =>
+                setState(() => _back = values.first),
+            showSelectedIcon: false,
+            style: ButtonStyle(
+              visualDensity: VisualDensity.compact,
+              backgroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? colors.primaryContainer : colors.surfaceContainerHighest),
+            ),
+          ),
           const SizedBox(height: 12),
           Container(
-            key: const ValueKey('silhouette_selected_detail'),
-            padding: const EdgeInsets.all(12),
+            key: Key(_back ? 'silhouette_back' : 'silhouette_front'),
             decoration: BoxDecoration(
-              color: scheme.primaryContainer.withValues(alpha: 0.26),
-              border: Border.all(color: scheme.primary.withValues(alpha: 0.20)),
-              borderRadius: BorderRadius.circular(14),
+              color: colors.brightness == Brightness.dark
+                ? const Color(0xFF0D121B) : const Color(0xFFF5F7FA),
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(selected.label,
-                  style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 4),
-                Text(SilhouetteMeasurementData.formatted(data),
-                  key: const ValueKey('silhouette_selected_value'),
-                  style: Theme.of(context).textTheme.titleLarge),
-                if (data != null) ...[
-                  Text('Registrado: ${DateFormat('dd/MM/yyyy').format(data.date)}',
-                    style: Theme.of(context).textTheme.bodySmall),
-                  if (data.previous != null)
-                    Text('Anterior: ${data.previous!.toStringAsFixed(1)} cm'
-                      ' · ${data.delta! >= 0 ? '+' : ''}'
-                      '${data.delta!.toStringAsFixed(1)} cm',
-                      key: const ValueKey('silhouette_delta')),
-                ] else
-                  Text('Todavía no has registrado esta medida.',
-                    style: Theme.of(context).textTheme.bodySmall),
-                if (history.points.isNotEmpty) ...[
-                  const SizedBox(height: 5),
-                  Text('${history.points.length} '
-                    '${history.points.length == 1 ? 'registro' : 'registros'}'
-                    ' en el historial · Ver evolución debajo',
-                    style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ]),
+            child: LayoutBuilder(builder: (context, limits) {
+              // The anatomical PNG has a 0.4 width/height ratio. Reserve
+              // generous outer margins for readable left/right callouts.
+              final w = limits.maxWidth;
+              final h = math.max(405.0, math.min(570.0, w * 1.43));
+              final figureWidth = w * .57;
+              final figureHeight = h * .95;
+              final figureLeft = (w - figureWidth) / 2;
+              final figureTop = (h - figureHeight) / 2;
+              final positions = _back ? _rear : _front;
+              final ink = colors.brightness == Brightness.dark
+                  ? const Color(0xFF7CB0FF) : const Color(0xFF1565EE);
+              const labelWidthFactor = .265;
+              final badgeWidth = w * labelWidthFactor;
+              final labelHeight = 42.0;
+              final anchors = [
+                for (final c in positions)
+                  Offset(figureLeft + c.anchor.dx * figureWidth,
+                    figureTop + c.anchor.dy * figureHeight),
+              ];
+              final ends = [
+                for (final c in positions)
+                  Offset(c.labelLeft ? badgeWidth+3 : w-badgeWidth-3,
+                    c.row*h+labelHeight*.5),
+              ];
+              return SizedBox(
+                height: h,
+                child: Stack(children: [
+                  Positioned(
+                    left:figureLeft, top:figureTop,
+                    width:figureWidth,height:figureHeight,
+                    child: Image.asset(
+                      _back
+                        ? 'assets/measurement_anatomy/png/body_back.png'
+                        : 'assets/measurement_anatomy/png/body_front.png',
+                      key: const Key('measurement_anatomy_png'),
+                      fit:BoxFit.contain,
+                      filterQuality:FilterQuality.high,
+                      semanticLabel: _back
+                          ? 'Anatomía muscular posterior'
+                          : 'Anatomía muscular frontal',
+                    ),
+                  ),
+                  Positioned.fill(child:IgnorePointer(child:CustomPaint(
+                    painter:_LeaderLines(anchors:anchors,ends:ends,color:ink),
+                  ))),
+                  for(var i=0;i<positions.length;i++)
+                    Positioned(
+                      left:positions[i].labelLeft ? 3 : w-badgeWidth-3,
+                      top:positions[i].row*h,
+                      width:badgeWidth,
+                      height:labelHeight,
+                      child: _MeasureCalloutBadge(
+                        key:Key('measure_chip_${positions[i].metric.name}'),
+                        metric:positions[i].metric,
+                        shortName:positions[i].shortName,
+                        value:SilhouetteMeasurementData.latest(
+                          widget.measurements,positions[i].metric),
+                        selected:widget.selected == positions[i].metric,
+                        color:ink,
+                        onPressed:()=>_open(positions[i].metric),
+                      ),
+                    ),
+                  for(var i=0;i<positions.length;i++)
+                    Positioned(
+                      key: Key('map_${_back?'back':'front'}_${positions[i].metric.name}'),
+                      left:anchors[i].dx-16,top:anchors[i].dy-16,
+                      width:32,height:32,
+                      child:Semantics(
+                        button:true,
+                        label:'${positions[i].metric.label}, '
+                          '${SilhouetteMeasurementData.formatted(
+                            SilhouetteMeasurementData.latest(
+                              widget.measurements,positions[i].metric))}',
+                        child:InkResponse(
+                          radius:16,
+                          onTap:()=>_open(positions[i].metric),
+                          child:Center(child:Container(
+                            width:widget.selected==positions[i].metric?13:10,
+                            height:widget.selected==positions[i].metric?13:10,
+                            decoration:BoxDecoration(
+                              shape:BoxShape.circle,
+                              color:ink,
+                              border:Border.all(color:Colors.white,width:1.6),
+                              boxShadow:const [BoxShadow(
+                                color:Colors.black38,blurRadius:3)],
+                            ),
+                          )),
+                        ),
+                      ),
+                    ),
+                ]),
+              );
+            }),
           ),
-          const SizedBox(height: 10),
-          Wrap(spacing: 6,runSpacing: 6,children: [
-            for (final metric in SilhouetteMeasurementData.metrics)
-              ActionChip(
-                key: ValueKey('measure_chip_${metric.name}'),
-                tooltip: metric.label,
-                avatar: Icon(Icons.circle,
-                  size: 11,
-                  color: selected == metric ? scheme.primary
-                    : SilhouetteMeasurementData.latest(measurements,metric) != null
-                      ? scheme.tertiary : scheme.outline),
-                label: Text('${metric.label}: '
-                  '${SilhouetteMeasurementData.latest(measurements,metric)?.value.toStringAsFixed(1) ?? '—'}'
-                  '${SilhouetteMeasurementData.latest(measurements,metric) == null ? '' : ' cm'}'),
-                onPressed: () => onSelected(metric),
-              ),
-          ]),
-          const SizedBox(height: 6),
-          Text('Los gemelos tienen una única medida general; el registro '
-            'actual no distingue pantorrilla izquierda y derecha. '
-            'Un cambio de perímetro no demuestra por sí solo ganancia muscular.',
-            style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 9),
+          Text('Toca una etiqueta o un punto para ver su imagen, medida e historial.',
+            style:Theme.of(context).textTheme.bodySmall),
+          Text('Los valores corresponden a perímetros registrados. '
+            'Los gemelos tienen una medida general, no un valor por pierna.',
+            style:Theme.of(context).textTheme.bodySmall),
         ]),
       ),
     );
   }
 }
 
-class _BodyView extends StatelessWidget {
-  final bool back;
-  final String label;
-  final List<_Spot> spots;
-  final MeasurementMetric selected;
+class _MeasureCalloutBadge extends StatelessWidget {
+  final MeasurementMetric metric;
+  final String shortName;
+  final SilhouetteMeasurement? value;
+  final bool selected;
+  final Color color;
+  final VoidCallback onPressed;
+  const _MeasureCalloutBadge({
+    super.key,required this.metric,required this.shortName,
+    required this.value,required this.selected,required this.color,
+    required this.onPressed,
+  });
+  @override
+  Widget build(BuildContext context) {
+    final bright = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: selected ? color : bright?const Color(0xFF1C2635):Colors.white,
+      borderRadius:BorderRadius.circular(9),
+      child:InkWell(
+        borderRadius:BorderRadius.circular(9),onTap:onPressed,
+        child:Container(
+          decoration:BoxDecoration(
+            borderRadius:BorderRadius.circular(9),
+            border:Border.all(color:color.withValues(alpha:.55)),
+          ),
+          padding:const EdgeInsets.symmetric(horizontal:4,vertical:3),
+          child:Column(mainAxisAlignment:MainAxisAlignment.center,
+            children:[
+              Text(shortName,maxLines:1,overflow:TextOverflow.ellipsis,
+                style:TextStyle(fontSize:10.0,fontWeight:FontWeight.w500,
+                  color:selected?Colors.white:
+                    bright?Colors.white:const Color(0xFF192132))),
+              const SizedBox(height:2),
+              Text(value==null?'—':'${value!.value.toStringAsFixed(1)} cm',
+                maxLines:1,style:TextStyle(
+                  fontSize:12,fontWeight:FontWeight.w800,
+                  color:selected?Colors.white:color)),
+            ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _LeaderLines extends CustomPainter {
+  final List<Offset> anchors,ends;
+  final Color color;
+  const _LeaderLines({required this.anchors,
+    required this.ends,required this.color});
+  @override
+  void paint(Canvas canvas,Size size){
+    final pen=Paint()
+      ..color=color.withValues(alpha:.90)
+      ..strokeWidth=1.7
+      ..strokeCap=StrokeCap.round
+      ..style=PaintingStyle.stroke;
+    for(var i=0;i<anchors.length;i++) {
+      final a=anchors[i],e=ends[i];
+      final knee=Offset(e.dx+(a.dx-e.dx)*.43,e.dy);
+      canvas.drawPath(Path()..moveTo(e.dx,e.dy)
+        ..lineTo(knee.dx,knee.dy)
+        ..lineTo(a.dx,a.dy),pen);
+    }
+  }
+  @override
+  bool shouldRepaint(covariant _LeaderLines old) =>
+    old.anchors!=anchors||old.ends!=ends||old.color!=color;
+}
+
+/// Dedicated page: PNG muscle crop, exact recorded values, recent entries
+/// and a chart in the currently selected app theme/accent.
+class MeasurementMuscleDetailPage extends StatelessWidget {
+  final MeasurementMetric metric;
   final List<BodyMeasurement> measurements;
-  final ValueChanged<MeasurementMetric> onSelected;
-  const _BodyView({
-    super.key, required this.back, required this.label,
-    required this.spots,required this.selected,
-    required this.measurements,required this.onSelected,
+  const MeasurementMuscleDetailPage({
+    super.key,required this.metric,required this.measurements,
   });
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Column(children: [
-      Text(label,style:Theme.of(context).textTheme.labelLarge),
-      const SizedBox(height: 5),
-      AspectRatio(
-        aspectRatio: 200/440,
-        child: LayoutBuilder(builder: (context, constraints) {
-          final width = constraints.maxWidth;
-          final height = constraints.maxHeight;
-          return Stack(clipBehavior: Clip.none, children: [
-            Positioned.fill(child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E5E9)),
+    final scheme=Theme.of(context).colorScheme;
+    final value=SilhouetteMeasurementData.latest(measurements,metric);
+    final progress=MeasurementProgress(measurements,metric);
+    final records=progress.points.reversed.toList();
+    final chest=metric==MeasurementMetric.chest;
+    final back=metric==MeasurementMetric.hips ||
+        metric==MeasurementMetric.calves;
+    return Scaffold(
+      appBar:AppBar(title:Text(metric.label)),
+      body:ListView(padding:const EdgeInsets.all(16),children:[
+        Container(
+          key:const Key('measurement_detail_anatomy'),
+          height:220,
+          clipBehavior:Clip.antiAlias,
+          decoration:BoxDecoration(
+            color:scheme.brightness==Brightness.dark
+                ? const Color(0xFF101722):const Color(0xFFF4F6F9),
+            borderRadius:BorderRadius.circular(18)),
+          child:Image.asset(
+            chest ? 'assets/measurement_anatomy/png/detail_chest.png'
+              : back ? 'assets/measurement_anatomy/png/body_back.png'
+                     : 'assets/measurement_anatomy/png/body_front.png',
+            semanticLabel:chest?'Pectorales destacados en azul':
+              'Anatomía correspondiente a ${metric.label}',
+            fit:BoxFit.contain,
+          ),
+        ),
+        const SizedBox(height:12),
+        Card(child:Padding(
+          padding:const EdgeInsets.all(16),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text('Medida actual',style:Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height:6),
+            Text(SilhouetteMeasurementData.formatted(value),
+              key:const Key('measurement_detail_value'),
+              style:Theme.of(context).textTheme.headlineMedium),
+            if(value!=null)...[
+              const SizedBox(height:4),
+              Text('Registrado: ${DateFormat('dd/MM/yyyy').format(value.date)}'),
+              if(value.previous!=null)
+                Text('Anterior: ${value.previous!.toStringAsFixed(1)} cm · '
+                  '${value.delta!>0?'+':''}'
+                  '${value.delta!.toStringAsFixed(1)} cm',
+                  key:const Key('measurement_detail_delta')),
+            ] else const Text('Sin registros todavía.'),
+          ]),
+        )),
+        const SizedBox(height:12),
+        Card(child:Padding(padding:const EdgeInsets.all(16),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text('Historial',style:Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height:8),
+            if(records.length>1)
+              SizedBox(height:130,child:CustomPaint(
+                key:const Key('measurement_detail_chart'),
+                painter:_MetricHistoryPainter(records,scheme.primary),
+                child:const SizedBox.expand(),
+              ))
+            else const Text('Registra esta medida en dos fechas para ver su evolución.'),
+            const SizedBox(height:10),
+            for(final entry in records.take(12))
+              ListTile(
+                dense:true,contentPadding:EdgeInsets.zero,
+                title:Text('${entry.value.toStringAsFixed(1)} cm'),
+                subtitle:Text(DateFormat('dd MMM yyyy','es')
+                  .format(entry.date)),
               ),
-            )),
-            Positioned.fill(child: CustomPaint(
-              painter: _AnatomyPainter(
-                back: back, selected: selected,
-                accent: scheme.primary,
-
-              ),
-            )),
-            for (final spot in spots)
-              Positioned(
-                left: math.max(0, math.min(width-28, width*spot.x/200-14)),
-                top: math.max(0, math.min(height-28, height*spot.y/440-14)),
-                width:28, height:28,
-                child: Semantics(
-                  button: true,
-                  label: '${back?'Espalda':'Frente'}, ${spot.metric.label}, '
-                    '${SilhouetteMeasurementData.formatted(
-                      SilhouetteMeasurementData.latest(measurements,spot.metric))}',
-                  child: Tooltip(
-                    message: spot.metric.label,
-                    child: InkWell(
-                      key: ValueKey('map_${back?'back':'front'}_${spot.metric.name}'),
-                      borderRadius: BorderRadius.circular(30),
-                      onTap: ()=>onSelected(spot.metric),
-                      child: Center(child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 130),
-                        width: spot.metric==selected ? 15:9,
-                        height: spot.metric==selected ? 15:9,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color:spot.metric==selected ? scheme.primary
-                            : SilhouetteMeasurementData.latest(
-                                measurements,spot.metric)!=null
-                              ? scheme.tertiary : scheme.surface,
-                          border: Border.all(color:scheme.onSurface,width:1.1),
-                          boxShadow: [
-                            BoxShadow(color:scheme.shadow.withValues(alpha:0.22),
-                              blurRadius:3)
-                          ],
-                        ),
-                      )),
-                    ),
-                  ),
-                ),
-              ),
-          ]);
-        }),
-      ),
-    ]);
+          ]),
+        )),
+        const SizedBox(height:12),
+        Text('Se muestra el perímetro que registraste, no el tamaño '
+          'individual de un músculo. Más centímetros no siempre implican '
+          'ganancia muscular.',
+          style:Theme.of(context).textTheme.bodySmall),
+      ]),
+    );
   }
 }
 
-/// The source SVG files in assets/measurement_anatomy are original artwork.
-/// Paths are interpreted natively with Flutter Canvas to avoid raster blur or
-/// adding an SVG rendering dependency to the shipped application.
-/// Only absolute SVG M, L, Q and Z commands are allowed.
-class _AnatomyPainter extends CustomPainter {
-  final bool back;
-  final MeasurementMetric selected;
-  final Color accent;
-  const _AnatomyPainter({required this.back, required this.selected,
-    required this.accent});
-
-  static final Map<String,Path> _pathCache = <String,Path>{};
-  static final RegExp _tokens = RegExp(r'[MLQZ]|-?(?:\d+(?:\.\d+)?|\.\d+)');
-
-  static Path _pathFromSvg(String data) => _pathCache.putIfAbsent(data, () {
-    final values = _tokens.allMatches(data).map((m) => m.group(0)!).toList();
-    final path = Path();
-    var i = 0;
-    while (i < values.length) {
-      final command = values[i++];
-      switch (command) {
-        case 'M':
-          path.moveTo(double.parse(values[i++]),double.parse(values[i++]));
-        case 'L':
-          path.lineTo(double.parse(values[i++]),double.parse(values[i++]));
-        case 'Q':
-          final x1 = double.parse(values[i++]);
-          final y1 = double.parse(values[i++]);
-          path.quadraticBezierTo(x1,y1,double.parse(values[i++]),
-            double.parse(values[i++]));
-        case 'Z':
-          path.close();
-        default:
-          throw FormatException('Unsupported anatomical SVG path token: $command');
-      }
-    }
-    return path;
-  });
-
+class _MetricHistoryPainter extends CustomPainter {
+  final List<MeasurementPoint> points;
+  final Color color;
+  const _MetricHistoryPainter(this.points,this.color);
   @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.scale(size.width / 200, size.height / 440);
-    final anatomyInk = const Color(0xFF111318);
-    final seam = const Color(0xFFF6F8FA);
-    final shapePaint = Paint()
-      ..color = anatomyInk
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
-    final borderPaint = Paint()
-      ..color = seam
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.7
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round
-      ..isAntiAlias = true;
-
-    // The character head is a single clean silhouette: no placeholder
-    // geometric limbs. Every muscle contour below is vector path art.
-    canvas.drawOval(const Rect.fromLTWH(84,11,32,46),shapePaint);
-    final contours = back ? anatomyBackContours : anatomyFrontContours;
-    for (final contour in contours) {
-      canvas.save();
-      if (contour.mirrored) {
-        canvas.translate(200,0);
-        canvas.scale(-1,1);
-      }
-      final path = _pathFromSvg(contour.d);
-      if (contour.solid) {
-        canvas.drawPath(path,shapePaint);
-      }
-      borderPaint.strokeWidth = contour.width;
-      canvas.drawPath(path,borderPaint);
-      canvas.restore();
+  void paint(Canvas canvas,Size size){
+    if(points.length<2)return;
+    final v=points.map((e)=>e.value);
+    final minV=v.reduce(math.min),maxV=v.reduce(math.max);
+    final range=math.max(1.0,maxV-minV);
+    final line=Paint()..color=color..strokeWidth=2.4
+      ..strokeCap=StrokeCap.round..style=PaintingStyle.stroke;
+    final grid=Paint()..color=color.withValues(alpha:.12)
+      ..strokeWidth=1;
+    for(var i=0;i<=3;i++){
+      final y=14+(size.height-28)*i/3;
+      canvas.drawLine(Offset(5,y),Offset(size.width-5,y),grid);
     }
-
-    // Small transparent outline, not a painted muscle or fake change in
-    // actual body shape. Uses the existing saved circumferences only.
-    final regions = <MeasurementMetric,Rect>{
-      MeasurementMetric.shoulders:
-        Rect.fromCenter(center:const Offset(100,85),width:81,height:28),
-      MeasurementMetric.chest:
-        Rect.fromCenter(center:const Offset(100,114),width:74,height:30),
-      MeasurementMetric.waist:
-        Rect.fromCenter(center:const Offset(100,177),width:48,height:29),
-      MeasurementMetric.hips:
-        Rect.fromCenter(center:const Offset(100,210),width:62,height:32),
-      MeasurementMetric.leftArm:
-        Rect.fromCenter(center:Offset(back?47:153,153),width:21,height:47),
-      MeasurementMetric.rightArm:
-        Rect.fromCenter(center:Offset(back?153:47,153),width:21,height:47),
-      MeasurementMetric.leftLeg:
-        Rect.fromCenter(center:Offset(back?77:123,270),width:30,height:53),
-      MeasurementMetric.rightLeg:
-        Rect.fromCenter(center:Offset(back?123:77,270),width:30,height:53),
-      MeasurementMetric.calves:
-        Rect.fromCenter(center:const Offset(100,365),width:79,height:38),
-    };
-    final region = regions[selected];
-    if (region != null) {
-      canvas.drawOval(region,Paint()
-        ..color = accent.withValues(alpha:0.13)
-        ..style = PaintingStyle.fill);
-      canvas.drawOval(region,Paint()
-        ..color = accent.withValues(alpha:0.8)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.4
-        ..isAntiAlias = true);
+    final path=Path();
+    for(var i=0;i<points.length;i++){
+      final x=9+(size.width-18)*i/(points.length-1);
+      final y=size.height-12-(points[i].value-minV)/range*(size.height-24);
+      if(i==0){path.moveTo(x,y);}else{path.lineTo(x,y);}
+      canvas.drawCircle(Offset(x,y),3.2,Paint()..color=color);
     }
-    canvas.restore();
+    canvas.drawPath(path,line);
   }
-
   @override
-  bool shouldRepaint(covariant _AnatomyPainter previous) =>
-      previous.back != back ||
-      previous.selected != selected ||
-      previous.accent != accent;
+  bool shouldRepaint(covariant _MetricHistoryPainter old) =>
+    old.color!=color||old.points!=points;
 }
