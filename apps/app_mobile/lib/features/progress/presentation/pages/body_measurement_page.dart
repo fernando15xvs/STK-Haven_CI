@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/components/primary_button.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/domain/models/settings_state.dart';
@@ -510,9 +509,15 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
                   child: const Text('Cancelar'),
                 ),
                 const SizedBox(width:12),
-                Expanded(child: PrimaryButton(
-                  label:_saving?'Guardando…':'Guardar medida',
-                  onPressed: () { if (!_saving) _save(); },
+                Expanded(child: FilledButton(
+                  key: const Key('measurement_modal_save'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(52),
+                    backgroundColor: AppColors.of(context).primary,
+                    foregroundColor: AppColors.of(context).onPrimary,
+                  ),
+                  onPressed: _saving ? null : _save,
+                  child: Text(_saving ? 'Guardando…' : 'Guardar'),
                 )),
               ]),
             ),
