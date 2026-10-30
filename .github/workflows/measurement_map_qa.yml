@@ -7,6 +7,10 @@ on:
       - 'apps/app_mobile/test/features/progress/body_measurement_silhouette_test.dart'
       - 'apps/app_mobile/test/measurement_progress_panel_test.dart'
       - 'apps/app_mobile/test/features/progress/body_measurement_navigation_test.dart'
+      - 'apps/app_mobile/test/features/progress/body_measurement_summary_test.dart'
+      - 'packages/core/lib/database/hive/models/hive_body_measurement.dart'
+      - 'packages/core/lib/database/hive/models/hive_body_measurement.g.dart'
+      - 'packages/core/test/features/progress/measurement_height_hive_test.dart'
       - 'apps/app_mobile/test/features/workout/closable_modal_sheets_test.dart'
       - 'apps/app_mobile/lib/features/workout/presentation/widgets/barbell_calculator_modal.dart'
       - 'apps/app_mobile/lib/features/onboarding/presentation/widgets/program_preview_modal.dart'
@@ -41,6 +45,9 @@ jobs:
         run: >-
           flutter analyze --no-fatal-infos
           apps/app_mobile/lib/features/progress/presentation/widgets/body_measurement_silhouette.dart
+          apps/app_mobile/lib/features/progress/presentation/widgets/body_measurement_summary.dart
+          packages/core/lib/database/hive/models/hive_body_measurement.dart
+          packages/core/lib/domain/models/body_measurement.dart
           apps/app_mobile/lib/features/progress/presentation/pages/body_measurement_page.dart
           apps/app_mobile/lib/features/progress/presentation/pages/measurement_progress_panel.dart
           packages/core/lib/features/progress/presentation/widgets/measurement_reminder_controls.dart
@@ -54,7 +61,11 @@ jobs:
           test/features/progress/body_measurement_silhouette_test.dart
           test/measurement_progress_panel_test.dart
           test/features/progress/body_measurement_navigation_test.dart
+          test/features/progress/body_measurement_summary_test.dart
           test/features/workout/closable_modal_sheets_test.dart
+      - name: Validate height storage compatibility with legacy records
+        working-directory: packages/core
+        run: flutter test test/features/progress/measurement_height_hive_test.dart
       - name: Upload actual Flutter front/back screenshots for review
         if: always()
         uses: actions/upload-artifact@v4
