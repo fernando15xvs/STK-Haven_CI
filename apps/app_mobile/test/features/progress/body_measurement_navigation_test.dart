@@ -38,7 +38,7 @@ class _FakeMeasurements extends BodyMeasurementNotifier {
   }
 }
 
-Future<void> _open(TestWidgetTester tester) async {
+Future<void> _open(WidgetTester tester) async {
   await tester.pumpWidget(ProviderScope(
     overrides: [
       settingsProvider.overrideWith(_Settings.new),
