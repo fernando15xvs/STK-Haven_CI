@@ -101,6 +101,27 @@ void main() {
     },
   );
 
+  testWidgets('measurement sheet remains dismissible when keyboard is open',
+    (tester) async {
+      tester.view.physicalSize=const Size(390,850);
+      tester.view.devicePixelRatio=1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
+      await _open(tester);
+      await tester.tap(find.byKey(const Key('measurement_add_button')));
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 310);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('measurement_modal_close')),findsOneWidget);
+      expect(find.byKey(const Key('measurement_modal_save')),findsOneWidget);
+      await tester.tap(find.byKey(const Key('measurement_modal_close')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('measurement_modal_close')),findsNothing);
+      expect(tester.takeException(),isNull);
+    },
+  );
+
   testWidgets('history is separate, edit and delete stay accessible',
     (tester) async {
       await _open(tester);
