@@ -169,21 +169,23 @@ void main() {
           await tester.tap(find.text('Espalda').last);
           await tester.pumpAndSettle();
         }
-        final boundary=tester.renderObject<RenderRepaintBoundary>(
-          find.byKey(const Key('progress_measurement_map_snapshot')));
-        final image=await boundary.toImage(pixelRatio:2);
-        try {
-          final bytes=await image.toByteData(format:ui.ImageByteFormat.png);
-          expect(bytes,isNotNull);
-          final dir=Directory('build/measurement_silhouette_qa')
-            ..createSync(recursive:true);
-          final file=File('${dir.path}/measurement_png_${dark?'dark':'light'}_$side.png');
-          file.writeAsBytesSync(bytes!.buffer.asUint8List(
-            bytes.offsetInBytes,bytes.lengthInBytes));
-          expect(file.lengthSync(),greaterThan(5000));
-        } finally {
-          image.dispose();
-        }
+        await tester.runAsync(() async {
+          final boundary=tester.renderObject<RenderRepaintBoundary>(
+            find.byKey(const Key('progress_measurement_map_snapshot')));
+          final image=await boundary.toImage(pixelRatio:2);
+          try {
+            final bytes=await image.toByteData(format:ui.ImageByteFormat.png);
+            expect(bytes,isNotNull);
+            final dir=Directory('build/measurement_silhouette_qa')
+              ..createSync(recursive:true);
+            final file=File('${dir.path}/measurement_png_${dark?'dark':'light'}_$side.png');
+            file.writeAsBytesSync(bytes!.buffer.asUint8List(
+              bytes.offsetInBytes,bytes.lengthInBytes));
+            expect(file.lengthSync(),greaterThan(5000));
+          } finally {
+            image.dispose();
+          }
+        });
       }
       expect(tester.takeException(),isNull);
     });
