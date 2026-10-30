@@ -134,7 +134,6 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final labelStyle = Theme.of(context).textTheme.labelMedium;
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
