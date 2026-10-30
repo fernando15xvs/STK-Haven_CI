@@ -202,7 +202,6 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
                     muscle: muscle,
                     maxSets: maxSets,
                     showIndirect: _showIndirect)),
-                ),
             ],
           ],
         ],
