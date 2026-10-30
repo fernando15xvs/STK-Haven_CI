@@ -506,7 +506,7 @@ class _AddMeasurementModalState extends ConsumerState<_AddMeasurementModal> {
                 const SizedBox(width:12),
                 Expanded(child: PrimaryButton(
                   label:_saving?'Guardando…':'Guardar medida',
-                  onPressed:()=>{if(!_saving) _save()},
+                  onPressed: () { if (!_saving) _save(); },
                 )),
               ]),
             ),
