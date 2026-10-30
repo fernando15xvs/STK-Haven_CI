@@ -7,6 +7,9 @@ class BodyMeasurement {
   
   /// Body fat percentage (0-100). Nullable.
   final double? bodyFatPercentage;
+
+  /// Height in centimeters, optional for existing measurements.
+  final double? heightCm;
   
   /// Canonical measurements in cm. Nullable.
   final double? shouldersCm;
@@ -24,6 +27,7 @@ class BodyMeasurement {
     required this.date,
     this.weightKg,
     this.bodyFatPercentage,
+    this.heightCm,
     this.shouldersCm,
     this.chestCm,
     this.waistCm,
@@ -40,6 +44,7 @@ class BodyMeasurement {
     DateTime? date,
     double? weightKg,
     double? bodyFatPercentage,
+    double? heightCm,
     double? shouldersCm,
     double? chestCm,
     double? waistCm,
@@ -55,6 +60,7 @@ class BodyMeasurement {
       date: date ?? this.date,
       weightKg: weightKg ?? this.weightKg,
       bodyFatPercentage: bodyFatPercentage ?? this.bodyFatPercentage,
+      heightCm: heightCm ?? this.heightCm,
       shouldersCm: shouldersCm ?? this.shouldersCm,
       chestCm: chestCm ?? this.chestCm,
       waistCm: waistCm ?? this.waistCm,
