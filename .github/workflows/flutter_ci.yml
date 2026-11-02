@@ -222,6 +222,10 @@ jobs:
           test/features/exercises/exercise_selection_preview_test.dart
           test/features/exercises/muscle_hierarchy_picker_test.dart
           test/features/exercises/mobile_lottie_production_plan_test.dart
+      # Regression gate for STK Motivation integrated with workout navigation.
+      - name: Test STK Motivation import, playlists, playback and compact player
+        working-directory: apps/app_mobile
+        run: flutter test test/features/motivation
       - name: Test 3 real catalog PNG carousels under QA flag
         working-directory: apps/app_mobile
         run: >-
