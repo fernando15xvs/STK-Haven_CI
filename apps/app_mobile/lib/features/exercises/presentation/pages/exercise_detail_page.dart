@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/features/progress/presentation/widgets/progress_chart_style.dart';
 import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/exercise.dart';
@@ -221,11 +222,9 @@ class ExerciseDetailPage extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  ClipRect(
-                    child: _OneRMChart(
-                      data: trend.history1RM,
-                      weightUnit: settings.weightUnit,
-                    ),
+                  _OneRMChart(
+                    data: trend.history1RM,
+                    weightUnit: settings.weightUnit,
                   ),
                 ],
               ),
@@ -532,129 +531,117 @@ class _OneRMChart extends StatelessWidget {
     if (data.length < 2) {
       return Center(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: 20),
           child: Text(
             'Registra al menos 2 entrenamientos para ver la gráfica',
-            style: TextStyle(color: AppColors.of(context).textSecondary),
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.of(context).textSecondary,
+            ),
           ),
         ),
       );
     }
 
-    final minY = data.map((e) => e.value).reduce((a, b) => a < b ? a : b) * 0.9;
-    final maxY = data.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.1;
+    final ordered = [...data]..sort((a, b) => a.date.compareTo(b.date));
+    final first = ordered.first.date;
+    final last = ordered.last.date;
 
-    return SizedBox(
-      height: 200,
-      child: LineChart(
-        LineChartData(
-          lineTouchData: LineTouchData(
-            enabled: true,
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (touchedSpot) =>
-                  AppColors.of(context).surfaceHigh,
-              getTooltipItems: (touchedSpots) {
-                return touchedSpots.map((spot) {
-                  return LineTooltipItem(
-                    '${spot.y.toStringAsFixed(1)} ${weightUnit.label}',
-                    TextStyle(
+    // Convert BEFORE calculating bounds. Otherwise lb data can fall outside
+    // a chart whose vertical scale was constructed from kg.
+    final spots = [
+      for (final point in ordered)
+        FlSpot(
+          ProgressChartStyle.elapsedDays(point.date, first),
+          WeightConverter.displayWeight(point.value, weightUnit),
+        ),
+    ];
+    final bounds = ProgressChartStyle.bounds(spots.map((point) => point.y));
+    final maxX = spots.last.x;
+    final xPadding = math.max(0.65, maxX * 0.045);
+
+    return Semantics(
+      label: 'Evolución del 1RM estimado: '
+          '${ProgressChartStyle.detailedDate(first)} a '
+          '${ProgressChartStyle.detailedDate(last)}',
+      child: SizedBox(
+        height: 200,
+        child: Column(
+          children: [
+            Expanded(
+              child: LineChart(
+                LineChartData(
+                  lineTouchData: LineTouchData(
+                    enabled: true,
+                    touchTooltipData: LineTouchTooltipData(
+                      fitInsideHorizontally: true,
+                      fitInsideVertically: true,
+                      getTooltipColor: (_) =>
+                          ProgressChartStyle.tooltipBackground(context),
+                      getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
+                        final selected = ordered[spot.spotIndex];
+                        return LineTooltipItem(
+                          '${ProgressChartStyle.detailedDate(selected.date)}\n'
+                          '${ProgressChartStyle.measurement(spot.y, weightUnit)}',
+                          ProgressChartStyle.tooltipText(context),
+                        );
+                      }).toList(growable: false),
+                    ),
+                  ),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (_) => FlLine(
+                      color: ProgressChartStyle.gridColor(context),
+                      strokeWidth: 1,
+                      dashArray: const [4, 4],
+                    ),
+                  ),
+                  titlesData: const FlTitlesData(show: false),
+                  borderData: FlBorderData(show: false),
+                  minX: -xPadding,
+                  maxX: maxX + xPadding,
+                  minY: bounds.minY,
+                  maxY: bounds.maxY,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: spots,
+                      isCurved: false,
                       color: AppColors.of(context).primary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      barWidth: 3,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) =>
+                            FlDotCirclePainter(
+                              radius: 4,
+                              color: AppColors.of(context).surfaceHigh,
+                              strokeWidth: 2,
+                              strokeColor: AppColors.of(context).primary,
+                            ),
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: AppColors.of(context)
+                            .primary.withValues(alpha: 0.14),
+                        cutOffY: bounds.minY,
+                        applyCutOffY: true,
+                      ),
                     ),
-                  );
-                }).toList();
-              },
-            ),
-          ),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: AppColors.of(context).surfaceBorder,
-              strokeWidth: 1,
-              dashArray: [4, 4],
-            ),
-          ),
-          titlesData: FlTitlesData(
-            show: true,
-            rightTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            topTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            leftTitles: const AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 22,
-                interval: 1,
-                getTitlesWidget: (value, meta) {
-                  if (value % 1 != 0) return const SizedBox.shrink();
-                  final idx = value.toInt();
-                  if (idx >= 0 && idx < data.length) {
-                    final date = data[idx].date;
-                    // Only show first and last to avoid clutter
-                    if (idx == 0 || idx == data.length - 1) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Text(
-                          DateFormat('dd MMM', 'es').format(date),
-                          style: TextStyle(
-                            color: AppColors.of(context).textSecondary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                  return const SizedBox.shrink();
-                },
+                  ],
+                ),
               ),
             ),
-          ),
-          borderData: FlBorderData(show: false),
-          minX: -0.2, // Adds breathing room so dots aren't cut off
-          maxX: (data.length - 1).toDouble() + 0.2, // Adds breathing room
-          minY: minY,
-          maxY: maxY,
-          lineBarsData: [
-            LineChartBarData(
-              spots: data
-                  .asMap()
-                  .entries
-                  .map(
-                    (e) => FlSpot(
-                      e.key.toDouble(),
-                      WeightConverter.displayWeight(e.value.value, weightUnit),
-                    ),
-                  )
-                  .toList(),
-              isCurved: true,
-              curveSmoothness: 0.1,
-              color: AppColors.of(context).primary,
-              barWidth: 3,
-              isStrokeCapRound: true,
-              dotData: FlDotData(
-                show: true,
-                getDotPainter: (spot, percent, barData, index) {
-                  return FlDotCirclePainter(
-                    radius: 4,
-                    color: AppColors.of(context).surfaceHigh,
-                    strokeWidth: 2,
-                    strokeColor: AppColors.of(context).primary,
-                  );
-                },
-              ),
-              belowBarData: BarAreaData(
-                show: true,
-                color: AppColors.of(context).primary.withValues(alpha: 0.15),
-                cutOffY: minY,
-                applyCutOffY: true,
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(ProgressChartStyle.date(first),
+                      style: ProgressChartStyle.axisText(context)),
+                  Text(ProgressChartStyle.date(last),
+                      style: ProgressChartStyle.axisText(context)),
+                ],
               ),
             ),
           ],
