@@ -87,6 +87,7 @@ class DashboardPage extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             if (activeWorkout.isActive)
               _ActiveWorkoutHero(
+                session: activeWorkout.session!,
                 name: activeWorkout.routineDisplayName,
                 startedAt: activeWorkout.session!.startedAt,
                 lastActivityAt: ref
@@ -308,11 +309,13 @@ class _DailyMessageCard extends ConsumerWidget {
 }
 
 class _ActiveWorkoutHero extends StatelessWidget {
+  final WorkoutSession session;
   final String name;
   final DateTime startedAt;
   final DateTime? lastActivityAt;
 
   const _ActiveWorkoutHero({
+    required this.session,
     required this.name,
     required this.startedAt,
     this.lastActivityAt,
@@ -326,6 +329,16 @@ class _ActiveWorkoutHero extends StatelessWidget {
       lastActivityAt ?? startedAt,
       DateTime.now(),
     );
+    final effectiveExercises = session.exercises.where((exercise) {
+      return exercise.sets.any((set) => set.setType == WorkoutSetType.working);
+    }).toList(growable: false);
+    final completedExercises = effectiveExercises.where((exercise) {
+      final sets = exercise.sets
+          .where((set) => set.setType == WorkoutSetType.working)
+          .toList(growable: false);
+      return sets.isNotEmpty && sets.every((set) => set.completed);
+    }).length;
+    final pendingExercises = effectiveExercises.length - completedExercises;
 
     return PremiumCard(
       onTap: () => Navigator.push(
@@ -386,10 +399,18 @@ class _ActiveWorkoutHero extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
+            '${completedExercises} de ${effectiveExercises.length} ejercicios completados'
+            ' · ${pendingExercises} pendientes',
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.of(context).textSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
             minutes <= 0
                 ? 'Recién comenzado · toca para continuar'
                 : '$minutes min en curso · toca para continuar',
-            style: AppTypography.bodyMedium.copyWith(
+            style: AppTypography.bodySmall.copyWith(
               color: AppColors.of(context).textSecondary,
             ),
           ),
