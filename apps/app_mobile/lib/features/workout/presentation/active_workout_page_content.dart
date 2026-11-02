@@ -22,6 +22,8 @@ import 'package:gym_tracker/features/workout/presentation/workout_summary_page.d
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_library_page.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/barbell_calculator_modal.dart';
 
+import 'package:gym_tracker/features/motivation/presentation/widgets/motivation_mini_player.dart';
+
 class ActiveWorkoutPage extends ConsumerStatefulWidget {
   const ActiveWorkoutPage({super.key});
 
@@ -301,34 +303,23 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     );
   }
 
-  Future<String?> _showLeaveDialog(BuildContext context) {
-    return showDialog<String>(
+  Future<void> _confirmDiscard(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         backgroundColor: AppColors.of(context).surfaceHigh,
-        title: Text(
-          'Entrenamiento en curso',
-          style: AppTypography.headlineMedium,
+        title: const Text('Descartar entrenamiento'),
+        content: const Text(
+          'Se eliminará el entrenamiento en curso y todas las series registradas. '
+          'Esta acción no se puede deshacer.',
         ),
-        content: Text('¿Qué deseas hacer?', style: AppTypography.bodyMedium),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop('continue'),
-            child: Text(
-              'Continuar',
-              style: TextStyle(color: AppColors.of(context).textPrimary),
-            ),
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop('finish'),
-            child: Text(
-              'Finalizar',
-              style: TextStyle(color: AppColors.of(context).primary),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop('discard'),
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
               'Descartar',
               style: TextStyle(color: AppColors.of(context).error),
@@ -337,6 +328,10 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
         ],
       ),
     );
+    if (confirmed != true || !context.mounted) return;
+
+    await ref.read(activeWorkoutProvider.notifier).cancelWorkout();
+    if (context.mounted) Navigator.of(context).pop();
   }
 
   Future<void> _finish(BuildContext context) async {
@@ -359,8 +354,8 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
           title: const Text('Aún faltan ejercicios'),
           content: Text(
             incompleteExercises == 1
-                ? 'Todavía tienes 1 ejercicio con series efectivas pendientes. Puedes seguir entrenando o guardar la sesión incompleta para continuarla después.'
-                : 'Todavía tienes $incompleteExercises ejercicios con series efectivas pendientes. Puedes seguir entrenando o guardar la sesión incompleta para continuarla después.',
+                ? 'Todavía tienes 1 ejercicio con series efectivas pendientes. Puedes seguir entrenando o finalizar ahora. Lo que ya registraste se guardará y podrás retomar los ejercicios pendientes después.'
+                : 'Todavía tienes $incompleteExercises ejercicios con series efectivas pendientes. Puedes seguir entrenando o finalizar ahora. Lo que ya registraste se guardará y podrás retomar los ejercicios pendientes después.',
           ),
           actions: [
             TextButton(
@@ -480,21 +475,15 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
       (exercise) => exercise.supersetGroupId != null,
     );
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
-        final choice = await _showLeaveDialog(context);
-        if (!context.mounted) return;
+    final effectiveWorkoutSets = session.exercises
+        .expand((exercise) => exercise.sets)
+        .where((set) => set.setType == WorkoutSetType.working)
+        .toList(growable: false);
+    final allExercisesCompleted = effectiveWorkoutSets.isNotEmpty &&
+        effectiveWorkoutSets.every((set) => set.completed);
 
-        if (choice == 'discard') {
-          await ref.read(activeWorkoutProvider.notifier).cancelWorkout();
-          if (context.mounted) Navigator.of(context).pop();
-        } else if (choice == 'finish') {
-          await _finish(context);
-        }
-      },
-      child: Scaffold(
+    // Back/minimize returns to the app while the provider keeps the session alive.
+    return Scaffold(
         appBar: AppBar(
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -534,6 +523,48 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                   ? null
                   : () => _toggleFocus(session),
               tooltip: _focusMode ? 'Ver todos los ejercicios' : 'Modo enfoque',
+            ),
+            PopupMenuButton<String>(
+              tooltip: 'Opciones del entrenamiento',
+              icon: Icon(
+                Icons.more_vert,
+                color: AppColors.of(context).textSecondary,
+              ),
+              onSelected: (value) {
+                switch (value) {
+                  case 'finish':
+                    _finish(context);
+                    break;
+                  case 'discard':
+                    _confirmDiscard(context);
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem<String>(
+                  value: 'finish',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.flag_outlined),
+                    title: Text('Finalizar entrenamiento'),
+                    subtitle: Text('Guardar lo realizado, aunque esté incompleto'),
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'discard',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(
+                      Icons.delete_outline,
+                      color: AppColors.of(context).error,
+                    ),
+                    title: Text(
+                      'Descartar entrenamiento',
+                      style: TextStyle(color: AppColors.of(context).error),
+                    ),
+                  ),
+                ),
+              ],
             ),
             IconButton(
               icon: Icon(
@@ -596,6 +627,8 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                     )
                   : const SizedBox.shrink(key: ValueKey('no_rest')),
             ),
+            // Within the normal layout flow, never over timers or Finish.
+            const MotivationMiniPlayer(showLauncherWhenEmpty: true),
             Expanded(
               child: _focusMode && session.exercises.isNotEmpty
                   ? _FocusedWorkoutView(
@@ -684,16 +717,20 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
             ),
           ],
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-        floatingActionButton: Padding(
-          padding: const EdgeInsets.all(16),
-          child: PrimaryButton(
-            label: 'Finalizar',
-            onPressed: () => _finish(context),
-          ),
-        ),
-      ),
-    );
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        floatingActionButton: allExercisesCompleted
+            ? SafeArea(
+                minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: PrimaryButton(
+                    label: 'Finalizar entrenamiento',
+                    onPressed: _isFinishing ? null : () => _finish(context),
+                  ),
+                ),
+              )
+            : null,
+      );
   }
 
   void _showEmptyWorkoutDialog(BuildContext context, WidgetRef ref) {

@@ -3,15 +3,20 @@ import 'package:core/domain/models/body_measurement.dart';
 enum MeasurementMetric {
   weight('Peso', 'kg'),
   bodyFat('Grasa corporal', '%'),
-  shoulders('Hombros', 'cm'),
-  chest('Pecho', 'cm'),
+  shoulders('Contorno de hombros', 'cm'),
+  chest('Tórax', 'cm'),
+  neck('Cuello', 'cm'),
+  leftForearm('Antebrazo izquierdo', 'cm'),
+  rightForearm('Antebrazo derecho', 'cm'),
+  leftCalf('Pantorrilla izquierda', 'cm'),
+  rightCalf('Pantorrilla derecha', 'cm'),
   waist('Cintura', 'cm'),
-  hips('Caderas / glúteos', 'cm'),
+  hips('Cadera', 'cm'),
   leftArm('Brazo izquierdo', 'cm'),
   rightArm('Brazo derecho', 'cm'),
-  leftLeg('Pierna izquierda', 'cm'),
-  rightLeg('Pierna derecha', 'cm'),
-  calves('Gemelos', 'cm');
+  leftLeg('Muslo izquierdo', 'cm'),
+  rightLeg('Muslo derecho', 'cm'),
+  calves('Pantorrillas (registro antiguo)', 'cm');
 
   final String label;
   final String unit;
@@ -21,6 +26,11 @@ enum MeasurementMetric {
     bodyFat => m.bodyFatPercentage,
     shoulders => m.shouldersCm,
     chest => m.chestCm,
+    neck => m.neckCm,
+    leftForearm => m.leftForearmCm,
+    rightForearm => m.rightForearmCm,
+    leftCalf => m.leftCalfCm,
+    rightCalf => m.rightCalfCm,
     waist => m.waistCm,
     hips => m.hipsCm,
     leftArm => m.leftArmCm,

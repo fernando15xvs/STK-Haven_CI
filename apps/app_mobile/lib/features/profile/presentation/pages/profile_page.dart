@@ -13,6 +13,7 @@ import 'package:core/features/onboarding/application/program_service.dart';
 import 'package:core/features/sync/presentation/backup_status_page.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:gym_tracker/features/motivation/presentation/motivation_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
@@ -120,6 +121,21 @@ class ProfilePage extends ConsumerWidget {
                   builder: (_) => const CoachConnectionsPage(clientOnly: true),
                 ),
               ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          const SectionHeading(title: 'STK MOTIVATION'),
+          const SizedBox(height: AppSpacing.sm),
+          PremiumCard(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              leading: Icon(Icons.headphones, color: AppColors.of(context).primary),
+              title: Text('Mis audios y videos', style: AppTypography.headlineMedium),
+              subtitle: const Text('MP3, MP4, playlists y reproducción en segundo plano'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const MotivationPage())),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),

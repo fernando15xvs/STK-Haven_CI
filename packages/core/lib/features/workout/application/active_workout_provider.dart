@@ -953,9 +953,18 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
   }
 
   Future<void> cancelWorkout() async {
+    final discardedSessionId = state.session?.id;
     _cancelTimers();
     _undoSession = null;
     await ref.read(activeWorkoutRepositoryProvider).clearDraft();
+    // A partially finalized workout also has a local history snapshot.
+    // Discard must remove *only* that incomplete snapshot, not other sessions.
+    if (discardedSessionId != null && Hive.isBoxOpen(HiveBoxes.history)) {
+      final deleted = await ref
+          .read(workoutRepositoryProvider)
+          .deleteIncompleteWorkoutSession(discardedSessionId);
+      if (deleted) ref.read(workoutHistoryProvider.notifier).refresh();
+    }
     state = const ActiveWorkoutState();
     unawaited(_cancelUnfinishedReminder());
   }

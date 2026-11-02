@@ -1,0 +1,51 @@
+name: STK Motivation + Active Workout Integration QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/app_mobile/lib/features/motivation/**
+      - apps/app_mobile/lib/features/workout/presentation/active_workout_page_content.dart
+      - apps/app_mobile/lib/features/home/presentation/pages/dashboard_page.dart
+      - apps/app_mobile/test/features/motivation/**
+      - apps/app_mobile/test/features/workout/**
+      - packages/core/lib/features/workout/application/active_workout_provider.dart
+      - packages/core/lib/features/workout/data/workout_repository.dart
+      - packages/core/test/features/workout/application/workout_recovery_contract_test.dart
+      - .github/workflows/workout_motivation_integration_qa.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration-regression:
+    name: Motivation + workout regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: stable
+          cache: true
+      - name: Resolve pinned Flutter workspace
+        run: flutter pub get --enforce-lockfile
+      - name: Analyze integration code
+        run: >-
+          flutter analyze --no-fatal-infos
+          apps/app_mobile/lib/features/motivation
+          apps/app_mobile/lib/features/workout/presentation/active_workout_page_content.dart
+          apps/app_mobile/lib/features/home/presentation/pages/dashboard_page.dart
+          packages/core/lib/features/workout/application/active_workout_provider.dart
+          packages/core/lib/features/workout/data/workout_repository.dart
+      - name: Test partial-workout resume and safe discard
+        working-directory: packages/core
+        run: flutter test test/features/workout/application/workout_recovery_contract_test.dart
+      - name: Test STK Motivation library and compact player
+        working-directory: apps/app_mobile
+        run: flutter test test/features/motivation
+      - name: Test workout UI regressions
+        working-directory: apps/app_mobile
+        run: flutter test test/features/workout

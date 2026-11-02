@@ -1,0 +1,2 @@
+-r requirements-authoring.txt
+vtk>=9.3,<10

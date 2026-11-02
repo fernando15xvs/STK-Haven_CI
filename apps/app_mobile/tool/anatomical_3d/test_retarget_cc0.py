@@ -1,0 +1,132 @@
+"""CC0 licensed mesh retarget gates: no unreviewed asset can ship."""
+import json
+import math
+import os
+from pathlib import Path
+import struct
+import unittest
+import retarget_cc0_glb as rig
+
+
+BASE=Path(os.environ.get('STK_CC0_MODEL','build/cc0_model_stage/human-base-rigged-cc0.glb'))
+OUTPUT=Path(os.environ.get('STK_CC0_RETARGET','build/cc0_53bone_retarget'))
+
+
+def decode(path):
+    data=path.read_bytes()
+    n,kind=struct.unpack_from('<I4s',data,12)
+    if kind!=b'JSON':raise AssertionError('Missing GLB JSON')
+    return data,json.loads(data[20:20+n])
+
+class CC0RetargetTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not BASE.is_file():raise AssertionError('Missing verified CC0 source in public CI')
+        cls.raw=BASE.read_bytes()
+        cls.base=rig.GLB(cls.raw)
+        if not OUTPUT.is_dir():raise AssertionError('CC0 retarget pipeline was not executed')
+        cls.manifest=json.loads((OUTPUT/'manifest.json').read_text())
+
+    def test_preserves_real_cc0_mesh_and_skin_provenance(self):
+        self.assertEqual(self.manifest['sourceModel'],'innerscene_cc0_rig53')
+        self.assertFalse(self.manifest['approved'])
+        self.assertFalse(self.manifest['enabled'])
+        self.assertEqual(self.manifest['catalogCount'],229)
+        self.assertEqual(len(self.manifest['pilots']),3)
+        for exercise in rig.EXERCISES:
+            full_bytes,full=decode(OUTPUT/(exercise+'.glb'))
+            mobile_bytes,mobile=decode(OUTPUT/(exercise+'_mobile_lod.glb'))
+            self.assertEqual(full['extras']['sourceSha256'],rig.SOURCE_SHA)
+            self.assertEqual(mobile['extras']['sourceSha256'],rig.SOURCE_SHA)
+            self.assertFalse(full['extras']['approved'])
+            self.assertFalse(mobile['extras']['enabled'])
+            self.assertEqual(len(full['skins'][0]['joints']),53)
+            self.assertEqual(len(mobile['skins'][0]['joints']),53)
+            self.assertEqual(len(full['animations']),1)
+            self.assertEqual(len(mobile['animations']),1)
+            count={'ex_bench_press':4,'ex_barbell_row':5,'ex_squat':5}[exercise]
+            self.assertEqual(len(full['meshes'][0]['primitives']),count)
+            self.assertEqual(len(mobile['meshes'][0]['primitives']),count)
+            for doc in (full,mobile):
+                parts=doc['meshes'][0]['primitives']
+                regions=[p['extras']['stkMuscleRegion'] for p in parts]
+                self.assertEqual(len(regions),len(set(regions)))
+                self.assertIn('body',regions)
+                self.assertTrue(all(p['extras']['anatomicalAccuracy'].endswith(
+                    '_not_reviewed') for p in parts))
+            self.assertEqual(len(mobile['materials']),5 if exercise=='ex_bench_press' else 4)
+            self.assertLess(len(mobile_bytes),850*1024)
+            self.assertGreater(len(full_bytes),4*1024*1024)
+            expected=['STK_BODY','STK_PRIMARY','STK_SECONDARY','STK_EQUIPMENT']
+            if exercise=='ex_bench_press':
+                expected.append('STK_CUSHION')
+            self.assertEqual([m['name'] for m in full['materials']],expected)
+            self.assertFalse(any('uri' in buffer for buffer in full['buffers']))
+            self.assertEqual(len(full['skins'][0]['joints']),
+                len(self.base.doc['skins'][0]['joints']))
+            for doc in (full,mobile):
+                self.assertTrue(all(s.get('interpolation')=='LINEAR'
+                    for s in doc['animations'][0]['samplers']))
+                self.assertEqual(doc['extras']['exerciseId'],exercise)
+                self.assertEqual(doc['animations'][0]['channels'][0]['target']['path'],
+                                 'rotation')
+                self.assertTrue(any(n.get('name')=='STK_EXERCISE_BAR'
+                                    for n in doc['nodes']))
+
+    def test_hands_and_feet_stay_attached_at_41_keyframes(self):
+        for ex in rig.EXERCISES:
+            summary=next(x for x in self.manifest['pilots'] if x['id']==ex)
+            self.assertLess(summary['maxGripErrorMetersAtKeyframes'],0.003)
+            self.assertLess(summary['maxFootErrorMetersAtKeyframes'],0.003)
+            self.assertEqual(summary['frames'],41)
+            self.assertGreater(summary['trianglesByRegion']['primary'],500)
+            self.assertGreater(summary['trianglesByRegion']['secondary'],100)
+            for t in (0,0.4,1.6,2.0,2.8,3.6,4.0):
+                loc,bar,e=rig.body_pose(self.base,ex,t)
+                self.assertLess(e['gripErrorMeters'],1e-4)
+                self.assertLess(e['footErrorMeters'],1e-4)
+                self.assertEqual(len(bar),3)
+                self.assertTrue(all(math.isfinite(x) for x in bar))
+            start=rig.body_pose(self.base,ex,0)[1]
+            end=rig.body_pose(self.base,ex,4)[1]
+            self.assertLess(math.dist(start,end),1e-6)
+
+    def test_v98_capped_bar_and_grip_markers_are_in_actual_mobile_glb(self):
+        # Exactly seven low-poly capped components: shaft, two plates,
+        # two grip markers and two sleeve collars, all within existing size.
+        for ex in rig.EXERCISES:
+            full=rig.GLB((OUTPUT/(ex+'.glb')).read_bytes(),expected_sha=None)
+            mobile=rig.GLB(
+                (OUTPUT/(ex+'_mobile_lod.glb')).read_bytes(),
+                expected_sha=None)
+            for candidate in (full,mobile):
+                bar=next(mesh for mesh in candidate.doc['meshes']
+                         if mesh.get('name')=='STK_BAR_AND_PLATES')
+                prim=bar['primitives'][0]
+                xyz=candidate.accessor(prim['attributes']['POSITION'])
+                normals=candidate.accessor(prim['attributes']['NORMAL'])
+                faces=candidate.accessor(prim['indices'])
+                self.assertEqual(len(xyz),7*58)
+                self.assertEqual(len(normals),len(xyz))
+                self.assertEqual(len(faces),7*168)
+                self.assertTrue(all(math.isfinite(v)
+                                    for row in xyz for v in row))
+                self.assertTrue(all(abs(
+                    sum(v*v for v in normal)-1)<.0001
+                                    for normal in normals))
+                self.assertTrue(all(0<=int(index[0])<len(xyz)
+                                    for index in faces))
+                centers=[p for p,n in zip(xyz,normals)
+                         if abs(abs(n[0])-1.)<1e-5 and
+                            abs(p[1])<1e-6 and abs(p[2])<1e-6]
+                self.assertEqual(len(centers),14)
+                self.assertFalse(candidate.doc['extras']['approved'])
+                self.assertFalse(candidate.doc['extras']['enabled'])
+
+    def test_rejects_wrong_source_hash(self):
+        fake=bytearray(self.raw)
+        fake[-1]^=1
+        with self.assertRaisesRegex(ValueError,'SHA256'):
+            rig.GLB(bytes(fake))
+
+if __name__=='__main__':unittest.main()

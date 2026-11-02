@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app/stk_haven_app.dart';
@@ -29,6 +30,17 @@ Future<void> bootstrapMobileApp({
   );
 
   await HiveDatabase.init();
+
+  // Initialise OS lock-screen and notification controls before creating a player.
+  try {
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.Fernando_S_ac.gym_tracker.motivation',
+      androidNotificationChannelName: 'STK Motivation',
+      androidNotificationOngoing: true,
+    );
+  } catch (e) {
+    debugPrint('STK Motivation background initialization failed: $e');
+  }
 
   runApp(
     const ProviderScope(

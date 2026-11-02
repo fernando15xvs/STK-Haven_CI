@@ -1,0 +1,119 @@
+{
+  "version": 2,
+  "purpose": "approved_visual_direction_not_approved_animation",
+  "approved_reference": true,
+  "approved_assets": false,
+  "enabled_assets": false,
+  "format_preference": "lightweight_mobile_animation; Lottie only if comparable fidelity is achievable",
+  "character": {
+    "style": "anatomical_3d_appearance",
+    "basePalette": "neutral_grayscale",
+    "outfit": "anatomy_visible",
+    "renderBackground": "transparent",
+    "view": "consistent_oblique_3_4",
+    "targetHighlight": "theme_primary",
+    "secondaryHighlight": "theme_primary_shaded"
+  },
+  "appearance": {
+    "modes": [
+      "light",
+      "dark"
+    ],
+    "accents": [
+      "blue",
+      "violet",
+      "emerald",
+      "teal",
+      "rose",
+      "amber",
+      "coral",
+      "slate"
+    ],
+    "highlightOnlyAnatomicalMuscles": true
+  },
+  "pilots": [
+    {
+      "id": "ex_bench_press",
+      "title": "Press de banca",
+      "camera": "oblique_three_quarter",
+      "primaryMuscles": [
+        "pectoralis_major"
+      ],
+      "secondaryMuscles": [
+        "anterior_deltoid",
+        "triceps_brachii"
+      ],
+      "equipment": [
+        "flat_bench",
+        "barbell",
+        "plates"
+      ],
+      "motionRequirements": [
+        "stable_foot_contact",
+        "stable_bench_contact",
+        "hands_fixed_to_bar",
+        "controlled_chest_to_press_path"
+      ]
+    },
+    {
+      "id": "ex_barbell_row",
+      "title": "Remo con barra",
+      "camera": "oblique_three_quarter_posterior",
+      "primaryMuscles": [
+        "latissimus_dorsi",
+        "rhomboids",
+        "middle_trapezius"
+      ],
+      "secondaryMuscles": [
+        "posterior_deltoid",
+        "elbow_flexors"
+      ],
+      "equipment": [
+        "barbell",
+        "plates"
+      ],
+      "motionRequirements": [
+        "hip_hinge_stable",
+        "spine_neutral",
+        "hands_fixed_to_bar",
+        "bar_toward_abdomen"
+      ]
+    },
+    {
+      "id": "ex_squat",
+      "title": "Sentadilla",
+      "camera": "oblique_three_quarter_frontal",
+      "primaryMuscles": [
+        "quadriceps_femoris",
+        "gluteus_maximus"
+      ],
+      "secondaryMuscles": [
+        "adductor_magnus"
+      ],
+      "equipment": [
+        "barbell",
+        "plates"
+      ],
+      "motionRequirements": [
+        "feet_planted",
+        "bar_contacts_upper_back",
+        "coordinated_hip_knee_ankle",
+        "controlled_depth"
+      ]
+    }
+  ],
+  "review": {
+    "visualV2": false,
+    "biomechanics": false,
+    "iosDevice": false,
+    "androidDevice": false,
+    "performance": false
+  },
+  "rules": {
+    "noGifs": true,
+    "noAppWeb": true,
+    "noWorkoutHistoryDeletion": true,
+    "preserveExerciseIds": true,
+    "continue229Drafts": true
+  }
+}

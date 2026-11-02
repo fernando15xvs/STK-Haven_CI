@@ -1,3 +1,5 @@
+import 'package:core/features/progress/application/body_measurement_provider.dart';
+import 'package:core/features/progress/presentation/widgets/measurement_reminder_controls.dart';
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/core/services/workout_notification_service.dart';
 import 'package:core/features/faith/presentation/verse_notification_settings_page.dart';
@@ -152,6 +154,15 @@ class NotificationsSettingsPage extends ConsumerWidget {
                   },
                 ),
               ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          _Section(
+            title: 'Medidas corporales',
+            children: [
+              MeasurementReminderControls(
+                measurements: ref.watch(bodyMeasurementProvider),
+              ),
             ],
           ),
           const SizedBox(height: 14),

@@ -2,6 +2,8 @@ import 'package:core/domain/models/exercise.dart';
 import 'package:core/features/exercises/application/exercise_demonstration_library.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'exercise_png_pilot_library.dart';
+import 'exercise_png_pilot_carousel.dart';
 
 /// Shows only exercise-ID-specific verified Lottie media or still posters.
 /// Never substitutes another exercise, downloads external files or loads GIFs.
@@ -30,6 +32,7 @@ class _ExerciseDemonstrationCardState
   Widget build(BuildContext context) {
     final guide = ExerciseDemonstrationLibrary.guideFor(widget.exercise);
     final media = ExerciseDemonstrationLibrary.mediaFor(widget.exercise);
+    final pngPilot = PngPilotLibrary.forId(widget.exercise.id);
     final reduceMotion = MediaQuery.disableAnimationsOf(context) ||
         widget.reduceMotion;
     Widget placeholder(String message) => Container(
@@ -53,7 +56,9 @@ class _ExerciseDemonstrationCardState
           ),
         );
 
-    final mediaWidget = media == null
+    final mediaWidget = pngPilot != null
+        ? ExercisePngPilotCarousel(pilot:pngPilot,compact:widget.compact)
+        : media == null
         ? placeholder('Animación específica todavía no disponible. '
             'Consulta la guía técnica de este ejercicio.')
         : media.format == ExerciseMediaFormat.poster

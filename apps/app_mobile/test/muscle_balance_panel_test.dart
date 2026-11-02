@@ -1,4 +1,5 @@
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/features/progress/application/progress_metrics_service.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
@@ -92,10 +93,15 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Balance muscular'), findsOneWidget);
+    // One global filter: only Resumen has 7D/1M/3M/1A controls.
+    expect(find.byType(SegmentedButton<TimeFilter>), findsNothing);
+    expect(find.byKey(const ValueKey('muscle_shared_period')), findsOneWidget);
+    expect(find.text('1M'), findsOneWidget);
+    expect(find.byKey(const ValueKey('muscle_summary')), findsOneWidget);
     expect(find.textContaining('Hay etiquetas antiguas por clasificar'),
         findsOneWidget);
     expect(find.textContaining('Indirecto estimado:'), findsNothing);
-    // Move the vertical list, not the nested horizontal period selector.
+    // Only a vertical list remains: no duplicate horizontal filter.
     await tester.drag(find.byType(ListView).first, const Offset(0, -240));
     await tester.pumpAndSettle();
     await tester.ensureVisible(
@@ -107,7 +113,7 @@ void main() {
     // The ambiguous historical row sorts before Pecho; verify it before
     // moving down the lazy list so the test does not scroll past it.
     await tester.scrollUntilVisible(
-      find.text('Glúteos e isquios · por clasificar'), 120,
+      find.text('Glúteos e isquios · por clasificar'), -120,
     );
     expect(find.text('Glúteos e isquios · por clasificar'), findsOneWidget);
     await tester.ensureVisible(find.text('Glúteos e isquios · por clasificar'));
@@ -121,10 +127,25 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Ejercicios que aportaron trabajo directo'), findsWidgets);
     expect(find.text('Press banca'), findsWidgets);
+    // Zero-activity catalogue groups are collapsed until explicitly opened.
+    expect(find.text('Tríceps'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('muscle_inactive_toggle')), 120);
+    await tester.tap(find.byKey(const ValueKey('muscle_inactive_toggle')));
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Tríceps'), 120);
     expect(find.textContaining('Indirecto estimado: 0.5'), findsWidgets);
     await tester.scrollUntilVisible(find.text('Piernas'), 120);
     expect(find.text('Piernas'), findsOneWidget);
+    // The shared provider updates this screen without introducing a selector.
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(MuscleHeatmapGrid)));
+    container.read(timeFilterProvider.notifier).setFilter(TimeFilter.week);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('muscle_shared_period')), -200);
+    expect(find.text('7D'), findsOneWidget);
+    expect(find.byType(SegmentedButton<TimeFilter>), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

@@ -34,7 +34,7 @@ class BodyMeasurementNotifier extends Notifier<List<BodyMeasurement>> {
       await MeasurementReminderService.synchronize(state);
       return null;
     } catch (_) {
-      return 'Las medidas se guardaron, pero no se pudo actualizar el recordatorio. Revísalo en esta pantalla.';
+      return 'Las medidas se guardaron, pero no se pudo actualizar el recordatorio. Revísalo en Perfil → Notificaciones.';
     }
   }
 
@@ -45,7 +45,7 @@ class BodyMeasurementNotifier extends Notifier<List<BodyMeasurement>> {
       await MeasurementReminderService.synchronize(state);
       return null;
     } catch (_) {
-      return 'Las medidas se guardaron, pero no se pudo actualizar el recordatorio. Revísalo en esta pantalla.';
+      return 'Las medidas se guardaron, pero no se pudo actualizar el recordatorio. Revísalo en Perfil → Notificaciones.';
     }
   }
 }

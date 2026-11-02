@@ -22,6 +22,21 @@ import WidgetKit
       didFinishLaunchingWithOptions: launchOptions
     )
 
+    // Only registered for an explicitly enabled, static internal GPU review.
+    // Nothing in the exercise catalogue creates this platform view.
+    if let registrar = self.registrar(forPlugin: "StkAnatomyGpuReview") {
+      registrar.register(
+        StkAnatomyGpuReviewFactory(messenger: registrar.messenger()),
+        withId: "stk_haven/anatomy_gpu_static"
+      )
+    }
+    if let registrar = self.registrar(forPlugin: "StkAnatomyGpuSkinned") {
+      registrar.register(
+        StkAnatomyGpuSkinnedFactory(messenger: registrar.messenger()),
+        withId: "stk_haven/anatomy_gpu_skinning"
+      )
+    }
+
     if let controller = window?.rootViewController as? FlutterViewController {
       let timezoneChannel = FlutterMethodChannel(
         name: "stk_haven/timezone",

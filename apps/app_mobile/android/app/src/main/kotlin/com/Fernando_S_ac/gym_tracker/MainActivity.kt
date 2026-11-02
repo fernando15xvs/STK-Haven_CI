@@ -16,7 +16,7 @@ import com.google.android.gms.fitness.FitnessLocal
 import com.google.android.gms.fitness.LocalRecordingClient
 import com.google.android.gms.fitness.data.LocalDataType
 import com.google.android.gms.fitness.request.LocalDataReadRequest
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.text.SimpleDateFormat
@@ -26,7 +26,7 @@ import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
-class MainActivity : FlutterActivity(), SensorEventListener {
+class MainActivity : AudioServiceActivity(), SensorEventListener {
     private val channelName = "stk_haven/daily_steps"
     private val legacyPermissionRequest = 7412
     private val accessPermissionRequest = 7413
@@ -40,6 +40,17 @@ class MainActivity : FlutterActivity(), SensorEventListener {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        // Disabled-by-default experimental native GPU rasterizer for static
+        // anatomical GLB review. Never instantiated by workout screens.
+        flutterEngine.platformViewsController.registry.registerViewFactory(
+            "stk_haven/anatomy_gpu_static",
+            StkAnatomyGpuReviewFactory(flutterEngine.dartExecutor.binaryMessenger),
+        )
+        // Separate GLES3 shader-skinned pilot, never selected in production.
+        flutterEngine.platformViewsController.registry.registerViewFactory(
+            "stk_haven/anatomy_gpu_skinning",
+            StkAnatomyGpuSkinnedFactory(flutterEngine.dartExecutor.binaryMessenger),
+        )
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
         MethodChannel(

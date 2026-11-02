@@ -1,0 +1,26 @@
+{
+  "schema": "stk_realistic_anatomical_12_png_pilots_v1",
+  "version": 1,
+  "source": "Original illustrations generated for STK Haven in this conversation",
+  "approved": false,
+  "productionEnabled": false,
+  "colors": {
+    "primary": "#EF4444",
+    "secondary": "#2B73F6"
+  },
+  "count": 12,
+  "images": {
+    "ex_barbell_row/01_inicio.png": "d5d7cbccc83b4a317a0e1b6f8ebd3f36202316a99513dc7f4394c55d0688cbc2",
+    "ex_barbell_row/02_ejecucion.png": "8dd94e226821e19d9a941558ef2fb31859fb97c8449334023752f5b0d46e17af",
+    "ex_barbell_row/03_contraccion.png": "cc3da61c00ca99c1e7a557a16cb5c5cfe970efee281a9272034d083356aebbed",
+    "ex_barbell_row/04_retorno.png": "5100ed93143fd936e6a277662809eafcdfe947e5a1bb6591916eb853eb92e884",
+    "ex_bench_press/01_inicio.png": "5fc79cbffc931c39adff9b3a95072d35de069526730b365b8e5cb6fedbf2ac19",
+    "ex_bench_press/02_ejecucion.png": "7596eb3d32ea23062e70276baf6f6b897fb9c82c5c7f5245fc84432f268daada",
+    "ex_bench_press/03_contraccion.png": "7e2878f056fc5095550512cc2d56c7a86ab850e5e4a18a7e47189c17be275523",
+    "ex_bench_press/04_retorno.png": "d68ad81d99f388da95b1270e4bf436f798ec64cb252102aa62d5f1cd9ebb35c6",
+    "ex_squat/01_inicio.png": "3a624ac40b7efca0a3e109bbe42055aeb988a2c509881a3d890462b9cb01f1e8",
+    "ex_squat/02_ejecucion.png": "79001d3281561fa9bf478e9951ed048811f3a196ad9fb3d86579208ec5bb4d66",
+    "ex_squat/03_contraccion.png": "39ef24e1fd23461e6c0abbfec8b14e39146d3ee6f7ffc2a838c90d2bffbb4d24",
+    "ex_squat/04_retorno.png": "89c5663e2b02bd92b7df216fbf3f68c9a3e89d1c4564d7285cd7d87753c92712"
+  }
+}
