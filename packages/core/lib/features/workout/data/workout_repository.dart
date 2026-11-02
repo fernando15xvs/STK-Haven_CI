@@ -17,6 +17,26 @@ class WorkoutRepository {
     return _box.values.map(_fromHive).toList();
   }
 
+  /// Remove a previously saved *partial* snapshot when its active draft is
+  /// discarded. Never delete a completed historical workout with the same id.
+  Future<bool> deleteIncompleteWorkoutSession(String id) async {
+    final stored = _box.get(id);
+    if (stored == null) return false;
+    final workingSets = stored.exercises
+        .expand((exercise) => exercise.sets)
+        .where((set) =>
+            set.setType == 'working' ||
+            (set.setType.isEmpty && !set.warmup))
+        .toList(growable: false);
+    if (workingSets.isEmpty ||
+        workingSets.every((set) => set.completed)) {
+      return false;
+    }
+    await _box.delete(id);
+    return true;
+  }
+
+
   HiveWorkoutSession _toHive(WorkoutSession model) {
     return HiveWorkoutSession(
       id: model.id,

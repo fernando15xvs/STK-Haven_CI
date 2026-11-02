@@ -30,7 +30,7 @@ void main() {
     registerHiveAdapters();
     activeWorkoutBox = await Hive.openBox<dynamic>(HiveBoxes.activeWorkout);
     historyBox = await Hive.openBox<HiveWorkoutSession>(
-      'workout_recovery_history_test',
+      HiveBoxes.history,
     );
     routinesBox = await Hive.openBox<HiveRoutine>(
       'workout_recovery_routines_test',
@@ -131,6 +131,44 @@ void main() {
       expect(replayed.nextRoutineId, 'lower-a');
     },
   );
+
+  test('discard removes only its own incomplete history snapshot', () async {
+    final partial = _session(complete: false);
+    final completed = WorkoutSession(
+      id: 'previous-completed-workout',
+      routineId: 'upper-a',
+      routineNameSnapshot: 'Upper A',
+      startedAt: DateTime(2026, 9, 18, 8),
+      finishedAt: DateTime(2026, 9, 18, 9),
+      durationSeconds: 3600,
+      exercises: _session(complete: true).exercises,
+    );
+    final repository = WorkoutRepository(historyBox);
+    await repository.saveWorkoutSession(partial);
+    await repository.saveWorkoutSession(completed);
+    await ActiveWorkoutRepository(activeWorkoutBox).saveDraft(partial);
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    expect(container.read(activeWorkoutProvider).session?.id, partial.id);
+
+    await container.read(activeWorkoutProvider.notifier).cancelWorkout();
+
+    expect(ActiveWorkoutRepository(activeWorkoutBox).getDraft(), isNull);
+    expect(container.read(activeWorkoutProvider).isActive, isFalse);
+    expect(
+      repository.getAllSessions().map((session) => session.id).toList(),
+      ['previous-completed-workout'],
+    );
+    // A completed historical workout is never deleted by this cleanup API.
+    expect(
+      await repository.deleteIncompleteWorkoutSession(
+        'previous-completed-workout',
+      ),
+      isFalse,
+    );
+    expect(repository.getAllSessions(), hasLength(1));
+  });
 
   test('legacy routine exercise without phase loads as main', () async {
     final legacyExercise = HiveRoutineExercise(
