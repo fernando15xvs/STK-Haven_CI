@@ -16,7 +16,7 @@ import com.google.android.gms.fitness.FitnessLocal
 import com.google.android.gms.fitness.LocalRecordingClient
 import com.google.android.gms.fitness.data.LocalDataType
 import com.google.android.gms.fitness.request.LocalDataReadRequest
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.text.SimpleDateFormat
@@ -26,7 +26,7 @@ import java.util.Locale
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
-class MainActivity : FlutterActivity(), SensorEventListener {
+class MainActivity : AudioServiceActivity(), SensorEventListener {
     private val channelName = "stk_haven/daily_steps"
     private val legacyPermissionRequest = 7412
     private val accessPermissionRequest = 7413
