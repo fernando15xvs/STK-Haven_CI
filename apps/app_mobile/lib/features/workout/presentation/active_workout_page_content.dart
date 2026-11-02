@@ -21,6 +21,7 @@ import 'package:core/domain/models/exercise.dart';
 import 'package:gym_tracker/features/workout/presentation/workout_summary_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_library_page.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/barbell_calculator_modal.dart';
+import 'package:gym_tracker/features/motivation/presentation/widgets/motivation_mini_player.dart';
 
 class ActiveWorkoutPage extends ConsumerStatefulWidget {
   const ActiveWorkoutPage({super.key});
@@ -596,6 +597,8 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                     )
                   : const SizedBox.shrink(key: ValueKey('no_rest')),
             ),
+            // Within the normal layout flow, never over timers or Finish.
+            const MotivationMiniPlayer(showLauncherWhenEmpty: true),
             Expanded(
               child: _focusMode && session.exercises.isNotEmpty
                   ? _FocusedWorkoutView(

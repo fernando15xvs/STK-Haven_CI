@@ -12,6 +12,7 @@ import 'package:gym_tracker/features/routines/presentation/pages/create_routine_
 import 'package:gym_tracker/features/routines/presentation/pages/routine_templates_page.dart';
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
+import 'package:gym_tracker/features/motivation/presentation/widgets/motivation_mini_player.dart';
 
 class RoutinesPage extends ConsumerWidget {
   const RoutinesPage({super.key});
@@ -172,6 +173,7 @@ class RoutinesPage extends ConsumerWidget {
                     },
                   ),
           ),
+          const MotivationMiniPlayer(showLauncherWhenEmpty: true),
         ],
       ),
     );
