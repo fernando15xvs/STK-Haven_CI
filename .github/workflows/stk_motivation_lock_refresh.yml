@@ -1,0 +1,40 @@
+name: Temporary STK Motivation lockfile refresh
+on:
+  push:
+    branches:
+      - feat/mobile-lottie-batch1-drafts-20261018
+    paths:
+      - .github/workflows/stk_motivation_lock_refresh.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: stable
+      - name: Generate exact workspace dependency lock
+        run: |
+          flutter pub get
+          flutter pub get --enforce-lockfile
+          python3 - <<'PY'
+          import base64, pathlib
+          print('STK_LOCK_B64_BEGIN')
+          print(base64.b64encode(pathlib.Path('pubspec.lock').read_bytes()).decode('ascii'))
+          print('STK_LOCK_B64_END')
+          PY
+      - name: Commit lockfile to CI branch only
+        run: |
+          git config user.name "stk-ci-lockfile"
+          git config user.email "stk-ci-lockfile@users.noreply.github.com"
+          git add pubspec.lock
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(deps): lock STK Motivation Flutter packages"
+            git push origin HEAD:$GITHUB_REF_NAME
+          fi
