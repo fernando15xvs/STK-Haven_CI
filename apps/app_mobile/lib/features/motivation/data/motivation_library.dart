@@ -118,11 +118,10 @@ class MotivationLibrary extends ChangeNotifier {
   }
   Future<int> importFromPicker({required MotivationMode mode}) async {
     await load();
-    final pick=await FilePicker.platform.pickFiles(
-      type:FileType.custom,allowedExtensions:supportedExtensions.toList(),
-      allowMultiple:true,withData:false);
-    if(pick==null)return 0;
-    return importFiles(pick.files,mode:mode);
+    final pick=await FilePicker.pickFiles(
+      type:FileType.custom,allowedExtensions:supportedExtensions.toList());
+    if(pick.isEmpty)return 0;
+    return importFiles(pick,mode:mode);
   }
   Future<int> importFiles(List<PlatformFile> files,
     {required MotivationMode mode}) async {
@@ -131,7 +130,8 @@ class MotivationLibrary extends ChangeNotifier {
     for(final f in files){
       final ext=p.extension(f.name).toLowerCase().replaceFirst('.','');
       if(f.path==null || !supportedExtensions.contains(ext))continue;
-      if(f.size<=0 || f.size>maxFileBytes){
+      final expected=await f.length();
+      if(expected<=0 || expected>maxFileBytes){
         throw const FormatException('Archivo vacío o superior a 512 MB');
       }
       final id=const Uuid().v4();
@@ -139,7 +139,7 @@ class MotivationLibrary extends ChangeNotifier {
       final temp=File(dest.path+'.part');
       try{
         await File(f.path!).openRead().pipe(temp.openWrite());
-        if(await temp.length()!=f.size){
+        if(await temp.length()!=expected){
           throw const FileSystemException('Importación incompleta');
         }
         await temp.rename(dest.path);
