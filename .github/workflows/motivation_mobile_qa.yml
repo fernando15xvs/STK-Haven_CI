@@ -40,5 +40,22 @@ jobs:
             apps/app_mobile/lib/features/workout/presentation/active_workout_page_content.dart
       - name: Test STK Motivation local library and compact workout player
         run: flutter test apps/app_mobile/test/features/motivation
+      # Same production UI scope as the established public CI. Archived 3D
+      # tests need generated GLBs and belong to the separate anatomical QA job.
       - name: Test existing mobile screens and workout behaviour
-        run: flutter test apps/app_mobile/test
+        working-directory: apps/app_mobile
+        run: >-
+          flutter test
+          test/core
+          test/features/workout
+          test/features/progress
+          test/measurement_progress_panel_test.dart
+          test/muscle_balance_panel_test.dart
+          test/progress_insights_panel_test.dart
+          test/progress_unified_exercises_test.dart
+          test/widget_test.dart
+          test/features/exercises/advanced_exercise_filter_sheet_test.dart
+          test/features/exercises/exercise_demonstration_card_test.dart
+          test/features/exercises/exercise_selection_preview_test.dart
+          test/features/exercises/muscle_hierarchy_picker_test.dart
+          test/features/exercises/mobile_lottie_production_plan_test.dart
