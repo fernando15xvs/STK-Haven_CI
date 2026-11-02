@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import '../application/motivation_playback.dart';
 import '../data/motivation_library.dart';
+import 'widgets/motivation_audio_settings_sheet.dart';
 
 class MotivationPage extends StatefulWidget {
   const MotivationPage({super.key});
@@ -22,6 +23,7 @@ class _MotivationPageState extends State<MotivationPage> {
     super.initState();
     library.addListener(_refresh);
     player.addListener(_refresh);
+    unawaited(player.loadAudioPreferences());
     unawaited(library.load().catchError((Object e){
       _message('No se pudo abrir la biblioteca: '+e.toString());
     }));
@@ -69,7 +71,9 @@ class _MotivationPageState extends State<MotivationPage> {
     if(name!=null)await library.createPlaylist(name);
   }
   Future<void> _edit(MotivationTrack track,String action) async {
-    if(action=='rename'){
+    if(action=='favorite'){
+      await library.toggleFavorite(track.id);
+    }else if(action=='rename'){
       final title=await _askName('Renombrar',initial:track.title);
       if(title!=null)await library.renameTrack(track.id,title);
     }else if(action=='mode'){
@@ -123,6 +127,71 @@ class _MotivationPageState extends State<MotivationPage> {
       }
     }
   }
+  Future<void> _reorderCurrentPlaylist() async {
+    if(!selection.startsWith('playlist:'))return;
+    final id=selection.substring(9);
+    final matching=library.playlists.where((p)=>p.id==id);
+    if(matching.isEmpty)return;
+    final list=matching.first;
+    if(!mounted)return;
+    await showModalBottomSheet<void>(
+      context:context,
+      isScrollControlled:true,
+      useSafeArea:true,
+      builder:(ctx)=>FractionallySizedBox(
+        heightFactor:0.75,
+        child:StatefulBuilder(builder:(ctx,refresh){
+          final tracks=library.forSelection('playlist:$id');
+          return Column(children:[
+            ListTile(
+              title:Text('Ordenar: ${list.title}'),
+              subtitle:const Text('Mantén pulsado el asa para mover. '
+                'Los cambios se guardan en el dispositivo.'),
+              trailing:IconButton(
+                tooltip:'Cerrar',
+                onPressed:()=>Navigator.pop(ctx),
+                icon:const Icon(Icons.close)),
+            ),
+            Expanded(
+              child:tracks.isEmpty
+                ?const Center(child:Text('Añade archivos antes de ordenar.'))
+                :ReorderableListView.builder(
+                  key:const ValueKey('motivation_playlist_reorder'),
+                  buildDefaultDragHandles:false,
+                  itemCount:tracks.length,
+                  onReorder:(oldIndex,newIndex)async{
+                    await library.reorderPlaylist(id,oldIndex,newIndex);
+                    refresh((){});
+                  },
+                  itemBuilder:(context,i){
+                    final track=tracks[i];
+                    return ListTile(
+                      key:ValueKey('reorder_${track.id}'),
+                      title:Text(track.title,
+                        maxLines:1,overflow:TextOverflow.ellipsis),
+                      leading:Icon(track.isVideo
+                        ?Icons.movie_outlined:Icons.music_note_outlined),
+                      trailing:ReorderableDragStartListener(
+                        index:i,child:const Icon(Icons.drag_handle)),
+                    );
+                  }),
+            ),
+            const SizedBox(height:12),
+          ]);
+        }),
+      ),
+    );
+  }
+
+  void _showAudioSettings(){
+    showModalBottomSheet<void>(
+      context:context,
+      isScrollControlled:true,
+      useSafeArea:true,
+      builder:(ctx)=>const MotivationAudioSettingsSheet(),
+    );
+  }
+
   Future<void> _deleteList() async {
     final id=selection.substring(9);
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
@@ -174,6 +243,12 @@ class _MotivationPageState extends State<MotivationPage> {
               Text(track.mode.label+' · '+(track.isVideo?'MP4':'Audio'),
                 style:AppTypography.bodySmall),
             ])),
+          IconButton(
+            key:const ValueKey('motivation_favorite_current'),
+            tooltip:track.favorite?'Quitar favorito':'Añadir favorito',
+            onPressed:()=>unawaited(library.toggleFavorite(track.id)),
+            icon:Icon(track.favorite?Icons.favorite:Icons.favorite_border,
+              color:track.favorite?colors.primary:null)),
           IconButton(tooltip:'Detener',onPressed:()=>unawaited(player.stop()),
             icon:const Icon(Icons.stop_circle_outlined)),
         ]),
@@ -228,6 +303,9 @@ class _MotivationPageState extends State<MotivationPage> {
             icon:Icon(Icons.shuffle,
               color:player.shuffle?colors.primary:null)),
         ]),
+        if(player.sleepTimer.active)
+          Text('Apagado programado activo',
+            style:TextStyle(color:colors.primary)),
         Text('El audio continúa con la pantalla bloqueada; '
           'el video solo se muestra dentro de STK Haven.',
           style:AppTypography.bodySmall.copyWith(color:colors.textSecondary)),
@@ -242,9 +320,16 @@ class _MotivationPageState extends State<MotivationPage> {
     final tracks=library.forSelection(selection);
     return Scaffold(
       appBar:AppBar(title:const Text('STK Motivation'),
-        actions:[IconButton(tooltip:'Crear playlist',
-          onPressed:()=>unawaited(_createPlaylist()),
-          icon:const Icon(Icons.playlist_add))]),
+        actions:[
+          IconButton(
+            key:const ValueKey('motivation_settings'),
+            tooltip:'Volumen, velocidad y temporizador',
+            onPressed:_showAudioSettings,
+            icon:const Icon(Icons.tune)),
+          IconButton(tooltip:'Crear playlist',
+            onPressed:()=>unawaited(_createPlaylist()),
+            icon:const Icon(Icons.playlist_add)),
+        ]),
       body:!library.loaded
         ?const Center(child:CircularProgressIndicator())
         :ListView(key:const ValueKey('motivation_library'),
@@ -284,16 +369,22 @@ class _MotivationPageState extends State<MotivationPage> {
             SingleChildScrollView(scrollDirection:Axis.horizontal,
               child:Row(children:[
                 _filter('all','Todos'),
+                _filter('favorites','Favoritos'),
                 for(final m in MotivationMode.values)
                   _filter('mode:'+m.name,m.label),
                 for(final p in library.playlists)
                   _filter('playlist:'+p.id,p.title),
               ])),
             if(selection.startsWith('playlist:'))
-              Align(alignment:Alignment.centerRight,
-                child:TextButton.icon(onPressed:()=>unawaited(_deleteList()),
+              Row(mainAxisAlignment:MainAxisAlignment.end,children:[
+                TextButton.icon(
+                  onPressed:()=>unawaited(_reorderCurrentPlaylist()),
+                  icon:const Icon(Icons.drag_handle),
+                  label:const Text('Ordenar')),
+                TextButton.icon(onPressed:()=>unawaited(_deleteList()),
                   icon:const Icon(Icons.delete_outline),
-                  label:const Text('Eliminar lista'))),
+                  label:const Text('Eliminar lista')),
+              ]),
             const SizedBox(height:12),
             Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
               Text('Archivos ('+tracks.length.toString()+')',
@@ -323,11 +414,13 @@ class _MotivationPageState extends State<MotivationPage> {
                 trailing:PopupMenuButton<String>(
                   tooltip:'Opciones de archivo',
                   onSelected:(a)=>unawaited(_edit(t,a)),
-                  itemBuilder:(_)=>const [
-                    PopupMenuItem(value:'rename',child:Text('Renombrar')),
-                    PopupMenuItem(value:'mode',child:Text('Cambiar modo')),
-                    PopupMenuItem(value:'list',child:Text('Playlists')),
-                    PopupMenuItem(value:'delete',child:Text('Eliminar copia')),
+                  itemBuilder:(_)=>[
+                    PopupMenuItem(value:'favorite',child:Text(
+                      t.favorite?'Quitar de favoritos':'Añadir a favoritos')),
+                    const PopupMenuItem(value:'rename',child:Text('Renombrar')),
+                    const PopupMenuItem(value:'mode',child:Text('Cambiar modo')),
+                    const PopupMenuItem(value:'list',child:Text('Playlists')),
+                    const PopupMenuItem(value:'delete',child:Text('Eliminar copia')),
                   ]),
               )),
           ]),

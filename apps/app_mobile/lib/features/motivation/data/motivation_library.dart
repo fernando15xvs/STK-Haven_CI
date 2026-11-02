@@ -21,16 +21,21 @@ enum MotivationRepeat {
 @immutable
 class MotivationTrack {
   const MotivationTrack({required this.id, required this.title,
-    required this.fileName, required this.mode, required this.importedAt});
+    required this.fileName, required this.mode, required this.importedAt,
+    this.favorite=false});
   final String id, title, fileName;
   final MotivationMode mode;
   final DateTime importedAt;
+  final bool favorite;
   bool get isVideo => p.extension(fileName).toLowerCase() == '.mp4';
-  MotivationTrack copyWith({String? title, MotivationMode? mode}) =>
+  MotivationTrack copyWith({String? title, MotivationMode? mode,
+    bool? favorite}) =>
     MotivationTrack(id:id, title:title??this.title, fileName:fileName,
-      mode:mode??this.mode, importedAt:importedAt);
+      mode:mode??this.mode, importedAt:importedAt,
+      favorite:favorite??this.favorite);
   Map<String,dynamic> toJson()=>{'id':id,'title':title,'fileName':fileName,
-    'mode':mode.name,'importedAt':importedAt.toIso8601String()};
+    'mode':mode.name,'importedAt':importedAt.toIso8601String(),
+    'favorite':favorite};
   factory MotivationTrack.fromJson(Map<String,dynamic> j) {
     final name=j['fileName'] as String;
     if(p.basename(name)!=name || name.contains('..')) {
@@ -39,7 +44,9 @@ class MotivationTrack {
     return MotivationTrack(id:j['id'] as String,title:j['title'] as String,
       fileName:name,mode:MotivationMode.values.firstWhere(
         (m)=>m.name==j['mode'],orElse:()=>MotivationMode.discipline),
-      importedAt:DateTime.parse(j['importedAt'] as String));
+      importedAt:DateTime.parse(j['importedAt'] as String),
+      // Existing stage-1 records omit this field.
+      favorite:j['favorite']==true);
   }
 }
 @immutable
@@ -99,6 +106,9 @@ class MotivationLibrary extends ChangeNotifier {
     return p.join(_directory!.path,t.fileName);
   }
   List<MotivationTrack> forSelection(String selection){
+    if(selection=='favorites'){
+      return _tracks.where((t)=>t.favorite).toList();
+    }
     if(selection.startsWith('mode:')){
       final mode=selection.substring(5);
       return _tracks.where((t)=>t.mode.name==mode).toList();
@@ -163,6 +173,12 @@ class MotivationLibrary extends ChangeNotifier {
     _tracks[i]=_tracks[i].copyWith(title:title.trim());
     await _changed();
   }
+  Future<void> toggleFavorite(String id) async {
+    final i=_tracks.indexWhere((t)=>t.id==id);
+    if(i<0)return;
+    _tracks[i]=_tracks[i].copyWith(favorite:!_tracks[i].favorite);
+    await _changed();
+  }
   Future<void> changeMode(String id,MotivationMode mode) async {
     final i=_tracks.indexWhere((t)=>t.id==id);
     if(i<0)return;
@@ -186,6 +202,28 @@ class MotivationLibrary extends ChangeNotifier {
     if(title.trim().isEmpty)return;
     _playlists.add(MotivationPlaylist(id:const Uuid().v4(),
       title:title.trim(),trackIds:const []));
+    await _changed();
+  }
+  /// Flutter ReorderableListView passes newIndex one greater when dragging
+  /// toward the bottom. Keep the resulting order persistent and stable.
+  static List<String> moveIds(List<String> ids,int oldIndex,int newIndex){
+    if(oldIndex<0 || oldIndex>=ids.length ||
+       newIndex<0 || newIndex>ids.length){
+      throw RangeError('Índices fuera de rango');
+    }
+    final next=List<String>.of(ids);
+    if(oldIndex<newIndex)newIndex--;
+    final id=next.removeAt(oldIndex);
+    next.insert(newIndex,id);
+    return next;
+  }
+  Future<void> reorderPlaylist(String id,int oldIndex,int newIndex) async {
+    final i=_playlists.indexWhere((p)=>p.id==id);
+    if(i<0)return;
+    final current=_playlists[i];
+    final ids=moveIds(current.trackIds,oldIndex,newIndex);
+    _playlists[i]=MotivationPlaylist(id:current.id,title:current.title,
+      trackIds:ids);
     await _changed();
   }
   Future<void> deletePlaylist(String id) async {
