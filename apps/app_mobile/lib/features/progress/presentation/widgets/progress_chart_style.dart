@@ -60,12 +60,12 @@ class ProgressChartStyle {
     final lowest = values.reduce(math.min);
     final highest = values.reduce(math.max);
     if (includeZero) {
-      return ProgressChartBounds(0, math.max(1, highest) * 1.18);
+      return ProgressChartBounds(0.0, math.max(1.0, highest) * 1.18);
     }
     final range = highest - lowest;
     final padding =
-        range > 0 ? range * 0.18 : math.max(1, highest.abs() * 0.08);
-    final minimum = math.max(0, lowest - padding);
+        range > 0 ? range * 0.18 : math.max(1.0, highest.abs() * 0.08);
+    final minimum = math.max(0.0, lowest - padding);
     final maximum = highest + padding;
     return ProgressChartBounds(minimum, math.max(minimum + 0.01, maximum));
   }
