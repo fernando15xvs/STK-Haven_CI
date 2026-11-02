@@ -8,6 +8,8 @@ on:
       - apps/app_mobile/lib/shared/bootstrap/mobile_app_bootstrap.dart
       - apps/app_mobile/lib/features/profile/presentation/pages/profile_page.dart
       - apps/app_mobile/lib/features/home/presentation/pages/home_screen.dart
+      - apps/app_mobile/lib/features/routines/presentation/pages/routines_page.dart
+      - apps/app_mobile/lib/features/workout/presentation/active_workout_page_content.dart
       - apps/app_mobile/test/features/motivation/**
       - apps/app_mobile/pubspec.yaml
       - pubspec.lock
@@ -33,6 +35,10 @@ jobs:
             apps/app_mobile/lib/features/motivation \
             apps/app_mobile/lib/shared/bootstrap/mobile_app_bootstrap.dart \
             apps/app_mobile/lib/features/profile/presentation/pages/profile_page.dart \
-            apps/app_mobile/lib/features/home/presentation/pages/home_screen.dart
-      - name: Test STK Motivation library data contracts
-        run: flutter test apps/app_mobile/test/features/motivation/motivation_library_test.dart
+            apps/app_mobile/lib/features/home/presentation/pages/home_screen.dart \
+            apps/app_mobile/lib/features/routines/presentation/pages/routines_page.dart \
+            apps/app_mobile/lib/features/workout/presentation/active_workout_page_content.dart
+      - name: Test STK Motivation local library and compact workout player
+        run: flutter test apps/app_mobile/test/features/motivation
+      - name: Test existing mobile screens and workout behaviour
+        run: flutter test apps/app_mobile/test
