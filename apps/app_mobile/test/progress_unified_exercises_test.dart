@@ -122,4 +122,38 @@ void main() {
     expect(find.text('Técnica y ficha del ejercicio'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('focused performance opens exact exercise and full history',
+      (tester) async {
+    Exercise? openedHistory;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          exerciseListProvider.overrideWith(_Exercises.new),
+          workoutHistoryProvider.overrideWith(_History.new),
+          settingsProvider.overrideWith(_Settings.new),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: ProgressExercisesPanel(
+              initialExerciseId: 'curl',
+              onOpenHistory: (exercise) => openedHistory = exercise,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Curl de bíceps'), findsOneWidget);
+    expect(find.text('Extensiones'), findsNothing);
+    expect(find.byKey(const ValueKey('progress_exercises_search')), findsNothing);
+    expect(find.byKey(const ValueKey('progress_exercise_curl')), findsOneWidget);
+    expect(find.text('SESIONES RECIENTES'), findsNothing);
+    expect(find.text('Técnica y ficha del ejercicio'), findsNothing);
+    final action = find.byKey(const ValueKey('progress_open_history_curl'));
+    await tester.ensureVisible(action);
+    await tester.tap(action);
+    expect(openedHistory?.id, 'curl');
+    expect(tester.takeException(), isNull);
+  });
+
 }
