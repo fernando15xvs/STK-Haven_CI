@@ -276,19 +276,32 @@ class ExerciseProgressCalculator {
 
     final current1Rm = performances.last.estimated1RM;
     final latestDate = performances.last.date;
-    final thirtyDaysBeforeLatest = latestDate.subtract(const Duration(days: 30));
+    // "Last 30 days" means a real calendar window, not the oldest workout
+    // found before the date 30 days prior to the last workout. That old
+    // lookup could produce a misleading comparison to an event months ago.
+    final today = DateTime.now();
+    final comparisonEnd = to != null && to.isBefore(today) ? to : today;
+    final comparisonStart =
+        comparisonEnd.subtract(const Duration(days: 30));
     ExerciseSessionPerformance? baseline;
-    for (var index = performances.length - 2; index >= 0; index--) {
-      final candidate = performances[index];
-      if (!candidate.date.isAfter(thirtyDaysBeforeLatest)) {
-        baseline = candidate;
-        break;
+    final latestIsRecent =
+        !latestDate.isBefore(comparisonStart) &&
+        !latestDate.isAfter(comparisonEnd);
+    if (latestIsRecent) {
+      // Earliest valid evidence in the same rolling 30-day window.
+      for (final candidate in performances) {
+        if (!candidate.date.isBefore(comparisonStart) &&
+            candidate.date.isBefore(latestDate) &&
+            candidate.estimated1RM > 0) {
+          baseline = candidate;
+          break;
+        }
       }
     }
 
     double? absoluteChange30Days;
     double? percentChange30Days;
-    if (baseline != null && baseline.estimated1RM > 0) {
+    if (baseline != null && current1Rm > 0) {
       absoluteChange30Days = current1Rm - baseline.estimated1RM;
       percentChange30Days =
           (absoluteChange30Days / baseline.estimated1RM) * 100;

@@ -76,6 +76,55 @@ void main() {
       expect(dashboard.hasRecordedWork, true);
     });
 
+    test('30-day e1RM does not compare against a workout 45 days ago', () {
+      final now = DateTime.now();
+      final sessions = [
+        session(id: 'old', startedAt: now.subtract(const Duration(days: 45)),
+          sets: const [WorkoutSet(weight: 20, reps: 8, completed: true)]),
+        session(id: 'latest', startedAt: now.subtract(const Duration(hours: 1)),
+          sets: const [WorkoutSet(weight: 32.5, reps: 8, completed: true)]),
+      ];
+      final trend = ExerciseProgressCalculator.calculateTrend(sessions, 'bench');
+      expect(trend.current1RM, greaterThan(0));
+      expect(trend.absoluteChange30Days, isNull);
+      expect(trend.percentChange30Days, isNull);
+      expect(trend.latestComparison, isNotNull);
+    });
+
+    test('30-day e1RM references earliest workout within current window', () {
+      final now = DateTime.now();
+      final sessions = [
+        session(id: 'too-old', startedAt: now.subtract(const Duration(days: 50)),
+          sets: const [WorkoutSet(weight: 10, reps: 8, completed: true)]),
+        session(id: 'baseline', startedAt: now.subtract(const Duration(days: 25)),
+          sets: const [WorkoutSet(weight: 20, reps: 8, completed: true)]),
+        session(id: 'recent', startedAt: now.subtract(const Duration(days: 6)),
+          sets: const [WorkoutSet(weight: 29, reps: 8, completed: true)]),
+        session(id: 'latest', startedAt: now.subtract(const Duration(hours: 1)),
+          sets: const [WorkoutSet(weight: 32.5, reps: 8, completed: true)]),
+      ];
+      final trend = ExerciseProgressCalculator.calculateTrend(sessions, 'bench');
+      // At identical reps, e1RM scales linearly with recorded weight;
+      // the 25-day baseline is used, never the 50-day history entry.
+      final expectedPercent = (32.5 / 20 - 1) * 100;
+      expect(trend.percentChange30Days, closeTo(expectedPercent, 0.01));
+      expect(trend.absoluteChange30Days, isNotNull);
+      expect(trend.sessionCount, 4);
+    });
+
+    test('stale latest workout has no invented 30-day comparison', () {
+      final now = DateTime.now();
+      final sessions = [
+        session(id: 'older', startedAt: now.subtract(const Duration(days: 65)),
+          sets: const [WorkoutSet(weight: 20, reps: 8, completed: true)]),
+        session(id: 'old', startedAt: now.subtract(const Duration(days: 45)),
+          sets: const [WorkoutSet(weight: 32.5, reps: 8, completed: true)]),
+      ];
+      final trend = ExerciseProgressCalculator.calculateTrend(sessions, 'bench');
+      expect(trend.current1RM, greaterThan(0));
+      expect(trend.percentChange30Days, isNull);
+    });
+
     test('ignores sessions without completed working sets', () {
       final dashboard = ExerciseProgressCalculator.calculateTrend(
         [
