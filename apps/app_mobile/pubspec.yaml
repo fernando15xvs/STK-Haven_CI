@@ -55,6 +55,12 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  # Single local variable font for both themes, offline and consistent on iOS/Android.
+  fonts:
+    - family: Outfit
+      fonts:
+        - asset: assets/fonts/Outfit-Variable.ttf
+
   assets:
     - assets/imagenes/
     - assets/measurement_anatomy/
