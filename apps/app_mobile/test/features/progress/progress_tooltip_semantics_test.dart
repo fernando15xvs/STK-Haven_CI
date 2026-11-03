@@ -66,7 +66,8 @@ void main() {
           final tooltipData = chart.data.lineTouchData.touchTooltipData;
           final items = tooltipData.getTooltipItems([touched]);
           expect(items, hasLength(1));
-          final tooltip = items.single;
+          expect(items.single, isNotNull);
+          final tooltip = items.single!;
           expect(tooltip.text, contains('2026'));
           expect(tooltip.text, contains(unit.label));
           expect(tooltip.text, isNot(contains('15912.0')));
@@ -82,14 +83,14 @@ void main() {
         final v = chartWidgets.first.data.lineTouchData.touchTooltipData
             .getTooltipItems([LineBarSpot(volumeChart, 0, volumeChart.spots[1])]);
         final weight = WeightConverter.displayWeight(15912, unit);
-        expect(v.single.text, contains('10 oct 2026'));
-        expect(v.single.text, contains(ProgressChartStyle.measurement(weight, unit)));
+        expect(v.single!.text, contains('10 oct 2026'));
+        expect(v.single!.text, contains(ProgressChartStyle.measurement(weight, unit)));
 
         final rmChart = chartWidgets.last.data.lineBarsData.single;
         final e = chartWidgets.last.data.lineTouchData.touchTooltipData
             .getTooltipItems([LineBarSpot(rmChart, 0, rmChart.spots[1])]);
-        expect(e.single.text, contains('15 oct 2026'));
-        expect(e.single.text, contains(
+        expect(e.single!.text, contains('15 oct 2026'));
+        expect(e.single!.text, contains(
           ProgressChartStyle.measurement(
             WeightConverter.displayWeight(39, unit),
             unit,
