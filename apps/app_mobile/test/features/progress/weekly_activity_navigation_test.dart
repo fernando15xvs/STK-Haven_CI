@@ -63,6 +63,25 @@ void main() {
     });
   }
 
+  testWidgets('overnight session is marked on its completion day',
+      (tester) async {
+    final sundayNight = DateTime(2026, 11, 1, 23, 40);
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: WeeklyActivityCard(
+          history: [session('cross-midnight', sundayNight)],
+          referenceDate: DateTime(2026, 11, 3, 12),
+          onOpenProgress: () {},
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    // Finish Monday 02 Nov 00:20. Matching the Progreso heatmap,
+    // it is one activity day in the current week, not last week.
+    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('empty week retains direct access to Progreso',
       (tester) async {
     var opened = false;
