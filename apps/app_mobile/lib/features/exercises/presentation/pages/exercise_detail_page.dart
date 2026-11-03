@@ -4,19 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_chart_style.dart';
-import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/core/constants/curated_exercise_catalog.dart';
 import 'package:core/core/constants/muscle_taxonomy_v1.dart';
 import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_demonstration_card.dart';
-import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_history_set_row.dart';
-import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
+import 'package:gym_tracker/features/exercises/presentation/pages/exercise_history_page.dart';
+import 'package:gym_tracker/features/progress/presentation/pages/focused_exercise_progress_page.dart';
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
-import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:core/features/workout/application/workout_history_provider.dart';
-import 'package:core/domain/models/personal_record.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 
@@ -37,38 +33,6 @@ class ExerciseDetailPage extends ConsumerWidget {
                 MuscleTaxonomyV1.byId[id]!.labelEs,
           ];
     final settings = ref.watch(settingsProvider);
-    final allPRs = ref.watch(personalRecordRepositoryProvider).getAllPRs();
-    final history = ref.watch(workoutHistoryProvider);
-    final trend = ExerciseProgressCalculator.calculateTrend(
-      history,
-      exercise.id,
-    );
-
-    // Find PRs specific to this exercise
-    final maxWeightPR = allPRs
-        .where((p) => p.exerciseId == exercise.id && p.type == PRType.maxWeight)
-        .fold<PersonalRecordEvent?>(
-          null,
-          (prev, element) =>
-              prev == null || element.newValue > prev.newValue ? element : prev,
-        );
-    final bestSetVolumePR = allPRs
-        .where(
-          (p) => p.exerciseId == exercise.id && p.type == PRType.bestSetVolume,
-        )
-        .fold<PersonalRecordEvent?>(
-          null,
-          (prev, element) =>
-              prev == null || element.newValue > prev.newValue ? element : prev,
-        );
-
-    // Get History for this exercise
-    final sessionsWithExercise =
-        history
-            .where((s) => s.exercises.any((e) => e.exerciseId == exercise.id))
-            .toList()
-          ..sort((a, b) => b.startedAt.compareTo(a.startedAt)); // latest first
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -126,272 +90,81 @@ class ExerciseDetailPage extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xxl),
 
-          // Progress Section
+          // Personal metrics live in Progreso, and the full read-only
+          // session record lives in its own history route. Do not duplicate
+          // PRs, charts or five-session previews in the technical ficha.
           Text(
-            'TU PROGRESO',
+            'MIS REGISTROS',
             style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2),
           ),
           const SizedBox(height: AppSpacing.md),
-          if (trend.current1RM > 0) ...[
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.of(context).surfaceHigh,
-                borderRadius: AppRadius.lg_,
-                border: Border.all(color: AppColors.of(context).surfaceBorder),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '1RM ESTIMADO',
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.of(context).textSecondary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              WeightConverter.formatWeight(
-                                trend.current1RM,
-                                settings.weightUnit,
-                              ),
-                              style: AppTypography.displaySmall.copyWith(
-                                color: AppColors.of(context).primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (trend.percentChange30Days != null &&
-                          trend.percentChange30Days != 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: trend.percentChange30Days! >= 0
-                                ? AppColors.of(context).successFaded
-                                : AppColors.of(
-                                    context,
-                                  ).error.withValues(alpha: 0.15),
-                            borderRadius: AppRadius.sm_,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                'ÚLTIMOS 30 DÍAS',
-                                style: AppTypography.labelSmall.copyWith(
-                                  color: trend.percentChange30Days! >= 0
-                                      ? AppColors.of(context).success
-                                      : AppColors.of(context).error,
-                                  fontSize: 8,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    trend.percentChange30Days! >= 0
-                                        ? Icons.trending_up
-                                        : Icons.trending_down,
-                                    color: trend.percentChange30Days! >= 0
-                                        ? AppColors.of(context).success
-                                        : AppColors.of(context).error,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${trend.percentChange30Days! > 0 ? '+' : ''}${WeightConverter.formatWeight(trend.absoluteChange30Days!, settings.weightUnit)}',
-                                    style: AppTypography.labelMedium.copyWith(
-                                      color: trend.percentChange30Days! >= 0
-                                          ? AppColors.of(context).success
-                                          : AppColors.of(context).error,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  ExerciseOneRmChart(
-                    data: trend.history1RM,
-                    weightUnit: settings.weightUnit,
-                  ),
-                ],
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.of(context).surfaceHigh,
+              borderRadius: AppRadius.lg_,
+              border: Border.all(
+                color: AppColors.of(context).surfaceBorder,
               ),
             ),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              decoration: BoxDecoration(
-                color: AppColors.of(context).surfaceHigh,
-                borderRadius: AppRadius.lg_,
-                border: Border.all(color: AppColors.of(context).surfaceBorder),
-              ),
-              child: Center(
-                child: Text(
-                  'Sin datos de 1RM estimado',
-                  style: TextStyle(color: AppColors.of(context).textSecondary),
+            child: Column(
+              children: [
+                ListTile(
+                  key: const ValueKey('exercise_open_progress'),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          FocusedExerciseProgressPage(exercise: exercise),
+                    ),
+                  ),
+                  leading: Icon(
+                    Icons.insights_outlined,
+                    color: AppColors.of(context).primary,
+                  ),
+                  title: Text(
+                    'Ver mi rendimiento',
+                    style: AppTypography.headlineSmall,
+                  ),
+                  subtitle: Text(
+                    'Tendencias y récords de este ejercicio',
+                    style: AppTypography.bodySmall,
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: AppColors.of(context).textSecondary,
+                  ),
                 ),
-              ),
-            ),
-          ],
-
-          const SizedBox(height: AppSpacing.xxl),
-
-          // PRs Section
-          Text(
-            'RÉCORDS',
-            style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          if (maxWeightPR == null && bestSetVolumePR == null)
-            Text(
-              'Aún no tienes récords',
-              style: TextStyle(color: AppColors.of(context).textSecondary),
-            )
-          else
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.of(context).surfaceHigh,
-                borderRadius: AppRadius.lg_,
-                border: Border.all(color: AppColors.of(context).surfaceBorder),
-              ),
-              child: Column(
-                children: [
-                  if (maxWeightPR != null)
-                    _buildTrophyRow(
-                      context,
-                      'Mayor peso',
-                      FitnessFormatter.formatPRValue(
-                        maxWeightPR.newValue,
-                        PRType.maxWeight,
-                        settings.weightUnit,
-                      ),
-                      Icons.fitness_center,
-                      isLast: bestSetVolumePR == null,
+                Divider(
+                  height: 1,
+                  color: AppColors.of(context).surfaceBorder,
+                ),
+                ListTile(
+                  key: const ValueKey('exercise_open_history'),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ExerciseHistoryPage(exercise: exercise),
                     ),
-                  if (bestSetVolumePR != null)
-                    _buildTrophyRow(
-                      context,
-                      'Mejor serie (volumen)',
-                      FitnessFormatter.formatPRValue(
-                        bestSetVolumePR.newValue,
-                        PRType.bestSetVolume,
-                        settings.weightUnit,
-                      ),
-                      Icons.layers,
-                      isLast: true,
-                    ),
-                ],
-              ),
+                  ),
+                  leading: Icon(
+                    Icons.history_outlined,
+                    color: AppColors.of(context).primary,
+                  ),
+                  title: Text(
+                    'Ver historial completo',
+                    style: AppTypography.headlineSmall,
+                  ),
+                  subtitle: Text(
+                    'Todas tus sesiones y series registradas',
+                    style: AppTypography.bodySmall,
+                  ),
+                  trailing: Icon(
+                    Icons.chevron_right,
+                    color: AppColors.of(context).textSecondary,
+                  ),
+                ),
+              ],
             ),
-
-          const SizedBox(height: AppSpacing.xxl),
-
-          // History Section
-          Text(
-            'HISTORIAL RECIENTE',
-            style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2),
           ),
-          const SizedBox(height: AppSpacing.md),
-          if (sessionsWithExercise.isEmpty)
-            Text(
-              'Aún no has realizado este ejercicio',
-              style: TextStyle(color: AppColors.of(context).textSecondary),
-            )
-          else
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.of(context).surfaceHigh,
-                borderRadius: AppRadius.lg_,
-                border: Border.all(color: AppColors.of(context).surfaceBorder),
-              ),
-              child: Column(
-                children: sessionsWithExercise
-                    .take(5)
-                    .toList()
-                    .asMap()
-                    .entries
-                    .map((entry) {
-                      final idx = entry.key;
-                      final session = entry.value;
-                      final exData = session.exercises.firstWhere(
-                        (e) => e.exerciseId == exercise.id,
-                      );
-                      final isLast =
-                          idx == (sessionsWithExercise.take(5).length - 1);
-
-                      return Column(
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.of(context).surfaceBorder,
-                                    borderRadius: AppRadius.sm_,
-                                  ),
-                                  child: Text(
-                                    DateFormat(
-                                      'dd MMM',
-                                      'es',
-                                    ).format(session.startedAt).toUpperCase(),
-                                    style: AppTypography.labelMedium.copyWith(
-                                      color: AppColors.of(
-                                        context,
-                                      ).textSecondary,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: exData.sets
-                                        .map((set) => ExerciseHistorySetRow(
-                                              set: set,
-                                              weightUnit: settings.weightUnit,
-                                            ))
-                                        .toList(),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (!isLast)
-                            Divider(
-                              height: 1,
-                              color: AppColors.of(context).surfaceBorder,
-                            ),
-                        ],
-                      );
-                    })
-                    .toList(),
-              ),
-            ),
-
           const SizedBox(height: AppSpacing.xxl),
-
 
         ],
       ),
@@ -430,45 +203,6 @@ class ExerciseDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildTrophyRow(
-    BuildContext context,
-    String title,
-    String value,
-    IconData icon, {
-    bool isLast = false,
-  }) {
-    return Column(
-      children: [
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 4,
-          ),
-          leading: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.of(context).gold.withValues(alpha: 0.15),
-              borderRadius: AppRadius.sm_,
-            ),
-            child: Icon(icon, color: AppColors.of(context).gold, size: 20),
-          ),
-          title: Text(
-            title,
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.of(context).textSecondary,
-            ),
-          ),
-          trailing: Text(value, style: AppTypography.headlineSmall),
-        ),
-        if (!isLast)
-          Divider(
-            height: 1,
-            indent: 64,
-            color: AppColors.of(context).surfaceBorder,
-          ),
-      ],
-    );
-  }
 }
 
 class ExerciseOneRmChart extends StatelessWidget {
