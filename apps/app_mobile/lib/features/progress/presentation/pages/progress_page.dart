@@ -13,7 +13,7 @@ import 'package:gym_tracker/features/progress/presentation/widgets/muscle_heatma
 import 'package:gym_tracker/features/progress/presentation/widgets/volume_chart.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/calendar_heatmap_card.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detail_page.dart';
-import 'package:core/core/utils/weight_converter.dart';
+import 'package:gym_tracker/features/progress/presentation/widgets/progress_volume_headline.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/body_measurement_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/domain/models/settings_state.dart';
@@ -148,30 +148,12 @@ class _SummaryTab extends ConsumerWidget {
           style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2),
         ),
         const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              NumberFormat.decimalPattern().format(
-                WeightConverter.displayWeight(
-                  metrics.totalVolume,
-                  settings.weightUnit,
-                ).toInt(),
-              ),
-              style: AppTypography.displayMedium.copyWith(letterSpacing: -1),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              settings.weightUnit.label.toUpperCase(),
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.of(context).textSecondary,
-              ),
-            ),
-            const Spacer(),
-            if (metrics.volumePercentChange != null)
-              _TrendBadge(value: metrics.volumePercentChange!),
-          ],
+        ProgressVolumeHeadline(
+          volumeKg: metrics.totalVolume,
+          weightUnit: settings.weightUnit,
+          trailing: metrics.volumePercentChange == null
+              ? null
+              : _TrendBadge(value: metrics.volumePercentChange!),
         ),
         const SizedBox(height: AppSpacing.xl),
         Container(

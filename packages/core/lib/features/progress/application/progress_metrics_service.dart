@@ -3,6 +3,15 @@ import 'package:core/features/progress/application/calendar_heatmap_calculator.d
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 
+/// Compares complete periods; no percentage is meaningful without a
+/// positive previous-period baseline. Null means "sin referencia".
+double? periodPercentChange(double current, double previous) {
+  if (!current.isFinite || !previous.isFinite || previous <= 0) {
+    return null;
+  }
+  return (current - previous) / previous * 100;
+}
+
 enum TimeFilter { week, month, threeMonths, year }
 
 extension TimeFilterExtension on TimeFilter {
@@ -164,23 +173,16 @@ final progressMetricsProvider = Provider<DashboardMetrics>((ref) {
     }
   }
 
-  double? volumePercentChange;
-  if (previousTotalVolume > 0) {
-    volumePercentChange =
-        ((totalVolume - previousTotalVolume) / previousTotalVolume) * 100;
-  } else if (totalVolume > 0) {
-    volumePercentChange = 100.0;
-  }
+  // A zero/unknown baseline cannot be described as +100% growth.
+  final volumePercentChange =
+      periodPercentChange(totalVolume, previousTotalVolume);
 
   final currentWorkoutCount = currentPeriodSessions.length;
   final previousWorkoutCount = previousPeriodSessions.length;
-  double? workoutFrequencyPercentChange;
-  if (previousWorkoutCount > 0) {
-    workoutFrequencyPercentChange =
-        ((currentWorkoutCount - previousWorkoutCount) / previousWorkoutCount) * 100;
-  } else if (currentWorkoutCount > 0) {
-    workoutFrequencyPercentChange = 100.0;
-  }
+  final workoutFrequencyPercentChange = periodPercentChange(
+    currentWorkoutCount.toDouble(),
+    previousWorkoutCount.toDouble(),
+  );
 
   final periodDays = periodDuration.inDays <= 0 ? 1 : periodDuration.inDays;
   final workoutsPerWeek = currentWorkoutCount * 7 / periodDays;
