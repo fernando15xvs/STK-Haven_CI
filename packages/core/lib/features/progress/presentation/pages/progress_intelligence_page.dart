@@ -175,7 +175,10 @@ class _ExerciseInsightCard extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         subtitle: Text(
-          '${latest.routineName.isEmpty ? 'Entrenamiento libre' : latest.routineName} · ${_date(latest.date)}',
+          '${latest.routineName.isEmpty ? 'Entrenamiento libre' : latest.routineName} · ${_date(latest.date)}'
+          '\n${trend.current1RM > 0 ? '1RM estimado: ${FitnessFormatter.formatWeight(trend.current1RM, unit)}' : 'Sin estimación de 1RM'}',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         trailing: trend.hasPlateauSignal
             ? const Tooltip(
@@ -383,6 +386,9 @@ class _ExerciseInsightCard extends StatelessWidget {
                   'Señal informativa: las últimas tres estimaciones de 1RM están dentro de un rango aproximado del 2%. Observa técnica, recuperación y contexto antes de cambiar el plan.',
             ),
           ],
+          // Legacy routes without navigation retain the session preview.
+          // In mobile, the user opens the same records from the exercise ficha.
+          if (onOpenExercise == null) ...[
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerLeft,
@@ -411,6 +417,7 @@ class _ExerciseInsightCard extends StatelessWidget {
                   ),
                 ),
               ),
+          ],
           if (onOpenExercise != null)
             Align(
               alignment: Alignment.centerRight,
