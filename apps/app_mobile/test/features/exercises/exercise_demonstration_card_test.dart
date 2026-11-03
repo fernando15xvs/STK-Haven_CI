@@ -58,4 +58,42 @@ void main() {
     expect(find.text('2. Ejecución'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  for (final brightness in [Brightness.dark, Brightness.light]) {
+    testWidgets('unverified exercise has exactly one empty message in ${brightness.name}',
+        (tester) async {
+      tester.view.physicalSize = const Size(320, 720);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final exercise = Exercise(
+        id: 'custom_without_guide',
+        name: 'Movimiento sin material',
+        muscleGroup: 'General',
+      );
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(brightness: brightness),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: MediaQuery(
+              data: const MediaQueryData(
+                textScaler: TextScaler.linear(1.6),
+              ),
+              child: ExerciseDemonstrationCard(exercise: exercise),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('exercise_media_fallback')), findsOneWidget);
+      expect(find.textContaining('Este ejercicio aún no tiene demostración'),
+          findsOneWidget);
+      expect(find.textContaining('Todavía no hay una guía verificada'),
+          findsNothing);
+      expect(find.textContaining('Guía general orientativa'), findsNothing);
+      expect(find.byKey(const Key('exercise_verified_media')), findsNothing);
+      expect(find.byKey(const Key('exercise_toggle_animation')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
 }
