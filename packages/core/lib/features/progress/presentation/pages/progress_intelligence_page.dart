@@ -103,10 +103,14 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
         .toSet()
         .toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    // A period change can remove the selected muscle from the available
+    // groups. Fall back to "Todos" without keeping an invisible stale filter.
+    final selectedMuscle = muscles.contains(_muscle) ? _muscle : null;
     final search = _search.trim().toLowerCase();
     final matching = entries.where((entry) =>
         entry.exercise.name.toLowerCase().contains(search) &&
-        (_muscle == null || entry.exercise.muscleGroup == _muscle))
+        (selectedMuscle == null ||
+            entry.exercise.muscleGroup == selectedMuscle))
         .toList();
     matching.sort((a, b) => compareExerciseProgress(
       order: _order,
@@ -191,7 +195,8 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
                       key: const ValueKey('progress_exercises_muscle'),
                       isExpanded: true,
                       isDense: true,
-                      value: _muscle,
+                      value: selectedMuscle,
+                      hint: const Text('Todos'),
                       selectedItemBuilder: (context) => [
                         const Text('Todos', overflow: TextOverflow.ellipsis),
                         for (final group in muscles)
