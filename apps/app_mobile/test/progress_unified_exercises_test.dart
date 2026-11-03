@@ -87,13 +87,39 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Curl de bíceps'), findsOneWidget);
       expect(find.text('Extensiones'), findsNothing);
+      expect(find.textContaining('1RM estimado:'), findsOneWidget);
       await tester.tap(find.text('Curl de bíceps'));
       await tester.pumpAndSettle();
       expect(find.text('PR carga'), findsOneWidget);
+      // The mobile route opens the same history from its existing ficha;
+      // the expanded panel must not duplicate five recent sessions.
+      expect(find.text('SESIONES RECIENTES'), findsNothing);
       await tester.ensureVisible(find.text('Técnica y ficha del ejercicio'));
       await tester.tap(find.text('Técnica y ficha del ejercicio'));
       expect(opened?.id, 'curl');
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('legacy panel without a ficha route still exposes session history',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          exerciseListProvider.overrideWith(_Exercises.new),
+          workoutHistoryProvider.overrideWith(_History.new),
+          settingsProvider.overrideWith(_Settings.new),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: ProgressExercisesPanel()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Curl de bíceps'));
+    await tester.pumpAndSettle();
+    expect(find.text('SESIONES RECIENTES'), findsOneWidget);
+    expect(find.text('Técnica y ficha del ejercicio'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }
