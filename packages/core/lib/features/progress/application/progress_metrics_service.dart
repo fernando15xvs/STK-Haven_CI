@@ -27,19 +27,12 @@ double? periodPercentChange(double current, double previous) {
 enum TimeFilter { week, month, threeMonths, year }
 
 extension TimeFilterExtension on TimeFilter {
-  DateTime get startDate {
-    final now = DateTime.now();
-    switch (this) {
-      case TimeFilter.week:
-        return now.subtract(const Duration(days: 7));
-      case TimeFilter.month:
-        return now.subtract(const Duration(days: 30));
-      case TimeFilter.threeMonths:
-        return now.subtract(const Duration(days: 90));
-      case TimeFilter.year:
-        return now.subtract(const Duration(days: 365));
-    }
-  }
+  /// A deterministic rolling window: the same reference instant produces
+  /// identical cutoffs in all Progreso calculations.
+  DateTime startDateAt(DateTime now) =>
+      now.subtract(Duration(days: calendarDays));
+
+  DateTime get startDate => startDateAt(DateTime.now());
 
   String get label {
     switch (this) {
@@ -129,7 +122,7 @@ final progressMetricsProvider = Provider<DashboardMetrics>((ref) {
     startDate: today.subtract(Duration(days: filter.calendarDays - 1)),
     endDate: today,
   );
-  final startDate = filter.startDate;
+  final startDate = filter.startDateAt(now);
   final periodDuration = now.difference(startDate);
   final previousStartDate = startDate.subtract(periodDuration);
 

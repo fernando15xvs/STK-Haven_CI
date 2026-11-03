@@ -16,6 +16,7 @@ import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detai
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_history_page.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_volume_headline.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_consistency_metrics.dart';
+import 'package:gym_tracker/features/progress/presentation/widgets/progress_shared_period_selector.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/body_measurement_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:gym_tracker/core/theme/components/metric_tile.dart';
@@ -61,24 +62,46 @@ class ProgressPage extends ConsumerWidget {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            const _SummaryTab(),
-            ProgressExercisesPanel(
-              onOpenExercise: (exercise) => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => ExerciseDetailPage(exercise: exercise),
-                ),
+        // A single period control serves Resumen, Ejercicios and Músculos.
+        // Medidas keeps its separate, measurement-specific date range.
+        body: Builder(
+          builder: (context) {
+            final tabs = DefaultTabController.of(context);
+            return AnimatedBuilder(
+              animation: tabs,
+              builder: (context, _) => Column(
+                children: [
+                  if (tabs.index != 3) const ProgressSharedPeriodSelector(),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        const _SummaryTab(),
+                        ProgressExercisesPanel(
+                          useSharedPeriod: true,
+                          onOpenExercise: (exercise) =>
+                              Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  ExerciseDetailPage(exercise: exercise),
+                            ),
+                          ),
+                          onOpenHistory: (exercise) =>
+                              Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  ExerciseHistoryPage(exercise: exercise),
+                            ),
+                          ),
+                        ),
+                        const MuscleHeatmapGrid(),
+                        const BodyMeasurementPage(),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              onOpenHistory: (exercise) => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => ExerciseHistoryPage(exercise: exercise),
-                ),
-              ),
-            ),
-            const MuscleHeatmapGrid(),
-            const BodyMeasurementPage(),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -95,11 +118,12 @@ class _SummaryTab extends ConsumerWidget {
     final history = ref.watch(workoutHistoryProvider);
     final settings = ref.watch(settingsProvider);
     final exercises = ref.watch(exerciseListProvider);
+    final now = DateTime.now();
     final insights = ProgressInsightCalculator.calculate(
       history: history,
       exercises: exercises,
-      from: filter.startDate,
-      now: DateTime.now(),
+      from: filter.startDateAt(now),
+      now: now,
       periodKey: filter.label,
     );
 
@@ -109,47 +133,6 @@ class _SummaryTab extends ConsumerWidget {
         vertical: AppSpacing.lg,
       ),
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.of(context).surfaceHigh,
-            borderRadius: AppRadius.lg_,
-            border: Border.all(color: AppColors.of(context).surfaceBorder),
-          ),
-          padding: const EdgeInsets.all(4),
-          child: SegmentedButton<TimeFilter>(
-            segments: const [
-              ButtonSegment(value: TimeFilter.week, label: Text('7D')),
-              ButtonSegment(value: TimeFilter.month, label: Text('1M')),
-              ButtonSegment(value: TimeFilter.threeMonths, label: Text('3M')),
-              ButtonSegment(value: TimeFilter.year, label: Text('1A')),
-            ],
-            selected: {filter},
-            onSelectionChanged: (Set<TimeFilter> newSelection) {
-              ref
-                  .read(timeFilterProvider.notifier)
-                  .setFilter(newSelection.first);
-            },
-            showSelectedIcon: false,
-            style: ButtonStyle(
-              backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AppColors.of(context).primary.withValues(alpha: 0.15);
-                }
-                return Colors.transparent;
-              }),
-              foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AppColors.of(context).primary;
-                }
-                return AppColors.of(context).textSecondary;
-              }),
-              side: const WidgetStatePropertyAll(BorderSide.none),
-              shape: WidgetStatePropertyAll(
-                RoundedRectangleBorder(borderRadius: AppRadius.md_),
-              ),
-            ),
-          ),
-        ),
         const SizedBox(height: AppSpacing.xl),
         Text(
           'VOLUMEN TOTAL',

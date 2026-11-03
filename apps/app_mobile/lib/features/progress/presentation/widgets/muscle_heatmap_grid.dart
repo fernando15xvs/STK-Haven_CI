@@ -28,12 +28,13 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
     final exercises = ref.watch(exerciseListProvider);
     final routines = ref.watch(routineListProvider);
     final period = ref.watch(timeFilterProvider);
+    final now = DateTime.now();
     final report = MuscleBalanceCalculator.calculate(
       history: history,
       exercises: exercises,
       routines: routines,
-      from: period.startDate,
-      now: DateTime.now(),
+      from: period.startDateAt(now),
+      now: now,
     );
 
     final activeGroups = report.groups.where((g) => g.directSets > 0).toList();
@@ -60,7 +61,7 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
           )),
           const SizedBox(width: 8),
           Tooltip(
-            message: 'Período elegido en Resumen',
+            message: 'Período compartido con Resumen y Ejercicios',
             child: Container(
               key: const ValueKey('muscle_shared_period'),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -74,8 +75,9 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
           ),
         ]),
         const SizedBox(height: 7),
-        Text('El período se cambia en Resumen. Los datos reflejan '
-          'trabajo registrado, no crecimiento muscular ni recuperación.',
+        Text('El período se cambia arriba y afecta a Resumen, Ejercicios '
+          'y Músculos. Las semanas completas se comparan por separado. '
+          'El trabajo registrado no demuestra crecimiento muscular.',
           style: AppTypography.bodySmall.copyWith(
             color: colors.textSecondary)),
         const SizedBox(height: 14),
@@ -173,7 +175,7 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
             const Padding(
               padding: EdgeInsets.only(bottom: 12),
               child: Text('Aún no hay series efectivas en este período. '
-                'Cambia el filtro desde Resumen para ver otro período.')),
+                'Cambia el filtro superior para ver otro período.')),
           for (final muscle in activeGroups)
             Padding(
               padding: const EdgeInsets.only(bottom: 9),

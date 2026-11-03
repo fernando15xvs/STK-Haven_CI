@@ -9,6 +9,7 @@ import 'package:core/features/profile/presentation/providers/settings_provider.d
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
 import 'package:core/features/progress/application/exercise_progress_sort.dart';
 import 'package:core/features/progress/application/progress_analytics_cache.dart' as analytics;
+import 'package:core/features/progress/application/progress_metrics_service.dart';
 import 'package:core/features/progress/application/unilateral_progress_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +42,7 @@ class ProgressExercisesPanel extends ConsumerStatefulWidget {
     this.onOpenExercise,
     this.onOpenHistory,
     this.initialExerciseId,
+    this.useSharedPeriod = false,
   });
 
   final ValueChanged<Exercise>? onOpenExercise;
@@ -49,6 +51,10 @@ class ProgressExercisesPanel extends ConsumerStatefulWidget {
   /// When set, only this exercise is shown, with 'Todo' selected initially.
   /// Used by the technical ficha's "Ver mi rendimiento" action.
   final String? initialExerciseId;
+
+  /// True only inside the main Progreso tab. Standalone/focused routes keep
+  /// their own "Todo" option for lifetime exercise exploration.
+  final bool useSharedPeriod;
 
   @override
   ConsumerState<ProgressExercisesPanel> createState() =>
@@ -72,13 +78,24 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
     final analyticsCache = ref.watch(analytics.progressAnalyticsCacheProvider);
     final exercises = ref.watch(exerciseListProvider);
     final settings = ref.watch(settingsProvider);
-    // A calendar-day cutoff stays stable as users search/sort. The shared
-    // analytics cache invalidates whenever the history index changes.
-    final today = DateTime.now();
-    final midnight = DateTime(today.year, today.month, today.day);
-    final from = _period.days == null
-        ? null
-        : midnight.subtract(Duration(days: _period.days!));
+    final sharedPeriod = widget.useSharedPeriod
+        ? ref.watch(timeFilterProvider)
+        : null;
+    final clock = DateTime.now();
+    // Round only the cache lookup window to the minute, not displayed dates.
+    // This avoids a new analytics-cache entry on every search keystroke.
+    // The exclusive upper bound is the next minute, so fresh workouts
+    // recorded in this minute remain visible without accepting future days.
+    final minute = DateTime(
+      clock.year, clock.month, clock.day, clock.hour, clock.minute);
+    final endExclusive = minute.add(const Duration(minutes: 1));
+    // Selected Progreso tabs use the same 7D/1M/3M/1A duration.
+    // Standalone/focused routes preserve 30/90/Todo local selection.
+    final from = sharedPeriod != null
+        ? sharedPeriod.startDateAt(minute)
+        : _period.days == null
+            ? null
+            : minute.subtract(Duration(days: _period.days!));
 
     final entries = <_ProgressEntry>[];
     for (final exercise in exercises) {
@@ -90,6 +107,7 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
         exercise.id,
         period: analytics.ProgressPeriod(
           from: from,
+          to: endExclusive,
           maxChartPoints: settings.performanceMode == PerformanceMode.savings
               ? 48 : 120,
         ),
@@ -130,7 +148,8 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
           child: Row(children: [
             Expanded(child: Text('Rendimiento por ejercicio',
                 style: Theme.of(context).textTheme.titleMedium)),
-            DropdownButton<ProgressPeriod>(
+            if (!widget.useSharedPeriod)
+              DropdownButton<ProgressPeriod>(
               value: _period,
               items: ProgressPeriod.values.map((period) =>
                   DropdownMenuItem(value: period, child: Text(period.label)))
