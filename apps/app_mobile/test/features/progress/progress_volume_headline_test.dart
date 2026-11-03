@@ -1,5 +1,4 @@
 import 'package:core/core/theme/app_palette.dart';
-import 'package:core/domain/models/appearance_settings.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
