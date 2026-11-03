@@ -16,9 +16,9 @@ class ProgressChartStyle {
       );
 
   static TextStyle tooltipText(BuildContext context) =>
-      AppTypography.labelLarge.copyWith(
+      AppTypography.bodyMedium.copyWith(
         color: AppColors.of(context).textPrimary,
-        fontSize: 13,
+        fontWeight: FontWeight.w600,
         fontFeatures: const [FontFeature.tabularFigures()],
       );
 

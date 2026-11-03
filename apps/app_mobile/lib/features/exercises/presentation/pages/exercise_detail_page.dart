@@ -224,7 +224,7 @@ class ExerciseDetailPage extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  _OneRMChart(
+                  ExerciseOneRmChart(
                     data: trend.history1RM,
                     weightUnit: settings.weightUnit,
                   ),
@@ -522,11 +522,11 @@ class ExerciseDetailPage extends ConsumerWidget {
   }
 }
 
-class _OneRMChart extends StatelessWidget {
+class ExerciseOneRmChart extends StatelessWidget {
   final List<ExerciseProgressPoint> data;
   final WeightUnit weightUnit;
 
-  const _OneRMChart({required this.data, required this.weightUnit});
+  const ExerciseOneRmChart({required this.data, required this.weightUnit});
 
   @override
   Widget build(BuildContext context) {
