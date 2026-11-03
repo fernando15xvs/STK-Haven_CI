@@ -160,6 +160,14 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
             ),
           ]),
         ),
+        if (widget.useSharedPeriod)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              'Ejercicios se atribuyen a la fecha de inicio de cada sesión.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
         if (widget.initialExerciseId == null)
           Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),

@@ -1,5 +1,4 @@
 import 'package:core/core/theme/app_palette.dart';
-import 'package:core/domain/models/appearance_settings.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
@@ -121,13 +120,13 @@ void main() {
       expect(scope.read(timeFilterProvider), TimeFilter.month);
 
       tester.widget<SegmentedButton<TimeFilter>>(selector)
-          .onSelectionChanged({TimeFilter.year});
+          .onSelectionChanged!({TimeFilter.year});
       await tester.pumpAndSettle();
       expect(scope.read(timeFilterProvider), TimeFilter.year);
       expect(find.text('Remo antiguo'), findsOneWidget);
 
       tester.widget<SegmentedButton<TimeFilter>>(selector)
-          .onSelectionChanged({TimeFilter.week});
+          .onSelectionChanged!({TimeFilter.week});
       await tester.pumpAndSettle();
       expect(find.text('Prensa reciente'), findsOneWidget);
       expect(find.text('Remo antiguo'), findsNothing);
