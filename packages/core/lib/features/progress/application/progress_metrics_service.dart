@@ -4,6 +4,27 @@ import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 
+/// A frequency/calendar training day needs evidence of completed working
+/// exercise, not merely an imported or empty historical row. A partially
+/// finalized workout qualifies once work exists, without granting completion
+/// rewards or changing its persisted state. Bodyweight work (0 kg) qualifies.
+bool hasRecordedTrainingActivity(WorkoutSession session) {
+  return session.exercises.any(
+    (exercise) => exercise.sets.any(
+      (set) =>
+          set.setType == WorkoutSetType.working &&
+          set.completed &&
+          set.performanceReps > 0,
+    ),
+  );
+}
+
+/// A calendar day can include records up to the observation instant, not
+/// later today. Preserves the historical row while excluding future-dated
+/// imports from current active days, frequency and comparisons.
+bool isRecordedTrainingActivityAsOf(WorkoutSession session, DateTime now) =>
+    !session.finishedAt.isAfter(now) && hasRecordedTrainingActivity(session);
+
 /// Date-window contract shared with the heatmap: no future finish dates.
 /// A partial session with recorded work still belongs to its finish date;
 /// reward/program completion is governed separately by WorkoutNotifier.
@@ -15,8 +36,8 @@ bool isSessionInMetricsPeriod(
     session.finishedAt.isAfter(startDate) &&
     !session.finishedAt.isAfter(endDate);
 
-/// Exactly what the current Progreso frequency/mean represent:
-/// recorded history entries inside the chosen finish-time window.
+/// A pure average over the session cohort supplied by the caller.
+/// Progreso passes only effective training activity in its finish-time window.
 /// Incomplete entries are retained, with rewards/program progression handled
 /// elsewhere. This summary does not attempt to estimate active exercise time.
 class RecordedDurationSummary {
@@ -149,11 +170,15 @@ final progressMetricsProvider = Provider<DashboardMetrics>((ref) {
   final filter = ref.watch(timeFilterProvider);
   final allSessions = ref.watch(workoutHistoryProvider);
   final allPRs = ref.watch(personalRecordRepositoryProvider).getAllPRs();
-
   final now = DateTime.now();
+  // The same eligibility gate feeds the calendar and all numeric metrics;
+  // future timestamps from imports are not counted even later today.
+  final activitySessions = allSessions
+      .where((session) => isRecordedTrainingActivityAsOf(session, now))
+      .toList();
   final today = DateTime(now.year, now.month, now.day);
   final calendarHeatmap = CalendarHeatmapSnapshot.fromSessions(
-    allSessions,
+    activitySessions,
     startDate: today.subtract(Duration(days: filter.calendarDays - 1)),
     endDate: today,
   );
@@ -161,14 +186,14 @@ final progressMetricsProvider = Provider<DashboardMetrics>((ref) {
   final periodDuration = now.difference(startDate);
   final previousStartDate = startDate.subtract(periodDuration);
 
-  final currentPeriodSessions = allSessions
+  final currentPeriodSessions = activitySessions
       .where((session) => isSessionInMetricsPeriod(
             session,
             startDate: startDate,
             endDate: now,
           ))
       .toList();
-  final previousPeriodSessions = allSessions
+  final previousPeriodSessions = activitySessions
       .where(
         (s) => s.finishedAt.isAfter(previousStartDate) &&
             s.finishedAt.isBefore(startDate),
