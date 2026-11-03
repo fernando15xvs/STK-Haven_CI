@@ -10,6 +10,7 @@ import 'package:core/domain/models/exercise.dart';
 import 'package:core/core/constants/curated_exercise_catalog.dart';
 import 'package:core/core/constants/muscle_taxonomy_v1.dart';
 import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_demonstration_card.dart';
+import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_history_set_row.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
 import 'package:intl/intl.dart';
@@ -366,64 +367,12 @@ class ExerciseDetailPage extends ConsumerWidget {
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
-                                    children: exData.sets.map((set) {
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 4,
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Text(
-                                              '${FitnessFormatter.formatWeight(set.weight, settings.weightUnit)} × ${set.reps}',
-                                              style: AppTypography.monoMedium
-                                                  .copyWith(
-                                                    color: set.completed
-                                                        ? AppColors.of(
-                                                            context,
-                                                          ).textPrimary
-                                                        : AppColors.of(context)
-                                                              .textSecondary
-                                                              .withValues(
-                                                                alpha: 0.5,
-                                                              ),
-                                                    decoration: set.completed
-                                                        ? null
-                                                        : TextDecoration
-                                                              .lineThrough,
-                                                  ),
-                                            ),
-                                            if (!set.completed) ...[
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 6,
-                                                      vertical: 2,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.of(context)
-                                                      .error
-                                                      .withValues(alpha: 0.15),
-                                                  borderRadius:
-                                                      BorderRadius.circular(4),
-                                                ),
-                                                child: Text(
-                                                  'Fallida',
-                                                  style: AppTypography
-                                                      .labelSmall
-                                                      .copyWith(
-                                                        color: AppColors.of(
-                                                          context,
-                                                        ).error,
-                                                        fontSize: 9,
-                                                      ),
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      );
-                                    }).toList(),
+                                    children: exData.sets
+                                        .map((set) => ExerciseHistorySetRow(
+                                              set: set,
+                                              weightUnit: settings.weightUnit,
+                                            ))
+                                        .toList(),
                                   ),
                                 ),
                               ],
