@@ -1,5 +1,4 @@
 import 'package:core/core/theme/app_palette.dart';
-import 'package:core/domain/models/appearance_settings.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
@@ -79,7 +78,7 @@ class _Settings extends SettingsNotifier {
 
 void main() {
   setUpAll(() async => initializeDateFormatting('es'));
-  const exercise = Exercise(
+  final exercise = Exercise(
     id: 'bench',
     name: 'Press de banca',
     muscleGroup: 'Pecho',
@@ -103,7 +102,7 @@ void main() {
         ],
         child: MaterialApp(
           theme: ThemeData(brightness: brightness, extensions: [palette]),
-          home: const ExerciseHistoryPage(exercise: exercise),
+          home: ExerciseHistoryPage(exercise: exercise),
         ),
       ));
       await tester.pumpAndSettle();
@@ -133,7 +132,7 @@ void main() {
         workoutHistoryProvider.overrideWith(_EmptyHistory.new),
         settingsProvider.overrideWith(_Settings.new),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         home: ExerciseHistoryPage(exercise: exercise),
       ),
     ));
