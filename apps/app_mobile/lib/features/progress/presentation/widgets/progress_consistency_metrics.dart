@@ -24,9 +24,13 @@ class ProgressConsistencyMetrics extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-          child: _ConsistencyValue(
-            label: 'DURACIÓN MEDIA',
-            value: '${averageSessionMinutes.round()}m',
+          child: Tooltip(
+            message: 'Promedio de duración registrada, incluidas pausas y '
+                'tiempo de una sesión abierta. No equivale a esfuerzo activo.',
+            child: _ConsistencyValue(
+              label: 'MEDIA REGISTRADA',
+              value: '${averageSessionMinutes.round()}m',
+            ),
           ),
         ),
       ],

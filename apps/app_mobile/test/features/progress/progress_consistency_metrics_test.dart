@@ -35,10 +35,11 @@ void main() {
       ));
       await tester.pumpAndSettle();
       expect(find.text('ENTRENOS / SEM'), findsOneWidget);
-      expect(find.text('DURACIÓN MEDIA'), findsOneWidget);
+      expect(find.text('MEDIA REGISTRADA'), findsOneWidget);
       expect(find.text('DÍAS ACTIVOS'), findsNothing);
       expect(find.text('2.5'), findsOneWidget);
       expect(find.text('252m'), findsOneWidget);
+      expect(find.byType(Tooltip), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }

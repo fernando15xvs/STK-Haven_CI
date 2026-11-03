@@ -15,6 +15,41 @@ bool isSessionInMetricsPeriod(
     session.finishedAt.isAfter(startDate) &&
     !session.finishedAt.isAfter(endDate);
 
+/// Exactly what the current Progreso frequency/mean represent:
+/// recorded history entries inside the chosen finish-time window.
+/// Incomplete entries are retained, with rewards/program progression handled
+/// elsewhere. This summary does not attempt to estimate active exercise time.
+class RecordedDurationSummary {
+  const RecordedDurationSummary({
+    required this.sessionCount,
+    required this.totalDurationSeconds,
+  });
+
+  final int sessionCount;
+  final int totalDurationSeconds;
+
+  double get averageMinutes => sessionCount == 0
+      ? 0
+      : totalDurationSeconds / 60 / sessionCount;
+}
+
+/// Pure calculation for reproducible partial, imported and long-session tests.
+/// Callers apply their date window first; no stored duration is altered.
+RecordedDurationSummary summarizeRecordedDurations(
+  Iterable<WorkoutSession> recordedSessions,
+) {
+  var count = 0;
+  var seconds = 0;
+  for (final session in recordedSessions) {
+    count++;
+    seconds += session.durationSeconds;
+  }
+  return RecordedDurationSummary(
+    sessionCount: count,
+    totalDurationSeconds: seconds,
+  );
+}
+
 /// Compares complete periods; no percentage is meaningful without a
 /// positive previous-period baseline. Null means "sin referencia".
 double? periodPercentChange(double current, double previous) {
@@ -142,13 +177,11 @@ final progressMetricsProvider = Provider<DashboardMetrics>((ref) {
 
   double totalVolume = 0;
   int totalSets = 0;
-  int totalDurationSeconds = 0;
+  final recordedDuration = summarizeRecordedDurations(currentPeriodSessions);
   final Map<DateTime, double> dailyVolume = {};
   final activeDayKeys = <String>{};
 
   for (final session in currentPeriodSessions) {
-    totalDurationSeconds += session.durationSeconds;
-
     double sessionVolume = 0;
     for (final ex in session.exercises) {
       for (final set in ex.sets) {
@@ -196,9 +229,7 @@ final progressMetricsProvider = Provider<DashboardMetrics>((ref) {
 
   final periodDays = periodDuration.inDays <= 0 ? 1 : periodDuration.inDays;
   final workoutsPerWeek = currentWorkoutCount * 7 / periodDays;
-  final averageSessionMinutes = currentWorkoutCount == 0
-      ? 0.0
-      : (totalDurationSeconds / 60) / currentWorkoutCount;
+  final averageSessionMinutes = recordedDuration.averageMinutes;
 
   final prCount = allPRs.where((pr) => pr.achievedAt.isAfter(startDate)).length;
 
@@ -213,7 +244,7 @@ final progressMetricsProvider = Provider<DashboardMetrics>((ref) {
     volumeChartData: chartData,
     workoutCount: currentWorkoutCount,
     totalSets: totalSets,
-    totalDurationSeconds: totalDurationSeconds,
+    totalDurationSeconds: recordedDuration.totalDurationSeconds,
     prCount: prCount,
     activeDays: activeDayKeys.length,
     workoutsPerWeek: workoutsPerWeek,
