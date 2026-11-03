@@ -509,11 +509,16 @@ class ExerciseOneRmChart extends StatelessWidget {
     final bounds = ProgressChartStyle.bounds(spots.map((point) => point.y));
     final maxX = spots.last.x;
     final xPadding = math.max(0.65, maxX * 0.045);
+    final peakSpot = spots.reduce((a, b) => a.y >= b.y ? a : b);
+    final peakDate = ordered[spots.indexOf(peakSpot)].date;
 
     return Semantics(
       label: 'Evolución del 1RM estimado: '
           '${ProgressChartStyle.detailedDate(first)} a '
-          '${ProgressChartStyle.detailedDate(last)}',
+          '${ProgressChartStyle.detailedDate(last)}. '
+          'Última estimación: ${ProgressChartStyle.measurement(spots.last.y, weightUnit)}. '
+          'Máximo mostrado: ${ProgressChartStyle.measurement(peakSpot.y, weightUnit)} '
+          'el ${ProgressChartStyle.detailedDate(peakDate)}.',
       child: SizedBox(
         height: 200,
         child: Column(
@@ -526,6 +531,8 @@ class ExerciseOneRmChart extends StatelessWidget {
                     touchTooltipData: LineTouchTooltipData(
                       fitInsideHorizontally: true,
                       fitInsideVertically: true,
+                      maxContentWidth: ProgressChartStyle.tooltipMaxContentWidth,
+                      tooltipPadding: ProgressChartStyle.tooltipPadding,
                       getTooltipColor: (_) =>
                           ProgressChartStyle.tooltipBackground(context),
                       getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {

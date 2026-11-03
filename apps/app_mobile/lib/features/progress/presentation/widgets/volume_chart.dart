@@ -49,10 +49,15 @@ class VolumeChart extends StatelessWidget {
       displayData.map((point) => point.volume),
       includeZero: true,
     );
+    final peak = displayData.reduce(
+      (a, b) => a.volume >= b.volume ? a : b,
+    );
 
     return Semantics(
       label: 'Volumen de entrenamiento: ${ProgressChartStyle.detailedDate(first)}'
-          ' a ${ProgressChartStyle.detailedDate(last)}',
+          ' a ${ProgressChartStyle.detailedDate(last)}. '
+          'Máximo mostrado: ${ProgressChartStyle.measurement(peak.volume, weightUnit)}'
+          ' el ${ProgressChartStyle.detailedDate(peak.date)}.',
       child: SizedBox(
         height: 200,
         child: Column(
@@ -64,6 +69,8 @@ class VolumeChart extends StatelessWidget {
                     touchTooltipData: LineTouchTooltipData(
                       fitInsideHorizontally: true,
                       fitInsideVertically: true,
+                      maxContentWidth: ProgressChartStyle.tooltipMaxContentWidth,
+                      tooltipPadding: ProgressChartStyle.tooltipPadding,
                       getTooltipColor: (_) =>
                           ProgressChartStyle.tooltipBackground(context),
                       getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
