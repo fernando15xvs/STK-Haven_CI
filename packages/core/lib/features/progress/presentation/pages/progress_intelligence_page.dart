@@ -8,8 +8,8 @@ import 'package:core/features/exercises/presentation/providers/exercise_provider
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
 import 'package:core/features/progress/application/exercise_progress_sort.dart';
+import 'package:core/features/progress/application/progress_analytics_cache.dart' as analytics;
 import 'package:core/features/progress/application/unilateral_progress_summary.dart';
-import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -53,22 +53,27 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
 
   @override
   Widget build(BuildContext context) {
-    final history = ref.watch(workoutHistoryProvider);
+    final analyticsCache = ref.watch(analytics.progressAnalyticsCacheProvider);
     final exercises = ref.watch(exerciseListProvider);
     final settings = ref.watch(settingsProvider);
+    // A calendar-day cutoff stays stable as users search/sort. The shared
+    // analytics cache invalidates whenever the history index changes.
+    final today = DateTime.now();
+    final midnight = DateTime(today.year, today.month, today.day);
     final from = _period.days == null
         ? null
-        : DateTime.now().subtract(Duration(days: _period.days!));
+        : midnight.subtract(Duration(days: _period.days!));
 
     final entries = <_ProgressEntry>[];
     for (final exercise in exercises) {
-      final trend = ExerciseProgressCalculator.calculateTrend(
-        history,
+      final trend = analyticsCache.trend(analytics.ExerciseAnalyticsRequest(
         exercise.id,
-        from: from,
-        maxChartPoints: settings.performanceMode == PerformanceMode.savings
-            ? 48 : 120,
-      );
+        period: analytics.ProgressPeriod(
+          from: from,
+          maxChartPoints: settings.performanceMode == PerformanceMode.savings
+              ? 48 : 120,
+        ),
+      ));
       if (trend.hasRecordedWork) {
         entries.add(_ProgressEntry(exercise: exercise, trend: trend));
       }
