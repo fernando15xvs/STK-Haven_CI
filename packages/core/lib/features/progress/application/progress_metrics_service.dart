@@ -1,7 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/features/progress/application/calendar_heatmap_calculator.dart';
+import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
+
+/// Date-window contract shared with the heatmap: no future finish dates.
+/// A partial session with recorded work still belongs to its finish date;
+/// reward/program completion is governed separately by WorkoutNotifier.
+bool isSessionInMetricsPeriod(
+  WorkoutSession session, {
+  required DateTime startDate,
+  required DateTime endDate,
+}) =>
+    session.finishedAt.isAfter(startDate) &&
+    !session.finishedAt.isAfter(endDate);
 
 /// Compares complete periods; no percentage is meaningful without a
 /// positive previous-period baseline. Null means "sin referencia".
@@ -121,8 +133,13 @@ final progressMetricsProvider = Provider<DashboardMetrics>((ref) {
   final periodDuration = now.difference(startDate);
   final previousStartDate = startDate.subtract(periodDuration);
 
-  final currentPeriodSessions =
-      allSessions.where((s) => s.finishedAt.isAfter(startDate)).toList();
+  final currentPeriodSessions = allSessions
+      .where((session) => isSessionInMetricsPeriod(
+            session,
+            startDate: startDate,
+            endDate: now,
+          ))
+      .toList();
   final previousPeriodSessions = allSessions
       .where(
         (s) => s.finishedAt.isAfter(previousStartDate) &&
