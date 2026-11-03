@@ -35,6 +35,12 @@ class _ExerciseDemonstrationCardState
     final pngPilot = PngPilotLibrary.forId(widget.exercise.id);
     final reduceMotion = MediaQuery.disableAnimationsOf(context) ||
         widget.reduceMotion;
+    // No generic instruction or unrelated media is a valid substitute for
+    // a missing exercise-specific demonstration. Show one neutral state.
+    final noVerifiedContent = guide == null &&
+        media == null &&
+        pngPilot == null &&
+        widget.exercise.instructions.trim().isEmpty;
     Widget placeholder(String message) => Container(
           key: const Key('exercise_media_fallback'),
           constraints: BoxConstraints(
@@ -55,6 +61,23 @@ class _ExerciseDemonstrationCardState
             ],
           ),
         );
+
+    if (noVerifiedContent) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'CÓMO REALIZAR EL EJERCICIO',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 10),
+          placeholder(
+            'Este ejercicio aún no tiene demostración ni instrucciones '
+            'específicas verificadas.',
+          ),
+        ],
+      );
+    }
 
     final mediaWidget = pngPilot != null
         ? ExercisePngPilotCarousel(pilot:pngPilot,compact:widget.compact)
