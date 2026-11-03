@@ -127,35 +127,62 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          child: Column(
             children: [
-              DropdownButton<ExerciseProgressOrder>(
-                key: const ValueKey('progress_exercises_sort'),
-                isDense: true,
-                value: _order,
-                items: [
-                  for (final option in ExerciseProgressOrder.values)
-                    DropdownMenuItem(value: option, child: Text(option.label)),
+              Row(
+                children: [
+                  const SizedBox(width: 62, child: Text('Orden')),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButton<ExerciseProgressOrder>(
+                      key: const ValueKey('progress_exercises_sort'),
+                      isExpanded: true,
+                      isDense: true,
+                      value: _order,
+                      items: [
+                        for (final option in ExerciseProgressOrder.values)
+                          DropdownMenuItem(
+                            value: option,
+                            child: Text(option.label,
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                      ],
+                      onChanged: (next) {
+                        if (next != null) setState(() => _order = next);
+                      },
+                    ),
+                  ),
                 ],
-                onChanged: (selected) {
-                  if (selected != null) setState(() => _order = selected);
-                },
               ),
-              DropdownButton<String?>(
-                key: const ValueKey('progress_exercises_muscle'),
-                isDense: true,
-                value: _muscle,
-                items: [
-                  const DropdownMenuItem<String?>(
-                    value: null, child: Text('Todos los músculos')),
-                  for (final group in muscles)
-                    DropdownMenuItem<String?>(
-                      value: group, child: Text(group)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const SizedBox(width: 62, child: Text('Músculo')),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButton<String?>(
+                      key: const ValueKey('progress_exercises_muscle'),
+                      isExpanded: true,
+                      isDense: true,
+                      value: _muscle,
+                      selectedItemBuilder: (context) => [
+                        const Text('Todos', overflow: TextOverflow.ellipsis),
+                        for (final group in muscles)
+                          Text(group, maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null, child: Text('Todos los músculos')),
+                        for (final group in muscles)
+                          DropdownMenuItem<String?>(
+                            value: group, child: Text(group)),
+                      ],
+                      onChanged: (selected) =>
+                          setState(() => _muscle = selected),
+                    ),
+                  ),
                 ],
-                onChanged: (selected) => setState(() => _muscle = selected),
               ),
             ],
           ),
