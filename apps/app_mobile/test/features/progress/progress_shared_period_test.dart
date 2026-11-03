@@ -123,6 +123,16 @@ void main() {
           .onSelectionChanged!({TimeFilter.year});
       await tester.pumpAndSettle();
       expect(scope.read(timeFilterProvider), TimeFilter.year);
+      // ListView.builder renders only visible exercise cards. At 320px with
+      // 160% text the older card may be below the initial viewport.
+      await tester.scrollUntilVisible(
+        find.text('Remo antiguo'),
+        130,
+        scrollable: find.descendant(
+          of: find.byType(ListView),
+          matching: find.byType(Scrollable),
+        ).first,
+      );
       expect(find.text('Remo antiguo'), findsOneWidget);
 
       tester.widget<SegmentedButton<TimeFilter>>(selector)
