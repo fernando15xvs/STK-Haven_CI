@@ -35,9 +35,19 @@ class ProgressIntelligencePage extends StatelessWidget {
 }
 
 class ProgressExercisesPanel extends ConsumerStatefulWidget {
-  const ProgressExercisesPanel({super.key, this.onOpenExercise});
+  const ProgressExercisesPanel({
+    super.key,
+    this.onOpenExercise,
+    this.onOpenHistory,
+    this.initialExerciseId,
+  });
 
   final ValueChanged<Exercise>? onOpenExercise;
+  final ValueChanged<Exercise>? onOpenHistory;
+
+  /// When set, only this exercise is shown, with 'Todo' selected initially.
+  /// Used by the technical ficha's "Ver mi rendimiento" action.
+  final String? initialExerciseId;
 
   @override
   ConsumerState<ProgressExercisesPanel> createState() =>
@@ -47,6 +57,12 @@ class ProgressExercisesPanel extends ConsumerStatefulWidget {
 class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel> {
   ProgressPeriod _period = ProgressPeriod.days90;
   String _search = '';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialExerciseId != null) _period = ProgressPeriod.all;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +75,10 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
 
     final entries = <_ProgressEntry>[];
     for (final exercise in exercises) {
+      if (widget.initialExerciseId != null &&
+          exercise.id != widget.initialExerciseId) {
+        continue;
+      }
       final trend = ExerciseProgressCalculator.calculateTrend(
         history,
         exercise.id,
@@ -97,7 +117,8 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
             ),
           ]),
         ),
-        Padding(
+        if (widget.initialExerciseId == null)
+          Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
           child: TextField(
             key: const ValueKey('progress_exercises_search'),
@@ -127,6 +148,8 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
                           entry: matching[index],
                           unit: settings.weightUnit,
                           onOpenExercise: widget.onOpenExercise,
+                          onOpenHistory: widget.onOpenHistory,
+                          initiallyExpanded: widget.initialExerciseId != null,
                         ),
                       ),
                     ),
@@ -143,11 +166,19 @@ class _ProgressEntry {
 }
 
 class _ExerciseInsightCard extends StatelessWidget {
-  const _ExerciseInsightCard({required this.entry, required this.unit, this.onOpenExercise});
+  const _ExerciseInsightCard({
+    required this.entry,
+    required this.unit,
+    this.onOpenExercise,
+    this.onOpenHistory,
+    this.initiallyExpanded = false,
+  });
 
   final _ProgressEntry entry;
   final WeightUnit unit;
   final ValueChanged<Exercise>? onOpenExercise;
+  final ValueChanged<Exercise>? onOpenHistory;
+  final bool initiallyExpanded;
 
   int get _maxReps {
     var best = 0;
@@ -167,6 +198,8 @@ class _ExerciseInsightCard extends StatelessWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
+        key: ValueKey('progress_exercise_${entry.exercise.id}'),
+        initiallyExpanded: initiallyExpanded,
         tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
         leading: const Icon(Icons.insights_rounded),
@@ -386,9 +419,9 @@ class _ExerciseInsightCard extends StatelessWidget {
                   'Señal informativa: las últimas tres estimaciones de 1RM están dentro de un rango aproximado del 2%. Observa técnica, recuperación y contexto antes de cambiar el plan.',
             ),
           ],
-          // Legacy routes without navigation retain the session preview.
-          // In mobile, the user opens the same records from the exercise ficha.
-          if (onOpenExercise == null) ...[
+          // Only legacy routes with neither navigation callback show the
+          // five-session preview; mobile routes use full read-only history.
+          if (onOpenExercise == null && onOpenHistory == null) ...[
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerLeft,
@@ -425,6 +458,16 @@ class _ExerciseInsightCard extends StatelessWidget {
                 onPressed: () => onOpenExercise!(entry.exercise),
                 icon: const Icon(Icons.menu_book_outlined),
                 label: const Text('Técnica y ficha del ejercicio'),
+              ),
+            ),
+          if (onOpenHistory != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                key: ValueKey('progress_open_history_${entry.exercise.id}'),
+                onPressed: () => onOpenHistory!(entry.exercise),
+                icon: const Icon(Icons.history_rounded),
+                label: const Text('Ver historial completo'),
               ),
             ),
         ],
