@@ -22,6 +22,11 @@ class ProgressChartStyle {
         fontFeatures: const [FontFeature.tabularFigures()],
       );
 
+  /// A shared tooltip size avoids clipped date/weight at 160% text scale.
+  static const double tooltipMaxContentWidth = 184;
+  static const EdgeInsets tooltipPadding =
+      EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs);
+
   static Color tooltipBackground(BuildContext context) =>
       AppColors.of(context).surfaceHigh;
 
