@@ -3,6 +3,7 @@ import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/progress/application/exercise_progress_sort.dart';
 import 'package:core/features/progress/presentation/pages/progress_intelligence_page.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:flutter/material.dart';
@@ -122,6 +123,71 @@ void main() {
     expect(find.text('Técnica y ficha del ejercicio'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('exercise sorting, muscle filtering and single selectable trend',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          exerciseListProvider.overrideWith(_Exercises.new),
+          workoutHistoryProvider.overrideWith(_History.new),
+          settingsProvider.overrideWith(_Settings.new),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: ProgressExercisesPanel()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final sortFinder = find.byKey(const ValueKey('progress_exercises_sort'));
+    final muscleFinder =
+        find.byKey(const ValueKey('progress_exercises_muscle'));
+    expect(sortFinder, findsOneWidget);
+    expect(muscleFinder, findsOneWidget);
+
+    tester.widget<DropdownButton<ExerciseProgressOrder>>(sortFinder)
+        .onChanged!(ExerciseProgressOrder.inactive);
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<DropdownButton<ExerciseProgressOrder>>(sortFinder).value,
+      ExerciseProgressOrder.inactive,
+    );
+    tester.widget<DropdownButton<String?>>(muscleFinder)
+        .onChanged!('Tríceps');
+    await tester.pumpAndSettle();
+    expect(find.text('Extensiones'), findsOneWidget);
+    expect(find.text('Curl de bíceps'), findsNothing);
+
+    tester.widget<DropdownButton<String?>>(muscleFinder)
+        .onChanged!(null);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Curl de bíceps'));
+    await tester.tap(find.text('Curl de bíceps'));
+    await tester.pumpAndSettle();
+
+    final trendFinder =
+        find.byKey(const ValueKey('progress_exercise_trend_selector'));
+    await tester.ensureVisible(trendFinder.first);
+    expect(trendFinder, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('progress_exercise_trend_plot')),
+      findsOneWidget,
+    );
+    tester.widget<DropdownButton<ExerciseTrendMetric>>(trendFinder)
+        .onChanged!(ExerciseTrendMetric.rir);
+    await tester.pumpAndSettle();
+    expect(find.text('Sin datos de RIR registrados'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('progress_exercise_trend_plot')),
+      findsNothing,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('focused performance opens exact exercise and full history',
       (tester) async {
     Exercise? openedHistory;
@@ -155,5 +221,4 @@ void main() {
     expect(openedHistory?.id, 'curl');
     expect(tester.takeException(), isNull);
   });
-
 }

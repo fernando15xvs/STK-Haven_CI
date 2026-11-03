@@ -7,8 +7,9 @@ import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
+import 'package:core/features/progress/application/exercise_progress_sort.dart';
+import 'package:core/features/progress/application/progress_analytics_cache.dart' as analytics;
 import 'package:core/features/progress/application/unilateral_progress_summary.dart';
-import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -56,6 +57,8 @@ class ProgressExercisesPanel extends ConsumerStatefulWidget {
 
 class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel> {
   ProgressPeriod _period = ProgressPeriod.days90;
+  ExerciseProgressOrder _order = ExerciseProgressOrder.recent;
+  String? _muscle;
   String _search = '';
 
   @override
@@ -66,12 +69,16 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
 
   @override
   Widget build(BuildContext context) {
-    final history = ref.watch(workoutHistoryProvider);
+    final analyticsCache = ref.watch(analytics.progressAnalyticsCacheProvider);
     final exercises = ref.watch(exerciseListProvider);
     final settings = ref.watch(settingsProvider);
+    // A calendar-day cutoff stays stable as users search/sort. The shared
+    // analytics cache invalidates whenever the history index changes.
+    final today = DateTime.now();
+    final midnight = DateTime(today.year, today.month, today.day);
     final from = _period.days == null
         ? null
-        : DateTime.now().subtract(Duration(days: _period.days!));
+        : midnight.subtract(Duration(days: _period.days!));
 
     final entries = <_ProgressEntry>[];
     for (final exercise in exercises) {
@@ -79,24 +86,41 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
           exercise.id != widget.initialExerciseId) {
         continue;
       }
-      final trend = ExerciseProgressCalculator.calculateTrend(
-        history,
+      final trend = analyticsCache.trend(analytics.ExerciseAnalyticsRequest(
         exercise.id,
-        from: from,
-        maxChartPoints: settings.performanceMode == PerformanceMode.savings
-            ? 48 : 120,
-      );
+        period: analytics.ProgressPeriod(
+          from: from,
+          maxChartPoints: settings.performanceMode == PerformanceMode.savings
+              ? 48 : 120,
+        ),
+      ));
       if (trend.hasRecordedWork) {
         entries.add(_ProgressEntry(exercise: exercise, trend: trend));
       }
     }
-    entries.sort((a, b) =>
-        (b.trend.lastPerformedAt ?? DateTime(1970)).compareTo(
-        a.trend.lastPerformedAt ?? DateTime(1970)));
+    final muscles = entries
+        .map((entry) => entry.exercise.muscleGroup)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    // A period change can remove the selected muscle from the available
+    // groups. Fall back to "Todos" without keeping an invisible stale filter.
+    final selectedMuscle = muscles.contains(_muscle) ? _muscle : null;
     final search = _search.trim().toLowerCase();
     final matching = entries.where((entry) =>
-        entry.exercise.name.toLowerCase().contains(search))
-        .toList(growable: false);
+        entry.exercise.name.toLowerCase().contains(search) &&
+        (selectedMuscle == null ||
+            entry.exercise.muscleGroup == selectedMuscle))
+        .toList();
+    matching.sort((a, b) => compareExerciseProgress(
+      order: _order,
+      firstName: a.exercise.name,
+      firstDate: a.trend.lastPerformedAt,
+      firstChange: a.trend.latestComparison?.estimated1RmDelta,
+      secondName: b.exercise.name,
+      secondDate: b.trend.lastPerformedAt,
+      secondChange: b.trend.latestComparison?.estimated1RmDelta,
+    ));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -129,6 +153,70 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
               isDense: true,
             ),
             onChanged: (value) => setState(() => _search = value),
+          ),
+        ),
+        if (widget.initialExerciseId == null)
+          Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  const SizedBox(width: 62, child: Text('Orden')),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButton<ExerciseProgressOrder>(
+                      key: const ValueKey('progress_exercises_sort'),
+                      isExpanded: true,
+                      isDense: true,
+                      value: _order,
+                      items: [
+                        for (final option in ExerciseProgressOrder.values)
+                          DropdownMenuItem(
+                            value: option,
+                            child: Text(option.label,
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                      ],
+                      onChanged: (next) {
+                        if (next != null) setState(() => _order = next);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const SizedBox(width: 62, child: Text('Músculo')),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButton<String?>(
+                      key: const ValueKey('progress_exercises_muscle'),
+                      isExpanded: true,
+                      isDense: true,
+                      value: selectedMuscle,
+                      hint: const Text('Todos'),
+                      selectedItemBuilder: (context) => [
+                        const Text('Todos', overflow: TextOverflow.ellipsis),
+                        for (final group in muscles)
+                          Text(group, maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null, child: Text('Todos los músculos')),
+                        for (final group in muscles)
+                          DropdownMenuItem<String?>(
+                            value: group, child: Text(group)),
+                      ],
+                      onChanged: (selected) =>
+                          setState(() => _muscle = selected),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
         Expanded(
@@ -391,26 +479,7 @@ class _ExerciseInsightCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 7),
-          _TrendLine(
-            label: 'Peso',
-            points: trend.historyWeight,
-            formatter: (value) => FitnessFormatter.formatWeight(value, unit),
-          ),
-          _TrendLine(
-            label: 'Reps',
-            points: trend.historyReps,
-            formatter: (value) => '${value.round()} reps',
-          ),
-          _TrendLine(
-            label: 'RIR',
-            points: trend.historyRir,
-            formatter: (value) => value.toStringAsFixed(1),
-          ),
-          _TrendLine(
-            label: 'e1RM',
-            points: trend.history1RM,
-            formatter: (value) => FitnessFormatter.formatWeight(value, unit),
-          ),
+          _SelectableExerciseTrend(trend: trend, unit: unit),
           if (trend.hasPlateauSignal) ...[
             const SizedBox(height: 10),
             const _InfoMessage(
@@ -419,8 +488,8 @@ class _ExerciseInsightCard extends StatelessWidget {
                   'Señal informativa: las últimas tres estimaciones de 1RM están dentro de un rango aproximado del 2%. Observa técnica, recuperación y contexto antes de cambiar el plan.',
             ),
           ],
-          // Only legacy routes with neither navigation callback show the
-          // five-session preview; mobile routes use full read-only history.
+          // Legacy routes without navigation retain the session preview.
+          // In mobile, the user opens the same records from the exercise ficha.
           if (onOpenExercise == null && onOpenHistory == null) ...[
           const SizedBox(height: 12),
           Align(
@@ -535,38 +604,137 @@ class _Delta extends StatelessWidget {
   }
 }
 
-class _TrendLine extends StatelessWidget {
-  const _TrendLine({
-    required this.label,
-    required this.points,
-    required this.formatter,
+/// One metric selected at a time, using the recorded time stamps and the
+/// same color/text tokens as other Flutter charts. Missing RIR stays neutral.
+class _SelectableExerciseTrend extends StatefulWidget {
+  const _SelectableExerciseTrend({
+    required this.trend,
+    required this.unit,
   });
-  final String label;
-  final List<ExerciseProgressPoint> points;
-  final String Function(double value) formatter;
+  final ExerciseProgressTrend trend;
+  final WeightUnit unit;
+
+  @override
+  State<_SelectableExerciseTrend> createState() =>
+      _SelectableExerciseTrendState();
+}
+
+class _SelectableExerciseTrendState extends State<_SelectableExerciseTrend> {
+  ExerciseTrendMetric selected = ExerciseTrendMetric.estimatedOneRm;
+
+  String _display(double value) => switch (selected) {
+    ExerciseTrendMetric.weight || ExerciseTrendMetric.estimatedOneRm =>
+      FitnessFormatter.formatWeight(value, widget.unit),
+    ExerciseTrendMetric.repetitions => '${value.round()} reps',
+    ExerciseTrendMetric.rir => value.toStringAsFixed(1),
+  };
 
   @override
   Widget build(BuildContext context) {
-    if (points.isEmpty) return const SizedBox.shrink();
-    final first = points.first.value;
-    final latest = points.last.value;
-    final low = points.map((item) => item.value).reduce(math.min);
-    final high = points.map((item) => item.value).reduce(math.max);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
-      child: Row(
-        children: [
-          SizedBox(width: 52, child: Text(label)),
-          Expanded(
-            child: Text(
-              '${formatter(first)} → ${formatter(latest)} · rango ${formatter(low)}–${formatter(high)}',
-              style: Theme.of(context).textTheme.bodySmall,
+    final points = selected.points(widget.trend);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButton<ExerciseTrendMetric>(
+          key: const ValueKey('progress_exercise_trend_selector'),
+          value: selected,
+          isDense: true,
+          items: [
+            for (final metric in ExerciseTrendMetric.values)
+              DropdownMenuItem(
+                value: metric,
+                child: Text(metric.label),
+              ),
+          ],
+          onChanged: (next) {
+            if (next != null) setState(() => selected = next);
+          },
+        ),
+        const SizedBox(height: 8),
+        if (points.isEmpty)
+          Text(
+            'Sin datos de ${selected.label} registrados',
+            style: Theme.of(context).textTheme.bodySmall,
+          )
+        else ...[
+          Semantics(
+            label: 'Tendencia de ${selected.label}: '
+                '${_display(points.first.value)} a '
+                '${_display(points.last.value)}',
+            child: SizedBox(
+              height: 65,
+              width: double.infinity,
+              child: CustomPaint(
+                key: const ValueKey('progress_exercise_trend_plot'),
+                painter: _ExerciseTrendPainter(
+                  points: points,
+                  lineColor: Theme.of(context).colorScheme.primary,
+                ),
+              ),
             ),
           ),
+          const SizedBox(height: 5),
+          Text(
+            '${_display(points.first.value)} → ${_display(points.last.value)}'
+            ' · rango ${_display(points.map((e) => e.value).reduce(math.min))}'
+            '–${_display(points.map((e) => e.value).reduce(math.max))}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
-      ),
+      ],
     );
   }
+}
+
+class _ExerciseTrendPainter extends CustomPainter {
+  _ExerciseTrendPainter({required this.points, required this.lineColor});
+
+  final List<ExerciseProgressPoint> points;
+  final Color lineColor;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.isEmpty || size.width <= 0 || size.height <= 0) return;
+    const inset = 7.0;
+    final dx = math.max(1.0, size.width - inset * 2);
+    final dy = math.max(1.0, size.height - inset * 2);
+    final earliest = points.first.date.microsecondsSinceEpoch;
+    final latest = points.last.date.microsecondsSinceEpoch;
+    final sameTimestamp = earliest == latest;
+    final low = points.map((p) => p.value).reduce(math.min);
+    final high = points.map((p) => p.value).reduce(math.max);
+    final sameValue = (high - low).abs() < 1e-9;
+
+    Offset at(int index) {
+      final p = points[index];
+      final x = sameTimestamp
+          ? (points.length == 1 ? 0.5 : index / (points.length - 1))
+          : (p.date.microsecondsSinceEpoch - earliest) / (latest - earliest);
+      final y = sameValue ? 0.5 : (p.value - low) / (high - low);
+      return Offset(inset + x * dx, inset + (1 - y) * dy);
+    }
+
+    final line = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round;
+    final dots = Paint()..color = lineColor;
+    if (points.length > 1) {
+      final path = Path()..moveTo(at(0).dx, at(0).dy);
+      for (var i = 1; i < points.length; i++) {
+        path.lineTo(at(i).dx, at(i).dy);
+      }
+      canvas.drawPath(path, line);
+    }
+    for (var i = 0; i < points.length; i++) {
+      canvas.drawCircle(at(i), 3.4, dots);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ExerciseTrendPainter old) =>
+      old.lineColor != lineColor || old.points != points;
 }
 
 class _InfoMessage extends StatelessWidget {
