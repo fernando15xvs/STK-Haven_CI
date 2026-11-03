@@ -14,6 +14,7 @@ import 'package:gym_tracker/features/progress/presentation/widgets/volume_chart.
 import 'package:gym_tracker/features/progress/presentation/widgets/calendar_heatmap_card.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detail_page.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_volume_headline.dart';
+import 'package:gym_tracker/features/progress/presentation/widgets/progress_consistency_metrics.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/body_measurement_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:gym_tracker/core/theme/components/metric_tile.dart';
@@ -388,60 +389,9 @@ class _ConsistencyCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-          Row(
-            children: [
-              Expanded(
-                child: _InsightMetric(
-                  label: 'DÍAS ACTIVOS',
-                  value: '${metrics.activeDays}',
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _InsightMetric(
-                  label: 'ENTRENOS / SEM',
-                  value: metrics.workoutsPerWeek.toStringAsFixed(1),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _InsightMetric(
-                  label: 'DURACIÓN MEDIA',
-                  value: '${metrics.averageSessionMinutes.round()}m',
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InsightMetric extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _InsightMetric({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.of(context).surfaceHigh,
-        borderRadius: AppRadius.sm_,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(value, style: AppTypography.headlineMedium),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: AppTypography.labelSmall,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+          ProgressConsistencyMetrics(
+            workoutsPerWeek: metrics.workoutsPerWeek,
+            averageSessionMinutes: metrics.averageSessionMinutes,
           ),
         ],
       ),
