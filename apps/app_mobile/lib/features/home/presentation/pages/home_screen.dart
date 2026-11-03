@@ -33,16 +33,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // Only Home is constructed on first paint. Tabs are created on first visit
   // and then retained in IndexedStack so navigation preserves their state
   // without paying the cost of building Progress/Profile/Routines up front.
-  final List<Widget?> _pages = <Widget?>[
-    const ProgramDashboardPage(),
-    null,
-    null,
-    null,
-  ];
+  late final List<Widget?> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = <Widget?>[
+      ProgramDashboardPage(onOpenProgress: _openProgress),
+      null,
+      null,
+      null,
+    ];
+  }
+
+  void _openProgress() => _selectTab(2);
 
   Widget _createPage(int index) {
     return switch (index) {
-      0 => const ProgramDashboardPage(),
+      0 => ProgramDashboardPage(onOpenProgress: _openProgress),
       1 => const RoutinesPage(),
       2 => const ProgressPage(),
       3 => const ProfilePage(),
