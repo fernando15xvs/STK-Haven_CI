@@ -71,7 +71,12 @@ class ProgressPage extends ConsumerWidget {
               animation: tabs,
               builder: (context, _) => Column(
                 children: [
-                  if (tabs.index != 3) const ProgressSharedPeriodSelector(),
+                  // Keep TabBarView at the same child position when the
+                  // Medidas tab hides the cross-tab selector. Otherwise
+                  // Flutter may recreate its state during tab animations.
+                  tabs.index == 3
+                      ? const SizedBox.shrink()
+                      : const ProgressSharedPeriodSelector(),
                   Expanded(
                     child: TabBarView(
                       children: [
