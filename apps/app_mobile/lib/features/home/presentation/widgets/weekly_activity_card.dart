@@ -25,9 +25,11 @@ class WeeklyActivityCard extends StatelessWidget {
         .subtract(Duration(days: now.weekday - 1));
     final trainedDays = <int>{
       for (final session in history)
-        if (!session.startedAt.isBefore(startOfWeek) &&
-            !session.startedAt.isAfter(now))
-          session.startedAt.weekday,
+        // Match Progreso's calendar: group activity by the recorded
+        // completion day, including sessions that cross midnight.
+        if (!session.finishedAt.isBefore(startOfWeek) &&
+            !session.finishedAt.isAfter(now))
+          session.finishedAt.weekday,
     };
     const initials = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
     const fullNames = [
