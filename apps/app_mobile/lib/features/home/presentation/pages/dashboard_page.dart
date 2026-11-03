@@ -25,17 +25,20 @@ import 'package:core/features/workout/application/unfinished_workout_reminder_po
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
-import 'package:gym_tracker/core/theme/components/metric_tile.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/features/faith/presentation/pages/daily_verse_page.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/hydration_widget.dart';
+import 'package:gym_tracker/features/home/presentation/widgets/weekly_activity_card.dart';
+import 'package:gym_tracker/features/progress/presentation/pages/progress_page.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/daily_steps_widget.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/recovery_check_in_card.dart';
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 
 class DashboardPage extends ConsumerWidget {
-  const DashboardPage({super.key});
+  const DashboardPage({super.key, this.onOpenProgress});
+
+  final VoidCallback? onOpenProgress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -126,7 +129,15 @@ class DashboardPage extends ConsumerWidget {
             const SizedBox(height: AppSpacing.md),
             const DailyStepsWidget(),
             const SizedBox(height: AppSpacing.xxl),
-            _WeeklyTracker(history: history),
+            WeeklyActivityCard(
+              history: history,
+              onOpenProgress: onOpenProgress ??
+                  () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ProgressPage(),
+                        ),
+                      ),
+            ),
             if (lastWorkout != null || recentPR != null) ...[
               const SizedBox(height: AppSpacing.xxl),
               Text(
@@ -751,141 +762,6 @@ class _ActiveProgramCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _WeeklyTracker extends ConsumerWidget {
-  final List<WorkoutSession> history;
-
-  const _WeeklyTracker({required this.history});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final settings = ref.watch(settingsProvider);
-    final now = DateTime.now();
-    final startOfWeek = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    ).subtract(Duration(days: now.weekday - 1));
-    final sessions = history
-        .where((session) => !session.startedAt.isBefore(startOfWeek))
-        .toList();
-
-    var totalSets = 0;
-    var totalVolume = 0.0;
-    var totalTime = 0;
-    final trainedDays = <int>{};
-    for (final session in sessions) {
-      totalSets += WorkoutComparator.calculateSets(session);
-      totalVolume += WorkoutComparator.calculateVolume(session);
-      totalTime += session.durationSeconds;
-      trainedDays.add(session.startedAt.weekday);
-    }
-
-    const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'ESTA SEMANA',
-          style: AppTypography.labelLarge.copyWith(
-            color: AppColors.of(context).textSecondary,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        PremiumCard(
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(7, (index) {
-                  final weekday = index + 1;
-                  final trained = trainedDays.contains(weekday);
-                  final today = weekday == now.weekday;
-                  return Column(
-                    children: [
-                      Text(days[index], style: AppTypography.labelSmall),
-                      const SizedBox(height: 7),
-                      AnimatedContainer(
-                        duration: AppMotion.fast,
-                        width: 31,
-                        height: 31,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: trained
-                              ? AppColors.of(context).primary
-                              : Colors.transparent,
-                          border: Border.all(
-                            color: trained
-                                ? AppColors.of(context).primary
-                                : today
-                                ? AppColors.of(
-                                    context,
-                                  ).primary.withValues(alpha: 0.65)
-                                : AppColors.of(context).surfaceBorder,
-                          ),
-                        ),
-                        child: trained
-                            ? Icon(
-                                Icons.check,
-                                size: 15,
-                                color: AppColors.of(context).onPrimary,
-                              )
-                            : today
-                            ? Icon(
-                                Icons.circle,
-                                size: 7,
-                                color: AppColors.of(context).primary,
-                              )
-                            : null,
-                      ),
-                    ],
-                  );
-                }),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Row(
-                children: [
-                  Expanded(
-                    child: MetricTile(
-                      label: 'ENTRENOS',
-                      value: '${sessions.length}',
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: MetricTile(label: 'SERIES', value: '$totalSets'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Expanded(
-                    child: MetricTile(
-                      label: 'TIEMPO',
-                      value: '${totalTime ~/ 60}m',
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: MetricTile(
-                      label: 'VOLUMEN',
-                      value: FitnessFormatter.formatVolume(
-                        totalVolume,
-                        settings.weightUnit,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
