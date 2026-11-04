@@ -1,9 +1,9 @@
-# STK Haven · Public CI Snapshot
+# Public CI snapshot for STK Haven
 
-Canonical repo: private fernando15xvs/STK-Haven
-Canonical PR: #43
-Canonical source head: 146ec87617856970f91b347e2b67e1fc97ca8b25
-Branch: fix/progress-volume-period-buckets-20261103
-Scope: chart period bucketing, chart-edge/duplicate regression tests and guide. Mobile 320px/160% label overflow fixed in follow-up.
+Canonical: private fernando15xvs/STK-Haven
+Canonical PR: #44 (DATA-04: latest vs lifetime e1RM)
+Canonical source head: a312c026fc3b1cf7a5a962134b8fa93c13ea55ff
+Source branch: feat/progress-latest-vs-lifetime-e1rm-20261103
+Scope: 5 changed source/test/docs files; the remainder is the validated baseline from PR #43.
 
-The mirror is **only** a test runner. All product work and all PRs stay in the private canonical repository. No private Git history, credentials, signing materials, user data or backup data are copied here. Selected older private docs intentionally do not exist in this public mirror.
+The public mirror ONLY runs GitHub Actions on main pushes. Never open a second product PR here. No private history, credentials, App Store signing files, or personal backups are mirrored.

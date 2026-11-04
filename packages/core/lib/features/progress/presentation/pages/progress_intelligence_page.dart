@@ -257,16 +257,34 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
                   : ListView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
                       itemCount: matching.length,
-                      itemBuilder: (context, index) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _ExerciseInsightCard(
-                          entry: matching[index],
-                          unit: settings.weightUnit,
-                          onOpenExercise: widget.onOpenExercise,
-                          onOpenHistory: widget.onOpenHistory,
-                          initiallyExpanded: widget.initialExerciseId != null,
-                        ),
-                      ),
+                      itemBuilder: (context, index) {
+                        final entry = matching[index];
+                        // Query lifetime evidence only for visible cards.
+                        // The analytics index caches this across list rebuilds.
+                        // A filter-period peak is NOT an all-time PR.
+                        final lifetime = analyticsCache.trend(
+                          analytics.ExerciseAnalyticsRequest(
+                            entry.exercise.id,
+                            period: analytics.ProgressPeriod(
+                              from: null,
+                              to: endExclusive,
+                              maxChartPoints: 48,
+                            ),
+                          ),
+                        );
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _ExerciseInsightCard(
+                            entry: entry,
+                            unit: settings.weightUnit,
+                            historicalPeak: lifetime.bestRecorded1RM,
+                            historicalPeakAt: lifetime.bestRecorded1RMAt,
+                            onOpenExercise: widget.onOpenExercise,
+                            onOpenHistory: widget.onOpenHistory,
+                            initiallyExpanded: widget.initialExerciseId != null,
+                          ),
+                        );
+                      },
                     ),
         ),
       ],
@@ -284,6 +302,8 @@ class _ExerciseInsightCard extends StatelessWidget {
   const _ExerciseInsightCard({
     required this.entry,
     required this.unit,
+    required this.historicalPeak,
+    required this.historicalPeakAt,
     this.onOpenExercise,
     this.onOpenHistory,
     this.initiallyExpanded = false,
@@ -291,6 +311,8 @@ class _ExerciseInsightCard extends StatelessWidget {
 
   final _ProgressEntry entry;
   final WeightUnit unit;
+  final double historicalPeak;
+  final DateTime? historicalPeakAt;
   final ValueChanged<Exercise>? onOpenExercise;
   final ValueChanged<Exercise>? onOpenHistory;
   final bool initiallyExpanded;
@@ -324,7 +346,7 @@ class _ExerciseInsightCard extends StatelessWidget {
         ),
         subtitle: Text(
           '${latest.routineName.isEmpty ? 'Entrenamiento libre' : latest.routineName} · ${_date(latest.date)}'
-          '\n${trend.current1RM > 0 ? '1RM estimado: ${FitnessFormatter.formatWeight(trend.current1RM, unit)}' : 'Sin estimación de 1RM'}',
+          '\n${trend.current1RM > 0 ? 'Último e1RM: ${FitnessFormatter.formatWeight(trend.current1RM, unit)}' : 'Última sesión sin e1RM'}',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
@@ -340,9 +362,19 @@ class _ExerciseInsightCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               _Metric(
-                label: 'e1RM',
+                label: 'Último e1RM',
                 value: FitnessFormatter.formatWeight(trend.current1RM, unit),
               ),
+              if (historicalPeak > trend.current1RM + 0.005)
+                Tooltip(
+                  message: historicalPeakAt == null
+                      ? 'Máximo registrado de este ejercicio'
+                      : 'Mejor registro: ${_date(historicalPeakAt!)}',
+                  child: _Metric(
+                    label: 'Mejor e1RM histórico',
+                    value: FitnessFormatter.formatWeight(historicalPeak, unit),
+                  ),
+                ),
               _Metric(
                 label: 'PR carga',
                 value: FitnessFormatter.formatWeight(trend.maxWeight, unit),

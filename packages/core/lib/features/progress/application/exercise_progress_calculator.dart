@@ -103,6 +103,30 @@ class ExerciseProgressTrend {
     this.lastPerformedAt,
   });
 
+  /// Peak among all eligible session observations supplied to this trend.
+  /// For a lifetime PR, call calculateTrend with an unrestricted start date.
+  /// Never derive the peak from downsampled chart points: sampling may omit it.
+  double get bestRecorded1RM {
+    var best = 0.0;
+    for (final session in sessions) {
+      final estimate = session.estimated1RM;
+      if (estimate.isFinite && estimate > best) best = estimate;
+    }
+    return best;
+  }
+
+  DateTime? get bestRecorded1RMAt {
+    if (bestRecorded1RM <= 0) return null;
+    ExerciseSessionPerformance? peak;
+    for (final session in sessions) {
+      if (session.estimated1RM == bestRecorded1RM &&
+          (peak == null || session.date.isBefore(peak.date))) {
+        peak = session;
+      }
+    }
+    return peak?.date;
+  }
+
   bool get hasRecordedWork => sessionCount > 0;
   ExerciseSessionPerformance? get latestSession =>
       sessions.isEmpty ? null : sessions.last;

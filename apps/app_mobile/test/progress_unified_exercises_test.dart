@@ -49,6 +49,31 @@ class _History extends WorkoutHistoryNotifier {
   }
 }
 
+class _HistoryWithOlderPeak extends _History {
+  @override
+  List<WorkoutSession> build() => [
+    WorkoutSession(
+      id: 'historical-peak',
+      routineNameSnapshot: 'Brazos',
+      startedAt: DateTime.now().subtract(const Duration(days: 60)),
+      finishedAt: DateTime.now().subtract(const Duration(days: 60))
+          .add(const Duration(minutes: 30)),
+      durationSeconds: 1800,
+      exercises: [
+        WorkoutExercise(
+          exerciseId: 'curl',
+          exerciseNameSnapshot: 'Curl de bíceps',
+          muscleGroupSnapshot: 'Bíceps',
+          sets: const [
+            WorkoutSet(weight: 60, reps: 8, completed: true),
+          ],
+        ),
+      ],
+    ),
+    ...super.build(),
+  ];
+}
+
 class _Settings extends SettingsNotifier {
   @override
   SettingsState build() => const SettingsState();
@@ -88,7 +113,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Curl de bíceps'), findsOneWidget);
       expect(find.text('Extensiones'), findsNothing);
-      expect(find.textContaining('1RM estimado:'), findsOneWidget);
+      expect(find.textContaining('Último e1RM:'), findsOneWidget);
       await tester.tap(find.text('Curl de bíceps'));
       await tester.pumpAndSettle();
       expect(find.text('PR carga'), findsOneWidget);
@@ -101,6 +126,55 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('expanded card separates last e1RM from lifetime best',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 850);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        exerciseListProvider.overrideWith(_Exercises.new),
+        workoutHistoryProvider.overrideWith(_HistoryWithOlderPeak.new),
+        settingsProvider.overrideWith(_Settings.new),
+      ],
+      child: const MaterialApp(
+        home: Scaffold(
+          body: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(1.6)),
+            child: ProgressExercisesPanel(initialExerciseId: 'curl'),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Último e1RM'), findsOneWidget);
+    expect(find.text('Mejor e1RM histórico'), findsOneWidget);
+    expect(find.textContaining('Último e1RM:'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('all-time peak remains visible outside shared 1M period',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        exerciseListProvider.overrideWith(_Exercises.new),
+        workoutHistoryProvider.overrideWith(_HistoryWithOlderPeak.new),
+        settingsProvider.overrideWith(_Settings.new),
+      ],
+      child: const MaterialApp(
+        home: Scaffold(body: ProgressExercisesPanel(useSharedPeriod: true)),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Curl de bíceps'), findsOneWidget);
+    await tester.tap(find.text('Curl de bíceps'));
+    await tester.pumpAndSettle();
+    expect(find.text('Último e1RM'), findsOneWidget);
+    expect(find.text('Mejor e1RM histórico'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('legacy panel without a ficha route still exposes session history',
       (tester) async {

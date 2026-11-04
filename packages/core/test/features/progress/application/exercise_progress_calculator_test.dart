@@ -112,6 +112,27 @@ void main() {
       expect(trend.sessionCount, 4);
     });
 
+    test('latest estimate and lifetime peak are independent', () {
+      final oldPeakDate = DateTime(2026, 10, 7, 16);
+      final trend = ExerciseProgressCalculator.calculateTrend([
+        session(
+          id: 'peak',
+          startedAt: oldPeakDate,
+          sets: const [WorkoutSet(weight: 60, reps: 8, completed: true)],
+        ),
+        session(
+          id: 'latest',
+          startedAt: DateTime(2026, 10, 30, 16),
+          sets: const [WorkoutSet(weight: 35, reps: 8, completed: true)],
+        ),
+      ], 'bench');
+      expect(trend.current1RM, greaterThan(0));
+      expect(trend.bestRecorded1RM, greaterThan(trend.current1RM));
+      expect(trend.bestRecorded1RMAt, oldPeakDate);
+      expect(trend.latestSession!.sessionId, 'latest');
+      expect(trend.history1RM, hasLength(2));
+    });
+
     test('stale latest workout has no invented 30-day comparison', () {
       final now = DateTime.now();
       final sessions = [
@@ -149,6 +170,8 @@ void main() {
       expect(dashboard.completedWorkSets, 0);
       expect(dashboard.totalVolume, 0);
       expect(dashboard.current1RM, 0);
+      expect(dashboard.bestRecorded1RM, 0);
+      expect(dashboard.bestRecorded1RMAt, isNull);
       expect(dashboard.lastPerformedAt, isNull);
       expect(dashboard.hasRecordedWork, false);
     });
