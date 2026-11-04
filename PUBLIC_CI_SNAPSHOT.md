@@ -1,9 +1,9 @@
-# STK Haven public CI snapshot
+# STK Haven Public CI Snapshot
 
-Private canonical PR: #44
-Canonical branch: feat/progress-latest-vs-lifetime-e1rm-20261103
-Canonical source head: d7b8fc99ac9e4064eb3449c11b02f3b1d01c06f2
-Baseline: merged PR #43. Tested change: 5 PR #44 files.
-Bugfix from previous CI: on 320px the test now drags the ListView until the technique link is actually visible before tapping.
+Canonical private repo: fernando15xvs/STK-Haven
+Canonical PR: #45 (UX-01 Resumen unique ownership)
+Canonical source head: 86b0b474ea30c8190a31954d93a626c3d30541a2
+Source branch: feat/progress-summary-no-duplicate-metrics-20261103
+Changed files in this scope: apps/app_mobile/lib/features/progress/presentation/pages/progress_page.dart, apps/app_mobile/test/features/progress/progress_summary_scope_test.dart, docs/progress/PROGRESS_SUMMARY_OWNERSHIP_20261103.md
 
-The public mirror ONLY runs Actions. No PR in mirror, no secret history, credentials, user backups or Apple-signing files.
+The public mirror ONLY runs CI Actions from main. No pull request on mirror. Do not copy user data, Hive backups, Apple signing material, tokens or private history.

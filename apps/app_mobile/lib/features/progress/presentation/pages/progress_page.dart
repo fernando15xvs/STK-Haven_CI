@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
-import 'package:core/features/workout/presentation/widgets/recent_workout_details.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
 import 'package:core/features/progress/application/progress_insight_calculator.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
@@ -19,7 +17,6 @@ import 'package:gym_tracker/features/progress/presentation/widgets/progress_cons
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_shared_period_selector.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/body_measurement_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:gym_tracker/core/theme/components/metric_tile.dart';
 
 class ProgressPage extends ConsumerWidget {
   const ProgressPage({super.key});
@@ -80,7 +77,7 @@ class ProgressPage extends ConsumerWidget {
                   Expanded(
                     child: TabBarView(
                       children: [
-                        const _SummaryTab(),
+                        const ProgressSummaryTab(),
                         ProgressExercisesPanel(
                           useSharedPeriod: true,
                           onOpenExercise: (exercise) =>
@@ -113,8 +110,9 @@ class ProgressPage extends ConsumerWidget {
   }
 }
 
-class _SummaryTab extends ConsumerWidget {
-  const _SummaryTab();
+/// Resumen is a focused overview; full workout details remain in Historial.
+class ProgressSummaryTab extends ConsumerWidget {
+  const ProgressSummaryTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -152,6 +150,16 @@ class _SummaryTab extends ConsumerWidget {
               : _TrendBadge(value: metrics.volumePercentChange!),
         ),
         const SizedBox(height: AppSpacing.xl),
+        Semantics(
+          header: true,
+          child: Text(
+            'TENDENCIA DE VOLUMEN · ${filter.label}',
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.of(context).textSecondary,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
@@ -175,158 +183,12 @@ class _SummaryTab extends ConsumerWidget {
         ),
         const SizedBox(height: AppSpacing.xxl),
         ProgressInsightsPanel(insights: insights),
-        const SizedBox(height: AppSpacing.xxl),
-        Text(
-          'ESTE PERIODO (${filter.label.toUpperCase()})',
-          style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Row(
-          children: [
-            Expanded(
-              child: MetricTile(
-                label: 'Entrenamientos',
-                value: '${metrics.workoutCount}',
-                icon: Icon(
-                  Icons.fitness_center,
-                  size: 16,
-                  color: AppColors.of(context).primary,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: MetricTile(
-                label: 'Series',
-                value: '${metrics.totalSets}',
-                icon: const Icon(
-                  Icons.layers,
-                  size: 16,
-                  color: Colors.purpleAccent,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: MetricTile(
-                label: 'Tiempo',
-                value: _formatDuration(metrics.totalDurationSeconds),
-                icon: const Icon(
-                  Icons.timer,
-                  size: 16,
-                  color: Colors.orangeAccent,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: MetricTile(
-                label: 'Récords',
-                value: '${metrics.prCount} PRs',
-                icon: Icon(
-                  Icons.emoji_events,
-                  size: 16,
-                  color: AppColors.of(context).gold,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xxl),
-        Text(
-          'ENTRENAMIENTOS RECIENTES',
-          style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        if (history.isEmpty)
-          Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text(
-                'No hay entrenamientos recientes',
-                style: TextStyle(color: AppColors.of(context).textSecondary),
-              ),
-            ),
-          )
-        else
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.of(context).surface,
-              borderRadius: AppRadius.lg_,
-              border: Border.all(color: AppColors.of(context).surfaceBorder),
-              boxShadow: AppElevation.soft(context),
-            ),
-            child: Column(
-              children: history.take(6).toList().asMap().entries.map((entry) {
-                final idx = entry.key;
-                final session = entry.value;
-                final isLast = idx == (history.take(6).length - 1);
-                return Column(
-                  children: [
-                    ListTile(
-                      onTap: () => RecentWorkoutDetails.show(
-                        context,
-                        session,
-                        settings.weightUnit,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      leading: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.of(context).primaryFaded,
-                          borderRadius: AppRadius.sm_,
-                        ),
-                        child: Icon(
-                          Icons.fitness_center,
-                          color: AppColors.of(context).primary,
-                          size: 20,
-                        ),
-                      ),
-                      title: Text(
-                        session.routineNameSnapshot.isEmpty
-                            ? 'Entrenamiento libre'
-                            : session.routineNameSnapshot,
-                        style: AppTypography.headlineSmall,
-                      ),
-                      subtitle: Text(
-                        DateFormat(
-                          'dd MMM yyyy',
-                          'es',
-                        ).format(session.startedAt),
-                        style: AppTypography.bodySmall,
-                      ),
-                      trailing: Text(
-                        '${session.durationSeconds ~/ 60} min',
-                        style: AppTypography.labelMedium.copyWith(
-                          color: AppColors.of(context).textSecondary,
-                        ),
-                      ),
-                    ),
-                    if (!isLast)
-                      const Divider(height: 1, indent: 64, endIndent: 16),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
         const SizedBox(height: 80),
       ],
     );
   }
 
-  String _formatDuration(int seconds) {
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    if (hours > 0) return '${hours}h ${minutes}m';
-    return '${minutes}m';
-  }
+
 }
 
 class _ConsistencyCard extends StatelessWidget {
