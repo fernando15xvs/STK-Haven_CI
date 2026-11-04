@@ -1,9 +1,9 @@
-# Public CI snapshot for STK Haven
+# STK Haven public CI snapshot
 
-Canonical: private fernando15xvs/STK-Haven
-Canonical PR: #44 (DATA-04: latest vs lifetime e1RM)
-Canonical source head: a312c026fc3b1cf7a5a962134b8fa93c13ea55ff
-Source branch: feat/progress-latest-vs-lifetime-e1rm-20261103
-Scope: 5 changed source/test/docs files; the remainder is the validated baseline from PR #43.
+Private canonical PR: #44
+Canonical branch: feat/progress-latest-vs-lifetime-e1rm-20261103
+Canonical source head: d7b8fc99ac9e4064eb3449c11b02f3b1d01c06f2
+Baseline: merged PR #43. Tested change: 5 PR #44 files.
+Bugfix from previous CI: on 320px the test now drags the ListView until the technique link is actually visible before tapping.
 
-The public mirror ONLY runs GitHub Actions on main pushes. Never open a second product PR here. No private history, credentials, App Store signing files, or personal backups are mirrored.
+The public mirror ONLY runs Actions. No PR in mirror, no secret history, credentials, user backups or Apple-signing files.

@@ -120,8 +120,19 @@ void main() {
       // The mobile route opens the same history from its existing ficha;
       // the expanded panel must not duplicate five recent sessions.
       expect(find.text('SESIONES RECIENTES'), findsNothing);
-      await tester.ensureVisible(find.text('Técnica y ficha del ejercicio'));
-      await tester.tap(find.text('Técnica y ficha del ejercicio'));
+      // New historical-peak metrics can make the expanded card taller than
+      // a 320x800 viewport. Scroll the real exercise list like a user, then
+      // verify that the navigation control is on-screen and actionable.
+      final technicalLink = find.text('Técnica y ficha del ejercicio');
+      await tester.dragUntilVisible(
+        technicalLink,
+        find.byType(ListView),
+        const Offset(0, -160),
+      );
+      await tester.pumpAndSettle();
+      final linkRect = tester.getRect(technicalLink);
+      expect(linkRect.center.dy, inInclusiveRange(0, 800));
+      await tester.tap(technicalLink);
       expect(opened?.id, 'curl');
       expect(tester.takeException(), isNull);
     },
