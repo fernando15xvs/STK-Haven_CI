@@ -21,7 +21,15 @@ de un ejercicio distinto no aparecen. Se conserva el significado de
 `!completed` = pendiente, sin clasificarlo automáticamente como fallido.
 También se corrige la gramática del contador de sesión singular.
 
-La primera ejecución de CI detectó un **desbordamiento real de 167 px en 320 px** y 97 px en 390 px: la etiqueta «Personalizado» dejaba menos de una palabra de ancho al nombre. El encabezado de la tarjeta de Biblioteca ahora presenta nombre y badge en vertical, con badge limitado a 112 px y fuente Outfit. Además, las pruebas hacen scroll explícito antes de pulsar títulos inicialmente fuera de pantalla; no se silencian excepciones.
+La primera ejecución de CI detectó un **desbordamiento real de 167 px en 320 px** y 97 px en 390 px: la etiqueta «Personalizado» dejaba menos de una palabra de ancho al nombre. El encabezado de la tarjeta de Biblioteca ahora presenta nombre y badge en vertical, con badge limitado a 112 px y fuente Outfit. Además, las pruebas desplazan la lista hasta el elemento y fuerzan
+`Scrollable.ensureVisible(alignment: 0.25)` antes del toque: estar
+parcialmente visible no garantiza que el **centro** del control sea tocable.
+El segundo CI detectó precisamente un centro a y=883 en una pantalla de
+850 y a y=868 al entrar en Rendimiento; ahora el test comprueba las
+coordenadas del centro antes de tocar. La sección «MIS REGISTROS» de la ficha
+técnica es una `ListView` de construcción perezosa: el test debe desplazarse
+hasta ella antes de exigir que exista como widget. No se silencian
+excepciones ni se deshabilitan comprobaciones.
 
 Los textos de nombres, músculos secundarios y equipamiento personalizados
 no pueden forzar una etiqueta técnica fuera de un dispositivo de 320 px.

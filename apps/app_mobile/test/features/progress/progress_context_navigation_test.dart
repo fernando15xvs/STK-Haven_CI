@@ -86,6 +86,37 @@ class _Favorites extends ExerciseFavoriteIdsNotifier {
   Set<String> build() => {};
 }
 
+/// An element can be partially visible while its tap CENTER is still below
+/// the 320px viewport. Align its center safely before sending any gesture.
+Future<void> _tapVisible(
+  WidgetTester tester,
+  Finder target, {
+  Finder? scrollable,
+}) async {
+  if (scrollable != null) {
+    await tester.dragUntilVisible(
+      target,
+      scrollable,
+      const Offset(0, -170),
+      maxIteration: 35,
+    );
+  }
+  await Scrollable.ensureVisible(
+    tester.element(target),
+    alignment: 0.25,
+    duration: const Duration(milliseconds: 1),
+  );
+  await tester.pumpAndSettle();
+  final bounds = tester.getRect(target);
+  final height = tester.view.physicalSize.height /
+      tester.view.devicePixelRatio;
+  expect(bounds.center.dy, greaterThan(0), reason: 'target above viewport');
+  expect(bounds.center.dy, lessThan(height),
+      reason: 'target center below viewport');
+  await tester.tap(target);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   setUpAll(() async => initializeDateFormatting('es'));
 
@@ -132,24 +163,28 @@ void main() {
     // The custom title can begin below the visible viewport after filtering
     // and at large text scale. Scroll the actual list before tapping.
     final progressTitle = find.text(_longName);
-    await tester.dragUntilVisible(
+    await _tapVisible(
+      tester,
       progressTitle,
-      find.byType(ListView).last,
-      const Offset(0, -160),
+      scrollable: find.byType(ListView).last,
     );
-    await tester.pumpAndSettle();
-    await tester.tap(progressTitle);
-    await tester.pumpAndSettle();
     final ficha = find.text('Técnica y ficha del ejercicio');
-    await tester.dragUntilVisible(
+    await _tapVisible(
+      tester,
       ficha,
-      find.byType(ListView).last,
-      const Offset(0, -160),
+      scrollable: find.byType(ListView).last,
     );
-    await tester.pumpAndSettle();
-    await tester.tap(ficha);
-    await tester.pumpAndSettle();
     expect(find.byType(ExerciseDetailPage), findsOneWidget);
+    // The technical page is a lazy ListView: this heading can start below
+    // the viewport and is built only once we scroll to it.
+    await tester.scrollUntilVisible(
+      find.text('MIS REGISTROS'),
+      220,
+      scrollable: find.descendant(
+        of: find.byType(ExerciseDetailPage),
+        matching: find.byType(Scrollable),
+      ).first,
+    );
     expect(find.text('MIS REGISTROS'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -157,14 +192,11 @@ void main() {
     final history = find.byKey(
       const ValueKey('progress_open_history_custom-alpha'),
     );
-    await tester.dragUntilVisible(
+    await _tapVisible(
+      tester,
       history,
-      find.byType(ListView).last,
-      const Offset(0, -160),
+      scrollable: find.byType(ListView).last,
     );
-    await tester.pumpAndSettle();
-    await tester.tap(history);
-    await tester.pumpAndSettle();
     expect(find.text('1 sesión registrada'), findsOneWidget);
     expect(find.byKey(
       const ValueKey('exercise_history_session-custom-beta'),
@@ -217,16 +249,21 @@ void main() {
         expect(find.text('Biblioteca'), findsOneWidget);
         final customName = find.text(_longName);
         expect(customName, findsOneWidget);
-        await tester.dragUntilVisible(
+        await _tapVisible(
+          tester,
           customName,
-          find.byType(ListView).last,
-          const Offset(0, -160),
+          scrollable: find.byType(ListView).last,
         );
-        await tester.pumpAndSettle();
-        await tester.tap(customName);
-        await tester.pumpAndSettle();
 
         expect(find.byType(ExerciseDetailPage), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.text('MIS REGISTROS'),
+          220,
+          scrollable: find.descendant(
+            of: find.byType(ExerciseDetailPage),
+            matching: find.byType(Scrollable),
+          ).first,
+        );
         expect(find.text('MIS REGISTROS'), findsOneWidget);
         expect(find.byKey(const ValueKey('exercise_open_progress')),
             findsOneWidget);
@@ -239,9 +276,7 @@ void main() {
         final openProgress = find.byKey(
           const ValueKey('exercise_open_progress'),
         );
-        await tester.ensureVisible(openProgress);
-        await tester.tap(openProgress);
-        await tester.pumpAndSettle();
+        await _tapVisible(tester, openProgress);
 
         expect(find.byType(FocusedExerciseProgressPage), findsOneWidget);
         expect(find.byKey(const ValueKey('progress_exercise_custom-alpha')),
@@ -254,14 +289,11 @@ void main() {
 
         final historyLink =
             find.byKey(const ValueKey('progress_open_history_custom-alpha'));
-        await tester.dragUntilVisible(
+        await _tapVisible(
+          tester,
           historyLink,
-          find.byType(ListView).last,
-          const Offset(0, -160),
+          scrollable: find.byType(ListView).last,
         );
-        await tester.pumpAndSettle();
-        await tester.tap(historyLink);
-        await tester.pumpAndSettle();
 
         expect(find.byType(ExerciseHistoryPage), findsOneWidget);
         expect(find.text('1 sesión registrada'), findsOneWidget);

@@ -72,10 +72,38 @@ jobs:
           ls -1 /tmp/stk-post-roadmap2-migrations
       - name: Select isolated ports for every local Supabase test service
         run: |
-          # GitHub runners may already occupy Supabase's DEFAULT Inbucket
-          # port 54324. Isolate the entire local port bundle, not just db.
-          # This config change exists ONLY in CI's disposable checkout.
-          base=$((56000 + (GITHUB_RUN_ID % 700) * 10))
+          # Supabase runs only in this job's disposable Docker environment.
+          # A run-ID-derived port can still collide with a runner service:
+          # pick six consecutive ports and verify they are all bindable.
+          # Only this CI checkout's config.toml is modified.
+          base=""
+          for attempt in $(seq 1 100); do
+            candidate=$((20000 + ((RANDOM + GITHUB_RUN_ID + attempt * 67) % 2300) * 10))
+            if python3 - "$candidate" <<'PY'
+          import socket
+          import sys
+          candidate = int(sys.argv[1])
+          probes = []
+          try:
+              for port in range(candidate, candidate + 6):
+                  sock = socket.socket()
+                  probes.append(sock)
+                  sock.bind(("0.0.0.0", port))
+          except OSError:
+              sys.exit(1)
+          finally:
+              for sock in probes:
+                  sock.close()
+          PY
+            then
+              base="$candidate"
+              break
+            fi
+          done
+          if [[ -z "$base" ]]; then
+            echo "::error::Could not find six available local Supabase ports"
+            exit 1
+          fi
           printf '\n[db]\nport = %s\nshadow_port = %s\n' \
             "$base" "$((base+1))" >> supabase/config.toml
           printf '\n[api]\nport = %s\n' \
