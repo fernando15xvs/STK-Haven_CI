@@ -177,28 +177,47 @@ class ExerciseDetailPage extends ConsumerWidget {
     String label,
     String value,
   ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.of(context).surfaceHigh,
-        borderRadius: AppRadius.sm_,
-        border: Border.all(color: AppColors.of(context).surfaceBorder),
+    // Custom equipment / muscle descriptions can be longer than a
+    // 320px viewport. Keep each pill within the page's available width and
+    // let its two text segments wrap instead of making the whole Wrap overflow.
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width - 2 * AppSpacing.md,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppColors.of(context).primary),
-          const SizedBox(width: 6),
-          Text('$label:', style: AppTypography.labelSmall),
-          const SizedBox(width: 4),
-          Text(
-            value,
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.of(context).textPrimary,
-              fontWeight: FontWeight.bold,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.of(context).surfaceHigh,
+          borderRadius: AppRadius.sm_,
+          border: Border.all(color: AppColors.of(context).surfaceBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppColors.of(context).primary),
+            const SizedBox(width: AppSpacing.xs),
+            Flexible(
+              child: Text(
+                '$label:',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelSmall,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: AppSpacing.xxs),
+            Flexible(
+              child: Text(
+                value,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.of(context).textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

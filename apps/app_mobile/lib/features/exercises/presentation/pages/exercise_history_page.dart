@@ -64,7 +64,7 @@ class ExerciseHistoryPage extends ConsumerWidget {
                       bottom: AppSpacing.md,
                     ),
                     child: Text(
-                      '${sessions.length} sesiones registradas',
+                      '${sessions.length} ${sessions.length == 1 ? 'sesión registrada' : 'sesiones registradas'}',
                       style: AppTypography.bodyMedium.copyWith(
                         color: AppColors.of(context).textSecondary,
                       ),

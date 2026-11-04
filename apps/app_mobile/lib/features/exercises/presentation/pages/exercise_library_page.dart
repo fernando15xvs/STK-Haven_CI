@@ -469,12 +469,11 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                                       Expanded(
                                         child: Text(
                                           exercise.name,
-                                          style: AppTypography.headlineMedium
+                                          style: AppTypography.headlineSmall
                                               .copyWith(
                                                 color: AppColors.of(
                                                   context,
                                                 ).textPrimary,
-                                                fontSize: 16,
                                               ),
                                         ),
                                       ),
