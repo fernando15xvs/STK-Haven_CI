@@ -330,6 +330,12 @@ class _ExerciseInsightCard extends StatelessWidget {
     final trend = entry.trend;
     final latest = trend.latestSession!;
     final comparison = trend.latestComparison;
+    // Do not claim an e1RM trend when either observation has no estimate.
+    final estimatedDelta = comparison != null &&
+            comparison.latest.estimated1RM > 0 &&
+            comparison.previous.estimated1RM > 0
+        ? comparison.estimated1RmDelta
+        : null;
     final unilateral = UnilateralProgressCalculator.fromTrend(trend);
 
     return Card(
@@ -342,13 +348,36 @@ class _ExerciseInsightCard extends StatelessWidget {
         leading: const Icon(Icons.insights_rounded),
         title: Text(
           entry.exercise.name,
-          style: const TextStyle(fontWeight: FontWeight.w800),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
         ),
-        subtitle: Text(
-          '${latest.routineName.isEmpty ? 'Entrenamiento libre' : latest.routineName} · ${_date(latest.date)}'
-          '\n${trend.current1RM > 0 ? 'Último e1RM: ${FitnessFormatter.formatWeight(trend.current1RM, unit)}' : 'Última sesión sin e1RM'}',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+        // A closed card must answer when the exercise was trained and
+        // whether the latest measured strength changed, at large text sizes.
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${_date(latest.date)} · ${latest.routineName.isEmpty ? 'Entrenamiento libre' : latest.routineName}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              trend.current1RM > 0
+                  ? 'Último e1RM: ${FitnessFormatter.formatWeight(trend.current1RM, unit)}'
+                  : 'Última sesión sin e1RM',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              estimatedDelta == null
+                  ? 'Sin comparación'
+                  : 'Vs. anterior: ${_weightDelta(estimatedDelta, unit)}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
         ),
         trailing: trend.hasPlateauSignal
             ? const Tooltip(

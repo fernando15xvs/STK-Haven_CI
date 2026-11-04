@@ -74,6 +74,17 @@ class _HistoryWithOlderPeak extends _History {
   ];
 }
 
+class _LongNamedExercises extends ExerciseListNotifier {
+  @override
+  List<Exercise> build() => [
+    Exercise(
+      id: 'curl',
+      name: 'Curl unilateral de bíceps con mancuerna en banco inclinado — variante personalizada',
+      muscleGroup: 'Bíceps',
+    ),
+  ];
+}
+
 class _Settings extends SettingsNotifier {
   @override
   SettingsState build() => const SettingsState();
@@ -114,6 +125,8 @@ void main() {
       expect(find.text('Curl de bíceps'), findsOneWidget);
       expect(find.text('Extensiones'), findsNothing);
       expect(find.textContaining('Último e1RM:'), findsOneWidget);
+      expect(find.text('Sin comparación'), findsOneWidget);
+      expect(find.textContaining('· Brazos'), findsOneWidget);
       await tester.tap(find.text('Curl de bíceps'));
       await tester.pumpAndSettle();
       expect(find.text('PR carga'), findsOneWidget);
@@ -163,6 +176,8 @@ void main() {
     expect(find.text('Último e1RM'), findsOneWidget);
     expect(find.text('Mejor e1RM histórico'), findsOneWidget);
     expect(find.textContaining('Último e1RM:'), findsOneWidget);
+    expect(find.textContaining('Vs. anterior:'), findsOneWidget);
+    expect(find.text('Sin comparación'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -184,8 +199,44 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Último e1RM'), findsOneWidget);
     expect(find.text('Mejor e1RM histórico'), findsOneWidget);
+    // The old peak is outside this month's filter; it is not a valid
+    // previous-session comparison inside the selected period.
+    expect(find.text('Sin comparación'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  for (final width in [320.0, 390.0]) {
+    testWidgets('long custom exercise at ${width.toInt()}px keeps complete summary',
+        (tester) async {
+      tester.view.physicalSize = Size(width, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          exerciseListProvider.overrideWith(_LongNamedExercises.new),
+          workoutHistoryProvider.overrideWith(_History.new),
+          settingsProvider.overrideWith(_Settings.new),
+        ],
+        child: MaterialApp(
+          home: Scaffold(
+            body: MediaQuery(
+              data: const MediaQueryData(
+                textScaler: TextScaler.linear(1.6),
+              ),
+              child: const ProgressExercisesPanel(),
+            ),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('variante personalizada'), findsOneWidget);
+      expect(find.textContaining('· Brazos'), findsOneWidget);
+      expect(find.textContaining('Último e1RM:'), findsOneWidget);
+      expect(find.text('Sin comparación'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('legacy panel without a ficha route still exposes session history',
       (tester) async {
