@@ -1,9 +1,9 @@
-# STK Haven Public CI Snapshot
+# STK Haven — CI snapshot of canonical private PR #47
 
-Canonical: private fernando15xvs/STK-Haven
-Canonical PR: #46 UX-03
-Canonical source head: ea3092c25bf4cf8ea6206d2c1e2f06d2505d5a68
-Source branch: feat/progress-exercise-closed-card-comparison-20261103
-Files in this batch (3): apps/app_mobile/test/progress_unified_exercises_test.dart, docs/progress/PROGRESS_EXERCISE_CLOSED_CARD_CONTRACT_20261103.md, packages/core/lib/features/progress/presentation/pages/progress_intelligence_page.dart
+Canonical private repository: fernando15xvs/STK-Haven
+Source PR: #47, GRAF-02/GRAF-04 readable tooltips and touched chart extrema
+Source HEAD: 193f4b1f47be14177b523f39d476219007ea473a
+Source branch: fix/progress-tooltip-extremes-selection-20261104
+Changed source files (5): apps/app_mobile/lib/features/exercises/presentation/pages/exercise_detail_page.dart, apps/app_mobile/lib/features/progress/presentation/widgets/progress_chart_style.dart, apps/app_mobile/lib/features/progress/presentation/widgets/volume_chart.dart, apps/app_mobile/test/features/progress/progress_chart_touch_extremes_test.dart, docs/progress/PROGRESS_CHART_TOOLTIP_EXTREMES_CONTRACT_20261104.md
 
-Baseline includes merged PR #45 on 2026-11-04. This mirror exclusively runs CI on main. No PR in mirror, no user data, credentials, provisioning profiles or private Git history.
+Only CI runs on this public mirror. No product PR on mirror; no GitHub Actions on private canonical. No personal records, Hive data, passwords, signing credentials or private history in snapshot.

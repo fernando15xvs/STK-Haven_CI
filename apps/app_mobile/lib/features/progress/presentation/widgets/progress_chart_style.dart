@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:core/domain/models/settings_state.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
@@ -24,8 +25,36 @@ class ProgressChartStyle {
 
   /// A shared tooltip size avoids clipped date/weight at 160% text scale.
   static const double tooltipMaxContentWidth = 184;
+  static const double tooltipMargin = 14;
   static const EdgeInsets tooltipPadding =
       EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs);
+
+  /// Shared selection indicator: a neutral dashed vertical guide and an
+  /// outlined point visible on bright/dark/OLED surfaces. The tooltip stays
+  /// offset from the touched point instead of hiding its position.
+  static List<TouchedSpotIndicatorData> selectedIndicators(
+    BuildContext context,
+    List<int> indexes,
+  ) => [
+        for (var i = 0; i < indexes.length; i++)
+          TouchedSpotIndicatorData(
+            FlLine(
+              color: AppColors.of(context).textSecondary,
+              strokeWidth: 1.5,
+              dashArray: const [4, 4],
+            ),
+            FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) =>
+                  FlDotCirclePainter(
+                radius: 5,
+                color: AppColors.of(context).surfaceHigh,
+                strokeWidth: 2.5,
+                strokeColor: AppColors.of(context).primary,
+              ),
+            ),
+          ),
+      ];
 
   static Color tooltipBackground(BuildContext context) =>
       AppColors.of(context).surfaceHigh;

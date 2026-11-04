@@ -254,6 +254,7 @@ class ExerciseOneRmChart extends StatelessWidget {
     final maxX = spots.last.x;
     final xPadding = math.max(0.65, maxX * 0.045);
     final peakSpot = spots.reduce((a, b) => a.y >= b.y ? a : b);
+    final lowSpot = spots.reduce((a, b) => a.y <= b.y ? a : b);
     final peakDate = ordered[spots.indexOf(peakSpot)].date;
 
     return Semantics(
@@ -262,9 +263,10 @@ class ExerciseOneRmChart extends StatelessWidget {
           '${ProgressChartStyle.detailedDate(last)}. '
           'Última estimación: ${ProgressChartStyle.measurement(spots.last.y, weightUnit)}. '
           'Máximo mostrado: ${ProgressChartStyle.measurement(peakSpot.y, weightUnit)} '
-          'el ${ProgressChartStyle.detailedDate(peakDate)}.',
+          'el ${ProgressChartStyle.detailedDate(peakDate)}. '
+          'Mínimo mostrado: ${ProgressChartStyle.measurement(lowSpot.y, weightUnit)}.',
       child: SizedBox(
-        height: 200,
+        height: 248,
         child: Column(
           children: [
             Expanded(
@@ -272,7 +274,13 @@ class ExerciseOneRmChart extends StatelessWidget {
                 LineChartData(
                   lineTouchData: LineTouchData(
                     enabled: true,
+                    getTouchedSpotIndicator: (barData, spotIndexes) =>
+                        ProgressChartStyle.selectedIndicators(
+                          context,
+                          spotIndexes,
+                        ),
                     touchTooltipData: LineTouchTooltipData(
+                      tooltipMargin: ProgressChartStyle.tooltipMargin,
                       fitInsideHorizontally: true,
                       fitInsideVertically: true,
                       maxContentWidth: ProgressChartStyle.tooltipMaxContentWidth,
@@ -333,17 +341,55 @@ class ExerciseOneRmChart extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(ProgressChartStyle.date(first),
-                      style: ProgressChartStyle.axisText(context)),
-                  Text(ProgressChartStyle.date(last),
-                      style: ProgressChartStyle.axisText(context)),
+                  Expanded(
+                    child: Text(
+                      ProgressChartStyle.date(first),
+                      maxLines: 2,
+                      textAlign: TextAlign.start,
+                      style: ProgressChartStyle.axisText(context),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      ProgressChartStyle.date(last),
+                      maxLines: 2,
+                      textAlign: TextAlign.end,
+                      style: ProgressChartStyle.axisText(context),
+                    ),
+                  ),
                 ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+              child: Semantics(
+                label: 'Rango estimado mostrado: mínimo '
+                    '${ProgressChartStyle.measurement(lowSpot.y, weightUnit)}, '
+                    'máximo ${ProgressChartStyle.measurement(peakSpot.y, weightUnit)}.',
+                child: Wrap(
+                  spacing: AppSpacing.md,
+                  runSpacing: AppSpacing.xxs,
+                  alignment: WrapAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Mín. ${ProgressChartStyle.measurement(lowSpot.y, weightUnit)}',
+                      style: ProgressChartStyle.axisText(context),
+                      maxLines: 2,
+                    ),
+                    Text(
+                      'Máx. ${ProgressChartStyle.measurement(peakSpot.y, weightUnit)}',
+                      style: ProgressChartStyle.axisText(context),
+                      maxLines: 2,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

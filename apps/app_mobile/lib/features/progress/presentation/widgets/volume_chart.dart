@@ -105,7 +105,14 @@ class VolumeChart extends StatelessWidget {
               child: LineChart(
                 LineChartData(
                   lineTouchData: LineTouchData(
+                    enabled: true,
+                    getTouchedSpotIndicator: (barData, spotIndexes) =>
+                        ProgressChartStyle.selectedIndicators(
+                          context,
+                          spotIndexes,
+                        ),
                     touchTooltipData: LineTouchTooltipData(
+                      tooltipMargin: ProgressChartStyle.tooltipMargin,
                       fitInsideHorizontally: true,
                       fitInsideVertically: true,
                       maxContentWidth: ProgressChartStyle.tooltipMaxContentWidth,
