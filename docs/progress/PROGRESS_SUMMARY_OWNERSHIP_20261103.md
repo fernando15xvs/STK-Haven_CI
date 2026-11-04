@@ -29,6 +29,12 @@ ni se deshabilita el servicio de detalles de sesión.
   rendimiento, historial individual, músculos y medidas sin navegación circular.
 - Se añade encabezado accesible y coherente `TENDENCIA DE VOLUMEN · 1M`,
   usando `AppTypography` y `AppColors` en lugar de grises fijos.
+- CI inicial detectó un desbordamiento de 6 px (escala 1.0) y 126 px
+  (escala 1.6) en la vista real 320 px. El calendario sustituye la leyenda
+  horizontal rígida por un `Wrap` con parejas icono + etiqueta que conservan
+  todo el texto. Los tests ahora distinguen fallos iniciales de fallos al
+  desplazar el calendario/observaciones; **no se declara solucionado hasta
+  validar CI del nuevo SHA**.
 - No hay cambios a Hive, Supabase, gamificación, Coach, Motivation, programas
   o datos de entrenamiento.
 

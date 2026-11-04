@@ -107,6 +107,8 @@ void main() {
           ),
         ));
         await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull,
+            reason: 'initial summary layout must fit 320px');
 
         // These sections are the only owners of summary overview data.
         expect(find.text('VOLUMEN TOTAL'), findsOneWidget);
@@ -129,6 +131,8 @@ void main() {
           scrollable: find.byType(Scrollable).first,
         );
         expect(find.byType(CalendarHeatmapCard), findsOneWidget);
+        expect(tester.takeException(), isNull,
+            reason: 'calendar section must not overflow at 320px');
         await tester.scrollUntilVisible(
           find.byType(ProgressInsightsPanel),
           180,

@@ -143,15 +143,28 @@ class CalendarHeatmapCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Row(
+          // A two-item legend is descriptive text, not a fixed-width
+          // toolbar. Allow it to wrap at 320px and large text scales.
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.xs,
             children: [
-              _LegendDot(active: false),
-              const SizedBox(width: 5),
-              Text('Sin sesión', style: AppTypography.labelSmall),
-              const SizedBox(width: AppSpacing.md),
-              _LegendDot(active: true),
-              const SizedBox(width: 5),
-              Text('Con sesión', style: AppTypography.labelSmall),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _LegendDot(active: false),
+                  const SizedBox(width: 5),
+                  Text('Sin sesión', style: AppTypography.labelSmall),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _LegendDot(active: true),
+                  const SizedBox(width: 5),
+                  Text('Con sesión', style: AppTypography.labelSmall),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
