@@ -45,6 +45,16 @@ nombres y equipamiento largos, lectura independiente de series completas y
 pendientes, botón de volver en cada nivel, sin pérdida ni mezcla de ID.
 También recorre entrada desde `Progreso > Ejercicios` a Ficha y a Historial.
 
+La tercera ejecución de CI (run #41929958345, intento 1) reveló el motivo de la
+cancelación: cada test de navegación llegó al timeout Flutter de **10 minutos**
+porque `Scrollable.ensureVisible(duration: 1 ms)` se esperaba con `await`
+dentro de `FakeAsync` sin `tester.pump`. El `Future` animado nunca podía
+resolver. Se corrigió la llamada a `duration: Duration.zero`, que ajusta
+el desplazamiento instantáneamente, manteniendo la comprobación real de que
+el centro del control está dentro del viewport antes del toque. Esta
+corrección **no** desactiva asserts ni oculta desbordamientos; requiere
+otro CI completo antes del merge.
+
 Las pruebas no alteran entrenamientos, bases Hive, Supabase, programas,
 cálculos e1RM ni gamificación. Debe aprobarse CI en espejo 7/7 con
 blob-SHA idénticos antes del merge. El test no equivale a prueba física

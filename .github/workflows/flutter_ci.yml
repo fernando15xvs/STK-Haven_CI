@@ -12,7 +12,8 @@ permissions:
 
 concurrency:
   group: public-ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  # Only newest mirror snapshot matters; cancel a stale, hung run.
+  cancel-in-progress: true
 
 env:
   FLUTTER_VERSION: "3.38.9"

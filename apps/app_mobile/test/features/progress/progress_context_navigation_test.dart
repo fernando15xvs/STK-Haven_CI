@@ -104,7 +104,9 @@ Future<void> _tapVisible(
   await Scrollable.ensureVisible(
     tester.element(target),
     alignment: 0.25,
-    duration: const Duration(milliseconds: 1),
+    // A non-zero animation must be pumped by WidgetTester. Awaiting it here
+    // deadlocks FakeAsync and causes each navigation test to time out.
+    duration: Duration.zero,
   );
   await tester.pumpAndSettle();
   final bounds = tester.getRect(target);
