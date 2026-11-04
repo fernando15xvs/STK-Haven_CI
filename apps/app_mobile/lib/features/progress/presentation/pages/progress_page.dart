@@ -163,6 +163,7 @@ class _SummaryTab extends ConsumerWidget {
           child: VolumeChart(
             data: metrics.volumeChartData,
             weightUnit: settings.weightUnit,
+            period: filter,
           ),
         ),
         const SizedBox(height: AppSpacing.xxl),

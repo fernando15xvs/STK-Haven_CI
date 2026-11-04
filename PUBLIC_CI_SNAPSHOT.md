@@ -1,15 +1,9 @@
-# Public CI snapshot
+# STK Haven · Public CI Snapshot
 
-This repository is a history-free CI mirror of the private STK Haven source.
+Canonical repo: private fernando15xvs/STK-Haven
+Canonical PR: #43
+Canonical source head: 8bdddace4cd972123ec8c5d80b0e2b9075735a14
+Branch: fix/progress-volume-period-buckets-20261103
+Scope: chart period bucketing, chart-edge/duplicate regression tests and guide.
 
-Source commit: 30831762f40313cb1d5b1df2d7c4595e3b05b670
-Source branch: fix/progress-effective-activity-consistency-20261103
-Source PR: fernando15xvs/STK-Haven#41 (DATA-08)
-Source dependency: canonical PR #40 merged on main.
-Scope: three changed files, SHA checked against the source.
-Validation only: STK Haven Public CI on push to mirror main, no mirror PR.
-
-The private Git history, local signing material, environment files, credentials,
-backups and other excluded local files are intentionally not mirrored.
-
-Some legacy private documentation remains excluded from the public mirror.
+The mirror is **only** a test runner. All product work and all PRs stay in the private canonical repository. No private Git history, credentials, signing materials, user data or backup data are copied here. Selected older private docs intentionally do not exist in this public mirror.

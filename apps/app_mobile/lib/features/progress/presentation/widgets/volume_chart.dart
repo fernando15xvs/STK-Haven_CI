@@ -11,12 +11,49 @@ import 'package:core/features/progress/application/progress_metrics_service.dart
 class VolumeChart extends StatelessWidget {
   final List<VolumeDataPoint> data;
   final WeightUnit weightUnit;
+  /// Identifies whether dots represent days, 7-day buckets or calendar months.
+  /// Null preserves day-level labels for callers outside the shared dashboard.
+  final TimeFilter? period;
 
-  const VolumeChart({super.key, required this.data, required this.weightUnit});
+  const VolumeChart({
+    super.key,
+    required this.data,
+    required this.weightUnit,
+    this.period,
+  });
+
+  String _dateLabel(DateTime date, {bool detailed = false}) {
+    if (period == TimeFilter.year) {
+      final month = ProgressChartStyle.calendarMonth(date);
+      return detailed ? 'Mes de $month' : month;
+    }
+    if (period == TimeFilter.threeMonths) {
+      final start = detailed
+          ? ProgressChartStyle.detailedDate(date)
+          : ProgressChartStyle.date(date);
+      return detailed ? 'Semana desde el $start' : 'Sem. $start';
+    }
+    return detailed
+        ? ProgressChartStyle.detailedDate(date)
+        : ProgressChartStyle.date(date);
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (data.isEmpty) {
+    // The provider already aggregates periods, but this widget is public to
+    // callers with raw points. Coalesce same-day entries and ignore invalid
+    // imported values so fl_chart never receives duplicate X or NaN/Inf.
+    final byDay = <DateTime, double>{};
+    for (final point in data) {
+      if (!point.volume.isFinite || point.volume < 0) continue;
+      final day = DateTime(point.date.year, point.date.month, point.date.day);
+      byDay.update(
+        day,
+        (current) => current + point.volume,
+        ifAbsent: () => point.volume,
+      );
+    }
+    if (byDay.isEmpty) {
       return SizedBox(
         height: 200,
         child: Center(
@@ -30,7 +67,9 @@ class VolumeChart extends StatelessWidget {
       );
     }
 
-    final sorted = [...data]..sort((a, b) => a.date.compareTo(b.date));
+    final sorted = [
+      for (final item in byDay.entries) VolumeDataPoint(item.key, item.value),
+    ]..sort((a, b) => a.date.compareTo(b.date));
     final displayData = sorted
         .map((point) => _DisplayPoint(
               point.date,
@@ -54,10 +93,10 @@ class VolumeChart extends StatelessWidget {
     );
 
     return Semantics(
-      label: 'Volumen de entrenamiento: ${ProgressChartStyle.detailedDate(first)}'
-          ' a ${ProgressChartStyle.detailedDate(last)}. '
+      label: 'Volumen de entrenamiento: ${_dateLabel(first, detailed: true)}'
+          ' a ${_dateLabel(last, detailed: true)}. '
           'Máximo mostrado: ${ProgressChartStyle.measurement(peak.volume, weightUnit)}'
-          ' el ${ProgressChartStyle.detailedDate(peak.date)}.',
+          ' en ${_dateLabel(peak.date, detailed: true)}.',
       child: SizedBox(
         height: 200,
         child: Column(
@@ -76,7 +115,7 @@ class VolumeChart extends StatelessWidget {
                       getTooltipItems: (touchedSpots) => touchedSpots.map((spot) {
                         final selected = displayData[spot.spotIndex];
                         return LineTooltipItem(
-                          '${ProgressChartStyle.detailedDate(selected.date)}\n'
+                          '${_dateLabel(selected.date, detailed: true)}\n'
                           '${ProgressChartStyle.measurement(selected.volume, weightUnit)}',
                           ProgressChartStyle.tooltipText(context),
                         );
@@ -121,16 +160,16 @@ class VolumeChart extends StatelessWidget {
               child: displayData.length == 1
                   ? Center(
                       child: Text(
-                        ProgressChartStyle.date(first),
+                        _dateLabel(first),
                         style: ProgressChartStyle.axisText(context),
                       ),
                     )
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(ProgressChartStyle.date(first),
+                        Text(_dateLabel(first),
                             style: ProgressChartStyle.axisText(context)),
-                        Text(ProgressChartStyle.date(last),
+                        Text(_dateLabel(last),
                             style: ProgressChartStyle.axisText(context)),
                       ],
                     ),

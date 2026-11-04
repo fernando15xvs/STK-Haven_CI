@@ -99,6 +99,93 @@ void main() {
     }
   }
 
+  testWidgets('3M weekly buckets disclose the aggregation at narrow width',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final values = bucketVolumeChartData([
+      VolumeDataPoint(DateTime(2026, 8, 5), 100),
+      VolumeDataPoint(DateTime(2026, 8, 6), 200),
+      VolumeDataPoint(DateTime(2026, 8, 12), 450),
+    ], filter: TimeFilter.threeMonths,
+       startDate: DateTime(2026, 8, 5));
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: VolumeChart(
+          data: values,
+          weightUnit: WeightUnit.kg,
+          period: TimeFilter.threeMonths,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Sem. 5 ago'), findsOneWidget);
+    expect(find.text('Sem. 12 ago'), findsOneWidget);
+    final plot = tester.widget<LineChart>(find.byType(LineChart)).data;
+    expect(plot.lineBarsData.single.spots.map((s) => s.y), [300, 450]);
+    expect(plot.lineTouchData.touchTooltipData.fitInsideHorizontally, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('1A calendar month labels retain months despite empty weeks',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final values = bucketVolumeChartData([
+      VolumeDataPoint(DateTime(2026, 1, 9), 15912),
+      VolumeDataPoint(DateTime(2026, 4, 7), 2500),
+    ], filter: TimeFilter.year,
+       startDate: DateTime(2025, 11, 3));
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.6)),
+          child: VolumeChart(
+            data: values,
+            weightUnit: WeightUnit.kg,
+            period: TimeFilter.year,
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('ene 2026'), findsOneWidget);
+    expect(find.text('abr 2026'), findsOneWidget);
+    final spots =
+        tester.widget<LineChart>(find.byType(LineChart)).data.lineBarsData.single.spots;
+    expect(spots[1].x, greaterThan(80));
+    expect(spots[0].y, 15912);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('volume chart sums duplicate dates and skips invalid imports',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: VolumeChart(
+          data: [
+            VolumeDataPoint(DateTime(2026, 10, 6, 12), 120),
+            VolumeDataPoint(DateTime(2026, 10, 6, 18), 80),
+            VolumeDataPoint(DateTime(2026, 10, 7), double.nan),
+            VolumeDataPoint(DateTime(2026, 10, 9), 15912),
+          ],
+          weightUnit: WeightUnit.kg,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final spots =
+        tester.widget<LineChart>(find.byType(LineChart)).data.lineBarsData.single.spots;
+    expect(spots.length, 2);
+    expect(spots.map((spot) => spot.y), [200, 15912]);
+    expect(spots.last.x, 3);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('one point, zero volume, and enlarged text do not overflow',
       (tester) async {
     tester.view.physicalSize = const Size(320, 720);

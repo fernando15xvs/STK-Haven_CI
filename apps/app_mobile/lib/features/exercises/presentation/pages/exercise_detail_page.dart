@@ -213,7 +213,18 @@ class ExerciseOneRmChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (data.length < 2) {
+    // Multiple sessions on the same day must not create overlapping points.
+    // The latest observation of each local day is the honest daily trend;
+    // all underlying sessions remain intact in the exercise history.
+    final sorted = data.where((p) => p.value.isFinite && p.value >= 0).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+    final latestByDay = <DateTime, ExerciseProgressPoint>{};
+    for (final point in sorted) {
+      latestByDay[DateTime(point.date.year, point.date.month, point.date.day)] =
+          point;
+    }
+    final ordered = latestByDay.values.toList(growable: false);
+    if (ordered.length < 2) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -227,7 +238,6 @@ class ExerciseOneRmChart extends StatelessWidget {
       );
     }
 
-    final ordered = [...data]..sort((a, b) => a.date.compareTo(b.date));
     final first = ordered.first.date;
     final last = ordered.last.date;
 

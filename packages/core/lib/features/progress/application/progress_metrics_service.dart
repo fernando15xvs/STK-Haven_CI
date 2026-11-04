@@ -124,6 +124,64 @@ class VolumeDataPoint {
   const VolumeDataPoint(this.date, this.volume);
 }
 
+/// Groups only *observed* training volumes for the requested period.
+///
+/// 7D and 1M keep each local calendar day; 3M groups into seven-day
+/// windows anchored to the selected period's first day; 1A uses calendar
+/// months. Missing dates are gaps, NOT fabricated zero-workout sessions.
+/// All volume values are stored in kg and converted only by the UI.
+List<VolumeDataPoint> bucketVolumeChartData(
+  Iterable<VolumeDataPoint> observedDailyVolumes, {
+  required TimeFilter filter,
+  required DateTime startDate,
+}) {
+  final firstDayUtc =
+      DateTime.utc(startDate.year, startDate.month, startDate.day);
+  final buckets = <DateTime, double>{};
+  for (final point in observedDailyVolumes) {
+    // Negative / non-finite training volume is not a chartable observation.
+    // Leave source history untouched, do not manufacture a replacement point.
+    if (!point.volume.isFinite || point.volume < 0) continue;
+    final day = DateTime(point.date.year, point.date.month, point.date.day);
+    final bucket = switch (filter) {
+      TimeFilter.week || TimeFilter.month => day,
+      TimeFilter.threeMonths =>
+        _weeklyVolumeBucket(day, firstDayUtc, startDate),
+      TimeFilter.year => DateTime(day.year, day.month),
+    };
+    buckets.update(
+      bucket,
+      (current) => current + point.volume,
+      ifAbsent: () => point.volume,
+    );
+  }
+  return [
+    for (final entry in (buckets.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key))))
+      VolumeDataPoint(entry.key, entry.value),
+  ];
+}
+
+DateTime _weeklyVolumeBucket(
+  DateTime localDay,
+  DateTime firstDayUtc,
+  DateTime startDate,
+) {
+  // Compare calendar-day values in UTC to prevent local DST changes from
+  // moving a session into the wrong seven-day bucket.
+  final utcDay = DateTime.utc(
+    localDay.year,
+    localDay.month,
+    localDay.day,
+  );
+  final index = utcDay.difference(firstDayUtc).inDays ~/ 7;
+  return DateTime(
+    startDate.year,
+    startDate.month,
+    startDate.day + index * 7,
+  );
+}
+
 class DashboardMetrics {
   final double totalVolume;
   final double? volumePercentChange;
@@ -258,10 +316,11 @@ final progressMetricsProvider = Provider<DashboardMetrics>((ref) {
 
   final prCount = allPRs.where((pr) => pr.achievedAt.isAfter(startDate)).length;
 
-  final chartData = dailyVolume.entries
-      .map((e) => VolumeDataPoint(e.key, e.value))
-      .toList()
-    ..sort((a, b) => a.date.compareTo(b.date));
+  final chartData = bucketVolumeChartData(
+    dailyVolume.entries.map((e) => VolumeDataPoint(e.key, e.value)),
+    filter: filter,
+    startDate: startDate,
+  );
 
   return DashboardMetrics(
     totalVolume: totalVolume,

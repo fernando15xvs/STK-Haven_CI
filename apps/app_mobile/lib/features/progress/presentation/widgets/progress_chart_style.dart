@@ -39,6 +39,9 @@ class ProgressChartStyle {
   static String detailedDate(DateTime date) =>
       DateFormat('d MMM yyyy', 'es').format(date);
 
+  static String calendarMonth(DateTime date) =>
+      DateFormat('MMM yyyy', 'es').format(date);
+
   static String number(double value) {
     final formatter = NumberFormat.decimalPattern('es')
       ..maximumFractionDigits = 1;

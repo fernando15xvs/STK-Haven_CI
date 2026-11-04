@@ -51,6 +51,44 @@ void main() {
     }
   });
 
+  testWidgets('same-day 1RM observations display only the last valid set',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ExerciseOneRmChart(
+          data: [
+            ExerciseProgressPoint(date: DateTime(2026, 10, 6, 10), value: 35),
+            ExerciseProgressPoint(date: DateTime(2026, 10, 6, 18), value: 39),
+            ExerciseProgressPoint(date: DateTime(2026, 10, 31, 18), value: 37.7),
+          ],
+          weightUnit: WeightUnit.kg,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final chart = tester.widget<LineChart>(find.byType(LineChart)).data;
+    expect(chart.lineBarsData.single.spots.length, 2);
+    expect(chart.lineBarsData.single.spots.first.y, 39);
+    expect(chart.maxY, greaterThan(39));
+    expect(tester.takeException(), isNull);
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ExerciseOneRmChart(
+          data: [
+            ExerciseProgressPoint(date: DateTime(2026, 10, 6, 10), value: 35),
+            ExerciseProgressPoint(date: DateTime(2026, 10, 6, 18), value: 39),
+          ],
+          weightUnit: WeightUnit.kg,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byType(LineChart), findsNothing);
+    expect(find.textContaining('al menos 2 entrenamientos'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   // Reproduce the screenshot edge/clipping cases without private user data.
   // Test both charts at narrow/wide layouts and scaled font sizes.
   for (final width in [320.0, 375.0, 390.0, 430.0]) {
