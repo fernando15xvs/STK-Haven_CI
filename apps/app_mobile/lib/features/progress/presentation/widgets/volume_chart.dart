@@ -167,10 +167,23 @@ class VolumeChart extends StatelessWidget {
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_dateLabel(first),
-                            style: ProgressChartStyle.axisText(context)),
-                        Text(_dateLabel(last),
-                            style: ProgressChartStyle.axisText(context)),
+                        Expanded(
+                          child: Text(
+                            _dateLabel(first),
+                            maxLines: 2,
+                            textAlign: TextAlign.start,
+                            style: ProgressChartStyle.axisText(context),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Expanded(
+                          child: Text(
+                            _dateLabel(last),
+                            maxLines: 2,
+                            textAlign: TextAlign.end,
+                            style: ProgressChartStyle.axisText(context),
+                          ),
+                        ),
                       ],
                     ),
             ),
