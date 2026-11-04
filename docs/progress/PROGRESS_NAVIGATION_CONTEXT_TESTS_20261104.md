@@ -21,6 +21,8 @@ de un ejercicio distinto no aparecen. Se conserva el significado de
 `!completed` = pendiente, sin clasificarlo automáticamente como fallido.
 También se corrige la gramática del contador de sesión singular.
 
+La primera ejecución de CI detectó un **desbordamiento real de 167 px en 320 px** y 97 px en 390 px: la etiqueta «Personalizado» dejaba menos de una palabra de ancho al nombre. El encabezado de la tarjeta de Biblioteca ahora presenta nombre y badge en vertical, con badge limitado a 112 px y fuente Outfit. Además, las pruebas hacen scroll explícito antes de pulsar títulos inicialmente fuera de pantalla; no se silencian excepciones.
+
 Los textos de nombres, músculos secundarios y equipamiento personalizados
 no pueden forzar una etiqueta técnica fuera de un dispositivo de 320 px.
 Los chips aplican un límite máximo de ancho, `Flexible` y hasta dos/tres

@@ -464,45 +464,50 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          exercise.name,
-                                          style: AppTypography.headlineSmall
-                                              .copyWith(
-                                                color: AppColors.of(
-                                                  context,
-                                                ).textPrimary,
-                                              ),
+                                  // At 320px / 160% text, a side-by-side
+                                  // custom badge steals all width from a long
+                                  // name. Stack the badge below the title.
+                                  Text(
+                                    exercise.name,
+                                    maxLines: 5,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.headlineSmall.copyWith(
+                                      color: AppColors.of(context).textPrimary,
+                                    ),
+                                  ),
+                                  if (isCustom) ...[
+                                    const SizedBox(height: AppSpacing.xxs),
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 112,
                                         ),
-                                      ),
-                                      if (isCustom)
-                                        Container(
+                                        child: Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 7,
                                             vertical: 3,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: AppColors.of(
-                                              context,
-                                            ).primary.withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(
-                                              999,
-                                            ),
+                                            color: AppColors.of(context)
+                                                .primary.withValues(alpha: 0.12),
+                                            borderRadius:
+                                                BorderRadius.circular(999),
                                           ),
                                           child: Text(
                                             'Personalizado',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
                                             style: AppTypography.labelSmall
                                                 .copyWith(
-                                                  color: AppColors.of(
-                                                    context,
-                                                  ).primary,
-                                                ),
+                                              color:
+                                                  AppColors.of(context).primary,
+                                            ),
                                           ),
                                         ),
-                                    ],
-                                  ),
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 4),
                                   Text(
                                     '${exercise.muscleGroup} • ${exercise.equipment.isEmpty ? 'Libre' : exercise.equipment}${isUnilateral ? ' • Unilateral' : ''}',

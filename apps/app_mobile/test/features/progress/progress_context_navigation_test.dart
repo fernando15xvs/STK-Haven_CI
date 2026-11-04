@@ -129,7 +129,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('progress_exercise_custom-alpha')),
         findsOneWidget);
-    await tester.tap(find.text(_longName));
+    // The custom title can begin below the visible viewport after filtering
+    // and at large text scale. Scroll the actual list before tapping.
+    final progressTitle = find.text(_longName);
+    await tester.dragUntilVisible(
+      progressTitle,
+      find.byType(ListView).last,
+      const Offset(0, -160),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(progressTitle);
     await tester.pumpAndSettle();
     final ficha = find.text('Técnica y ficha del ejercicio');
     await tester.dragUntilVisible(
@@ -208,7 +217,12 @@ void main() {
         expect(find.text('Biblioteca'), findsOneWidget);
         final customName = find.text(_longName);
         expect(customName, findsOneWidget);
-        await tester.ensureVisible(customName);
+        await tester.dragUntilVisible(
+          customName,
+          find.byType(ListView).last,
+          const Offset(0, -160),
+        );
+        await tester.pumpAndSettle();
         await tester.tap(customName);
         await tester.pumpAndSettle();
 
