@@ -84,7 +84,6 @@ void main() {
           expect(find.text('0.75'), findsOneWidget);
           expect(find.text('178.0 cm'), findsOneWidget);
           expect(tester.takeException(), isNull);
-          semantics.dispose();
         },
       );
     }
@@ -159,6 +158,7 @@ void main() {
             findsOneWidget,
           );
           expect(tester.takeException(), isNull);
+          semantics.dispose();
         },
       );
     }
