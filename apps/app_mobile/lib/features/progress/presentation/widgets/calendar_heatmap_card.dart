@@ -12,7 +12,15 @@ class CalendarHeatmapCard extends StatelessWidget {
     required this.periodLabel,
   });
 
-  static const _weekdayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+  static const _weekdayLabels = <({String short, String spoken})>[
+    (short: 'L', spoken: 'Lunes'),
+    (short: 'M', spoken: 'Martes'),
+    (short: 'X', spoken: 'Miércoles'),
+    (short: 'J', spoken: 'Jueves'),
+    (short: 'V', spoken: 'Viernes'),
+    (short: 'S', spoken: 'Sábado'),
+    (short: 'D', spoken: 'Domingo'),
+  ];
   static const _months = [
     'ene',
     'feb',
@@ -30,6 +38,10 @@ class CalendarHeatmapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Keep weekday glyphs and rows readable at 160% without modifying dates.
+    // A cell stays >=18dp and only grows with the user's text scale.
+    final cellExtent = (MediaQuery.textScalerOf(context).scale(14) + 4)
+        .clamp(18.0, 36.0).toDouble();
     final weeks = <List<CalendarHeatmapDay>>[];
     for (var index = 0; index < snapshot.days.length; index += 7) {
       weeks.add(snapshot.days.sublist(index, index + 7));
@@ -97,22 +109,27 @@ class CalendarHeatmapCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           SizedBox(
-            height: 126,
+            height: cellExtent * 7,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
                   children: _weekdayLabels
                       .map(
-                        (label) => SizedBox(
-                          width: 16,
-                          height: 18,
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              label,
-                              style: AppTypography.labelSmall.copyWith(
-                                color: AppColors.of(context).textDisabled,
+                        (weekday) => Semantics(
+                          label: weekday.spoken,
+                          child: ExcludeSemantics(
+                            child: SizedBox(
+                              width: cellExtent,
+                              height: cellExtent,
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  weekday.short,
+                                  style: AppTypography.labelSmall.copyWith(
+                                    color: AppColors.of(context).textSecondary,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -120,7 +137,7 @@ class CalendarHeatmapCard extends StatelessWidget {
                       )
                       .toList(growable: false),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: AppSpacing.xxs),
                 Expanded(
                   child: SingleChildScrollView(
                     reverse: true,
@@ -131,7 +148,7 @@ class CalendarHeatmapCard extends StatelessWidget {
                           .map(
                             (week) => Column(
                               children: week
-                                  .map((day) => _buildDayCell(context, day))
+                                  .map((day) => _buildDayCell(context, day, cellExtent))
                                   .toList(growable: false),
                             ),
                           )
@@ -180,33 +197,40 @@ class CalendarHeatmapCard extends StatelessWidget {
     );
   }
 
-  Widget _buildDayCell(BuildContext context, CalendarHeatmapDay day) {
+  Widget _buildDayCell(
+    BuildContext context, CalendarHeatmapDay day, double cellExtent) {
     if (!day.isInPeriod) {
-      return const SizedBox(width: 18, height: 18);
+      return SizedBox(width: cellExtent, height: cellExtent);
     }
 
     final label = day.workoutCount == 0
         ? '${_formatDate(day.date)} · sin sesión'
         : '${_formatDate(day.date)} · ${day.workoutCount} ${day.workoutCount == 1 ? 'sesión' : 'sesiones'}';
 
-    return Semantics(
-      label: label,
-      excludeSemantics: true,
-      child: Tooltip(
-        message: label,
-        child: Container(
-          width: 14,
-          height: 14,
-          margin: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: day.isActive
-                ? AppColors.of(context).primary.withValues(alpha: 0.82)
-                : AppColors.of(context).surfaceHigh,
-            borderRadius: BorderRadius.circular(4),
-            border: Border.all(
-              color: day.isActive
-                  ? AppColors.of(context).primary
-                  : AppColors.of(context).surfaceBorder,
+    return SizedBox(
+      width: cellExtent,
+      height: cellExtent,
+      child: Semantics(
+        label: label,
+        excludeSemantics: true,
+        child: Tooltip(
+          message: label,
+          child: Center(
+            child: Container(
+              width: 14,
+              height: 14,
+              margin: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: day.isActive
+                    ? AppColors.of(context).primary.withValues(alpha: 0.82)
+                    : AppColors.of(context).surfaceHigh,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: day.isActive
+                      ? AppColors.of(context).primary
+                      : AppColors.of(context).surfaceBorder,
+                ),
+              ),
             ),
           ),
         ),
