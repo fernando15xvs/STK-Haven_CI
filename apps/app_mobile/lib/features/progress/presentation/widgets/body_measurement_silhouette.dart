@@ -4,6 +4,7 @@ import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:core/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 
 /// Only actual recorded circumferences are allowed here.
@@ -184,7 +185,22 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               // The anatomical PNG has a 0.4 width/height ratio. Reserve
               // generous outer margins for readable left/right callouts.
               final w = limits.maxWidth;
-              final h = math.max(405.0, math.min(570.0, w * 1.43));
+              // Callouts must grow with accessibility text instead of
+              // clipping two rows in a hard-coded 42px badge. Increase
+              // canvas height enough to avoid same-side overlap at 320px.
+              final scaler = MediaQuery.textScalerOf(context);
+              final labelHeight = math.max(
+                42.0,
+                scaler.scale(AppTypography.labelSmall.fontSize!) *
+                    AppTypography.labelSmall.height! +
+                    scaler.scale(AppTypography.bodySmall.fontSize!) *
+                    AppTypography.bodySmall.height! +
+                    AppSpacing.xxs * 2 + AppSpacing.xs,
+              );
+              final h = math.max(
+                math.max(405.0, labelHeight / 0.11),
+                math.min(570.0, w * 1.43),
+              );
               final figureWidth = w * .57;
               final figureHeight = h * .95;
               final figureLeft = (w - figureWidth) / 2;
@@ -193,7 +209,6 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               final ink = accent.primary;
               const labelWidthFactor = .265;
               final badgeWidth = w * labelWidthFactor;
-              final labelHeight = 42.0;
               final anchors = [
                 for (final c in positions)
                   Offset(figureLeft + c.anchor.dx * figureWidth,
@@ -238,7 +253,6 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
                         value:SilhouetteMeasurementData.latest(
                           widget.measurements,positions[i].metric),
                         selected:widget.selected == positions[i].metric,
-                        color:ink,
                         onPressed:()=>_open(positions[i].metric),
                       ),
                     ),
@@ -291,39 +305,59 @@ class _MeasureCalloutBadge extends StatelessWidget {
   final String shortName;
   final SilhouetteMeasurement? value;
   final bool selected;
-  final Color color;
   final VoidCallback onPressed;
   const _MeasureCalloutBadge({
     super.key,required this.metric,required this.shortName,
-    required this.value,required this.selected,required this.color,
+    required this.value,required this.selected,
     required this.onPressed,
   });
   @override
   Widget build(BuildContext context) {
-    final bright = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: selected ? color : bright?const Color(0xFF1C2635):Colors.white,
-      borderRadius:BorderRadius.circular(9),
-      child:InkWell(
-        borderRadius:BorderRadius.circular(9),onTap:onPressed,
-        child:Container(
-          decoration:BoxDecoration(
-            borderRadius:BorderRadius.circular(9),
-            border:Border.all(color:color.withValues(alpha:.55)),
+    final palette = AppColors.of(context);
+    final foreground = selected ? palette.onPrimary : palette.textPrimary;
+    return Semantics(
+      button: true,
+      label: '${metric.label}: ${SilhouetteMeasurementData.formatted(value)}',
+      child: Material(
+        color: selected ? palette.primary : palette.surfaceHigh,
+        borderRadius: AppRadius.sm_,
+        child: InkWell(
+          borderRadius: AppRadius.sm_,
+          onTap: onPressed,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.sm_,
+              border: Border.all(
+                color: selected ? palette.primary : palette.surfaceBorder,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xxs,
+              vertical: AppSpacing.xxs,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  shortName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelSmall.copyWith(color: foreground),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  value == null ? '—' : '${value!.value.toStringAsFixed(1)} cm',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodySmall.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                    color: selected ? palette.onPrimary : palette.primary,
+                  ),
+                ),
+              ],
+            ),
           ),
-          padding:const EdgeInsets.symmetric(horizontal:4,vertical:3),
-          child:Column(mainAxisAlignment:MainAxisAlignment.center,
-            children:[
-              Text(shortName,maxLines:1,overflow:TextOverflow.ellipsis,
-                style:TextStyle(fontSize:10.0,fontWeight:FontWeight.w500,
-                  color:selected?AppColors.of(context).onPrimary:
-                    bright?Colors.white:const Color(0xFF192132))),
-              const SizedBox(height:2),
-              Text(value==null?'—':'${value!.value.toStringAsFixed(1)} cm',
-                maxLines:1,style:TextStyle(
-                  fontSize:12,fontWeight:FontWeight.w800,
-                  color:selected?AppColors.of(context).onPrimary:color)),
-            ]),
         ),
       ),
     );

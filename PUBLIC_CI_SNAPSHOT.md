@@ -1,9 +1,8 @@
 # STK Haven public CI snapshot
-
 Canonical private repo: fernando15xvs/STK-Haven
-Canonical PR: #49 DES-02 Outfit tabular KPI alignment
-Source head: 8263abd6cbb0b32ecc8c4c27da379b742da10320
-Source branch: fix/progress-tabular-kpis-theme-20261104
-Changed source files (5): apps/app_mobile/lib/features/progress/presentation/widgets/muscle_heatmap_grid.dart, apps/app_mobile/lib/features/progress/presentation/widgets/progress_consistency_metrics.dart, apps/app_mobile/test/features/progress/progress_consistency_metrics_test.dart, apps/app_mobile/test/muscle_balance_panel_test.dart, docs/progress/PROGRESS_TABULAR_KPI_DESIGN_CONTRACT_20261104.md
+Private PR: #50, DES-01/03/04 silhouette callout accessibility scope
+Source HEAD: 692f8a9ff7e0930312d1a5be882542194eacd350
+Source branch: fix/progress-measurement-callouts-theme-20261104
+Changed files (3): apps/app_mobile/lib/features/progress/presentation/widgets/body_measurement_silhouette.dart, apps/app_mobile/test/features/progress/progress_measurement_badge_theme_test.dart, docs/progress/PROGRESS_SILHOUETTE_BADGE_TYPOGRAPHY_CONTRACT_20261104.md
 
-Previous source PR #48 merged in private main (d606c4a), mirror source parity 5/5 and CI 7/7. Public mirror is exclusively an Actions runner on main (no product PRs). CI-only port discovery and newest-snapshot concurrency remain enabled. No personal data, Hive backups or Apple certificates are included.
+Public mirror main for GitHub Actions only. No PR on mirror; no hosted Supabase changes, credentials, signing certificates, user records or private Git history. Previous #49 was merged into source and validated SUCCESS 7/7 (#41938723611).
