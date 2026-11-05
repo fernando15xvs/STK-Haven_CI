@@ -261,9 +261,11 @@ class _SummaryCard extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // The wrapping area is narrower than the outer card by its padding.
-        // Calculate tracks from actual inner width to keep rows aligned.
-        final availableWidth = constraints.maxWidth - 2 * AppSpacing.sm;
+        // Account for both horizontal paddings AND the one-pixel border on
+        // either side. Reserve one additional logical pixel so fractional
+        // widths cannot wrap the third item onto an unintended second row.
+        final availableWidth =
+            constraints.maxWidth - 2 * AppSpacing.sm - 3.0;
         final columns =
             ((availableWidth + AppSpacing.xs) /
                 (minTileWidth + AppSpacing.xs)).floor().clamp(1, 3);
