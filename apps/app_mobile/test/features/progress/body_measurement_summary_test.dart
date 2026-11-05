@@ -84,6 +84,7 @@ void main() {
           expect(find.text('0.75'), findsOneWidget);
           expect(find.text('178.0 cm'), findsOneWidget);
           expect(tester.takeException(), isNull);
+          semantics.dispose();
         },
       );
     }
@@ -114,7 +115,6 @@ void main() {
           addTearDown(tester.view.resetPhysicalSize);
           addTearDown(tester.view.resetDevicePixelRatio);
           final semantics = tester.ensureSemantics();
-          addTearDown(semantics.dispose);
           final brightness = dark ? Brightness.dark : Brightness.light;
           await tester.pumpWidget(MaterialApp(
             theme: ThemeData(
