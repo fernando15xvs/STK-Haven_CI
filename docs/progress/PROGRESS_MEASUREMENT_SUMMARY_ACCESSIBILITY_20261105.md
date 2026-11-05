@@ -15,7 +15,7 @@ aunque los datos originales sean correctos.
 - Usar `AppTypography` (familia Outfit y números tabulares), `AppSpacing`,
   `AppRadius` y colores semánticos `AppColors.of(context)`.
 - Las cuatro tarjetas de la misma fila crecen en función de
-  `MediaQuery.textScalerOf(context)`: 119 px a 1.0, 215 px a 1.6,
+  `MediaQuery.textScalerOf(context)`: 136 px a 1.0, 232 px a 1.6,
   sin disminuir el tamaño de texto con `FittedBox`.
 - Permitir hasta dos líneas para título, cifra y leyenda; conservar la
   distribución 2×2 de `Wrap` y la lectura mediante scroll en tamaños compactos.

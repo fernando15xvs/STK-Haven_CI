@@ -196,7 +196,7 @@ class _SummaryTile extends StatelessWidget {
     // Grow both columns equally and let long labels wrap instead of shrinking.
     final scale = (MediaQuery.textScalerOf(context).scale(14) / 14)
         .clamp(1.0, 1.6).toDouble();
-    final tileHeight = 119.0 + 160.0 * (scale - 1.0);
+    final tileHeight = 136.0 + 160.0 * (scale - 1.0);
     final spokenValue = value == '—'
         ? 'Sin registro'
         : '$value${suffix.isEmpty ? '' : ' $suffix'}';
