@@ -3,6 +3,7 @@ import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:flutter/material.dart';
+import 'package:gym_tracker/core/theme/app_colors.dart';
 
 /// Independent latest observation for partial records. Historical measurements
 /// are never interpreted as zero and future measurements are not invented.
@@ -95,22 +96,22 @@ class BodyMeasurementSummary extends StatelessWidget {
       key: const Key('measurement_summary'),
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
               Expanded(child: Text('Resumen de medidas',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800))),
+                style: AppTypography.headlineMedium.copyWith(
+                  color: colors.textPrimary, fontWeight: FontWeight.w800))),
               Icon(Icons.insights_outlined, size: 20, color: colors.primary),
             ]),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             LayoutBuilder(builder: (context, constraints) {
-              final tileWidth = (constraints.maxWidth - 10) / 2;
+              final tileWidth = (constraints.maxWidth - AppSpacing.sm) / 2;
               return Wrap(
-                spacing: 10,
-                runSpacing: 10,
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.sm,
                 children: [
                   SizedBox(width: tileWidth, child: _SummaryTile(
                     testKey: 'summary_weight',
@@ -157,11 +158,11 @@ class BodyMeasurementSummary extends StatelessWidget {
                 ],
               );
             }),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Datos reales de tus registros. La relación cintura/cadera '
               'solo aparece cuando ambas medidas se guardaron juntas.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              style: AppTypography.bodySmall.copyWith(
                 color: colors.textSecondary),
             ),
           ],
@@ -191,50 +192,62 @@ class _SummaryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      key: Key(testKey),
-      height: 119,
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: colors.surfaceHigh,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: colors.surfaceBorder),
-      ),
-      child: Column(
+    // A fixed 119px tile clipped values and supporting labels with large text.
+    // Grow both columns equally and let long labels wrap instead of shrinking.
+    final scale = (MediaQuery.textScalerOf(context).scale(14) / 14)
+        .clamp(1.0, 1.6).toDouble();
+    final tileHeight = 119.0 + 160.0 * (scale - 1.0);
+    final spokenValue = value == '—'
+        ? 'Sin registro'
+        : '$value${suffix.isEmpty ? '' : ' $suffix'}';
+    return Semantics(
+      container: true,
+      label: '$title. $spokenValue. $supporting',
+      child: ExcludeSemantics(
+        child: Container(
+          key: Key(testKey),
+          height: tileHeight,
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: colors.surfaceHigh,
+            borderRadius: AppRadius.md_,
+            border: Border.all(color: colors.surfaceBorder),
+          ),
+          child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
             Icon(icon, color: colors.primary, size: 18),
-            const SizedBox(width: 5),
+            const SizedBox(width: AppSpacing.xxs),
             Expanded(child: Text(title,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              style: AppTypography.labelMedium.copyWith(
                 color: colors.textSecondary),
             )),
           ]),
-          const SizedBox(height: 7),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '$value${suffix.isEmpty ? '' : ' $suffix'}',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: colors.textPrimary,
-              ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '$value${suffix.isEmpty ? '' : ' $suffix'}',
+            maxLines: 2,
+            softWrap: true,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.monoLarge.copyWith(
+              color: colors.textPrimary,
             ),
           ),
           const Spacer(),
           Text(supporting,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: colors.primary,
+            style: AppTypography.labelSmall.copyWith(
+              color: colors.textSecondary,
             ),
           ),
         ],
       ),
+    ),
+    ),
     );
   }
 }

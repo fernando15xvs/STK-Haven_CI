@@ -103,4 +103,64 @@ void main() {
     expect(find.text('Registra ambas juntas'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  for (final width in [320.0, 390.0]) {
+    for (final dark in [false, true]) {
+      testWidgets('measurement tiles wrap at ${width.toInt()}px / 160% / '
+          '${dark ? 'dark' : 'light'} and speak complete values',
+        (tester) async {
+          tester.view.physicalSize = Size(width, 850);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final semantics = tester.ensureSemantics();
+          addTearDown(semantics.dispose);
+          final brightness = dark ? Brightness.dark : Brightness.light;
+          await tester.pumpWidget(MaterialApp(
+            theme: ThemeData(
+              brightness: brightness,
+              extensions: [
+                AppColors.from(AppearanceSettings(), brightness),
+              ],
+            ),
+            home: MediaQuery(
+              data: MediaQueryData(
+                textScaler: const TextScaler.linear(1.6),
+              ),
+              child: Scaffold(
+                body: SingleChildScrollView(
+                  child: BodyMeasurementSummary(
+                    measurements: [_past, _latest, _partial],
+                    weightUnit: WeightUnit.kg,
+                  ),
+                ),
+              ),
+            ),
+          ));
+          await tester.pumpAndSettle();
+          for (final key in ['summary_weight', 'summary_fat',
+              'summary_waist_hip', 'summary_height']) {
+            final tile = tester.widget<Container>(find.byKey(Key(key)));
+            expect(tester.getSize(find.byKey(Key(key))).height, 215);
+            expect(tile.padding, const EdgeInsets.all(AppSpacing.sm));
+          }
+          expect(find.text('178.0 cm'), findsOneWidget);
+          expect(find.text('Agrégala en Nueva medida'), findsNothing);
+          expect(
+            find.bySemanticsLabel(
+              RegExp(r'Altura.*178\.0 cm.*Última altura registrada'),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.bySemanticsLabel(
+              RegExp(r'Cintura / cadera.*0\.75.*Misma fecha'),
+            ),
+            findsOneWidget,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
 }
