@@ -1,6 +1,7 @@
 import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
+import 'package:core/features/workout/application/workout_set_record_status.dart';
 import 'package:flutter/material.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 
@@ -8,16 +9,24 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 class ExerciseHistorySetRow extends StatelessWidget {
   final WorkoutSet set;
   final WeightUnit weightUnit;
+  /// Only supply when the set has an explicitly recorded skip/failure action.
+  /// A historical false `completed` value does NOT provide that evidence.
+  final WorkoutSetOutcomeEvidence? recordedOutcome;
 
   const ExerciseHistorySetRow({
     super.key,
     required this.set,
     required this.weightUnit,
+    this.recordedOutcome,
   });
 
   @override
   Widget build(BuildContext context) {
     final palette = AppColors.of(context);
+    final status = WorkoutSetRecordStatusPolicy.fromSet(
+      set,
+      recordedOutcome: recordedOutcome,
+    );
     final value =
         '${FitnessFormatter.formatWeight(set.weight, weightUnit)} × ${set.reps}';
 
@@ -40,7 +49,7 @@ class ExerciseHistorySetRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (!set.completed) ...[
+          if (status != WorkoutSetRecordStatus.completed) ...[
             const SizedBox(width: AppSpacing.xs),
             DecoratedBox(
               decoration: BoxDecoration(
@@ -54,10 +63,14 @@ class ExerciseHistorySetRow extends StatelessWidget {
                   vertical: AppSpacing.xxs,
                 ),
                 child: Text(
-                  'Pendiente',
-                  key: const ValueKey('history_set_pending'),
+                  status.label,
+                  key: ValueKey('history_set_status_${status.name}'),
                   style: AppTypography.labelMedium.copyWith(
-                    color: palette.textSecondary,
+                    color: switch (status) {
+                      WorkoutSetRecordStatus.skipped => palette.warning,
+                      WorkoutSetRecordStatus.failed => palette.error,
+                      _ => palette.textSecondary,
+                    },
                   ),
                 ),
               ),

@@ -1,8 +1,9 @@
-# STK Haven public CI snapshot
-Canonical private repo: fernando15xvs/STK-Haven
-Private PR: #50, DES-01/03/04 silhouette callout accessibility scope
-Source HEAD: 692f8a9ff7e0930312d1a5be882542194eacd350
-Source branch: fix/progress-measurement-callouts-theme-20261104
-Changed files (3): apps/app_mobile/lib/features/progress/presentation/widgets/body_measurement_silhouette.dart, apps/app_mobile/test/features/progress/progress_measurement_badge_theme_test.dart, docs/progress/PROGRESS_SILHOUETTE_BADGE_TYPOGRAPHY_CONTRACT_20261104.md
+# CI-only snapshot for STK Haven
+Private canonical repository: fernando15xvs/STK-Haven
+Canonical PR #51 DATA-09 partial, set status evidence without Hive migrations
+HEAD 2d9e6c693962ea7f2479e59dd45be52f290dded8
+Branch fix/progress-set-status-evidence-20261104
+Changed product files (5): apps/app_mobile/lib/features/exercises/presentation/widgets/exercise_history_set_row.dart, apps/app_mobile/test/features/progress/progress_set_status_semantics_test.dart, docs/progress/PROGRESS_SET_STATUS_EVIDENCE_CONTRACT_20261104.md, packages/core/lib/features/workout/application/workout_set_record_status.dart, packages/core/test/features/workout/application/workout_set_record_status_test.dart
 
-Public mirror main for GitHub Actions only. No PR on mirror; no hosted Supabase changes, credentials, signing certificates, user records or private Git history. Previous #49 was merged into source and validated SUCCESS 7/7 (#41938723611).
+PR #50 merged in canonical main at 8bb41fa; CI #41941825531 SUCCESS 7/7 on mirror.
+Public mirror main is exclusively GitHub Actions, no PR and no user data, signing credentials or private Git history. DATA-09 remains open pending real evidence persistence/decision.
