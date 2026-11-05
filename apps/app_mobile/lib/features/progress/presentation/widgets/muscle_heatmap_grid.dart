@@ -261,11 +261,14 @@ class _SummaryCard extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        // The wrapping area is narrower than the outer card by its padding.
+        // Calculate tracks from actual inner width to keep rows aligned.
+        final availableWidth = constraints.maxWidth - 2 * AppSpacing.sm;
         final columns =
-            ((constraints.maxWidth + AppSpacing.xs) /
+            ((availableWidth + AppSpacing.xs) /
                 (minTileWidth + AppSpacing.xs)).floor().clamp(1, 3);
         final tileWidth =
-            (constraints.maxWidth - AppSpacing.xs * (columns - 1)) / columns;
+            (availableWidth - AppSpacing.xs * (columns - 1)) / columns;
 
         return Container(
           key: const ValueKey('muscle_summary'),

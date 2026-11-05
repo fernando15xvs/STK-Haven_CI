@@ -289,8 +289,16 @@ void main() {
                 expect(size.width, lessThan(width));
               }
               if (width == 320 && scale == 1.6) {
-                // Small viewport + large text needs full-width cards.
+                // Small viewport + large text needs full-width rows.
                 expect(tester.getSize(totals.first).width, greaterThan(200));
+                expect(tester.getTopLeft(totals[1]).dy,
+                    greaterThan(tester.getTopLeft(totals[0]).dy));
+              }
+              if (width == 430 && scale == 1.0) {
+                // Three columns must fit inside the card padding.
+                final firstTop = tester.getTopLeft(totals.first).dy;
+                expect(tester.getTopLeft(totals[1]).dy, firstTop);
+                expect(tester.getTopLeft(totals[2]).dy, firstTop);
               }
               expect(find.bySemanticsLabel(
                   RegExp(r'^Series directas: \d+$')), findsOneWidget);
