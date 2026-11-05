@@ -235,6 +235,8 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
   }
 }
 
+/// Three independent measurements; reflow rather than squeeze oversized
+/// numbers into rigid third-width slots on 320px / accessible text sizes.
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     required this.total, required this.active, required this.inactive,
@@ -242,24 +244,64 @@ class _SummaryCard extends StatelessWidget {
   final int total;
   final int active;
   final int inactive;
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Container(
-      key: const ValueKey('muscle_summary'),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border.all(color: colors.surfaceBorder),
-        borderRadius: AppRadius.lg_),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(child: _Metric(label: 'Series directas',
-          value: '$total', prominent: true)),
-        Container(height: 52, width: 1, color: colors.surfaceBorder),
-        Expanded(child: _Metric(label: 'Trabajados', value: '$active')),
-        Container(height: 52, width: 1, color: colors.surfaceBorder),
-        Expanded(child: _Metric(label: 'Sin actividad', value: '$inactive')),
-      ]),
+    final textScale =
+        (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(1.0, 2.0);
+    final longestValue = [total, active, inactive]
+        .map((value) => value.toString().length)
+        .reduce((first, second) => first > second ? first : second);
+    // Allow more space for unusually large real counts instead of hiding
+    // digits or inventing a capped/abbreviated number.
+    final minTileWidth =
+        (112.0 + (longestValue > 4 ? (longestValue - 4) * 13.0 : 0.0)) *
+        textScale;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns =
+            ((constraints.maxWidth + AppSpacing.xs) /
+                (minTileWidth + AppSpacing.xs)).floor().clamp(1, 3);
+        final tileWidth =
+            (constraints.maxWidth - AppSpacing.xs * (columns - 1)) / columns;
+
+        return Container(
+          key: const ValueKey('muscle_summary'),
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          decoration: BoxDecoration(
+            color: colors.surface,
+            border: Border.all(color: colors.surfaceBorder),
+            borderRadius: AppRadius.lg_,
+          ),
+          child: Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.sm,
+            children: [
+              SizedBox(
+                key: const ValueKey('muscle_summary_direct'),
+                width: tileWidth,
+                child: _Metric(
+                  label: 'Series directas',
+                  value: '$total',
+                  prominent: true,
+                ),
+              ),
+              SizedBox(
+                key: const ValueKey('muscle_summary_active'),
+                width: tileWidth,
+                child: _Metric(label: 'Trabajados', value: '$active'),
+              ),
+              SizedBox(
+                key: const ValueKey('muscle_summary_inactive'),
+                width: tileWidth,
+                child: _Metric(label: 'Sin actividad', value: '$inactive'),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -273,21 +315,33 @@ class _Metric extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(
-          value,
-          style: AppTypography.headlineLarge.copyWith(
-            color: prominent ? colors.primary : colors.textPrimary,
-            fontFeatures: const [FontFeature.tabularFigures()],
+    return Semantics(
+      container: true,
+      label: '$label: $value',
+      child: ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value,
+                softWrap: true,
+                style: AppTypography.headlineLarge.copyWith(
+                  color: prominent ? colors.primary : colors.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(label,
+                softWrap: true,
+                style: AppTypography.bodySmall.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 3),
-        Text(label, maxLines: 2,
-          style: AppTypography.bodySmall.copyWith(
-            color: colors.textSecondary)),
-      ]),
+      ),
     );
   }
 }

@@ -233,4 +233,83 @@ void main() {
     }
   }
 
+  // The three metrics must not compress into unreadable one-third-width
+  // columns at accessibility scales; counts and spoken units stay complete.
+  for (final width in [320.0, 375.0, 390.0, 430.0]) {
+    for (final scale in [1.0, 1.3, 1.6]) {
+      for (final brightness in [Brightness.light, Brightness.dark]) {
+        testWidgets(
+          'muscle KPIs reflow ${width.toInt()}px / ${scale.toStringAsFixed(1)} '
+          '/ ${brightness.name} without lost counts',
+          (tester) async {
+            tester.view.physicalSize = Size(width, 850);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+            final semantics = tester.ensureSemantics();
+            try {
+              final colors = AppColors.from(
+                AppearanceSettings(
+                  accent: AppAccent.rose,
+                  oledBlack: brightness == Brightness.dark,
+                ),
+                brightness,
+              );
+              await tester.pumpWidget(ProviderScope(
+                overrides: [
+                  exerciseListProvider.overrideWith(_Exercises.new),
+                  routineListProvider.overrideWith(_Routines.new),
+                  workoutHistoryProvider.overrideWith(_History.new),
+                ],
+                child: MaterialApp(
+                  theme: ThemeData(
+                    brightness: brightness,
+                    fontFamily: 'Outfit',
+                    extensions: [colors],
+                  ),
+                  home: MediaQuery(
+                    data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+                    child: const Scaffold(body: MuscleHeatmapGrid()),
+                  ),
+                ),
+              ));
+              await tester.pumpAndSettle();
+              final summary = find.byKey(const ValueKey('muscle_summary'));
+              await tester.ensureVisible(summary);
+              await tester.pumpAndSettle();
+              final totals = [
+                find.byKey(const ValueKey('muscle_summary_direct')),
+                find.byKey(const ValueKey('muscle_summary_active')),
+                find.byKey(const ValueKey('muscle_summary_inactive')),
+              ];
+              for (final tile in totals) {
+                expect(tile, findsOneWidget);
+                final size = tester.getSize(tile);
+                expect(size.width, greaterThan(0));
+                expect(size.width, lessThan(width));
+              }
+              if (width == 320 && scale == 1.6) {
+                // Small viewport + large text needs full-width cards.
+                expect(tester.getSize(totals.first).width, greaterThan(200));
+              }
+              expect(find.bySemanticsLabel(
+                  RegExp(r'^Series directas: \d+$')), findsOneWidget);
+              expect(find.bySemanticsLabel(
+                  RegExp(r'^Trabajados: \d+$')), findsOneWidget);
+              expect(find.bySemanticsLabel(
+                  RegExp(r'^Sin actividad: \d+$')), findsOneWidget);
+              expect(
+                AppColors.contrast(colors.textSecondary, colors.surface),
+                greaterThanOrEqualTo(4.5),
+              );
+              expect(tester.takeException(), isNull);
+            } finally {
+              semantics.dispose();
+            }
+          },
+        );
+      }
+    }
+  }
+
 }
