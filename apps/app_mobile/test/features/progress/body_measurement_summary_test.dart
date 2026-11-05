@@ -4,6 +4,7 @@ import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/body_measurement_summary.dart';
 
 final _past = BodyMeasurement(
