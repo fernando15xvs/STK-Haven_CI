@@ -60,7 +60,12 @@ class _ConsistencyValue extends StatelessWidget {
         children: [
           Text(
             value,
-            style: AppTypography.headlineMedium,
+            style: AppTypography.headlineMedium.copyWith(
+              color: AppColors.of(context).textPrimary,
+              // Outfit remains the only family; tabular figures prevent
+              // horizontal jitter when an active period or unit changes.
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

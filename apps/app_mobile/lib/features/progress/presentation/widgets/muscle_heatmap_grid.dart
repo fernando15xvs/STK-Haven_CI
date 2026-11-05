@@ -262,8 +262,13 @@ class _Metric extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(value, style: AppTypography.headlineLarge.copyWith(
-          color: prominent ? colors.primary : colors.textPrimary)),
+        Text(
+          value,
+          style: AppTypography.headlineLarge.copyWith(
+            color: prominent ? colors.primary : colors.textPrimary,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
         const SizedBox(height: 3),
         Text(label, maxLines: 2,
           style: AppTypography.bodySmall.copyWith(

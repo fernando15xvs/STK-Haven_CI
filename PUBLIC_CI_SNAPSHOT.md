@@ -1,8 +1,9 @@
-# STK Haven CI-only snapshot
+# STK Haven public CI snapshot
 
 Canonical private repo: fernando15xvs/STK-Haven
-PR: #48 UX-13/14
-Exact source head: 3bee1898aa07eb389742b853edfb307cbf852257
-Canonical files (5): apps/app_mobile/lib/features/exercises/presentation/pages/exercise_detail_page.dart, apps/app_mobile/lib/features/exercises/presentation/pages/exercise_history_page.dart, apps/app_mobile/lib/features/exercises/presentation/pages/exercise_library_page.dart, apps/app_mobile/test/features/progress/progress_context_navigation_test.dart, docs/progress/PROGRESS_NAVIGATION_CONTEXT_TESTS_20261104.md
+Canonical PR: #49 DES-02 Outfit tabular KPI alignment
+Source head: 8263abd6cbb0b32ecc8c4c27da379b742da10320
+Source branch: fix/progress-tabular-kpis-theme-20261104
+Changed source files (5): apps/app_mobile/lib/features/progress/presentation/widgets/muscle_heatmap_grid.dart, apps/app_mobile/lib/features/progress/presentation/widgets/progress_consistency_metrics.dart, apps/app_mobile/test/features/progress/progress_consistency_metrics_test.dart, apps/app_mobile/test/muscle_balance_panel_test.dart, docs/progress/PROGRESS_TABULAR_KPI_DESIGN_CONTRACT_20261104.md
 
-Previous CI #41929958345 attempt 1 was canceled after navigation tests hit 10-minute Flutter FakeAsync timeouts due to awaiting Scrollable.ensureVisible with nonzero duration. The newest canonical head changes to Duration.zero for immediate scroll. Public mirror CI-only workflow now cancels old stale in-progress snapshots, allowing current evidence to run; CI-only port discovery remains intact. No PR or product code authored on mirror.
+Previous source PR #48 merged in private main (d606c4a), mirror source parity 5/5 and CI 7/7. Public mirror is exclusively an Actions runner on main (no product PRs). CI-only port discovery and newest-snapshot concurrency remain enabled. No personal data, Hive backups or Apple certificates are included.

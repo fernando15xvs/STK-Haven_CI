@@ -98,6 +98,18 @@ void main() {
     expect(find.byKey(const ValueKey('muscle_shared_period')), findsOneWidget);
     expect(find.text('1M'), findsOneWidget);
     expect(find.byKey(const ValueKey('muscle_summary')), findsOneWidget);
+    final summaryDigits = tester.widgetList<Text>(
+      find.descendant(
+        of: find.byKey(const ValueKey('muscle_summary')),
+        matching: find.byType(Text),
+      ),
+    ).where((value) => int.tryParse(value.data ?? '') != null).toList();
+    expect(summaryDigits, hasLength(3));
+    for (final text in summaryDigits) {
+      expect(text.style?.fontFamily, 'Outfit');
+      expect(text.style?.fontFeatures,
+          contains(const FontFeature.tabularFigures()));
+    }
     expect(find.textContaining('Hay etiquetas antiguas por clasificar'),
         findsOneWidget);
     expect(find.textContaining('Indirecto estimado:'), findsNothing);

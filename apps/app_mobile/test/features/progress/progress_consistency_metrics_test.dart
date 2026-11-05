@@ -13,7 +13,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final colors = AppColors.from(
-        const AppearanceSettings(),
+        AppearanceSettings(oledBlack: brightness == Brightness.dark),
         brightness,
       );
       await tester.pumpWidget(MaterialApp(
@@ -39,6 +39,21 @@ void main() {
       expect(find.text('DÍAS ACTIVOS'), findsNothing);
       expect(find.text('2.5'), findsOneWidget);
       expect(find.text('252m'), findsOneWidget);
+      for (final number in ['2.5', '252m']) {
+        final text = tester.widget<Text>(find.text(number));
+        expect(text.style?.fontFamily, 'Outfit');
+        expect(text.style?.color, colors.textPrimary);
+        expect(
+          text.style?.fontFeatures,
+          contains(const FontFeature.tabularFigures()),
+          reason: '$number must keep digits aligned without a new font',
+        );
+        expect(
+          AppColors.contrast(text.style!.color!, colors.surfaceHigh),
+          greaterThanOrEqualTo(4.5),
+          reason: 'Dark and light numeric text must be legible',
+        );
+      }
       expect(find.byType(Tooltip), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
