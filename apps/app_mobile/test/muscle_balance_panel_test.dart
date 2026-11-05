@@ -1,3 +1,5 @@
+import 'package:core/core/theme/app_palette.dart';
+import 'package:core/domain/models/appearance_settings.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
 import 'package:core/domain/models/routine.dart';
@@ -160,4 +162,75 @@ void main() {
     expect(find.byType(SegmentedButton<TimeFilter>), findsNothing);
     expect(tester.takeException(), isNull);
   });
+  for (final width in [320.0, 375.0, 390.0, 430.0]) {
+    for (final scale in [1.0, 1.3, 1.6]) {
+      for (final brightness in [Brightness.light, Brightness.dark]) {
+        testWidgets(
+          'muscle week comparison ${width.toInt()}px / ${scale.toStringAsFixed(1)} '
+          '/ ${brightness.name} wraps and reads complete dates',
+          (tester) async {
+            tester.view.physicalSize = Size(width, 850);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+            final semantics = tester.ensureSemantics();
+            try {
+              final colors = AppColors.from(
+                AppearanceSettings(
+                  accent: AppAccent.violet,
+                  oledBlack: brightness == Brightness.dark,
+                ),
+                brightness,
+              );
+              await tester.pumpWidget(ProviderScope(
+                overrides: [
+                  exerciseListProvider.overrideWith(_Exercises.new),
+                  routineListProvider.overrideWith(_Routines.new),
+                  workoutHistoryProvider.overrideWith(_History.new),
+                ],
+                child: MaterialApp(
+                  theme: ThemeData(
+                    brightness: brightness,
+                    fontFamily: 'Outfit',
+                    extensions: [colors],
+                  ),
+                  home: MediaQuery(
+                    data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+                    child: const Scaffold(body: MuscleHeatmapGrid()),
+                  ),
+                ),
+              ));
+              await tester.pumpAndSettle();
+              await tester.scrollUntilVisible(
+                find.byKey(const ValueKey('muscle_week_comparison')),
+                140,
+                scrollable: find.byType(Scrollable).first,
+              );
+              await tester.pumpAndSettle();
+              expect(
+                find.bySemanticsLabel(RegExp(
+                  r'Semana anterior desde el \d{2}/\d{2}/\d{4}\. '
+                  r'Semana reciente desde el \d{2}/\d{2}/\d{4}\.',
+                )),
+                findsOneWidget,
+              );
+              final dateLabel = tester.widget<Text>(
+                find.descendant(
+                  of: find.byKey(const ValueKey('muscle_week_comparison')),
+                  matching: find.textContaining(' → '),
+                ),
+              );
+              expect(dateLabel.style?.fontFamily, 'Outfit');
+              expect(dateLabel.style?.color, colors.textSecondary);
+              expect(dateLabel.softWrap, isTrue);
+              expect(tester.takeException(), isNull);
+            } finally {
+              semantics.dispose();
+            }
+          },
+        );
+      }
+    }
+  }
+
 }

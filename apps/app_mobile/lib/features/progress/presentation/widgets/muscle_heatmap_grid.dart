@@ -148,10 +148,24 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
                     color: colors.textSecondary)),
               ],
             )),
-            Text('${DateFormat('dd/MM').format(report.previousWeekStart)}'
-              ' → ${DateFormat('dd/MM').format(report.recentWeekStart)}',
-              style: AppTypography.labelMedium.copyWith(
-                color: colors.textSecondary)),
+            Flexible(
+              child: Semantics(
+                label: 'Semana anterior desde el '
+                  '${DateFormat('dd/MM/yyyy').format(report.previousWeekStart)}. '
+                  'Semana reciente desde el '
+                  '${DateFormat('dd/MM/yyyy').format(report.recentWeekStart)}.',
+                child: ExcludeSemantics(
+                  child: Text(
+                    '${DateFormat('dd/MM').format(report.previousWeekStart)}'
+                    ' → ${DateFormat('dd/MM').format(report.recentWeekStart)}',
+                    textAlign: TextAlign.end,
+                    softWrap: true,
+                    style: AppTypography.labelMedium.copyWith(
+                      color: colors.textSecondary),
+                  ),
+                ),
+              ),
+            ),
           ]),
         ),
         const SizedBox(height: 16),
