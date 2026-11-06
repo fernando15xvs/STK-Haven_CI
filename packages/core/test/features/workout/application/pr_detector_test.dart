@@ -217,5 +217,44 @@ void main() {
       expect(maxWeightPRs.length, 1);
       expect(maxWeightPRs.first.newValue, 80.0); // Should ignore the 200kg sets
     });
+    test('GAM-01: real PR during partial workout is valid, but skipped sets are not',
+        () {
+      final session = WorkoutSession(
+        id: 'partial-with-pr',
+        routineNameSnapshot: 'Push',
+        startedAt: DateTime(2026, 11, 5, 8),
+        finishedAt: DateTime(2026, 11, 5, 8, 40),
+        durationSeconds: 2400,
+        exercises: const [
+          WorkoutExercise(
+            exerciseId: 'press',
+            exerciseNameSnapshot: 'Press',
+            muscleGroupSnapshot: 'Pecho',
+            sets: [
+              WorkoutSet(weight: 80, reps: 8, completed: true),
+              WorkoutSet(weight: 110, reps: 0,
+                  completed: false, recordedOutcome: 'skipped'),
+              WorkoutSet(weight: 105, reps: 0,
+                  completed: false, recordedOutcome: 'failed'),
+              WorkoutSet(weight: 115, reps: 10, completed: false),
+            ],
+          ),
+        ],
+      );
+      final detected = PRDetector.analyze(
+        session: session,
+        getBestPreviousValue: (_, type) =>
+            type == PRType.maxWeight ? 75.0 : 1000.0,
+      );
+      expect(detected.where((pr) => pr.type == PRType.maxWeight),
+          hasLength(1));
+      expect(detected.single.newValue, 80);
+      final repeated = PRDetector.analyze(
+        session: session,
+        getBestPreviousValue: (_, __) => 1000.0,
+      );
+      expect(repeated, isEmpty);
+    });
+
   });
 }

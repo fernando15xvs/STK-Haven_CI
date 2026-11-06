@@ -128,7 +128,10 @@ class WorkoutAnalysisService {
     // 4. Save PRs
     if (newPRs.isNotEmpty) {
       await prRepo.savePRs(newPRs);
-      _ref.read(gamificationProvider.notifier).checkFirstPr();
+      // A verified PR belongs to the performed set even if the session is
+      // partial. This is independent of workout XP/program advancement.
+      // Wait for the idempotent achievement write before finishing analysis.
+      await _ref.read(gamificationProvider.notifier).checkFirstPr();
     }
 
     // 5. Build Result

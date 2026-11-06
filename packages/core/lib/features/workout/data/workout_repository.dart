@@ -66,6 +66,7 @@ class WorkoutRepository {
                       weight: s.weight,
                       reps: s.reps,
                       completed: s.completed,
+                      recordedOutcome: s.completed ? null : s.recordedOutcome,
                       rir: s.rir,
                       warmup: s.warmup,
                       restSeconds: s.restSeconds,
@@ -123,6 +124,7 @@ class WorkoutRepository {
                       weight: s.weight,
                       reps: s.reps,
                       completed: s.completed,
+                      recordedOutcome: s.completed ? null : s.recordedOutcome,
                       rir: s.rir,
                       setType: WorkoutSetType.values.firstWhere(
                         (type) => type.name == s.setType,

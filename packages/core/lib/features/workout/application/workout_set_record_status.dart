@@ -1,7 +1,7 @@
 import 'package:core/domain/models/workout_session.dart';
 
-/// User-visible state of a recorded set. This is deliberately NOT serialized:
-/// legacy WorkoutSet only contains `completed` and cannot prove intent.
+/// User-visible status; new explicit outcomes persist independently of
+/// the legacy completed bit, which must never imply failure.
 enum WorkoutSetRecordStatus {
   pending,
   completed,
@@ -29,7 +29,7 @@ class WorkoutSetRecordStatusPolicy {
   const WorkoutSetRecordStatusPolicy._();
 
   /// Backward compatible. An unfinished historical set is always "Pendiente"
-  /// unless a caller can provide real, explicit evidence to the contrary.
+  /// unless an explicit action saved its outcome.
   ///
   /// This policy does not guess from reps, weight, RIR, session completion,
   /// remaining planned sets or an interrupted workout.
@@ -38,7 +38,12 @@ class WorkoutSetRecordStatusPolicy {
     WorkoutSetOutcomeEvidence? recordedOutcome,
   }) {
     if (set.completed) return WorkoutSetRecordStatus.completed;
-    return switch (recordedOutcome) {
+    final evidence = recordedOutcome ?? switch (set.recordedOutcome) {
+      'skipped' => WorkoutSetOutcomeEvidence.skipped,
+      'failed' => WorkoutSetOutcomeEvidence.failed,
+      _ => null,
+    };
+    return switch (evidence) {
       WorkoutSetOutcomeEvidence.skipped => WorkoutSetRecordStatus.skipped,
       WorkoutSetOutcomeEvidence.failed => WorkoutSetRecordStatus.failed,
       null => WorkoutSetRecordStatus.pending,

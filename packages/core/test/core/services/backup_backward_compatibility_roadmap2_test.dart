@@ -119,6 +119,7 @@ void main() {
     expect(set.leftRir, isNull);
     expect(set.rightRir, isNull);
     expect(set.sideRestSeconds, 60);
+    expect(set.recordedOutcome, isNull);
     expect(set.setType, 'working');
   });
 
@@ -201,4 +202,44 @@ void main() {
     expect(set.rightRir, 1);
     expect(set.sideRestSeconds, 45);
   });
+  test('DATA-09: current backups preserve explicit set outcomes', () async {
+    final history = Hive.box<HiveWorkoutSession>(HiveBoxes.history);
+    await history.clear();
+    await history.put('outcomes', HiveWorkoutSession(
+      id: 'outcomes',
+      routineNameSnapshot: 'Outcomes',
+      startedAt: DateTime(2026, 11, 5, 8),
+      finishedAt: DateTime(2026, 11, 5, 9),
+      durationSeconds: 3600,
+      exercises: [
+        HiveWorkoutExercise(
+          exerciseId: 'press',
+          sets: [
+            HiveWorkoutSet(weight: 50, reps: 0,
+                completed: false, recordedOutcome: 'skipped'),
+            HiveWorkoutSet(weight: 50, reps: 0,
+                completed: false, recordedOutcome: 'failed'),
+            HiveWorkoutSet(weight: 50, reps: 0, completed: false),
+            HiveWorkoutSet(weight: 50, reps: 8, completed: true),
+          ],
+        ),
+      ],
+    ));
+    final backup = BackupService().createBackup();
+    final validated = BackupService().validateBackup(backup);
+    expect(validated.isValid, true);
+    final rawWorkouts = validated.parsedData!['workouts'] as List;
+    final rawSets = ((rawWorkouts.single as Map)['exercises'] as List)
+        .single['sets'] as List;
+    expect(rawSets.map((s) => s['recordedOutcome']).toList(),
+        ['skipped', 'failed', null, null]);
+
+    await BackupService().restoreBackup(validated.parsedData!,
+        schemaVersion: validated.schemaVersion!);
+    final restored = history.get('outcomes')!;
+    expect(restored.exercises.single.sets
+        .map((s) => s.recordedOutcome).toList(),
+        ['skipped', 'failed', null, null]);
+  });
+
 }

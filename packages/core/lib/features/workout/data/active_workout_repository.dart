@@ -84,6 +84,7 @@ class ActiveWorkoutRepository {
                         'weight': set.weight,
                         'reps': set.reps,
                         'completed': set.completed,
+                        'recordedOutcome': set.completed ? null : set.recordedOutcome,
                         'rir': set.rir,
                         'warmup': set.warmup,
                         'setType': set.setType.name,
@@ -114,6 +115,8 @@ class ActiveWorkoutRepository {
               weight: (set['weight'] as num).toDouble(),
               reps: set['reps'] as int,
               completed: set['completed'] as bool,
+              recordedOutcome: set['completed'] == true
+                  ? null : set['recordedOutcome'] as String?,
               rir: set['rir'] as int?,
               setType: WorkoutSetType.values.firstWhere(
                 (type) => type.name == set['setType'],

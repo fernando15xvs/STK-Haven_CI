@@ -45,6 +45,9 @@ class WorkoutSet {
   final double weight;
   final int reps;
   final bool completed;
+  /// Explicit recorded action: 'skipped' or 'failed'. Null means no evidence
+  /// (legacy/incomplete sets stay pending); never infer from reps or RIR.
+  final String? recordedOutcome;
   final int? rir;
   final WorkoutSetType setType;
   final int restSeconds; // fuente de verdad para el timer de descanso
@@ -71,6 +74,7 @@ class WorkoutSet {
     required this.weight,
     required this.reps,
     required this.completed,
+    this.recordedOutcome,
     this.rir,
     WorkoutSetType setType = WorkoutSetType.working,
     bool warmup = false,
@@ -197,6 +201,8 @@ class WorkoutSet {
     double? weight,
     int? reps,
     bool? completed,
+    String? recordedOutcome,
+    bool clearRecordedOutcome = false,
     int? rir,
     WorkoutSetType? setType,
     int? restSeconds,
@@ -219,6 +225,9 @@ class WorkoutSet {
       weight: weight ?? this.weight,
       reps: reps ?? this.reps,
       completed: completed ?? this.completed,
+      recordedOutcome: completed == true || clearRecordedOutcome
+          ? null
+          : (recordedOutcome ?? this.recordedOutcome),
       rir: clearRir ? null : (rir ?? this.rir),
       setType: setType ?? this.setType,
       restSeconds: restSeconds ?? this.restSeconds,
