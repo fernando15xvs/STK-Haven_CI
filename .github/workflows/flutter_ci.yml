@@ -606,6 +606,26 @@ jobs:
       - name: Build split ABI APKs
         working-directory: apps/app_mobile
         run: flutter build apk --release --split-per-abi --target lib/main_android.dart
+      # The CI build is not a physical-device test. Publish an installable,
+      # debug-signed APK with a digest so QA can verify the exact binary.
+      # Never package secrets, signing credentials or provisioning profiles.
+      - name: Verify Android debug APK and record SHA256
+        working-directory: apps/app_mobile
+        run: |
+          set -euo pipefail
+          APK="build/app/outputs/flutter-apk/app-debug.apk"
+          test -s "$APK"
+          sha256sum "$APK" > "$APK.sha256"
+          test -s "$APK.sha256"
+      - name: Upload Android debug APK for device QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-android-debug-qa
+          path: |
+            apps/app_mobile/build/app/outputs/flutter-apk/app-debug.apk
+            apps/app_mobile/build/app/outputs/flutter-apk/app-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 7
 
   ios:
     name: iOS release + profile
