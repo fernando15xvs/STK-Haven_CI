@@ -111,6 +111,21 @@ void main() {
             reason: 'initial summary layout must fit 320px');
 
         // These sections are the only owners of summary overview data.
+        // The original chart-screenshot percentages must use Spanish
+        // formatting, keep all digits visible and meet text contrast even
+        // in OLED mode with accessibility text scaled to 160%.
+        expect(find.text('+14,5%'), findsOneWidget);
+        final trend = tester.widget<Text>(find.text('+14,5%'));
+        expect(trend.style?.fontFamily, 'Outfit');
+        expect(trend.style?.color, colors.textPrimary);
+        expect(trend.style?.fontFeatures,
+            contains(const FontFeature.tabularFigures()));
+        expect(
+          AppColors.contrast(trend.style!.color!, colors.surface),
+          greaterThanOrEqualTo(4.5),
+        );
+        expect(find.text('+14.5%'), findsNothing);
+
         expect(find.text('VOLUMEN TOTAL'), findsOneWidget);
         expect(find.text('TENDENCIA DE VOLUMEN · 1M'), findsOneWidget);
         expect(find.byType(ProgressVolumeHeadline), findsOneWidget);

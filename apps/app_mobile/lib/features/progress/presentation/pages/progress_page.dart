@@ -265,30 +265,43 @@ class _TrendBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppColors.of(context);
     final positive = value >= 0;
-    final color = positive
-        ? AppColors.of(context).success
-        : AppColors.of(context).error;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: AppRadius.sm_,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            positive ? Icons.trending_up : Icons.trending_down,
-            color: color,
-            size: 14,
-          ),
-          const SizedBox(width: 4),
-          Text(
-            '${value > 0 ? '+' : ''}${value.toStringAsFixed(1)}%',
-            style: AppTypography.labelMedium.copyWith(color: color),
-          ),
-        ],
+    final statusColor = positive ? palette.success : palette.error;
+    // Numbers use a Spanish decimal separator and don't rely on the tint
+    // alone: semantic label and high-contrast primary text describe the trend.
+    final formatted = '${value > 0 ? '+' : ''}${value.toStringAsFixed(1).replaceAll('.', ',')}%';
+    return Semantics(
+      label: '${positive ? 'Tendencia positiva' : 'Tendencia negativa'}: $formatted',
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.xxs,
+        ),
+        decoration: BoxDecoration(
+          color: statusColor.withValues(alpha: 0.12),
+          borderRadius: AppRadius.sm_,
+          border: Border.all(color: palette.surfaceBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              positive ? Icons.trending_up : Icons.trending_down,
+              color: statusColor,
+              size: 16,
+            ),
+            const SizedBox(width: AppSpacing.xxs),
+            Text(
+              formatted,
+              key: const ValueKey('progress_trend_percent'),
+              style: AppTypography.labelMedium.copyWith(
+                color: palette.textPrimary,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

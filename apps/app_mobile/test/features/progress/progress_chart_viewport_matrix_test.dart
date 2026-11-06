@@ -191,4 +191,30 @@ void main() {
       }
     }
   }
+  testWidgets('DES-07: both charts honor OS Reduce Motion', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: Scaffold(
+          body: SingleChildScrollView(
+            child: Column(
+              children: [
+                VolumeChart(data: volume, weightUnit: WeightUnit.kg),
+                ExerciseOneRmChart(data: strength, weightUnit: WeightUnit.kg),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final charts = tester.widgetList<LineChart>(find.byType(LineChart)).toList();
+    expect(charts, hasLength(2));
+    for (final chart in charts) {
+      expect(chart.duration, Duration.zero,
+          reason: 'System Reduce Motion disables animated chart transitions');
+    }
+    expect(tester.takeException(), isNull);
+  });
+
 }

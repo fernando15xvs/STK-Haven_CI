@@ -290,6 +290,10 @@ class ExerciseOneRmChart extends StatelessWidget {
           children: [
             Expanded(
               child: LineChart(
+                // Accessibility / OS Reduce Motion: don't animate redraws.
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 150),
                 LineChartData(
                   lineTouchData: LineTouchData(
                     enabled: true,
