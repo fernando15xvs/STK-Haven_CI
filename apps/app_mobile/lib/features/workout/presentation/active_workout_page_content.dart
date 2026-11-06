@@ -1896,6 +1896,61 @@ class _SetRowState extends ConsumerState<_SetRow> {
                 ),
               ],
             ),
+            // This is a per-set action, distinct from skipping the rest timer.
+            // Historical false values remain pending until the user explicitly
+            // records a skipped/failed outcome. Partial unilateral sets are
+            // excluded because one completed side is already real work.
+            if (!done &&
+                !widget.initialSet.leftCompleted &&
+                !widget.initialSet.rightCompleted)
+              Align(
+                alignment: Alignment.centerRight,
+                child: PopupMenuButton<String>(
+                  key: ValueKey('set_outcome_${widget.exIndex}_${widget.setIndex}'),
+                  tooltip: 'Estado de la serie',
+                  onSelected: (outcome) {
+                    _debounce?.cancel();
+                    final updated = _setFromFields(completed: false).copyWith(
+                      recordedOutcome: outcome == 'pending' ? null : outcome,
+                      clearRecordedOutcome: outcome == 'pending',
+                    );
+                    ref.read(activeWorkoutProvider.notifier).updateSet(
+                      widget.exIndex, widget.setIndex, updated,
+                    );
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'pending', child: Text('Pendiente')),
+                    PopupMenuItem(value: 'skipped', child: Text('Omitida')),
+                    PopupMenuItem(value: 'failed', child: Text('Fallida')),
+                  ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm, vertical: AppSpacing.xxs),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.more_horiz, size: 16,
+                          color: AppColors.of(context).textSecondary),
+                        const SizedBox(width: AppSpacing.xxs),
+                        Text(
+                          switch (widget.initialSet.recordedOutcome) {
+                            'skipped' => 'Omitida',
+                            'failed' => 'Fallida',
+                            _ => 'Pendiente',
+                          },
+                          style: AppTypography.labelSmall.copyWith(
+                            color: switch (widget.initialSet.recordedOutcome) {
+                              'skipped' => AppColors.of(context).warning,
+                              'failed' => AppColors.of(context).error,
+                              _ => AppColors.of(context).textSecondary,
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             if (widget.unilateral) ...[
               const SizedBox(height: 5),
               Builder(

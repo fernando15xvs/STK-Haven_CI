@@ -91,4 +91,25 @@ void main() {
     expect(find.text('Pendiente'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+  for (final status in ['skipped', 'failed']) {
+    testWidgets('recorded $status in history survives visible badge',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: ExerciseHistorySetRow(
+            set: WorkoutSet(
+              weight: 50, reps: 0, completed: false,
+              recordedOutcome: status),
+            weightUnit: WeightUnit.kg,
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      final label = status == 'skipped' ? 'Omitida' : 'Fallida';
+      expect(find.text(label), findsOneWidget);
+      expect(find.text('Pendiente'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
 }

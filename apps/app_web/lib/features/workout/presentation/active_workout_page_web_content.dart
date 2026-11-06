@@ -1657,6 +1657,52 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
             ],
           );
 
+          // Per-set outcome is different from the rest timer's "Omitir".
+          // Never allow marking a partly completed unilateral set failed.
+          final outcomeMenu = !done &&
+                  !widget.set.leftCompleted && !widget.set.rightCompleted
+              ? PopupMenuButton<String>(
+                  key: ValueKey('web_set_outcome_${widget.exerciseIndex}_${widget.setIndex}'),
+                  tooltip: 'Estado de la serie',
+                  onSelected: (value) {
+                    _flushUpdate();
+                    final session = ref.read(activeWorkoutProvider).session;
+                    if (session == null) return;
+                    final current = session.exercises[widget.exerciseIndex]
+                        .sets[widget.setIndex];
+                    ref.read(activeWorkoutProvider.notifier).updateSet(
+                      widget.exerciseIndex, widget.setIndex,
+                      current.copyWith(
+                        completed: false,
+                        recordedOutcome: value == 'pending' ? null : value,
+                        clearRecordedOutcome: value == 'pending',
+                      ),
+                    );
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'pending', child: Text('Pendiente')),
+                    PopupMenuItem(value: 'skipped', child: Text('Omitida')),
+                    PopupMenuItem(value: 'failed', child: Text('Fallida')),
+                  ],
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'Estado: ${switch (widget.set.recordedOutcome) {
+                          'skipped' => 'Omitida',
+                          'failed' => 'Fallida',
+                          _ => 'Pendiente',
+                        }} ▾',
+                        style: AppTypography.labelMedium.copyWith(
+                          color: AppColors.of(context).textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : null;
+
           final sideControls = widget.unilateral
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1694,6 +1740,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 header,
+              if (outcomeMenu != null) outcomeMenu,
                 Text(
                   'Anterior: $previousText',
                   style: AppTypography.bodySmall.copyWith(
@@ -1732,6 +1779,7 @@ class _SetEditorState extends ConsumerState<_SetEditor> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               header,
+              if (outcomeMenu != null) outcomeMenu,
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
