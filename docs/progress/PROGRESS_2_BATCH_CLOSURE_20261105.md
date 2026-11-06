@@ -28,6 +28,28 @@ No crear PR en el espejo.
 | QA-09 | CI produce IPA **sin firmar**, registrar snapshot final | Firma Apple/provisioning, IPA instalable y prueba en iPhone |
 | QA-10 | Revisión sin falsos cierres y evidencias localizables | Todas las verificaciones anteriores |
 
+## Auditoría incremental de diseño incorporada al mismo lote
+
+- **DES-06/07/08/09:** `ProgressConsistencyMetrics` elimina la
+  abreviación por puntos suspensivos de las cifras y redistribuye los dos
+  indicadores en 1/2 columnas según ancho y escala real. Conserva las
+  etiquetas visibles `ENTRENOS / SEM` y `MEDIA REGISTRADA`, y aporta
+  semántica «Entrenamientos por semana» / «Duración media registrada: N
+  minutos» sin afirmar esfuerzo activo.
+- **DES-01/03/05:** `BodyMeasurementSilhouette` unifica el encabezado
+  con `AppTypography.headlineSmall` (Outfit), aplica
+  `AppColors.surfaceHigh` al lienzo en lugar de fondos ARGB
+  específicos, y usa colores semánticos para texto, selector y puntos
+  anatómicos. No toca perímetros ni geometrías de datos.
+- **Evidencia nueva:** `progress_consistency_metrics_test.dart`
+  contiene matriz de 24 casos 320/375/390/430 px × 1/1,3/1,6 ×
+  claro/oscuro; `progress_measurement_badge_theme_test.dart` comprueba
+  en los ocho acentos claro/oscuro/OLED el fondo semántico y Outfit.
+- **Snapshot CI anterior a estas mejoras:** #753
+  (7/7 jobs obligatorios SUCCESS; 23/23 hashes). Es insuficiente
+  para validar los cuatro archivos visuales nuevos: emitir snapshot
+  espejo completo y CI nuevo antes de cerrar el lote.
+
 ## Criterios antes de fusionar
 
 1. Flutter analyze y tests Core/mobile, DB/RLS, Edge Functions,

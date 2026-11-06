@@ -136,20 +136,19 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final accent = AppColors.of(context);
     return Card(
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+        padding: const EdgeInsets.all(AppSpacing.sm),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             Expanded(child: Text('Medidas corporales',
-              style: Theme.of(context).textTheme.titleMedium)),
+              style: AppTypography.headlineSmall)),
             Tooltip(
               message:'Perímetros registrados; no tamaños individuales de músculos.',
               child: Icon(Icons.info_outline, size: 19,
-                color: colors.onSurfaceVariant),
+                color: accent.textSecondary),
             ),
           ]),
           const SizedBox(height: 10),
@@ -167,19 +166,18 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               visualDensity: VisualDensity.compact,
               backgroundColor: WidgetStateProperty.resolveWith(
                 (states) => states.contains(WidgetState.selected)
-                    ? accent.primaryFaded : colors.surfaceContainerHighest),
+                    ? accent.primaryFaded : accent.surfaceHigh),
               foregroundColor: WidgetStateProperty.resolveWith(
                 (states) => states.contains(WidgetState.selected)
-                    ? accent.primary : colors.onSurface),
+                    ? accent.primary : accent.textPrimary),
             ),
           ),
           const SizedBox(height: 12),
           Container(
             key: Key(_back ? 'silhouette_back' : 'silhouette_front'),
             decoration: BoxDecoration(
-              color: colors.brightness == Brightness.dark
-                ? const Color(0xFF0D121B) : const Color(0xFFF5F7FA),
-              borderRadius: BorderRadius.circular(20),
+              color: accent.surfaceHigh,
+              borderRadius: AppRadius.lg_,
             ),
             child: LayoutBuilder(builder: (context, limits) {
               // The anatomical PNG has a 0.4 width/height ratio. Reserve
@@ -276,9 +274,8 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
                             decoration:BoxDecoration(
                               shape:BoxShape.circle,
                               color:ink,
-                              border:Border.all(color:Colors.white,width:1.6),
-                              boxShadow:const [BoxShadow(
-                                color:Colors.black38,blurRadius:3)],
+                              border:Border.all(color:accent.surface,width:1.6),
+                              
                             ),
                           )),
                         ),
@@ -290,10 +287,10 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
           ),
           const SizedBox(height: 9),
           Text('Toca una etiqueta o un punto para ver su imagen, medida e historial.',
-            style:Theme.of(context).textTheme.bodySmall),
+            style:AppTypography.bodySmall.copyWith(color: accent.textSecondary)),
           Text('Los valores corresponden a perímetros registrados. '
             'Las pantorrillas nuevas se registran por lado. El valor antiguo general sigue en el historial.',
-            style:Theme.of(context).textTheme.bodySmall),
+            style:AppTypography.bodySmall.copyWith(color: accent.textSecondary)),
         ]),
       ),
     );

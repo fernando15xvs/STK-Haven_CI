@@ -51,6 +51,14 @@ void main() {
           ),
         ));
         await tester.pumpAndSettle();
+        final silhouette = tester.widget<Container>(
+          find.byKey(const Key('silhouette_front')));
+        final background = silhouette.decoration! as BoxDecoration;
+        expect(background.color, colors.surfaceHigh,
+          reason: 'Silhouette must use semantic surface for every accent/OLED');
+        final heading = tester.widget<Text>(find.text('Medidas corporales'));
+        expect(heading.style?.fontFamily, 'Outfit');
+        expect(heading.style?.fontSize, AppTypography.headlineSmall.fontSize);
         for (final sample in [
           (
             key: 'measure_chip_chest',
