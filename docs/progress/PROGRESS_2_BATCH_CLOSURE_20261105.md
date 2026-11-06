@@ -50,6 +50,19 @@ No crear PR en el espejo.
   para validar los cuatro archivos visuales nuevos: emitir snapshot
   espejo completo y CI nuevo antes de cerrar el lote.
 
+## Auditoría final de las seis incidencias y entrega iPhone
+
+`PROGRESS_2_FINAL_DESIGN_AUDIT_20261106.md` recorre Inicio,
+Resumen, Ejercicios, Músculos, Medidas, Ficha e Historial con evidencia
+de tests por cada una de las seis incidencias originales. Cubre el
+formato español/contraste del porcentaje y Reduce Motion para gráficos.
+La comprobación en dispositivo físico sigue fuera de la evidencia
+automática, por lo que DES-09 y QA-05/06/07 no se certifican aquí.
+
+`IOS_PHYSICAL_TEST_SIGNING_20261106.md` documenta la firma local
+correcta de Runner y WidgetKit con App Groups. La IPA generada
+por CI es **unsigned**, no instalable directamente en el iPhone.
+
 ## Criterios antes de fusionar
 
 1. Flutter analyze y tests Core/mobile, DB/RLS, Edge Functions,

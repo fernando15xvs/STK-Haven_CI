@@ -19,7 +19,7 @@ certificación de QA física, firma Apple ni cierre de 17 tareas.
 
 ## Inspección del alcance (QA-04, revisión de código)
 
-Comparación Git `main...PR`: 27 archivos afectados, exclusivamente:
+Comparación Git `main...PR`: conjunto de archivos auditados, exclusivamente:
 
 - UI Progreso móvil: silueta de medidas, cuadrícula y KPIs musculares,
   indicadores de consistencia.
@@ -65,6 +65,19 @@ digest **del ZIP del artefacto**:
 Caduca `2026-11-13T01:31:59Z`.
 **No** confundir este hash con el SHA-256 del IPA interno ni una IPA
 firmada o instalable en un iPhone.
+
+## Auditoría final de diseño y preparación de iPhone
+
+- Auditoría de todas las pantallas afectadas y las seis incidencias:
+  `docs/progress/PROGRESS_2_FINAL_DESIGN_AUDIT_20261106.md`.
+- Resumen: porcentajes con coma española y texto contrastado,
+  regresión `progress_summary_scope_test.dart`.
+- e1RM y volumen: animación cero con `MediaQuery.disableAnimationsOf`,
+  regresión `progress_chart_viewport_matrix_test.dart`.
+- Guía de firma local para Runner, extensión WidgetKit y App Group:
+  `docs/progress/IOS_PHYSICAL_TEST_SIGNING_20261106.md`.
+- **Nuevo CI obligatorio** para validar estos cambios posteriores al
+  último snapshot #756 y antes de integrar en `main`.
 
 ## Bloqueos que no se deben cerrar desde el CI
 

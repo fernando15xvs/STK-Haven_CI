@@ -143,6 +143,8 @@
 
 ## Estado de reanudación
 
+- **2026-11-06 · auditoría visual final para integrar PR #55:** matriz rastreable de **seis incidencias** y siete superficies en `docs/progress/PROGRESS_2_FINAL_DESIGN_AUDIT_20261106.md`; mejorados porcentaje de tendencia (coma española/contraste/semántica) y Reduce Motion en gráficos, con tests añadidos. Manuales iPhone/Android/VoiceOver/TalkBack **NO EJECUTADOS**, instrucciones de firma Apple en `docs/progress/IOS_PHYSICAL_TEST_SIGNING_20261106.md`. Solo marcar DATA-09/GAM-01 y criterios DES automatizables tras **CI nuevo 7/7, 100% paridad y merge**. Los ítems QA físicos permanecerán abiertos.
+
 - **2026-11-06 · conflicto de PR #55 resuelto:** integración de `main` en la única rama de lote mediante commit `288696a1d9b54999041f60250c03a95a8345473d`; GitHub confirma `mergeable: true / clean`. [CI #754](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/42143579472) 7/7 verde y 27/27 blobs idénticos para el snapshot previo a resolver el conflicto. Auditoría de alcance, IPAs unsigned y bloqueos documentados en `docs/progress/PR55_INTEGRATION_QA_20261106.md`. Revalidar HEAD final en espejo sin PR; no fusionar ni marcar QA física como realizada sin evidencia.
 
 - **PR #55 en validación:** [Resumen muscular responsive](https://github.com/fernando15xvs/STK-Haven/pull/55), head `54f935eb`, espejo `2c0c61c3`, blobs 3/3 idénticos. [CI #42124896596](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/42125700976) iniciado (run 747), última verificación: 6/7 SUCCESS (Android artifacts en curso); 7/7 aún pendiente. No fusionar sin pruebas completas. No hay PR espejo; DES, DATA-09, GAM-01 y QA físicos siguen pendientes.
