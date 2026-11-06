@@ -34,13 +34,14 @@ class HiveWorkoutSetAdapter extends TypeAdapter<HiveWorkoutSet> {
       rightReps: fields[13] as int?,
       rightRir: fields[14] as int?,
       sideRestSeconds: fields[15] as int? ?? 60,
+      recordedOutcome: fields[16] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, HiveWorkoutSet obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.weight)
       ..writeByte(1)
@@ -72,7 +73,9 @@ class HiveWorkoutSetAdapter extends TypeAdapter<HiveWorkoutSet> {
       ..writeByte(14)
       ..write(obj.rightRir)
       ..writeByte(15)
-      ..write(obj.sideRestSeconds);
+      ..write(obj.sideRestSeconds)
+      ..writeByte(16)
+      ..write(obj.recordedOutcome);
   }
 
   @override

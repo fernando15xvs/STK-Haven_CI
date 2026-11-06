@@ -36,6 +36,9 @@ class HiveWorkoutSet {
   int? rightRir;
   @HiveField(15)
   int sideRestSeconds;
+  /// Optional appended field; old Hive records have no field 16.
+  @HiveField(16)
+  String? recordedOutcome;
 
   HiveWorkoutSet({
     required this.weight,
@@ -54,6 +57,7 @@ class HiveWorkoutSet {
     this.rightReps,
     this.rightRir,
     this.sideRestSeconds = 60,
+    this.recordedOutcome,
   });
 }
 

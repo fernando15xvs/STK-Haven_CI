@@ -298,6 +298,7 @@ class BackupService {
                         'weight': set.weight,
                         'reps': set.reps,
                         'completed': set.completed,
+                        'recordedOutcome': set.completed ? null : set.recordedOutcome,
                         'rir': set.rir,
                         'warmup': set.warmup,
                         'setType': set.setType,
@@ -472,6 +473,8 @@ class BackupService {
                                   weight: (set['weight'] as num).toDouble(),
                                   reps: set['reps'],
                                   completed: set['completed'],
+                                  recordedOutcome: set['completed'] == true
+                                      ? null : set['recordedOutcome'] as String?,
                                   rir: set['rir'],
                                   warmup: legacyWarmup,
                                   restSeconds: set['restSeconds'] ?? 0,
