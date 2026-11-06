@@ -44,4 +44,25 @@ void main() {
       'Pendiente', 'Completada', 'Omitida', 'Fallida',
     ]);
   });
+  test('explicit persisted evidence is read, reset, and cleared on completion', () {
+    const skipped = WorkoutSet(
+      weight: 80, reps: 0, completed: false, recordedOutcome: 'skipped');
+    const failed = WorkoutSet(
+      weight: 80, reps: 0, completed: false, recordedOutcome: 'failed');
+    expect(WorkoutSetRecordStatusPolicy.fromSet(skipped),
+        WorkoutSetRecordStatus.skipped);
+    expect(WorkoutSetRecordStatusPolicy.fromSet(failed),
+        WorkoutSetRecordStatus.failed);
+    expect(WorkoutSetRecordStatusPolicy.fromSet(
+        skipped.copyWith(clearRecordedOutcome: true)),
+        WorkoutSetRecordStatus.pending);
+    expect(WorkoutSetRecordStatusPolicy.fromSet(
+        failed.copyWith(completed: true)),
+        WorkoutSetRecordStatus.completed);
+    expect(failed.copyWith(completed: true).recordedOutcome, isNull);
+    expect(WorkoutSetRecordStatusPolicy.fromSet(const WorkoutSet(
+      weight: 20, reps: 8, completed: false, recordedOutcome: 'unknown')),
+      WorkoutSetRecordStatus.pending);
+  });
+
 }

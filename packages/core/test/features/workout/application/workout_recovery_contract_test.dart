@@ -12,6 +12,7 @@ import 'package:core/features/routines/data/routine_repository.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/data/active_workout_repository.dart';
 import 'package:core/features/workout/data/workout_repository.dart';
+import 'package:core/features/workout/application/workout_set_record_status.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
@@ -195,6 +196,48 @@ void main() {
     final routine = RoutineRepository(routinesBox).getAllRoutines().single;
     expect(routine.exercises.single.phase, RoutineExercisePhase.main);
   });
+  test('DATA-09: statuses survive draft, history and new Hive adapter', () async {
+    final base = _session(complete: false);
+    final pending = base.exercises.single.sets[1];
+    final explicit = WorkoutSession(
+      id: base.id,
+      routineId: base.routineId,
+      routineNameSnapshot: base.routineNameSnapshot,
+      startedAt: base.startedAt,
+      finishedAt: base.finishedAt,
+      durationSeconds: base.durationSeconds,
+      exercises: [
+        base.exercises.single.copyWith(sets: [
+          base.exercises.single.sets.first,
+          pending.copyWith(recordedOutcome: 'skipped'),
+          pending.copyWith(recordedOutcome: 'failed'),
+          pending,
+        ]),
+      ],
+    );
+    await ActiveWorkoutRepository(activeWorkoutBox).saveDraft(explicit);
+    final draft = ActiveWorkoutRepository(activeWorkoutBox).getDraft()!;
+    expect(draft.exercises.single.sets.map((s) => s.recordedOutcome),
+        [null, 'skipped', 'failed', null]);
+    await WorkoutRepository(historyBox).saveWorkoutSession(draft);
+    final saved = WorkoutRepository(historyBox).getAllSessions().single;
+    expect(saved.exercises.single.sets
+        .map(WorkoutSetRecordStatusPolicy.fromSet).toList(), [
+      WorkoutSetRecordStatus.completed,
+      WorkoutSetRecordStatus.skipped,
+      WorkoutSetRecordStatus.failed,
+      WorkoutSetRecordStatus.pending,
+    ]);
+    expect(saved.id, base.id);
+    expect(saved.exercises.single.sets[1].completed, isFalse);
+    expect(saved.exercises.single.sets[2].completed, isFalse);
+    final corrected = saved.exercises.single.sets[1]
+        .copyWith(completed: true);
+    expect(corrected.recordedOutcome, isNull);
+    expect(WorkoutSetRecordStatusPolicy.fromSet(corrected),
+        WorkoutSetRecordStatus.completed);
+  });
+
 }
 
 WorkoutSession _session({required bool complete}) {
