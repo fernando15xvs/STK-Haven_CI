@@ -467,6 +467,17 @@ class _ExerciseInsightCard extends StatelessWidget {
               )
             : null,
         children: [
+          if (onOpenHistory != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                key: ValueKey('progress_open_history_${entry.exercise.id}'),
+                onPressed: () => onOpenHistory!(entry.exercise),
+                icon: const Icon(Icons.history_rounded),
+                label: const Text('Ver historial completo'),
+              ),
+            ),
+
           // The chart is the primary task of this screen: show it BEFORE
           // secondary PR/compare tiles so it can be reached immediately.
           const SizedBox(height: 14),
@@ -701,16 +712,6 @@ class _ExerciseInsightCard extends StatelessWidget {
                 label: const Text('Técnica y ficha del ejercicio'),
               ),
             ),
-          if (onOpenHistory != null)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                key: ValueKey('progress_open_history_${entry.exercise.id}'),
-                onPressed: () => onOpenHistory!(entry.exercise),
-                icon: const Icon(Icons.history_rounded),
-                label: const Text('Ver historial completo'),
-              ),
-            ),
         ],
       ),
     );
@@ -920,8 +921,11 @@ class _SelectableExerciseTrendState extends State<_SelectableExerciseTrend> {
             },
           ),
           const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Dates must wrap at 320px / 160% text, not overflow by 110px.
+          Wrap(
+            spacing: 12,
+            runSpacing: 4,
+            alignment: WrapAlignment.spaceBetween,
             children: [
               Text(_date(plotted.first.date),
                   style: Theme.of(context).textTheme.labelSmall),
