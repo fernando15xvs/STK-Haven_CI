@@ -97,44 +97,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.only(left: 24, right: 24, bottom: 12),
+          // Lower the dock 8 logical pixels while retaining the iPhone home-indicator safe area.
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
           child: _BottomBarSurface(
             savings: savings,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _BottomNavItem(
+                Expanded(child: _BottomNavItem(
                   icon: Icons.home_outlined,
                   activeIcon: Icons.home,
                   label: 'Inicio',
                   isSelected: _currentIndex == 0,
                   onTap: () => _selectTab(0),
-                ),
-                _BottomNavItem(
+                )),
+                Expanded(child: _BottomNavItem(
                   icon: Icons.fitness_center_outlined,
                   activeIcon: Icons.fitness_center,
                   label: 'Entrenar',
                   isSelected: _currentIndex == 1,
                   onTap: () => _selectTab(1),
-                ),
+                )),
                 _FloatingMenuButton(
                   faithEnabled: faithEnabled,
                   coachEnabled: coachEnabled,
                 ),
-                _BottomNavItem(
+                Expanded(child: _BottomNavItem(
                   icon: Icons.bar_chart_outlined,
                   activeIcon: Icons.bar_chart,
                   label: 'Progreso',
                   isSelected: _currentIndex == 2,
                   onTap: () => _selectTab(2),
-                ),
-                _BottomNavItem(
+                )),
+                Expanded(child: _BottomNavItem(
                   icon: Icons.person_outline,
                   activeIcon: Icons.person,
                   label: 'Perfil',
                   isSelected: _currentIndex == 3,
                   onTap: () => _selectTab(3),
-                ),
+                )),
               ],
             ),
           ),
@@ -197,10 +198,8 @@ class _BottomNavItem extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(22),
-          child: SizedBox(
-            width: 72,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -214,21 +213,23 @@ class _BottomNavItem extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isSelected
-                          ? AppColors.of(context).primary
-                          : AppColors.of(context).textSecondary,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.w500,
-                      fontSize: 10,
-                    ),
+                    textAlign: TextAlign.center,
+                    softWrap: true,
+                    maxLines: 2,
+                    overflow: TextOverflow.visible,
+                    style: AppTypography.labelSmall.copyWith(
+                    color: isSelected
+                        ? AppColors.of(context).primary
+                        : AppColors.of(context).textSecondary,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    fontVariations: [
+                      FontVariation('wght', isSelected ? 700 : 600),
+                    ],
+                    letterSpacing: 0,
+                  ),
                   ),
                 ],
               ),
-            ),
           ),
         ),
       ),

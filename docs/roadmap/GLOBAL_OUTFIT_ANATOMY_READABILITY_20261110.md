@@ -51,6 +51,71 @@ el alto crece por texto accesible: preserva la relación 0,4 de las
 imágenes y calcula los puntos en ese mismo espacio. Se ampliaron
 etiquetas laterales en anchos menores de 360 puntos.
 
+## Extensión aprobada: UX de Progreso y barra inferior
+
+**Aprobación del usuario:** 2026-11-10. Una sola PR #56; no crear
+otra PR en `STK-Haven_CI`. Se conserva la solución de tipografía
+global y los 13 anclajes anatómicos anteriores.
+
+### Diagnóstico de las cuatro capturas
+
+1. La barra inferior de `HomeScreen` tenía **12 dp** de margen inferior
+   dentro del `SafeArea`, por lo que visualmente quedaba demasiado
+   alta. Ajustar el margen a **4 dp** (8 dp más abajo) sin invadir
+   el indicador de inicio, con ancho flexible de botones y Outfit
+   legible hasta 160% de escala.
+2. `ProgressExercisesPanel` dejaba fijos el título, la descripción,
+   el buscador y dos desplegables, reduciendo la altura del `ListView`.
+   En la pestaña principal se conservan buscador y tarjetas, pero
+   los filtros adicionales se pliegan; en rutas independientes
+   siguen disponibles.
+3. `FocusedExerciseProgressPage` reutilizaba el panel completo de
+   la lista: el usuario volvía a ver los mismos KPI/PR y la curva
+   de 65 dp sin poder seleccionar una sesión. En la pestaña principal,
+   las tarjetas ahora se resumen; tocar una abre la ruta específica
+   con **gráfico de 180 dp** y sesión seleccionable.
+4. `_SelectableExerciseTrend` solo pintaba los puntos. El modelo
+   `ExerciseSessionPerformance` **ya tiene** `bestWeight`,
+   `bestReps`, `averageRir`, `estimated1RM`, `sessionId`
+   y `date`. Se usan datos reales por sesión, sin migración,
+   sin interpolar RIR y sin alterar historial.
+
+### Comportamiento de rendimiento
+
+- La métrica del gráfico puede ser **Peso / Reps / RIR / e1RM**.
+- Cada punto y el selector de sesión por **fecha y hora** muestran
+  simultáneamente cuatro datos de la sesión: peso máximo,
+  repeticiones correspondientes, RIR medio (o «Sin registrar»)
+  y e1RM máximo (o «Sin estimación»).
+- El orden visual es **gráfico → datos por fecha → récords y
+  comparativas**, de modo que la funcionalidad principal es visible.
+- Si hay varias sesiones el mismo día, cada una conserva su
+  `sessionId` y la hora de inicio para desambiguar.
+- El gráfico muestra observaciones por sesión real; evita
+  inventar valores de RIR y permite desplazamiento horizontal en
+  historiales largos. **Historial completo** sigue mostrando las
+  series individuales, no es una copia de los KPI de Progreso.
+- Se mantiene el modo sin navegación de las rutas antiguas para
+  no romper acceso a datos; la pantalla principal usa acceso único
+  a rendimiento por ejercicio.
+
+### Criterios añadidos
+
+- [x] Barra 8 dp más baja sin ocupar SafeArea; etiquetas sin elipsis.
+- [x] Directorio de ejercicios compacto; filtros secundarios plegables.
+- [x] Pantalla de rendimiento detallada sin duplicación del listado.
+- [x] Gráfico táctil de 180 dp y selector de fecha/hora por sesión ID.
+- [x] Mostrar peso, reps, RIR y e1RM reales, con valores ausentes explícitos.
+- [x] Priorizar el gráfico por encima de tarjetas secundarias.
+- [x] Tests para 320/390 px × 100/160% de texto; métricas
+      y selección de tres sesiones, incluido RIR ausente.
+- [ ] Ejecutar flutter analyze, Core, mobile y compilaciones
+      en espejo CI; corregir eventuales regresiones.
+- [ ] Inspeccionar en iPhone/Android físico con muchos ejercicios
+      e historiales; verificar scroll con teclado abierto.
+- [ ] Integrar la PR #56 solo después de la validación de código
+      y revisión del checklist, sin tocar historiales.
+
 ## Checklist antes de fusionar
 
 - [x] Mantener Outfit y reforzar estilos globales móvil/web/Core.

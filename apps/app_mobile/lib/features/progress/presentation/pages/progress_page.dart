@@ -11,6 +11,7 @@ import 'package:gym_tracker/features/progress/presentation/widgets/muscle_heatma
 import 'package:gym_tracker/features/progress/presentation/widgets/volume_chart.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/calendar_heatmap_card.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detail_page.dart';
+import 'package:gym_tracker/features/progress/presentation/pages/focused_exercise_progress_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_history_page.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_volume_headline.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_consistency_metrics.dart';
@@ -80,6 +81,13 @@ class ProgressPage extends ConsumerWidget {
                         const ProgressSummaryTab(),
                         ProgressExercisesPanel(
                           useSharedPeriod: true,
+                          onOpenPerformance: (exercise) =>
+                              Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) =>
+                                  FocusedExerciseProgressPage(exercise: exercise),
+                            ),
+                          ),
                           onOpenExercise: (exercise) =>
                               Navigator.of(context).push(
                             MaterialPageRoute<void>(

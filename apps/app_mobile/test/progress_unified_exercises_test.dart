@@ -85,6 +85,43 @@ class _LongNamedExercises extends ExerciseListNotifier {
   ];
 }
 
+
+class _ThreeDates extends WorkoutHistoryNotifier {
+  @override
+  List<WorkoutSession> build() {
+    final dates = [
+      DateTime(2026, 11, 4, 8, 0),
+      DateTime(2026, 11, 6, 9, 30),
+      DateTime(2026, 11, 9, 10, 15),
+    ];
+    return [
+      for (var i = 0; i < dates.length; i++)
+        WorkoutSession(
+          id: ['session-first', 'session-middle', 'session-last'][i],
+          routineNameSnapshot: i == 1 ? 'Brazos B' : 'Brazos A',
+          startedAt: dates[i],
+          finishedAt: dates[i].add(const Duration(minutes: 35)),
+          durationSeconds: 2100,
+          exercises: [
+            WorkoutExercise(
+              exerciseId: 'curl',
+              exerciseNameSnapshot: 'Curl de bíceps',
+              muscleGroupSnapshot: 'Bíceps',
+              sets: [
+                WorkoutSet(
+                  weight: [35.0, 60.0, 70.0][i],
+                  reps: [4, 3, 8][i],
+                  rir: i == 1 ? null : [1, 0, 2][i],
+                  completed: true,
+                ),
+              ],
+            ),
+          ],
+        ),
+    ];
+  }
+}
+
 class _Settings extends SettingsNotifier {
   @override
   SettingsState build() => const SettingsState();
@@ -357,4 +394,124 @@ void main() {
     expect(openedHistory?.id, 'curl');
     expect(tester.takeException(), isNull);
   });
+  testWidgets('compact main Progress list opens one detailed performance route',
+      (tester) async {
+    Exercise? opened;
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        exerciseListProvider.overrideWith(_Exercises.new),
+        workoutHistoryProvider.overrideWith(_ThreeDates.new),
+        settingsProvider.overrideWith(_Settings.new),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: ProgressExercisesPanel(
+            useSharedPeriod: true,
+            onOpenPerformance: (exercise) => opened = exercise,
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Curl de bíceps'), findsOneWidget);
+    expect(find.text('PR carga'), findsNothing);
+    expect(find.text('TENDENCIAS'), findsNothing);
+    expect(find.byKey(const ValueKey('progress_exercise_trend_plot')),
+        findsNothing);
+    expect(find.byKey(const ValueKey('progress_exercises_sort')),
+        findsNothing);
+    await tester.tap(
+        find.byKey(const ValueKey('progress_exercises_toggle_filters')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('progress_exercises_sort')),
+        findsOneWidget);
+    await tester.tap(find.text('Curl de bíceps'));
+    expect(opened?.id, 'curl');
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final width in [320.0, 390.0]) {
+    for (final scale in [1.0, 1.6]) {
+      testWidgets('session chart exposes real four-metric values by date '
+          '${width.toInt()}px / $scale', (tester) async {
+        tester.view.physicalSize = Size(width, 950);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(ProviderScope(
+          overrides: [
+            exerciseListProvider.overrideWith(_Exercises.new),
+            workoutHistoryProvider.overrideWith(_ThreeDates.new),
+            settingsProvider.overrideWith(_Settings.new),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: MediaQuery(
+                data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+                child: const ProgressExercisesPanel(
+                  initialExerciseId: 'curl',
+                ),
+              ),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        final dateSelector = find.byKey(
+            const ValueKey('progress_exercise_session_selector'));
+        await tester.ensureVisible(dateSelector);
+        expect(dateSelector, findsOneWidget);
+        expect(tester.widget<DropdownButton<String>>(dateSelector).value,
+            'session-last');
+
+        Finder tile(String name) => find.byKey(ValueKey(name));
+        expect(find.descendant(
+            of: tile('progress_session_weight'),
+            matching: find.text('70 kg')), findsOneWidget);
+        expect(find.descendant(
+            of: tile('progress_session_reps'),
+            matching: find.text('8')), findsOneWidget);
+        expect(find.descendant(
+            of: tile('progress_session_rir'),
+            matching: find.text('2,0')), findsOneWidget);
+
+        tester.widget<DropdownButton<String>>(dateSelector)
+            .onChanged!('session-middle');
+        await tester.pumpAndSettle();
+        expect(find.descendant(
+            of: tile('progress_session_weight'),
+            matching: find.text('60 kg')), findsOneWidget);
+        expect(find.descendant(
+            of: tile('progress_session_reps'),
+            matching: find.text('3')), findsOneWidget);
+        expect(find.descendant(
+            of: tile('progress_session_rir'),
+            matching: find.text('Sin registrar')), findsOneWidget);
+        expect(find.descendant(
+            of: tile('progress_session_e1rm'),
+            matching: find.textContaining('kg')), findsOneWidget);
+
+        final plot = find.byKey(
+            const ValueKey('progress_exercise_trend_plot'));
+        await tester.ensureVisible(plot);
+        await tester.pumpAndSettle();
+        final rect = tester.getRect(plot);
+        await tester.tapAt(Offset(rect.left + 16, rect.center.dy));
+        await tester.pumpAndSettle();
+        expect(tester.widget<DropdownButton<String>>(dateSelector).value,
+            'session-first');
+        expect(find.descendant(
+            of: tile('progress_session_weight'),
+            matching: find.text('35 kg')), findsOneWidget);
+        expect(find.descendant(
+            of: tile('progress_session_reps'),
+            matching: find.text('4')), findsOneWidget);
+        expect(find.descendant(
+            of: tile('progress_session_rir'),
+            matching: find.text('1,0')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
 }

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show FontFeature;
 
 import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/core/utils/weight_converter.dart';
@@ -41,12 +42,15 @@ class ProgressExercisesPanel extends ConsumerStatefulWidget {
     super.key,
     this.onOpenExercise,
     this.onOpenHistory,
+    this.onOpenPerformance,
     this.initialExerciseId,
     this.useSharedPeriod = false,
   });
 
   final ValueChanged<Exercise>? onOpenExercise;
   final ValueChanged<Exercise>? onOpenHistory;
+  /// Dedicated detailed chart route; the main list stays compact.
+  final ValueChanged<Exercise>? onOpenPerformance;
 
   /// When set, only this exercise is shown, with 'Todo' selected initially.
   /// Used by the technical ficha's "Ver mi rendimiento" action.
@@ -66,11 +70,16 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
   ExerciseProgressOrder _order = ExerciseProgressOrder.recent;
   String? _muscle;
   String _search = '';
+  bool _filtersExpanded = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.initialExerciseId != null) _period = ProgressPeriod.all;
+    // Main Progreso uses a compact filter drawer; keep standalone routes'
+    // filters visible to preserve their established controls.
+    _filtersExpanded =
+        !widget.useSharedPeriod && widget.initialExerciseId == null;
   }
 
   @override
@@ -143,29 +152,64 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
-          child: Row(children: [
-            Expanded(child: Text('Rendimiento por ejercicio',
-                style: Theme.of(context).textTheme.titleMedium)),
-            if (!widget.useSharedPeriod)
-              DropdownButton<ProgressPeriod>(
-              value: _period,
-              items: ProgressPeriod.values.map((period) =>
-                  DropdownMenuItem(value: period, child: Text(period.label)))
-                  .toList(growable: false),
-              onChanged: (period) {
-                if (period != null) setState(() => _period = period);
-              },
-            ),
-          ]),
-        ),
-        if (widget.useSharedPeriod)
+        if (widget.initialExerciseId == null)
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              'Ejercicios se atribuyen a la fecha de inicio de cada sesión.',
-              style: Theme.of(context).textTheme.bodySmall,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Rendimiento por ejercicio',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                if (widget.useSharedPeriod)
+                  Tooltip(
+                    message: 'Los registros se atribuyen a la fecha de inicio de cada sesión.',
+                    child: Icon(
+                      Icons.info_outline,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  key: const ValueKey('progress_exercises_toggle_filters'),
+                  onPressed: () =>
+                      setState(() => _filtersExpanded = !_filtersExpanded),
+                  icon: Icon(_filtersExpanded
+                      ? Icons.filter_alt_off_outlined
+                      : Icons.tune_rounded),
+                  label: Text(_filtersExpanded ? 'Ocultar' : 'Filtros'),
+                ),
+              ],
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Evolución y sesiones',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                DropdownButton<ProgressPeriod>(
+                  value: _period,
+                  isDense: true,
+                  items: [
+                    for (final period in ProgressPeriod.values)
+                      DropdownMenuItem(
+                        value: period,
+                        child: Text(period.label),
+                      ),
+                  ],
+                  onChanged: (period) {
+                    if (period != null) setState(() => _period = period);
+                  },
+                ),
+              ],
             ),
           ),
         if (widget.initialExerciseId == null)
@@ -182,7 +226,7 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
             onChanged: (value) => setState(() => _search = value),
           ),
         ),
-        if (widget.initialExerciseId == null)
+        if (widget.initialExerciseId == null && _filtersExpanded)
           Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
           child: Column(
@@ -281,6 +325,10 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
                             historicalPeakAt: lifetime.bestRecorded1RMAt,
                             onOpenExercise: widget.onOpenExercise,
                             onOpenHistory: widget.onOpenHistory,
+                            onOpenPerformance: widget.onOpenPerformance,
+                            compact: widget.useSharedPeriod &&
+                                widget.initialExerciseId == null &&
+                                widget.onOpenPerformance != null,
                             initiallyExpanded: widget.initialExerciseId != null,
                           ),
                         );
@@ -306,6 +354,8 @@ class _ExerciseInsightCard extends StatelessWidget {
     required this.historicalPeakAt,
     this.onOpenExercise,
     this.onOpenHistory,
+    this.onOpenPerformance,
+    this.compact = false,
     this.initiallyExpanded = false,
   });
 
@@ -315,6 +365,8 @@ class _ExerciseInsightCard extends StatelessWidget {
   final DateTime? historicalPeakAt;
   final ValueChanged<Exercise>? onOpenExercise;
   final ValueChanged<Exercise>? onOpenHistory;
+  final ValueChanged<Exercise>? onOpenPerformance;
+  final bool compact;
   final bool initiallyExpanded;
 
   int get _maxReps {
@@ -338,6 +390,33 @@ class _ExerciseInsightCard extends StatelessWidget {
         : null;
     final unilateral = UnilateralProgressCalculator.fromTrend(trend);
 
+    // The main Progreso list is a directory, not a second performance page.
+    // Keep full charts, dates, records and history in the focused route.
+    if (compact) {
+      return Card(
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
+          key: ValueKey('progress_exercise_${entry.exercise.id}'),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16, vertical: 8),
+          onTap: onOpenPerformance == null
+              ? null
+              : () => onOpenPerformance!(entry.exercise),
+          leading: const Icon(Icons.insights_outlined),
+          title: Text(
+            entry.exercise.name,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          subtitle: Text(
+            '${_date(latest.date)} · '
+            '${trend.current1RM > 0 ? FitnessFormatter.formatWeight(trend.current1RM, unit) : 'Sin e1RM'}',
+            maxLines: 2,
+          ),
+          trailing: const Icon(Icons.chevron_right_rounded),
+        ),
+      );
+    }
+
     return Card(
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
@@ -357,6 +436,8 @@ class _ExerciseInsightCard extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+
+
             Text(
               '${_date(latest.date)} · ${latest.routineName.isEmpty ? 'Entrenamiento libre' : latest.routineName}',
               maxLines: 2,
@@ -386,6 +467,22 @@ class _ExerciseInsightCard extends StatelessWidget {
               )
             : null,
         children: [
+          // The chart is the primary task of this screen: show it BEFORE
+          // secondary PR/compare tiles so it can be reached immediately.
+          const SizedBox(height: 14),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'TENDENCIAS',
+              style: Theme.of(context)
+                  .textTheme
+                  .labelSmall
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          const SizedBox(height: 7),
+          _SelectableExerciseTrend(trend: trend, unit: unit),
+
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -555,19 +652,6 @@ class _ExerciseInsightCard extends StatelessWidget {
               ),
             ],
           ],
-          const SizedBox(height: 14),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'TENDENCIAS',
-              style: Theme.of(context)
-                  .textTheme
-                  .labelSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-          ),
-          const SizedBox(height: 7),
-          _SelectableExerciseTrend(trend: trend, unit: unit),
           if (trend.hasPlateauSignal) ...[
             const SizedBox(height: 10),
             const _InfoMessage(
@@ -692,8 +776,9 @@ class _Delta extends StatelessWidget {
   }
 }
 
-/// One metric selected at a time, using the recorded time stamps and the
-/// same color/text tokens as other Flutter charts. Missing RIR stays neutral.
+
+/* A full-size, selectable session chart. The latest session is selected
+ * initially; touches and a date picker expose all four recorded metrics. */
 class _SelectableExerciseTrend extends StatefulWidget {
   const _SelectableExerciseTrend({
     required this.trend,
@@ -709,24 +794,68 @@ class _SelectableExerciseTrend extends StatefulWidget {
 
 class _SelectableExerciseTrendState extends State<_SelectableExerciseTrend> {
   ExerciseTrendMetric selected = ExerciseTrendMetric.estimatedOneRm;
+  String? _selectedSessionId;
 
-  String _display(double value) => switch (selected) {
-    ExerciseTrendMetric.weight || ExerciseTrendMetric.estimatedOneRm =>
-      FitnessFormatter.formatWeight(value, widget.unit),
-    ExerciseTrendMetric.repetitions => '${value.round()} reps',
-    ExerciseTrendMetric.rir => value.toStringAsFixed(1),
+  double? _value(ExerciseSessionPerformance session) => switch (selected) {
+    ExerciseTrendMetric.weight => session.bestWeight,
+    ExerciseTrendMetric.repetitions => session.bestReps.toDouble(),
+    ExerciseTrendMetric.rir => session.averageRir,
+    ExerciseTrendMetric.estimatedOneRm =>
+      session.estimated1RM > 0 ? session.estimated1RM : null,
   };
+
+  String _date(DateTime value) {
+    final local = value.toLocal();
+    return '${local.day.toString().padLeft(2, '0')}/'
+        '${local.month.toString().padLeft(2, '0')}/${local.year}';
+  }
+
+  String _sessionLabel(ExerciseSessionPerformance session) {
+    final local = session.date.toLocal();
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    final name = session.routineName.isEmpty
+        ? 'Entrenamiento libre'
+        : session.routineName;
+    return '${_date(session.date)} · $hour:$minute · $name';
+  }
+
+  String _weight(double value) =>
+      FitnessFormatter.formatWeight(value, widget.unit)
+          .replaceAll('.', ',');
 
   @override
   Widget build(BuildContext context) {
-    final points = selected.points(widget.trend);
+    final sessions = widget.trend.sessions;
+    if (sessions.isEmpty) {
+      return const Text('No hay sesiones con series efectivas');
+    }
+
+    // Session IDs remain stable after switching metric/period.
+    final selectedId = sessions.any(
+      (s) => s.sessionId == _selectedSessionId,
+    ) ? _selectedSessionId! : sessions.last.sessionId;
+    final detail = sessions.firstWhere((s) => s.sessionId == selectedId);
+    // Missing RIR is NOT zero; never fabricate a chart point.
+    final plotted = sessions.where((s) => _value(s) != null).toList();
+    final values = plotted.map((s) => ExerciseProgressPoint(
+      date: s.date, value: _value(s)!,
+    )).toList(growable: false);
+    final highlight = plotted.indexWhere((s) => s.sessionId == selectedId);
+    final scheme = Theme.of(context).colorScheme;
+    final scale =
+        (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(1.0, 2.0);
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text('Métrica del gráfico',
+            style: Theme.of(context).textTheme.labelMedium),
+        const SizedBox(height: 6),
         DropdownButton<ExerciseTrendMetric>(
           key: const ValueKey('progress_exercise_trend_selector'),
           value: selected,
-          isDense: true,
+          isExpanded: true,
           items: [
             for (final metric in ExerciseTrendMetric.values)
               DropdownMenuItem(
@@ -738,74 +867,238 @@ class _SelectableExerciseTrendState extends State<_SelectableExerciseTrend> {
             if (next != null) setState(() => selected = next);
           },
         ),
-        const SizedBox(height: 8),
-        if (points.isEmpty)
+        const SizedBox(height: 12),
+        if (plotted.isEmpty)
           Text(
             'Sin datos de ${selected.label} registrados',
-            style: Theme.of(context).textTheme.bodySmall,
+            style: Theme.of(context).textTheme.bodyMedium,
           )
         else ...[
-          Semantics(
-            label: 'Tendencia de ${selected.label}: '
-                '${_display(points.first.value)} a '
-                '${_display(points.last.value)}',
-            child: SizedBox(
-              height: 65,
-              width: double.infinity,
-              child: CustomPaint(
-                key: const ValueKey('progress_exercise_trend_plot'),
-                painter: _ExerciseTrendPainter(
-                  points: points,
-                  lineColor: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 5),
           Text(
-            '${_display(points.first.value)} → ${_display(points.last.value)}'
-            ' · rango ${_display(points.map((e) => e.value).reduce(math.min))}'
-            '–${_display(points.map((e) => e.value).reduce(math.max))}',
+            'Toca un punto o selecciona una sesión para consultar sus valores.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
+          const SizedBox(height: 6),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final chartWidth = math.max(
+                constraints.maxWidth,
+                math.max(1, values.length - 1) * 44.0 + 32,
+              );
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (event) {
+                    final index = values.length == 1
+                        ? 0
+                        : (((event.localPosition.dx - 16) /
+                              (chartWidth - 32)) * (values.length - 1))
+                            .round().clamp(0, values.length - 1).toInt();
+                    setState(() =>
+                        _selectedSessionId = plotted[index].sessionId);
+                  },
+                  child: Semantics(
+                    label: 'Gráfico de ${selected.label} por sesión. '
+                        'Puedes tocar los puntos o elegir la fecha '
+                        'en el selector inferior.',
+                    child: SizedBox(
+                      width: chartWidth,
+                      height: 180,
+                      child: CustomPaint(
+                        key: const ValueKey('progress_exercise_trend_plot'),
+                        painter: _ExerciseTrendPainter(
+                          points: values,
+                          selectedPointIndex: highlight,
+                          lineColor: scheme.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(_date(plotted.first.date),
+                  style: Theme.of(context).textTheme.labelSmall),
+              Text(_date(plotted.last.date),
+                  style: Theme.of(context).textTheme.labelSmall),
+            ],
+          ),
         ],
+        const SizedBox(height: 16),
+        Text('Sesión seleccionada',
+            style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        DropdownButton<String>(
+          key: const ValueKey('progress_exercise_session_selector'),
+          value: selectedId,
+          isExpanded: true,
+          items: [
+            for (final session in sessions.reversed)
+              DropdownMenuItem(
+                value: session.sessionId,
+                child: Text(
+                  _sessionLabel(session),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+          onChanged: (id) {
+            if (id != null) setState(() => _selectedSessionId = id);
+          },
+        ),
+        const SizedBox(height: 10),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final twoColumns =
+                constraints.maxWidth >= (148.0 * scale * 2 + 8);
+            final tileWidth = twoColumns
+                ? (constraints.maxWidth - 8) / 2
+                : constraints.maxWidth;
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                SizedBox(
+                  width: tileWidth,
+                  child: _SessionValueTile(
+                    label: 'Peso máximo',
+                    value: _weight(detail.bestWeight),
+                    key: const ValueKey('progress_session_weight'),
+                  ),
+                ),
+                SizedBox(
+                  width: tileWidth,
+                  child: _SessionValueTile(
+                    label: 'Repeticiones',
+                    value: '${detail.bestReps}',
+                    key: const ValueKey('progress_session_reps'),
+                  ),
+                ),
+                SizedBox(
+                  width: tileWidth,
+                  child: _SessionValueTile(
+                    label: 'RIR medio',
+                    value: detail.averageRir == null
+                        ? 'Sin registrar'
+                        : detail.averageRir!.toStringAsFixed(1)
+                            .replaceAll('.', ','),
+                    key: const ValueKey('progress_session_rir'),
+                  ),
+                ),
+                SizedBox(
+                  width: tileWidth,
+                  child: _SessionValueTile(
+                    label: 'e1RM máximo',
+                    value: detail.estimated1RM > 0
+                        ? _weight(detail.estimated1RM)
+                        : 'Sin estimación',
+                    key: const ValueKey('progress_session_e1rm'),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Resumen de la sesión · ${detail.completedWorkingSets} '
+          '${detail.completedWorkingSets == 1 ? 'serie efectiva' : 'series efectivas'}. '
+          'El historial muestra cada serie individual.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }
 }
 
+class _SessionValueTile extends StatelessWidget {
+  const _SessionValueTile({super.key, required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      container: true,
+      label: '$label: $value',
+      child: ExcludeSemantics(
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.labelMedium),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                softWrap: true,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ExerciseTrendPainter extends CustomPainter {
-  _ExerciseTrendPainter({required this.points, required this.lineColor});
+  _ExerciseTrendPainter({
+    required this.points,
+    required this.lineColor,
+    this.selectedPointIndex = -1,
+  });
 
   final List<ExerciseProgressPoint> points;
   final Color lineColor;
+  final int selectedPointIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (points.isEmpty || size.width <= 0 || size.height <= 0) return;
-    const inset = 7.0;
+    const inset = 16.0;
     final dx = math.max(1.0, size.width - inset * 2);
     final dy = math.max(1.0, size.height - inset * 2);
-    final earliest = points.first.date.microsecondsSinceEpoch;
-    final latest = points.last.date.microsecondsSinceEpoch;
-    final sameTimestamp = earliest == latest;
     final low = points.map((p) => p.value).reduce(math.min);
     final high = points.map((p) => p.value).reduce(math.max);
     final sameValue = (high - low).abs() < 1e-9;
 
     Offset at(int index) {
-      final p = points[index];
-      final x = sameTimestamp
-          ? (points.length == 1 ? 0.5 : index / (points.length - 1))
-          : (p.date.microsecondsSinceEpoch - earliest) / (latest - earliest);
-      final y = sameValue ? 0.5 : (p.value - low) / (high - low);
+      final x = points.length == 1 ? 0.5 : index / (points.length - 1);
+      final y = sameValue ? 0.5 : (points[index].value - low) / (high - low);
       return Offset(inset + x * dx, inset + (1 - y) * dy);
     }
 
-    final line = Paint()
+    final guideline = Paint()
+      ..color = lineColor.withValues(alpha: .14)
+      ..strokeWidth = 1;
+    for (final level in [0.0, .5, 1.0]) {
+      canvas.drawLine(
+        Offset(inset, inset + dy * level),
+        Offset(size.width - inset, inset + dy * level),
+        guideline,
+      );
+    }
+    final stroke = Paint()
       ..color = lineColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4
+      ..strokeWidth = 2.6
       ..strokeCap = StrokeCap.round;
     final dots = Paint()..color = lineColor;
     if (points.length > 1) {
@@ -813,16 +1106,28 @@ class _ExerciseTrendPainter extends CustomPainter {
       for (var i = 1; i < points.length; i++) {
         path.lineTo(at(i).dx, at(i).dy);
       }
-      canvas.drawPath(path, line);
+      canvas.drawPath(path, stroke);
+    }
+    if (selectedPointIndex >= 0 && selectedPointIndex < points.length) {
+      final p = at(selectedPointIndex);
+      canvas.drawLine(Offset(p.dx, inset),
+          Offset(p.dx, size.height - inset), guideline);
     }
     for (var i = 0; i < points.length; i++) {
-      canvas.drawCircle(at(i), 3.4, dots);
+      final focused = i == selectedPointIndex;
+      final point = at(i);
+      canvas.drawCircle(point, focused ? 7.5 : 4.3, dots);
+      if (focused) {
+        canvas.drawCircle(point, 3.5, Paint()..color = Colors.white);
+      }
     }
   }
 
   @override
   bool shouldRepaint(covariant _ExerciseTrendPainter old) =>
-      old.lineColor != lineColor || old.points != points;
+      old.lineColor != lineColor ||
+      old.selectedPointIndex != selectedPointIndex ||
+      old.points != points;
 }
 
 class _InfoMessage extends StatelessWidget {
