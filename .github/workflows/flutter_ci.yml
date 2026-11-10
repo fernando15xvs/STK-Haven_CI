@@ -559,7 +559,9 @@ jobs:
 
   android:
     name: Android artifacts
-    runs-on: ubuntu-latest
+    # Ubuntu 26 runner fails NDK 28.2 download with a non-ZIP archive.
+    # Pin the known-compatible image until Android SDK mirror is repaired.
+    runs-on: ubuntu-24.04
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
