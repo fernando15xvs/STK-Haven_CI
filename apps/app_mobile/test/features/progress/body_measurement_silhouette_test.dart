@@ -217,4 +217,91 @@ void main() {
     expect(find.text('Sin registros todavía.'),findsOneWidget);
     expect(tester.takeException(),isNull);
   });
+  // Regression for the iPhone screenshots: prior markers were on the
+  // pectoral (shoulders), upper abdomen (chest), glutes (waist), knees
+  // (thighs) and lower legs (calves). Verify image-relative anatomy, not
+  // just labels and links, across compact and enlarged typography.
+  for (final width in [320.0, 390.0, 430.0]) {
+    for (final scale in [1.0, 1.6]) {
+      testWidgets('anatomy landmarks at ${width.toInt()}px x $scale',
+          (tester) async {
+        tester.view.physicalSize = Size(width, 1050);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(MaterialApp(
+          home: Scaffold(
+            body: MediaQuery(
+              data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+              child: SingleChildScrollView(
+                child: BodyMeasurementSilhouette(
+                  measurements: [_older, _newer, _latestPartial],
+                  selected: MeasurementMetric.chest,
+                  onSelected: (_) {},
+                ),
+              ),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        void check(String side, Map<String, Offset> landmarks) {
+          final figure = tester.getRect(
+            find.byKey(const Key('measurement_anatomy_png')));
+          for (final item in landmarks.entries) {
+            final target = find.byKey(Key('map_${side}_${item.key}'));
+            expect(target, findsOneWidget,
+                reason: 'Missing ${side} / ${item.key}');
+            final center = tester.getCenter(target);
+            final actual = Offset(
+              (center.dx - figure.left) / figure.width,
+              (center.dy - figure.top) / figure.height,
+            );
+            expect(actual.dx, closeTo(item.value.dx, .03),
+                reason: 'Horizontal anatomy error: ${side} ${item.key}');
+            expect(actual.dy, closeTo(item.value.dy, .03),
+                reason: 'Vertical anatomy error: ${side} ${item.key}');
+          }
+        }
+
+        check('front', {
+          'neck': const Offset(.50, .166),
+          'shoulders': const Offset(.82, .190),
+          'chest': const Offset(.50, .245),
+          'rightArm': const Offset(.215, .300),
+          'leftArm': const Offset(.785, .300),
+          'rightForearm': const Offset(.165, .385),
+          'leftForearm': const Offset(.835, .385),
+          'rightLeg': const Offset(.415, .535),
+          'leftLeg': const Offset(.585, .535),
+        });
+        final frontShoulder = tester.getCenter(
+          find.byKey(const Key('map_front_shoulders')));
+        final frontChest = tester.getCenter(
+          find.byKey(const Key('map_front_chest')));
+        expect(frontShoulder.dx, greaterThan(frontChest.dx),
+            reason: 'Deltoid must be lateral to pectoral');
+        expect(frontShoulder.dy, lessThan(frontChest.dy),
+            reason: 'Deltoid is not the lower pectoral');
+
+        await tester.ensureVisible(find.text('Espalda').last);
+        await tester.tap(find.text('Espalda').last);
+        await tester.pumpAndSettle();
+        check('back', {
+          'waist': const Offset(.50, .360),
+          'hips': const Offset(.54, .460),
+          'rightCalf': const Offset(.60, .730),
+          'leftCalf': const Offset(.40, .730),
+        });
+        expect(tester.getCenter(find.byKey(const Key('map_back_waist'))).dy,
+            lessThan(tester.getCenter(
+                find.byKey(const Key('map_back_hips'))).dy));
+        expect(tester.getCenter(find.byKey(const Key('map_back_hips'))).dy,
+            lessThan(tester.getCenter(
+                find.byKey(const Key('map_back_leftCalf'))).dy));
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
 }

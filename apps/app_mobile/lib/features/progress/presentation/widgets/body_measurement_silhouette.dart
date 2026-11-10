@@ -81,23 +81,32 @@ class _Callout {
 }
 
 // Independent front/rear tape contours; avoid duplicated measurements.
+// Anchors are NORMALIZED TO THE DISPLAYED ANATOMY IMAGE, not the full card.
+// Calibrated against the source front/back plates and the user's iPhone
+// captures. Each dot names a measurement contour, not an isolated muscle.
+// Front is mirrored anatomically: the person's right is image left.
 const _front = <_Callout>[
-  _Callout(MeasurementMetric.neck, 'Cuello', true, .085, Offset(.50,.166)),
-  _Callout(MeasurementMetric.shoulders, 'Hombros', false, .155, Offset(.68,.225)),
-  _Callout(MeasurementMetric.chest, 'Tórax', true, .270, Offset(.50,.296)),
-  _Callout(MeasurementMetric.rightArm, 'Brazo der.', true, .390, Offset(.225,.352)),
-  _Callout(MeasurementMetric.leftArm, 'Brazo izq.', false, .355, Offset(.775,.352)),
-  _Callout(MeasurementMetric.rightForearm, 'Ant. der.', true, .535, Offset(.165,.432)),
-  _Callout(MeasurementMetric.leftForearm, 'Ant. izq.', false, .505, Offset(.835,.432)),
-  _Callout(MeasurementMetric.rightLeg, 'Muslo der.', true, .725, Offset(.418,.655)),
-  _Callout(MeasurementMetric.leftLeg, 'Muslo izq.', false, .725, Offset(.582,.655)),
+  _Callout(MeasurementMetric.neck, 'Cuello', true, .085, Offset(.50, .166)),
+  // The deltoid is lateral and ABOVE the pectoral, not on the chest.
+  _Callout(MeasurementMetric.shoulders, 'Hombros', false, .155, Offset(.82, .190)),
+  _Callout(MeasurementMetric.chest, 'Tórax', true, .270, Offset(.50, .245)),
+  // Upper arms: between deltoid and elbow. Forearms: below elbow, before wrist.
+  _Callout(MeasurementMetric.rightArm, 'Brazo der.', true, .390, Offset(.215, .300)),
+  _Callout(MeasurementMetric.leftArm, 'Brazo izq.', false, .355, Offset(.785, .300)),
+  _Callout(MeasurementMetric.rightForearm, 'Ant. der.', true, .535, Offset(.165, .385)),
+  _Callout(MeasurementMetric.leftForearm, 'Ant. izq.', false, .505, Offset(.835, .385)),
+  // Mid-thigh, not the knee. Keep left and right measurement IDs intact.
+  _Callout(MeasurementMetric.rightLeg, 'Muslo der.', true, .725, Offset(.415, .535)),
+  _Callout(MeasurementMetric.leftLeg, 'Muslo izq.', false, .725, Offset(.585, .535)),
 ];
 
 const _rear = <_Callout>[
-  _Callout(MeasurementMetric.waist, 'Cintura', true, .395, Offset(.50,.472)),
-  _Callout(MeasurementMetric.hips, 'Cadera', false, .540, Offset(.54,.550)),
-  _Callout(MeasurementMetric.rightCalf, 'Pant. der.', false, .780, Offset(.60,.820)),
-  _Callout(MeasurementMetric.leftCalf, 'Pant. izq.', true, .835, Offset(.40,.820)),
+  // Waist is ABOVE the pelvis/glutes; hip tape crosses the widest glutes.
+  _Callout(MeasurementMetric.waist, 'Cintura', true, .395, Offset(.50, .360)),
+  _Callout(MeasurementMetric.hips, 'Cadera', false, .540, Offset(.54, .460)),
+  // Calf markers belong at muscular mid-calf, not the lower ankle.
+  _Callout(MeasurementMetric.rightCalf, 'Pant. der.', false, .780, Offset(.60, .730)),
+  _Callout(MeasurementMetric.leftCalf, 'Pant. izq.', true, .835, Offset(.40, .730)),
 ];
 
 /// A single authentic anatomical PNG, side labels and leader-lines.
@@ -199,14 +208,20 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
                 math.max(405.0, labelHeight / 0.11),
                 math.min(570.0, w * 1.43),
               );
-              final figureWidth = w * .57;
-              final figureHeight = h * .95;
+              // Keep the actual PNG coordinate space at its intrinsic 0.4
+              // width/height ratio. Previously the Image used BoxFit.contain
+              // while dots used the full, stretched slot: at 160% text the
+              // empty letterbox grew and markers drifted off the anatomy.
+              const anatomyAspect = .4;
+              final figureWidth = math.min(w * .57, h * .95 * anatomyAspect);
+              final figureHeight = figureWidth / anatomyAspect;
               final figureLeft = (w - figureWidth) / 2;
               final figureTop = (h - figureHeight) / 2;
               final positions = _back ? _rear : _front;
               final ink = accent.primary;
-              const labelWidthFactor = .265;
-              final badgeWidth = w * labelWidthFactor;
+              // Compact screens need wider labels when the user requests
+              // larger accessibility text, without shrinking Outfit glyphs.
+              final badgeWidth = w * (w < 360 ? .30 : .265);
               final anchors = [
                 for (final c in positions)
                   Offset(figureLeft + c.anchor.dx * figureWidth,
@@ -348,6 +363,7 @@ class _MeasureCalloutBadge extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.bodySmall.copyWith(
                     fontWeight: FontWeight.w700,
+                    fontVariations: const [FontVariation('wght', 700)],
                     fontFeatures: const [FontFeature.tabularFigures()],
                     color: selected ? palette.onPrimary : palette.primary,
                   ),
