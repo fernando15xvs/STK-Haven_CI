@@ -258,3 +258,11 @@
 - [ ] **Animaciones realmente producidas y aprobadas: 0/229**. No confundir el plan ni el manifiesto con archivos Lottie existentes. Se producirán y revisarán por lotes pequeños, con coincidencia biomecánica exacta y derechos de distribución comercial verificados; los primeros 10, luego 20 y 40 del lote 1.
 - [ ] Si una variante humana no puede mostrarse con fidelidad vectorial, considerar un vídeo corto comprimido **solo en móvil**, sin GIFs y sin trasladarlo a la versión web.
 - [ ] Las pruebas físicas de iOS/Android y la restauración de respaldos permanecen para el cierre general del roadmap; Flutter Analyze y CI del espejo deben seguir validándose en cada entrega.
+
+### Plan de producción iOS/Android — 229 animaciones Lottie
+
+- [x] Inventario completo en [`PHASE_4_LOTTIE_229_IOS_ANDROID_PRODUCTION_PLAN.md`](PHASE_4_LOTTIE_229_IOS_ANDROID_PRODUCTION_PLAN.md), generado a partir de **49 ejercicios históricos y 180 ejercicios curados** (229 IDs únicos, sin duplicados).
+- [x] Lotes cerrados y trazables: **40 + 60 + 70 + 59**. Familias de rigs y puertas de calidad definidos por `Exercise.id`.
+- [x] **Alcance solamente nativo:** se implementarán animaciones y assets en `apps/app_mobile` para Android e iOS. **Excluida expresamente `apps/app_web`**: sin dependencia Lottie, recursos multimedia ni reproductor en web.
+- [ ] Producción multimedia real: **0/229 Lotties terminados**. Los recursos deberán ser originales/licenciados, biomecánicamente correctos, optimizados y aprobados individualmente antes de incorporarlos al registro `approvedMedia`.
+- [ ] Comprobación de archivos y empaquetado nativo, métricas de rendimiento, revisión técnica y QA físico final del roadmap.

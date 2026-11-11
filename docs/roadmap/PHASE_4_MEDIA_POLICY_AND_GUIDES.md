@@ -27,6 +27,17 @@
 6. **Accesibilidad:** modo de movimiento reducido, pausa, guías equivalentes, contraste, lector de pantalla, sin destellos y fallback offline sin bloquear la app.
 7. **Cobertura:** empezar por 30–40 ejercicios comunes (press de banca, jalones, remo, elevaciones, sentadilla, peso muerto rumano, curl femoral, hip thrust y core); ampliar gradualmente solo cuando el recurso real coincida con el movimiento.
 
+## Plan de producción iOS y Android
+
+El inventario de **229 IDs sin duplicados**, agrupados en cuatro lotes exactos de
+**40 + 60 + 70 + 59**, está en
+[`PHASE_4_LOTTIE_229_IOS_ANDROID_PRODUCTION_PLAN.md`](PHASE_4_LOTTIE_229_IOS_ANDROID_PRODUCTION_PLAN.md).
+
+**Exclusión de web:** no implementar medios Lottie en `apps/app_web`;
+el reproductor, los JSON de animación y el manifiesto de assets pertenecen
+únicamente a `apps/app_mobile` (iOS/Android). La planificación no implica
+que ya existan archivos animados: **0/229 recursos completados**.
+
 ## Pendiente
 
 - Producir/revisar derechos y anatomía de animaciones específicas, cargar recursos locales reales y medir peso final de Android/iOS.
