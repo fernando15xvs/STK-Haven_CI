@@ -42,11 +42,11 @@ sin PR en el espejo. Esta fase no rediseña Inicio ni cambia la persistencia.
 - [x] Simplificar acciones de la tarjeta completada y enlazar resultados recientes.
 - [x] Añadir pruebas de sesión parcial, sin trabajo, cruce de medianoche,
       fecha futura, programa, IDs repetidos y tarjeta semanal a 320 dp.
-- [ ] CI espejo: Analyze + Core + mobile, iOS, Android, Supabase RLS,
-      Edge Functions, controles anatómicos (7/7).
-- [ ] Verificar hashes Git de todos los archivos del lote en ambos repositorios.
+- [x] Fase 1: CI espejo 7/7 verde, corrida
+      [#43449105484](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/43449105484).
+- [x] Fase 1: paridad de contenido Git 12/12 archivos del snapshot canónico.
 - [ ] QA en iPhone/Android físico y lector de pantalla: pendiente hasta evidencia.
-- [ ] Fusionar exclusivamente la PR canónica tras CI y revisión.
+- [ ] Fusionar exclusivamente la PR canónica tras fases 2 y 3, CI y revisión.
 
 **No se tocó:** esquemas/credenciales Supabase, Hive, notas históricas,
 recompensas, progresión de rutinas, gráficos, Coach, Motivation, Fe o assets.

@@ -1,15 +1,20 @@
 import 'dart:async';
+import 'dart:ui' show FontFeature;
 
 import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/features/home/application/daily_steps_bridge.dart';
 
 class DailyStepsWidget extends ConsumerStatefulWidget {
-  const DailyStepsWidget({super.key});
+  const DailyStepsWidget({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   ConsumerState<DailyStepsWidget> createState() => _DailyStepsWidgetState();
@@ -277,95 +282,94 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
   Widget build(BuildContext context) {
     final state = ref.watch(dailyStepsProvider);
     final preferences = ref.watch(stepGoalPreferencesProvider);
+    final colors = AppColors.of(context);
     final target = preferences.targetSteps;
     final remaining = (target - state.steps).clamp(0, target).toInt();
     final progress = target <= 0
         ? 0.0
         : (state.steps / target).clamp(0.0, 1.0).toDouble();
+    final format = NumberFormat.decimalPattern('es');
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.of(context).primaryFaded,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    Icons.directions_walk_rounded,
-                    color: AppColors.of(context).primary,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Text(
-                    'Pasos de hoy',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'Configurar meta y recordatorios',
-                  onPressed: _showGoalSettings,
-                  icon: const Icon(Icons.tune_rounded),
-                ),
-              ],
+    return PremiumCard(
+      key: const ValueKey('home_steps_card'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.directions_walk_rounded, color: colors.primary, size: 21),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(child: Text('Pasos', style: AppTypography.labelLarge)),
+              IconButton(
+                tooltip: 'Configurar meta y recordatorios de pasos',
+                onPressed: _showGoalSettings,
+                icon: const Icon(Icons.tune_rounded, size: 20),
+                color: colors.textSecondary,
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            format.format(state.steps),
+            style: AppTypography.headlineMedium.copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${state.steps} / $target pasos',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+          ),
+          Text(
+            'Meta: ${format.format(target)} pasos',
+            style: AppTypography.labelSmall.copyWith(
+              color: colors.textSecondary,
             ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 12,
-                backgroundColor: AppColors.of(context).surfaceBorder,
-                color: AppColors.of(context).primary,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ClipRRect(
+            borderRadius: AppRadius.sm_,
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: colors.surfaceBorder,
+              color: colors.primary,
+              semanticsLabel: 'Progreso de pasos',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Tooltip(
+            message: _deviceStatusText(state.deviceSynced),
+            child: Text(
+              widget.compact
+                  ? state.deviceSynced
+                      ? 'Desde el dispositivo'
+                      : 'Sin sincronizar'
+                  : _deviceStatusText(state.deviceSynced),
+              style: AppTypography.bodySmall.copyWith(
+                color: colors.textSecondary,
               ),
             ),
-            const SizedBox(height: 10),
+          ),
+          if (!widget.compact) ...[
+            const SizedBox(height: AppSpacing.xs),
             Text(
               remaining == 0
                   ? 'Meta completada por hoy.'
-                  : 'Te faltan $remaining pasos para tu meta.',
-              style: TextStyle(
-                color: AppColors.of(context).textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _deviceStatusText(state.deviceSynced),
-              style: TextStyle(
-                color: AppColors.of(context).textSecondary,
-                fontSize: 12,
+                  : 'Te faltan ${format.format(remaining)} pasos para tu meta.',
+              style: AppTypography.bodySmall.copyWith(
+                color: colors.textSecondary,
               ),
             ),
             if (preferences.reminderEnabled) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 preferences.reminderCadence == StepReminderCadence.balanced
-                    ? 'Recordatorios inteligentes: 17:30 y 20:30.'
-                    : 'Recordatorio suave: 20:00.',
-                style: TextStyle(
-                  color: AppColors.of(context).textSecondary,
-                  fontSize: 12,
+                    ? 'Recordatorios: 17:30 y 20:30.'
+                    : 'Recordatorio: 20:00.',
+                style: AppTypography.bodySmall.copyWith(
+                  color: colors.textSecondary,
                 ),
               ),
             ],
           ],
-        ),
+        ],
       ),
     );
   }

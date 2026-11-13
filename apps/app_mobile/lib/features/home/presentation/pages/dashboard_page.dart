@@ -18,7 +18,6 @@ import 'package:core/features/programs/presentation/providers/training_program_p
 import 'package:core/features/routines/data/routine_repository.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
-import 'package:core/features/workout/application/workout_comparator.dart';
 import 'package:core/features/workout/application/todays_workout_status.dart';
 import 'package:core/features/home/application/home_dashboard_session_policy.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
@@ -31,6 +30,7 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/features/faith/presentation/pages/daily_verse_page.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/hydration_widget.dart';
+import 'package:gym_tracker/features/home/presentation/widgets/home_wellness_layout.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/weekly_activity_card.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/progress_page.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/daily_steps_widget.dart';
@@ -83,13 +83,9 @@ class DashboardPage extends ConsumerWidget {
           ),
           children: [
             const _GreetingHeader(),
-            if (faithEnabled && settings.showDailyVerse) ...[
-              const SizedBox(height: AppSpacing.lg),
-              const _DailyMessageCard(),
-            ],
             const SizedBox(height: AppSpacing.lg),
             Text(
-              'TU DÍA',
+              'TU ENTRENAMIENTO',
               style: AppTypography.labelLarge.copyWith(
                 color: AppColors.of(context).textSecondary,
               ),
@@ -116,7 +112,7 @@ class DashboardPage extends ConsumerWidget {
                 programSession: nextProgramSession,
               ),
             const SizedBox(height: AppSpacing.md),
-            const RecoveryCheckInCard(),
+            const RecoveryCheckInCard(compact: true),
             if (settings.activeProgram != null) ...[
               const SizedBox(height: AppSpacing.md),
               _ActiveProgramCard(
@@ -132,23 +128,31 @@ class DashboardPage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            const HydrationWidget(),
-            const SizedBox(height: AppSpacing.md),
-            const DailyStepsWidget(),
+            const HomeWellnessLayout(
+              hydration: HydrationWidget(compact: true),
+              steps: DailyStepsWidget(compact: true),
+            ),
             const SizedBox(height: AppSpacing.xxl),
+            Text(
+              'ACTIVIDAD',
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
             WeeklyActivityCard(
               history: history,
               onOpenProgress: onOpenProgress ??
                   () => Navigator.of(context).push(
-                        MaterialPageRoute(
+                        MaterialPageRoute<void>(
                           builder: (_) => const ProgressPage(),
                         ),
                       ),
             ),
             if (recentWorkout != null || recentPR != null) ...[
-              const SizedBox(height: AppSpacing.xxl),
+              const SizedBox(height: AppSpacing.lg),
               Text(
-                'RECIENTE',
+                'NOVEDADES',
                 style: AppTypography.labelLarge.copyWith(
                   color: AppColors.of(context).textSecondary,
                 ),
@@ -156,10 +160,13 @@ class DashboardPage extends ConsumerWidget {
               const SizedBox(height: AppSpacing.sm),
               _RecentGrid(
                 lastWorkout: recentWorkout,
-                history: history,
                 recentPR: recentPR,
                 weightUnit: settings.weightUnit,
               ),
+            ],
+            if (faithEnabled && settings.showDailyVerse) ...[
+              const SizedBox(height: AppSpacing.xxl),
+              const _DailyMessageCard(),
             ],
           ],
         ),
@@ -773,13 +780,11 @@ class _ActiveProgramCard extends StatelessWidget {
 
 class _RecentGrid extends StatelessWidget {
   final WorkoutSession? lastWorkout;
-  final List<WorkoutSession> history;
   final PersonalRecordEvent? recentPR;
   final WeightUnit weightUnit;
 
   const _RecentGrid({
     required this.lastWorkout,
-    required this.history,
     required this.recentPR,
     required this.weightUnit,
   });
@@ -790,7 +795,6 @@ class _RecentGrid extends StatelessWidget {
       if (lastWorkout != null)
         _LastWorkoutCard(
           lastWorkout: lastWorkout!,
-          history: history,
           weightUnit: weightUnit,
         ),
       if (recentPR != null) _RecentPRCard(pr: recentPR!),
@@ -811,68 +815,50 @@ class _RecentGrid extends StatelessWidget {
 }
 
 class _LastWorkoutCard extends StatelessWidget {
-  final WorkoutSession lastWorkout;
-  final List<WorkoutSession> history;
-  final WeightUnit weightUnit;
-
   const _LastWorkoutCard({
     required this.lastWorkout,
-    required this.history,
     required this.weightUnit,
   });
 
+  final WorkoutSession lastWorkout;
+  final WeightUnit weightUnit;
+
   @override
   Widget build(BuildContext context) {
-    WorkoutSession? previous;
-    for (final session in history) {
-      if (session.routineId == lastWorkout.routineId &&
-          session.id != lastWorkout.id) {
-        previous = session;
-        break;
-      }
-    }
-    final comparison = WorkoutComparator.compare(
-      currentSession: lastWorkout,
-      previousSession: previous,
-    );
-
+    final colors = AppColors.of(context);
     return PremiumCard(
       onTap: () => RecentWorkoutDetails.show(context, lastWorkout, weightUnit),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Icon(Icons.history, color: AppColors.of(context).primary),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Último entrenamiento',
-            style: AppTypography.labelMedium.copyWith(
-              color: AppColors.of(context).textSecondary,
+          Icon(Icons.history_rounded, color: colors.primary, size: 25),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Último entrenamiento',
+                    style: AppTypography.labelMedium.copyWith(
+                        color: colors.textSecondary)),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  lastWorkout.routineNameSnapshot.isEmpty
+                      ? 'Entrenamiento libre'
+                      : lastWorkout.routineNameSnapshot,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.headlineSmall,
+                ),
+                Text(
+                  DateFormat('dd MMM', 'es')
+                      .format(lastWorkout.finishedAt.toLocal()),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            lastWorkout.routineNameSnapshot.isEmpty
-                ? 'Entrenamiento libre'
-                : lastWorkout.routineNameSnapshot,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.headlineSmall,
-          ),
-          const SizedBox(height: 5),
-          if (comparison != null && comparison.volumeDifferencePercent != 0)
-            Text(
-              '${comparison.volumeDifferencePercent > 0 ? '+' : ''}${comparison.volumeDifferencePercent.toStringAsFixed(1)}% volumen',
-              style: AppTypography.bodySmall.copyWith(
-                color: comparison.volumeDifferencePercent > 0
-                    ? AppColors.of(context).success
-                    : AppColors.of(context).warning,
-              ),
-            )
-          else
-            Text(
-              DateFormat('dd MMM', 'es').format(lastWorkout.startedAt),
-              style: AppTypography.bodySmall,
-            ),
+          Icon(Icons.chevron_right, color: colors.textSecondary),
         ],
       ),
     );
@@ -880,18 +866,17 @@ class _LastWorkoutCard extends StatelessWidget {
 }
 
 class _RecentPRCard extends ConsumerWidget {
-  final PersonalRecordEvent pr;
-
   const _RecentPRCard({required this.pr});
+
+  final PersonalRecordEvent pr;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    // A PR can outlive a deleted catalog exercise: keep the historical
-    // snapshot visible, but never navigate to a different exercise by name.
     final exercise = ref.watch(exerciseListProvider)
         .where((item) => item.id == pr.exerciseId)
         .firstOrNull;
+    final colors = AppColors.of(context);
     return PremiumCard(
       onTap: exercise == null
           ? null
@@ -900,35 +885,39 @@ class _RecentPRCard extends ConsumerWidget {
                   builder: (_) => FocusedExerciseProgressPage(exercise: exercise),
                 ),
               ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Icon(Icons.emoji_events_outlined, color: AppColors.of(context).gold),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'PR reciente',
-            style: AppTypography.labelMedium.copyWith(
-              color: AppColors.of(context).textSecondary,
+          Icon(Icons.emoji_events_outlined, color: colors.gold, size: 25),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('RÉCORD RECIENTE',
+                    style: AppTypography.labelMedium.copyWith(
+                        color: colors.textSecondary)),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  pr.exerciseNameSnapshot,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.headlineSmall,
+                ),
+                Text(
+                  FitnessFormatter.formatPRValue(
+                    pr.newValue,
+                    pr.type,
+                    settings.weightUnit,
+                  ),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            pr.exerciseNameSnapshot,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.headlineSmall,
-          ),
-          const SizedBox(height: 5),
-          Text(
-            FitnessFormatter.formatPRValue(
-              pr.newValue,
-              pr.type,
-              settings.weightUnit,
-            ),
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.of(context).gold,
-            ),
-          ),
+          if (exercise != null)
+            Icon(Icons.chevron_right, color: colors.textSecondary),
         ],
       ),
     );

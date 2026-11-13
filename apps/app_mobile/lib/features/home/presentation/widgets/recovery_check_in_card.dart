@@ -9,7 +9,9 @@ import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'recovery_history_sheet.dart';
 
 class RecoveryCheckInCard extends ConsumerWidget {
-  const RecoveryCheckInCard({super.key});
+  const RecoveryCheckInCard({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,6 +34,7 @@ class RecoveryCheckInCard extends ConsumerWidget {
               checkIn: checkIn,
               history: snapshot,
               onHistory: onHistory,
+              compact: compact,
             ),
     );
   }
@@ -224,11 +227,13 @@ class _RecoverySummary extends StatelessWidget {
   final RecoveryCheckIn checkIn;
   final RecoveryHistorySnapshot history;
   final VoidCallback? onHistory;
+  final bool compact;
 
   const _RecoverySummary({
     required this.checkIn,
     required this.history,
     this.onHistory,
+    this.compact = false,
   });
 
   @override
@@ -300,7 +305,7 @@ class _RecoverySummary extends StatelessWidget {
               Icon(Icons.tune, color: AppColors.of(context).textSecondary),
           ],
         ),
-        const SizedBox(height: AppSpacing.md),
+        SizedBox(height: compact ? AppSpacing.sm : AppSpacing.md),
         Text(
           checkIn.recommendation,
           style: AppTypography.bodyMedium.copyWith(
@@ -308,7 +313,7 @@ class _RecoverySummary extends StatelessWidget {
             height: 1.45,
           ),
         ),
-        if (visibleTrends.isNotEmpty) ...[
+        if (!compact && visibleTrends.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           Divider(color: AppColors.of(context).surfaceBorder),
           const SizedBox(height: AppSpacing.xs),

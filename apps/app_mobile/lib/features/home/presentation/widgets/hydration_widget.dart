@@ -1,12 +1,18 @@
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/features/home/application/hydration_provider.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
+import 'dart:ui' show FontFeature;
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/core/theme/components/premium_card.dart';
 
 class HydrationWidget extends ConsumerStatefulWidget {
-  const HydrationWidget({super.key});
+  const HydrationWidget({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   ConsumerState<HydrationWidget> createState() => _HydrationWidgetState();
@@ -157,88 +163,124 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget> {
   Widget build(BuildContext context) {
     final hydration = ref.watch(hydrationProvider);
     final preferences = ref.watch(hydrationPreferencesProvider);
+    final colors = AppColors.of(context);
     final targetMl = preferences.targetMl;
     final remaining = (targetMl - hydration.waterMl).clamp(0, targetMl);
     final progress = targetMl <= 0
         ? 0.0
         : (hydration.waterMl / targetMl).clamp(0.0, 1.0);
+    final format = NumberFormat.decimalPattern('es');
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.water_drop, color: Colors.blue),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Hidratación diaria',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+    return PremiumCard(
+      key: const ValueKey('home_hydration_card'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.water_drop_outlined, color: colors.primary, size: 21),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Text(
+                  widget.compact ? 'Agua' : 'Hidratación diaria',
+                  style: AppTypography.labelLarge,
                 ),
-                IconButton(
-                  tooltip: 'Configurar meta y recordatorio',
-                  onPressed: _showSettings,
-                  icon: const Icon(Icons.tune_rounded),
-                ),
-              ],
-            ),
-            Text(
-              '${hydration.waterMl} / $targetMl ml',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: AppColors.of(context).textSecondary,
               ),
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 12,
-                backgroundColor: AppColors.of(context).surfaceBorder,
-                color: Colors.blue,
+              IconButton(
+                tooltip: 'Configurar hidratación y recordatorios',
+                onPressed: _showSettings,
+                icon: const Icon(Icons.tune_rounded, size: 20),
+                color: colors.textSecondary,
+                visualDensity: VisualDensity.compact,
               ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '${format.format(hydration.waterMl)} ml',
+            style: AppTypography.headlineMedium.copyWith(
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
-            const SizedBox(height: 10),
+          ),
+          Text(
+            'Meta: ${format.format(targetMl)} ml',
+            style: AppTypography.labelSmall.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ClipRRect(
+            borderRadius: AppRadius.sm_,
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              backgroundColor: colors.surfaceBorder,
+              color: colors.primary,
+              semanticsLabel: 'Progreso de hidratación',
+            ),
+          ),
+          if (!widget.compact) ...[
+            const SizedBox(height: AppSpacing.sm),
             Text(
               remaining == 0
                   ? 'Meta registrada por hoy.'
-                  : 'Te faltan $remaining ml para tu meta personal.',
-              style: TextStyle(color: AppColors.of(context).textSecondary),
+                  : 'Te faltan ${format.format(remaining)} ml para tu meta.',
+              style: AppTypography.bodySmall.copyWith(
+                color: colors.textSecondary,
+              ),
             ),
             if (preferences.reminderEnabled) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 'Recordatorio: ${preferences.reminderHour.toString().padLeft(2, '0')}:00',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.of(context).textSecondary,
+                style: AppTypography.bodySmall.copyWith(
+                  color: colors.textSecondary,
                 ),
               ),
             ],
-            const SizedBox(height: 16),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          if (widget.compact)
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 4,
+              runSpacing: 2,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                TextButton(
+                  key: const ValueKey('home_hydration_quick_add'),
+                  onPressed: () => _addWater(250),
+                  child: const Text('+250 ml'),
+                ),
+                PopupMenuButton<int>(
+                  tooltip: 'Más cantidades de agua',
+                  icon: Icon(Icons.more_horiz, color: colors.textSecondary),
+                  onSelected: _addWater,
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 500, child: Text('Añadir 500 ml')),
+                    PopupMenuItem(value: 750, child: Text('Añadir 750 ml')),
+                  ],
+                ),
+              ],
+            )
+          else
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xs,
               children: [
                 _addButton('+250 ml', 250),
                 _addButton('+500 ml', 500),
                 _addButton('+750 ml', 750),
               ],
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
   Widget _addButton(String label, int ml) {
-    return OutlinedButton(onPressed: () => _addWater(ml), child: Text(label));
+    return OutlinedButton(
+      onPressed: () => _addWater(ml),
+      child: Text(label, style: AppTypography.labelMedium),
+    );
   }
 }

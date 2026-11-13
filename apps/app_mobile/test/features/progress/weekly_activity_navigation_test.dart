@@ -58,8 +58,8 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('ESTA SEMANA'), findsOneWidget);
-      expect(find.byIcon(Icons.check), findsOneWidget);
+      expect(find.text('ACTIVIDAD SEMANAL'), findsOneWidget);
+      expect(find.text('1 día con entrenamiento esta semana.'), findsOneWidget);
       for (final duplicate in ['ENTRENOS', 'SERIES', 'TIEMPO', 'VOLUMEN']) {
         expect(find.text(duplicate), findsNothing);
       }
@@ -129,7 +129,7 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.check), findsNothing);
+    expect(find.text('Aún no tienes actividad registrada esta semana.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -146,7 +146,7 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.check), findsNothing);
+    expect(find.text('Aún no tienes actividad registrada esta semana.'), findsOneWidget);
     await tester.tap(find.text('Ver análisis en Progreso'));
     expect(opened, isTrue);
     expect(tester.takeException(), isNull);
