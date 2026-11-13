@@ -87,7 +87,7 @@ void main() {
     await tester.pumpAndSettle();
     // Finish Monday 02 Nov 00:20. Matching the Progreso heatmap,
     // it is one activity day in the current week, not last week.
-    expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(find.text('1 día con entrenamiento esta semana.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
