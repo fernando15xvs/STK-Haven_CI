@@ -260,6 +260,11 @@ jobs:
       - name: Test web Perfil program navigation contracts
         working-directory: apps/app_web
         run: flutter test test/features/profile
+      # Compile the real web entry point, not just the source-code contract
+      # test. This catches browser-only build and navigation regressions.
+      - name: Build web release with Perfil and modern program routes
+        working-directory: apps/app_web
+        run: flutter build web --release --target lib/main.dart
       # Regression gate for STK Motivation integrated with workout navigation.
       - name: Test STK Motivation import, playlists, playback and compact player
         working-directory: apps/app_mobile

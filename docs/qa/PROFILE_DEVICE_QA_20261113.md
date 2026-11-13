@@ -39,3 +39,19 @@ Este documento **no certifica pruebas físicas**. Las casillas se completarán c
 - [ ] iPhone físico: modelo, iOS, fecha, capturas y fallos documentados.
 - [ ] Android físico: modelo, Android, fecha, capturas y fallos documentados.
 - [ ] PR #57 se mantiene en borrador hasta aprobación expresa.
+
+## Preparación de una prueba reproducible
+
+1. Abrir la última ejecución aprobada de [Actions del espejo](https://github.com/fernando15xvs/STK-Haven_CI/actions) (flujo `STK Haven Public CI`). Descargar desde **Artifacts** la compilación para el commit exacto de la PR. No usar un APK/IPA de otra versión; los artefactos caducan a los 7 días.
+2. Para Android, descargar `stk-haven-android-debug-qa`, descomprimir `app-debug.apk`, verificar `app-debug.apk.sha256`, instalar en un **dispositivo de prueba**; se deben otorgar permisos únicamente si el caso lo requiere.
+3. Para iPhone, `stk-haven-ios-unsigned` trae un IPA **sin firmar**. Su presencia certifica empaquetado, **no instalación ni una sesión real**. Hacen falta firma/provisionamiento válidos y un iPhone físico para la prueba.
+4. Antes de cualquier prueba de restauración, **exportar una copia local y conservarla fuera del dispositivo**; usar datos ficticios o un entorno de prueba. La restauración reemplaza datos locales. No realizarla con datos valiosos sin copia validada.
+5. Registrar por caso: modelo, sistema operativo y versión, commit SHA de código, build/versión, tema y acento, escala de texto, resultado, captura, pasos reproducibles. Si falla una prueba, mantener la casilla sin marcar.
+
+## Evidencia automática (distinta del QA físico)
+
+- [x] CI espejo 7/7 para el código de Perfil: [ejecución 43502798220](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/43502798220).
+- [x] Perfil móvil (tests widget/responsive/contratos) y Perfil web (test de contrato): ambos pasos ejecutados y aprobados en la [ejecución ampliada 43519421812](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/43519421812).
+- [x] Paridad de 41/41 archivos relacionados con Perfil comprobada entre HEAD canónico `22ba891fc9e9b5684ee26c701e9eef3eacdea5e7` y su espejo previo.
+- [ ] Build web release completo en Actions con nueva puerta de regresión.
+- [ ] Revisión humana de VoiceOver, TalkBack y navegador real (no se puede deducir del CI).

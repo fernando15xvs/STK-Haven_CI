@@ -1,7 +1,7 @@
 # STK Haven · Perfil — implementación en PR #57
 
 **Fecha:** 13 noviembre 2026 · **Rama existente:** `fix/home-phase1-data-navigation-20261113`.
-**Estado:** cambios de código A/B publicados, CI de la versión B en curso; C necesita QA real.
+**Estado:** bloques A/B implementados y CI espejo 7/7 confirmado (`43502798220`). Pruebas específicas Perfil móvil y web ejecutadas con éxito en `43519421812`; pendiente validar compilación web release y QA en dispositivos reales.
 **PR:** https://github.com/fernando15xvs/STK-Haven/pull/57
 **Espejo Actions:** `fernando15xvs/STK-Haven_CI` (`main`), sin PR espejo.
 **Auditoría de origen:** https://github.com/fernando15xvs/STK-Haven/pull/57#issuecomment-6863316769
@@ -30,7 +30,7 @@
 - [x] A5. Aclarar «Días preferidos» como recomendación, sin mutar calendario del programa activo de Entrenar.
 - [x] A6. Compatibilidad de intervalos unilaterales personalizados restaurados (0–600 s), sin valor inválido en Dropdown.
 - [x] A7. Pruebas de regresión para selector e integridad de navegación/servicio.
-- [ ] **A-GATE:** CI 7/7 del bloque funcional (última ejecución puede quedar cancelada por un commit posterior; usar el último HEAD final).
+- [x] **A-GATE:** CI espejo 7/7 confirmado en la captura `43502798220` que contiene el bloque A.
 
 ## Bloque B — diseño, navegación y formularios
 
@@ -42,28 +42,39 @@
 - [x] B6. Proteger salir de ambos editores con cambios pendientes; ofrecer «Seguir editando» o «Descartar».
 - [x] B7. Cambiar medallas de cuadrícula fija a lista adaptable, usando colores semánticos y texto escalable.
 - [x] B8. Retirar control visual inerte «Continuar» de la vista previa de Aspecto; ajustar textos de versículos y eliminar versión hardcodeada.
-- [ ] **B-GATE:** mobile widget tests, core tests, análisis, CI 7/7 para el HEAD del bloque B.
+- [x] **B-GATE:** mobile widget tests, core tests, análisis y CI 7/7 en `43502798220`; suite explícita Perfil móvil/web superada en la ejecución ampliada `43519421812`.
 
 ## Bloque C — regresión y QA
 
-- [x] C1. Tests nuevos de selector unilateral custom, estados de navegación, contratos de los formularios, superficies y logros a 320/390/430dp y texto 100/160/200 %.
+- [x] C1. Tests nuevos de selector unilateral custom, estados de navegación, contratos de los formularios, superficies y logros a 320/390/430dp y texto 100/160/200 %. **Se ejecutan explícitamente** los tests de `apps/app_mobile/test/features/profile` y `apps/app_web/test/features/profile` en CI espejo desde `43519421812`, ambos verdes.
 - [ ] C2. Contraste de los 8 acentos y claro/oscuro/OLED en todos los subflujos de Perfil, teclado y escalas; incluir rotación admitida.
 - [ ] C3. Verificación manual VoiceOver y TalkBack de identidad, logros, menús, chips, cambios de preferencias, cierres de editor.
 - [ ] C4. Restaurar datos locales/nube con y sin sesión; validar historial, notas, avatar, programas y permisos sin perder datos.
 - [ ] C5. Verificar uso sin cuenta, con cuenta y con módulo Fe desactivado, Coach permisos y datos privados.
 - [ ] C6. Revisión de tarjetas y títulos en Perfil contra Inicio/Entrenar/Progreso bajo temas, OLED y reducir movimiento.
 - [ ] C7. QA físico iPhone/Android, reportar versiones y capturas. **CI verde no equivale a esta prueba.**
-- [ ] C8. Paridad de Git blobs entre PR canónica y espejo + **7/7 final**.
-- [ ] C9. Mantener PR #57 **abierta, draft, sin fusionar** hasta que el usuario ordene integrarla.
+- [x] C8a. Paridad de **41/41 blobs** relacionados con Perfil/restore en PR principal y espejo, verificada para HEAD `22ba891fc9e9b5684ee26c701e9eef3eacdea5e7`.
+- [ ] C8b. **7/7 final** después de añadir compilación web release explícita al espejo.
+- [x] C9. PR #57 verificada **abierta, draft, sin fusionar**. Mantener así hasta la autorización explícita.
 
 ## Criterios de aceptación
 
-- [ ] Perfil nunca muestra ni acciona un programa antiguo cuando el moderno difiere.
-- [ ] Botón + mantiene Motivation; Perfil no repite ese enlace.
-- [ ] Cambio kg/lb no se revierte al guardar «Tu experiencia».
-- [ ] No se puede restaurar ninguna copia sobre una sesión en curso.
+- [x] Perfil no ofrece acciones de gestión de programas legacy ni en móvil ni en web (tests de contrato + CI); queda pendiente la interacción física/navegador.
+- [x] Botón + mantiene Motivation; Perfil no repite ese enlace (suite Perfil en CI).
+- [x] El editor «Tu experiencia» no vuelve a guardar kg/lb (test de contrato aprobado); falta verificar el recorrido manual entre pantallas.
+- [x] Guardas en la ruta cloud (UI y servicio, incluso tras la descarga) y en restauración local; **pendiente prueba real de importación/restauración**.
 - [ ] Tarjetas, tipografía y colores siguen Outfit/AppColors/PremiumCard en todas las pantallas de Perfil.
 - [ ] No hay overflow a 320dp/200% y los botones son accesibles.
 - [ ] CI final 7/7 en espejo y QA físico documentado, sin merge.
 
 **Límites:** no crear otra PR, no instalar una versión nueva ni generar IPA sin solicitud, no modificar Supabase ni eliminar rutinas, sesiones, cuentas, audio o medallas al simplificar navegación.
+
+## Evidencia y límites de la validación
+
+- [CI verde original, 7/7](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/43502798220).
+- [CI ampliado de Perfil móvil y web](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/43519421812): suites específicas completadas con éxito, compendio general de builds según la ejecución.
+- [ ] Compilación release real de `apps/app_web` en Actions (añadida al espejo como gate; su resultado debe verificarse).
+- [ ] Capturas y prueba de **navegador** en móvil/escritorio: configuración, permisos, navegación de programas, restauración y desconexión.
+- [ ] **iPhone físico firmado**: el IPA de Actions es *unsigned* y no puede instalarse sin firma/provisión adecuada. El artefacto no es prueba física.
+- [ ] **Android físico**: instalar el APK debug de Actions, probar permisos, backups y navegación; registrar dispositivo y versión.
+- Las pruebas de widget no son un sustituto de VoiceOver, TalkBack, teclado real ni pruebas de 200% en cada subpantalla. Estas casillas C2–C7 siguen abiertas.
