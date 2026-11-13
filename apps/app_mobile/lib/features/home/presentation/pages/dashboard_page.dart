@@ -64,6 +64,7 @@ class DashboardPage extends ConsumerWidget {
     final recentWorkout = HomeDashboardSessionPolicy.recentWorkout(
       history: history,
       completedToday: completedToday,
+      activeSessionId: activeWorkout.isActive ? activeWorkout.session?.id : null,
     );
     final allPRs = prRepo.getAllPRs()
       ..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));

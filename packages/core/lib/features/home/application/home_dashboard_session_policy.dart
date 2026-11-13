@@ -11,10 +11,16 @@ class HomeDashboardSessionPolicy {
   static WorkoutSession? recentWorkout({
     required List<WorkoutSession> history,
     required WorkoutSession? completedToday,
+    String? activeSessionId,
   }) {
     if (history.isEmpty) return null;
     final latest = history.first;
-    return latest.id == completedToday?.id ? null : latest;
+    // A saved partial snapshot can still be the currently active workout.
+    // It must not be repeated below the in-progress hero.
+    if (latest.id == completedToday?.id || latest.id == activeSessionId) {
+      return null;
+    }
+    return latest;
   }
 
   /// Count fully completed effective sessions in this legacy program only.

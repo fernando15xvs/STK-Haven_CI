@@ -87,6 +87,18 @@ void main() {
     );
   });
 
+  test('the active-workout banner owns a matching partial snapshot', () {
+    final partial = _session('partial', start, completed: false);
+    expect(
+      HomeDashboardSessionPolicy.recentWorkout(
+        history: [partial],
+        completedToday: null,
+        activeSessionId: partial.id,
+      ),
+      isNull,
+    );
+  });
+
   test('the completed-today banner owns the most recent session', () {
     final latest = _session('today', start.add(const Duration(days: 1)));
     final older = _session('older', start);
