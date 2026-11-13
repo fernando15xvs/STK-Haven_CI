@@ -251,6 +251,15 @@ jobs:
           test/features/exercises/exercise_selection_preview_test.dart
           test/features/exercises/muscle_hierarchy_picker_test.dart
           test/features/exercises/mobile_lottie_production_plan_test.dart
+      # Perfil's navigation, responsive themes, settings cards and programs
+      # have their own Flutter tests. They must run, not only be analyzed.
+      - name: Test Perfil navigation, forms, themes and responsive layout
+        working-directory: apps/app_mobile
+        run: flutter test test/features/profile
+      # The web route must not reintroduce the legacy destructive program flow.
+      - name: Test web Perfil program navigation contracts
+        working-directory: apps/app_web
+        run: flutter test test/features/profile
       # Regression gate for STK Motivation integrated with workout navigation.
       - name: Test STK Motivation import, playlists, playback and compact player
         working-directory: apps/app_mobile
