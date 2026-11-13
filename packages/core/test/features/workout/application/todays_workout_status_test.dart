@@ -41,4 +41,27 @@ void main() {
     final yesterday = session(at: DateTime(2026, 10, 13, 10), completed: true);
     expect(TodaysWorkoutStatus.latestCompletedToday([yesterday], today), isNull);
   });
+
+  test('overnight completed session is attributed to finish day', () {
+    final overnight = session(at: DateTime(2026, 10, 13, 23, 30), completed: true);
+    expect(TodaysWorkoutStatus.latestCompletedToday([overnight], today),
+        same(overnight));
+  });
+
+  test('a session started today but finished tomorrow is not finalized today', () {
+    final tomorrow = session(at: DateTime(2026, 10, 14, 23, 30), completed: true);
+    expect(TodaysWorkoutStatus.latestCompletedToday([tomorrow], today), isNull);
+  });
+
+  test('future-dated completion today is not yet a finished workout', () {
+    final later = session(at: DateTime(2026, 10, 14, 16, 30), completed: true);
+    expect(TodaysWorkoutStatus.latestCompletedToday([later], today), isNull);
+  });
+
+  test('returns latest completed by finish time, not start time', () {
+    final morning = session(at: DateTime(2026, 10, 14, 9), completed: true);
+    final afternoon = session(at: DateTime(2026, 10, 14, 14), completed: true);
+    expect(TodaysWorkoutStatus.latestCompletedToday([morning, afternoon], today),
+        same(afternoon));
+  });
 }

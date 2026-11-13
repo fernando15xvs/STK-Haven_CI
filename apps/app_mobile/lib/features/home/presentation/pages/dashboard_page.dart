@@ -20,6 +20,9 @@ import 'package:core/features/routines/presentation/providers/routine_provider.d
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/workout_comparator.dart';
 import 'package:core/features/workout/application/todays_workout_status.dart';
+import 'package:core/features/home/application/home_dashboard_session_policy.dart';
+import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:gym_tracker/features/progress/presentation/pages/focused_exercise_progress_page.dart';
 import 'package:core/features/workout/presentation/widgets/recent_workout_details.dart';
 import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
@@ -54,10 +57,13 @@ class DashboardPage extends ConsumerWidget {
     final activeWorkout = ref.watch(activeWorkoutProvider);
     final nextProgramSession = ref.watch(nextProgramSessionProvider);
 
-    final lastWorkout = history.isNotEmpty ? history.first : null;
     final completedToday = TodaysWorkoutStatus.latestCompletedToday(
       history,
       DateTime.now(),
+    );
+    final recentWorkout = HomeDashboardSessionPolicy.recentWorkout(
+      history: history,
+      completedToday: completedToday,
     );
     final allPRs = prRepo.getAllPRs()
       ..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
@@ -138,7 +144,7 @@ class DashboardPage extends ConsumerWidget {
                         ),
                       ),
             ),
-            if (lastWorkout != null || recentPR != null) ...[
+            if (recentWorkout != null || recentPR != null) ...[
               const SizedBox(height: AppSpacing.xxl),
               Text(
                 'RECIENTE',
@@ -148,9 +154,10 @@ class DashboardPage extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.sm),
               _RecentGrid(
-                lastWorkout: lastWorkout,
+                lastWorkout: recentWorkout,
                 history: history,
                 recentPR: recentPR,
+                weightUnit: settings.weightUnit,
               ),
             ],
           ],
@@ -489,7 +496,7 @@ class _CompletedTodayCard extends ConsumerWidget {
     return PremiumCard(
       backgroundColor: AppColors.of(context).primaryFaded,
       borderColor: AppColors.of(context).success.withValues(alpha: 0.55),
-      onTap: () => RecentWorkoutDetails.show(context, session, weightUnit),
+      // Explicit, independent actions below; no duplicate card-wide tap.
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -520,7 +527,6 @@ class _CompletedTodayCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: AppColors.of(context).success),
             ],
           ),
           const SizedBox(height: 12),
@@ -712,13 +718,11 @@ class _ActiveProgramCard extends StatelessWidget {
         .difference(activeProgram.startedAt)
         .inDays;
     final rawWeek = (daysSinceStart / 7).floor() + 1;
-    final week = rawWeek > activeProgram.durationWeeks
-        ? activeProgram.durationWeeks
-        : rawWeek;
-    final completed = history.where((session) {
-      return session.startedAt.isAfter(activeProgram.startedAt) &&
-          activeProgram.generatedRoutineIds.contains(session.routineId);
-    }).length;
+    final week = rawWeek.clamp(0, activeProgram.durationWeeks);
+    final completed = HomeDashboardSessionPolicy.completedProgramSessions(
+      history: history,
+      activeProgram: activeProgram,
+    );
     final progress = activeProgram.durationWeeks <= 0
         ? 0.0
         : week / activeProgram.durationWeeks;
@@ -770,22 +774,29 @@ class _RecentGrid extends StatelessWidget {
   final WorkoutSession? lastWorkout;
   final List<WorkoutSession> history;
   final PersonalRecordEvent? recentPR;
+  final WeightUnit weightUnit;
 
   const _RecentGrid({
     required this.lastWorkout,
     required this.history,
     required this.recentPR,
+    required this.weightUnit,
   });
 
   @override
   Widget build(BuildContext context) {
     final cards = <Widget>[
       if (lastWorkout != null)
-        _LastWorkoutCard(lastWorkout: lastWorkout!, history: history),
+        _LastWorkoutCard(
+          lastWorkout: lastWorkout!,
+          history: history,
+          weightUnit: weightUnit,
+        ),
       if (recentPR != null) _RecentPRCard(pr: recentPR!),
     ];
 
-    if (cards.length <= 1) return cards.first;
+    if (cards.isEmpty) return const SizedBox.shrink();
+    if (cards.length == 1) return cards.first;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -801,8 +812,13 @@ class _RecentGrid extends StatelessWidget {
 class _LastWorkoutCard extends StatelessWidget {
   final WorkoutSession lastWorkout;
   final List<WorkoutSession> history;
+  final WeightUnit weightUnit;
 
-  const _LastWorkoutCard({required this.lastWorkout, required this.history});
+  const _LastWorkoutCard({
+    required this.lastWorkout,
+    required this.history,
+    required this.weightUnit,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -820,6 +836,7 @@ class _LastWorkoutCard extends StatelessWidget {
     );
 
     return PremiumCard(
+      onTap: () => RecentWorkoutDetails.show(context, lastWorkout, weightUnit),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -869,7 +886,19 @@ class _RecentPRCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
+    // A PR can outlive a deleted catalog exercise: keep the historical
+    // snapshot visible, but never navigate to a different exercise by name.
+    final exercise = ref.watch(exerciseListProvider)
+        .where((item) => item.id == pr.exerciseId)
+        .firstOrNull;
     return PremiumCard(
+      onTap: exercise == null
+          ? null
+          : () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => FocusedExerciseProgressPage(exercise: exercise),
+                ),
+              ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

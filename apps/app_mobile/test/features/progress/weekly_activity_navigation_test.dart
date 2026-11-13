@@ -13,7 +13,16 @@ void main() {
         startedAt: date,
         finishedAt: date.add(const Duration(minutes: 40)),
         durationSeconds: 2400,
-        exercises: const [],
+        exercises: [
+          WorkoutExercise(
+            exerciseId: 'press',
+            exerciseNameSnapshot: 'Press',
+            muscleGroupSnapshot: 'Pecho',
+            sets: const [
+              WorkoutSet(weight: 20, reps: 8, completed: true),
+            ],
+          ),
+        ],
       );
 
   for (final brightness in [Brightness.dark, Brightness.light]) {
@@ -79,6 +88,46 @@ void main() {
     // Finish Monday 02 Nov 00:20. Matching the Progreso heatmap,
     // it is one activity day in the current week, not last week.
     expect(find.byIcon(Icons.check), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty/partial sessions without completed work do not count',
+      (tester) async {
+    final start = DateTime(2026, 11, 3, 10);
+    final empty = WorkoutSession(
+      id: 'empty',
+      routineId: 'routine',
+      startedAt: start,
+      finishedAt: start.add(const Duration(minutes: 20)),
+      durationSeconds: 1200,
+      exercises: const [],
+    );
+    final partial = WorkoutSession(
+      id: 'partial',
+      routineId: 'routine',
+      startedAt: start,
+      finishedAt: start.add(const Duration(minutes: 20)),
+      durationSeconds: 1200,
+      exercises: [
+        WorkoutExercise(
+          exerciseId: 'press',
+          exerciseNameSnapshot: 'Press',
+          muscleGroupSnapshot: 'Pecho',
+          sets: const [WorkoutSet(weight: 30, reps: 8, completed: false)],
+        ),
+      ],
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: WeeklyActivityCard(
+          history: [empty, partial],
+          referenceDate: DateTime(2026, 11, 3, 12),
+          onOpenProgress: () {},
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.check), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

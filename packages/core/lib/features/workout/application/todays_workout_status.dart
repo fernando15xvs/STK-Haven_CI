@@ -19,17 +19,22 @@ class TodaysWorkoutStatus {
     Iterable<WorkoutSession> sessions,
     DateTime now,
   ) {
+    // A session that began yesterday and ended after midnight belongs to
+    // today's completed activity, the same rule as Progreso's calendar.
+    // Never label a future-dated imported row as already finished.
+    final localNow = now.toLocal();
     WorkoutSession? latest;
     for (final session in sessions) {
-      final started = session.startedAt.toLocal();
-      if (started.year != now.year ||
-          started.month != now.month ||
-          started.day != now.day ||
+      final finished = session.finishedAt.toLocal();
+      if (finished.year != localNow.year ||
+          finished.month != localNow.month ||
+          finished.day != localNow.day ||
+          finished.isAfter(localNow) ||
           !isComplete(session)) {
         continue;
       }
       if (latest == null ||
-          session.startedAt.isAfter(latest.startedAt)) {
+          session.finishedAt.isAfter(latest.finishedAt)) {
         latest = session;
       }
     }

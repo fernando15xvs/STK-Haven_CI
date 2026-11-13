@@ -1,4 +1,5 @@
 import 'package:core/domain/models/workout_session.dart';
+import 'package:core/features/progress/application/progress_metrics_service.dart';
 import 'package:flutter/material.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
@@ -27,9 +28,9 @@ class WeeklyActivityCard extends StatelessWidget {
       for (final session in history)
         // Match Progreso's calendar: group activity by the recorded
         // completion day, including sessions that cross midnight.
-        if (!session.finishedAt.isBefore(startOfWeek) &&
-            !session.finishedAt.isAfter(now))
-          session.finishedAt.weekday,
+        if (isRecordedTrainingActivityAsOf(session, now) &&
+            !session.finishedAt.toLocal().isBefore(startOfWeek))
+          session.finishedAt.toLocal().weekday,
     };
     const initials = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
     const fullNames = [

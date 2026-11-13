@@ -20,7 +20,11 @@ import 'package:gym_tracker/features/progress/presentation/pages/body_measuremen
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 
 class ProgressPage extends ConsumerWidget {
-  const ProgressPage({super.key});
+  const ProgressPage({super.key, this.summaryAnchorKey});
+
+  /// A descendant anchor lets Home open Resumen on the retained tab without
+  /// recreating Progreso or resetting its shared period/filter state.
+  final Key? summaryAnchorKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,6 +67,7 @@ class ProgressPage extends ConsumerWidget {
         // A single period control serves Resumen, Ejercicios and Músculos.
         // Medidas keeps its separate, measurement-specific date range.
         body: Builder(
+          key: summaryAnchorKey,
           builder: (context) {
             final tabs = DefaultTabController.of(context);
             return AnimatedBuilder(

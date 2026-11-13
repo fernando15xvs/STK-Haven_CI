@@ -277,14 +277,13 @@ final progressMetricsProvider = Provider<DashboardMetrics>((ref) {
 
     totalVolume += sessionVolume;
 
-    final dateKey = DateTime(
-      session.finishedAt.year,
-      session.finishedAt.month,
-      session.finishedAt.day,
-    );
+    // Keep numeric active days and volume buckets on the same local finish
+    // date as the heatmap and Home's completed-session summary.
+    final finished = session.finishedAt.toLocal();
+    final dateKey = DateTime(finished.year, finished.month, finished.day);
     dailyVolume[dateKey] = (dailyVolume[dateKey] ?? 0) + sessionVolume;
     activeDayKeys.add(
-      '${session.finishedAt.year}-${session.finishedAt.month}-${session.finishedAt.day}',
+      '${finished.year}-${finished.month}-${finished.day}',
     );
   }
 

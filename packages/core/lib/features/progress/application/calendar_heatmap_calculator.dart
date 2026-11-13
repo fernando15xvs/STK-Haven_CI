@@ -51,7 +51,7 @@ class CalendarHeatmapSnapshot {
 
     final workoutCounts = <DateTime, int>{};
     for (final session in sessions) {
-      final date = _dateOnly(session.finishedAt);
+      final date = _dateOnly(session.finishedAt.toLocal());
       if (date.isBefore(normalizedStart) || date.isAfter(normalizedEnd)) {
         continue;
       }

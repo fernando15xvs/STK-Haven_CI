@@ -34,6 +34,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // and then retained in IndexedStack so navigation preserves their state
   // without paying the cost of building Progress/Profile/Routines up front.
   late final List<Widget?> _pages;
+  final GlobalKey _progressSummaryAnchorKey = GlobalKey();
 
   @override
   void initState() {
@@ -46,13 +47,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ];
   }
 
-  void _openProgress() => _selectTab(2);
+  void _openProgress() {
+    _selectTab(2);
+    // A link from the weekly summary must open Resumen, not whichever
+    // analytical subtab (possibly Medidas) was last visited.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final anchor = _progressSummaryAnchorKey.currentContext;
+      if (anchor != null) {
+        DefaultTabController.of(anchor).animateTo(0);
+      }
+    });
+  }
 
   Widget _createPage(int index) {
     return switch (index) {
       0 => ProgramDashboardPage(onOpenProgress: _openProgress),
       1 => const RoutinesPage(),
-      2 => const ProgressPage(),
+      2 => ProgressPage(summaryAnchorKey: _progressSummaryAnchorKey),
       3 => const ProfilePage(),
       _ => const SizedBox.shrink(),
     };
