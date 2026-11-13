@@ -1739,6 +1739,52 @@ class _SetRowState extends ConsumerState<_SetRow> {
         .toggleUnilateralSide(widget.exIndex, widget.setIndex, left: left);
   }
 
+  Future<void> _confirmRemoveSet() async {
+    final session = ref.read(activeWorkoutProvider).session;
+    if (session == null ||
+        widget.exIndex >= session.exercises.length ||
+        widget.setIndex >= session.exercises[widget.exIndex].sets.length) return;
+    final exercise = session.exercises[widget.exIndex];
+    if (exercise.sets.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cada ejercicio necesita al menos una serie.')),
+      );
+      return;
+    }
+    final instanceId = exercise.instanceId;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.of(context).surfaceHigh,
+        title: Text('Eliminar serie', style: AppTypography.headlineMedium),
+        content: Text(
+          '¿Deseas eliminar esta serie de ${widget.initialSet.setType.label.toLowerCase()}?',
+          style: AppTypography.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('Eliminar', style: TextStyle(
+              color: AppColors.of(context).error,
+            )),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final live = ref.read(activeWorkoutProvider).session;
+    if (live == null ||
+        widget.exIndex >= live.exercises.length ||
+        live.exercises[widget.exIndex].instanceId != instanceId ||
+        widget.setIndex >= live.exercises[widget.exIndex].sets.length) return;
+    ref.read(activeWorkoutProvider.notifier)
+        .removeSet(widget.exIndex, widget.setIndex);
+  }
+
   @override
   Widget build(BuildContext context) {
     final done = widget.initialSet.completed;
@@ -1752,37 +1798,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
     }
 
     return GestureDetector(
-      onLongPress: () async {
-        final confirm = await showDialog<bool>(
-          context: context,
-          builder: (_) => AlertDialog(
-            backgroundColor: AppColors.of(context).surfaceHigh,
-            title: Text('Eliminar serie', style: AppTypography.headlineMedium),
-            content: Text(
-              '¿Deseas eliminar esta serie de ${widget.initialSet.setType.label.toLowerCase()}?',
-              style: AppTypography.bodyMedium,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancelar'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  'Eliminar',
-                  style: TextStyle(color: AppColors.of(context).error),
-                ),
-              ),
-            ],
-          ),
-        );
-        if (confirm == true && context.mounted) {
-          ref
-              .read(activeWorkoutProvider.notifier)
-              .removeSet(widget.exIndex, widget.setIndex);
-        }
-      },
+      onLongPress: _confirmRemoveSet,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         margin: const EdgeInsets.only(bottom: 5),
@@ -1912,15 +1928,19 @@ class _SetRowState extends ConsumerState<_SetRow> {
             // Historical false values remain pending until the user explicitly
             // records a skipped/failed outcome. Partial unilateral sets are
             // excluded because one completed side is already real work.
-            if (!done &&
-                !widget.initialSet.leftCompleted &&
-                !widget.initialSet.rightCompleted)
-              Align(
+            Align(
                 alignment: Alignment.centerRight,
                 child: PopupMenuButton<String>(
                   key: ValueKey('set_outcome_${widget.exIndex}_${widget.setIndex}'),
-                  tooltip: 'Estado de la serie',
+                  tooltip: 'Acciones de la serie',
                   onSelected: (outcome) {
+                    if (outcome == 'delete') {
+                      _confirmRemoveSet();
+                      return;
+                    }
+                    if (done ||
+                        widget.initialSet.leftCompleted ||
+                        widget.initialSet.rightCompleted) return;
                     final updated = _setFromFields(completed: false).copyWith(
                       recordedOutcome: outcome == 'pending' ? null : outcome,
                       clearRecordedOutcome: outcome == 'pending',
@@ -1929,10 +1949,18 @@ class _SetRowState extends ConsumerState<_SetRow> {
                       widget.exIndex, widget.setIndex, updated,
                     );
                   },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'pending', child: Text('Pendiente')),
-                    PopupMenuItem(value: 'skipped', child: Text('Omitida')),
-                    PopupMenuItem(value: 'failed', child: Text('Fallida')),
+                  itemBuilder: (_) => [
+                    if (!done &&
+                        !widget.initialSet.leftCompleted &&
+                        !widget.initialSet.rightCompleted) ...[
+                      const PopupMenuItem(value: 'pending', child: Text('Pendiente')),
+                      const PopupMenuItem(value: 'skipped', child: Text('Omitida')),
+                      const PopupMenuItem(value: 'failed', child: Text('Fallida')),
+                    ],
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Text('Eliminar serie'),
+                    ),
                   ],
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -1944,11 +1972,13 @@ class _SetRowState extends ConsumerState<_SetRow> {
                           color: AppColors.of(context).textSecondary),
                         const SizedBox(width: AppSpacing.xxs),
                         Text(
-                          switch (widget.initialSet.recordedOutcome) {
-                            'skipped' => 'Omitida',
-                            'failed' => 'Fallida',
-                            _ => 'Pendiente',
-                          },
+                          done
+                              ? 'Acciones'
+                              : switch (widget.initialSet.recordedOutcome) {
+                                  'skipped' => 'Omitida',
+                                  'failed' => 'Fallida',
+                                  _ => 'Acciones',
+                                },
                           style: AppTypography.labelSmall.copyWith(
                             color: switch (widget.initialSet.recordedOutcome) {
                               'skipped' => AppColors.of(context).warning,

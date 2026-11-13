@@ -2,15 +2,11 @@ import 'dart:async';
 
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
-import 'package:core/features/programs/application/program_muscle_frequency_planner.dart';
 import 'package:core/features/programs/application/program_plan_insights.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
-import 'package:core/features/programs/application/program_volume_planner.dart';
 import 'package:core/features/programs/application/program_duration_choices.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
-import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -71,13 +67,8 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
         ? allPrograms.where((program) => program.isTemplate).toList(growable: false)
         : allPrograms;
     final routines = ref.watch(routineListProvider);
-    final history = ref.watch(workoutHistoryProvider);
-    final exercises = ref.watch(exerciseListProvider);
     final routineById = <String, Routine>{
       for (final routine in routines) routine.id: routine,
-    };
-    final muscleByExercise = <String, String>{
-      for (final exercise in exercises) exercise.id: exercise.muscleGroup,
     };
 
     return Scaffold(
@@ -121,20 +112,6 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                   routines: routines,
                   weekStart: weekStart,
                 );
-                final volumes = ProgramVolumePlanner.calculateWeek(
-                  program: program,
-                  routines: routines,
-                  history: history,
-                  muscleGroupByExerciseId: muscleByExercise,
-                  weekStart: weekStart,
-                );
-                final muscleFrequency =
-                    ProgramMuscleFrequencyPlanner.calculateWeek(
-                  program: program,
-                  routines: routines,
-                  exercises: exercises,
-                  weekStart: weekStart,
-                );
                 final insights = ProgramPlanInsights.calculate(
                   program: program,
                   routines: routines,
@@ -145,8 +122,6 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                   child: _ProgramCard(
                     program: program,
                     routineById: routineById,
-                    volumes: volumes,
-                    muscleFrequency: muscleFrequency,
                     plannedSessions: plannedSessions,
                     insights: insights,
                     onActivate: () => ref
@@ -801,8 +776,6 @@ class _ProgramCard extends StatelessWidget {
   const _ProgramCard({
     required this.program,
     required this.routineById,
-    required this.volumes,
-    required this.muscleFrequency,
     required this.plannedSessions,
     required this.insights,
     required this.onActivate,
@@ -817,8 +790,6 @@ class _ProgramCard extends StatelessWidget {
 
   final TrainingProgram program;
   final Map<String, Routine> routineById;
-  final List<ProgramMuscleVolume> volumes;
-  final List<ProgramMuscleFrequency> muscleFrequency;
   final List<ProgramScheduledSession> plannedSessions;
   final ProgramPlanInsights insights;
   final VoidCallback onActivate;
@@ -965,42 +936,19 @@ class _ProgramCard extends StatelessWidget {
             ],
             if (_friendlyProgramNote(program.notes).isNotEmpty)
               Text(_friendlyProgramNote(program.notes)),
-            ExpansionTile(
-              tilePadding: EdgeInsets.zero,
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.reorder_rounded),
               title: Text(
                 program.scheduleMode == ProgramScheduleMode.fixed
-                    ? 'Rutinas y cumplimiento'
-                    : 'Rotación y cumplimiento',
+                    ? 'Rutinas de la semana fija'
+                    : 'Rotación del programa',
               ),
               subtitle: Text(
-                program.scheduleMode == ProgramScheduleMode.fixed
-                    ? 'Semana fija controlada por el plan'
-                    : program.routineIds
-                        .map((id) => routineById[id]?.name ?? 'Eliminada')
-                        .join(' → '),
+                program.routineIds
+                    .map((id) => routineById[id]?.name ?? 'Eliminada')
+                    .join(' → '),
               ),
-              children: [
-                if (program.completions.isEmpty)
-                  const ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Aún no hay sesiones completadas.'),
-                  )
-                else
-                  ...program.completions.reversed.take(8).map(
-                        (item) => ListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          leading:
-                              const Icon(Icons.check_circle_outline_rounded),
-                          title: Text(
-                            routineById[item.routineId]?.name ?? item.routineId,
-                          ),
-                          subtitle: Text(
-                            'Semana ${item.programWeek} · ${_date(item.completedAt)}',
-                          ),
-                        ),
-                      ),
-              ],
             ),
             if (plannedSessions.isNotEmpty)
               ExpansionTile(
@@ -1063,100 +1011,12 @@ class _ProgramCard extends StatelessWidget {
                       ),
                 ],
               ),
-            if (muscleFrequency.isNotEmpty)
-              ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                title: const Text('Frecuencia muscular de esta semana'),
-                subtitle: const Text(
-                  'Sesiones por semana: una categoría se cuenta una sola vez '
-                  'por sesión, aunque intervenga en varios ejercicios.',
-                ),
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(0, 4, 0, 12),
-                    child: Text(
-                      'Directa: músculo principal del ejercicio. '
-                      'Secundaria: aparece como músculo asistente. '
-                      'No son series ni crecimiento muscular.',
-                    ),
-                  ),
-                  ...muscleFrequency
-                    .map(
-                      (item) => ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(item.canonicalGroupId == null
-                            ? '${item.muscleGroup} · por clasificar'
-                            : item.muscleGroup),
-                        subtitle: Text(
-                          item.directSessions == item.totalSessions
-                              ? '${item.directSessions} ${item.directSessions == 1 ? 'sesión directa' : 'sesiones directas'}'
-                              : item.directSessions == 0
-                                  ? '${item.secondaryOnlySessions} ${item.secondaryOnlySessions == 1 ? 'sesión como secundario' : 'sesiones como secundario'}'
-                                  : '${item.directSessions} directas · ${item.secondaryOnlySessions} secundarias',
-                        ),
-                        trailing: Text(
-                          '${item.totalSessions}×/sem',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                    )
-                    .toList(),
-                ],
-              ),
-            if (volumes.isNotEmpty)
-              ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                title: const Text('Volumen de esta semana'),
-                subtitle: const Text(
-                  'Series efectivas y volumen externo (kg·repeticiones) '
-                  'realizados frente a previstos; no mide crecimiento muscular.',
-                ),
-                children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(0, 4, 0, 12),
-                    child: Text(
-                      'Las series excluyen calentamiento y aproximación. '
-                      'Los kg·rep son una estimación del volumen externo '
-                      'basada en cargas anteriores, no una medida de hipertrofia.',
-                    ),
-                  ),
-                  ...volumes
-                    .map(
-                      (volume) => ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(volume.canonicalGroupId == null
-                            ? '${volume.muscleGroup} · por clasificar'
-                            : volume.muscleGroup),
-                        subtitle: Text(
-                          '${volume.completedWorkingSets}/${volume.plannedWorkingSets} '
-                          'series efectivas (realizadas/previstas)\n'
-                          '${volume.performedVolume.toStringAsFixed(0)}/'
-                          '${volume.plannedVolume.toStringAsFixed(0)} kg·rep '
-                          '(realizado/previsto)'
-                          '${volume.completionRatio == null ? '' : ' · '
-                            '${(volume.completionRatio! * 100).clamp(0, 999).toStringAsFixed(0)}% '
-                            'del volumen previsto'}',
-                        ),
-                      ),
-                    )
-                    .toList(),
-                ],
-              ),
           ],
         ),
       ),
     );
   }
 
-String _date(DateTime value) {
-    final local = value.toLocal();
-    return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
-  }
 }
 
 class _PlanOverview extends StatelessWidget {

@@ -1,7 +1,7 @@
 # STK Haven · Entrenar unificado con Programas — Roadmap A/B/C (PR #57)
 
 **Fecha:** 13 de noviembre de 2026
-**Estado:** IMPLEMENTACIÓN EN CURSO · A y B1 validados 7/7, B2 en implementación, C parcialmente preparado
+**Estado:** IMPLEMENTACIÓN EN CURSO · A, B1 y B2 validados 7/7; C implementándose, QA físico pendiente
 **PR canónica:** https://github.com/fernando15xvs/STK-Haven/pull/57
 **Rama:** `fix/home-phase1-data-navigation-20261113`
 **Espejo CI:** `fernando15xvs/STK-Haven_CI`, escribir solo a `main`, sin PR de espejo.
@@ -72,7 +72,7 @@ Reglas de precedencia: si hay plan activo, el calendario visible de Entrenar der
 - [ ] B2.4. Resumen final: primero lo registrado (tiempo, series, volumen, récords de esa sesión), después detalles opcionales; enviar comparativas históricas y análisis profundos a Progreso, evitando sección duplicada.
 - [ ] B2.5. Plantillas, filtros y páginas de ejercicios: jerarquía coherente, botones de contacto accesibles, filtros progresivos y estados vacíos claros; preservar ficha técnica y demostraciones válidas sin reemplazos de medios.
 - [ ] B2.6. Inicio **no** gana una segunda tarjeta/programa de gestión; revisar que su tarjeta de próxima sesión sea el único hero «qué entrenar hoy». Entrenar **no** muestra un clon de esa tarjeta.
-- [ ] B2-GATE. Golden/widget tests o inspección equivalente de pantallas clave; contraste/typography consistente; CI 7/7.
+- [x] B2-GATE. Golden/widget tests o inspección equivalente de pantallas clave; contraste/typography consistente; CI 7/7.
 
 ## 4. Bloque C — accesibilidad, rendimiento y QA final
 
@@ -109,4 +109,4 @@ Reglas de precedencia: si hay plan activo, el calendario visible de Entrenar der
 
 **Repositorios:** `fernando15xvs/STK-Haven` = fuente canónica; `fernando15xvs/STK-Haven_CI` = espejo de Actions. Todos los cambios se acumulan en la rama existente de la PR #57. No crear otra PR. El espejo recibe snapshot directo en `main`. No fusionar la PR hasta autorización expresa.
 
-**Registro de ejecución (13-11-2026):** Bloque A 7/7 en CI espejo `43482886539`; bloque B1 7/7 en CI espejo `43485873553`. B2 implementa de manera gradual controles adaptables (días, plantillas, series), jerarquía del resumen y gestión diferenciada de plantillas de programas; **su CI aún está pendiente de ejecutarse**. B2 y C no se darán por cerrados sin QA. PR #57 no se fusiona sin autorización.
+**Registro de ejecución (13-11-2026):** Bloque A 7/7 en CI espejo `43482886539`; B1 7/7 en `43485873553`; B2 7/7 en `43488134952`. C incorpora accesibilidad alternativa al gesto largo para eliminar series, pruebas de 8 acentos y OLED, test responsive del creador rápido y eliminación de paneles analíticos duplicados en la administración. **CI del bloque C pendiente; pruebas físicas aún pendientes.** PR #57 no se fusiona sin autorización.

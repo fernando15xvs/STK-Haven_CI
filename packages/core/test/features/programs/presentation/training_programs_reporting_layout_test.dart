@@ -65,7 +65,7 @@ class _History extends WorkoutHistoryNotifier {
 }
 
 void main() {
-  testWidgets('320 px plan leaves weekly volume uncovered and labels units',
+  testWidgets('320 px program manager keeps scheduling readable without duplicated history',
       (tester) async {
     tester.view.physicalSize = const Size(320, 640);
     tester.view.devicePixelRatio = 1;
@@ -85,23 +85,17 @@ void main() {
 
     expect(find.byType(FloatingActionButton), findsNothing);
     expect(find.byKey(const ValueKey('create_training_plan')), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Volumen de esta semana'), 140);
-    // The whole program card is built in one list item. scrollUntilVisible
-    // discovers the Text early but can leave its clickable area off-screen.
-    await tester.ensureVisible(find.text('Volumen de esta semana'));
+    await tester.scrollUntilVisible(find.text('Plan de esta semana'), 140);
+    await tester.ensureVisible(find.text('Plan de esta semana'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Volumen de esta semana'));
+    await tester.tap(find.text('Plan de esta semana'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(
-      find.textContaining('series efectivas (realizadas/previstas)'), 120,
-    );
-    await tester.ensureVisible(
-      find.textContaining('series efectivas (realizadas/previstas)'),
-    );
-    await tester.pumpAndSettle();
-    expect(find.textContaining('kg·rep'), findsWidgets);
+    // Planning belongs here; historical volume and muscle dashboards to Progreso.
+    expect(find.text('Volumen de esta semana'), findsNothing);
+    expect(find.text('Frecuencia muscular de esta semana'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
   testWidgets('template-only navigation hides regular plans and creator',
       (tester) async {
     await tester.pumpWidget(ProviderScope(
