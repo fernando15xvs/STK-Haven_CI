@@ -4,6 +4,9 @@ import 'dart:ui' show FontFeature;
 import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
+import 'package:core/domain/models/settings_state.dart';
+import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:gym_tracker/features/home/application/home_refresh_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,9 +15,14 @@ import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/features/home/application/daily_steps_bridge.dart';
 
 class DailyStepsWidget extends ConsumerStatefulWidget {
-  const DailyStepsWidget({super.key, this.compact = false});
+  const DailyStepsWidget({
+    super.key,
+    this.compact = false,
+    this.isVisible = true,
+  });
 
   final bool compact;
+  final bool isVisible;
 
   @override
   ConsumerState<DailyStepsWidget> createState() => _DailyStepsWidgetState();
@@ -22,27 +30,62 @@ class DailyStepsWidget extends ConsumerStatefulWidget {
 
 class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
     with WidgetsBindingObserver {
-  static const Duration _refreshInterval = Duration(minutes: 1);
   static const Duration _reminderResyncInterval = Duration(minutes: 15);
 
   Timer? _refreshTimer;
   DateTime? _lastReminderSyncAt;
   bool _busy = false;
   DailyStepsAccessStatus? _accessStatus;
+  bool _appResumed = true;
+
+  bool get _canPoll => HomeRefreshPolicy.canPoll(
+        visible: widget.isVisible,
+        appResumed: _appResumed,
+      );
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      ref.read(dailyStepsProvider.notifier).checkDateAndRefresh();
-      await _refreshFromDevice(requestAccess: true);
-      await _syncGoalReminders(force: true);
-      _refreshTimer = Timer.periodic(_refreshInterval, (_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _startPolling();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant DailyStepsWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isVisible != widget.isVisible) {
+      if (!widget.isVisible) {
+        _refreshTimer?.cancel();
+        _refreshTimer = null;
+      } else {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _startPolling();
+        });
+      }
+    }
+  }
+
+  void _startPolling() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    if (!mounted || !_canPoll) return;
+    ref.read(dailyStepsProvider.notifier).checkDateAndRefresh();
+    // Read already-authorized sensors only. Permission is requested solely
+    // from the explicit "Conectar pasos" action.
+    _refreshFromDevice();
+    _syncGoalReminders();
+    final savings =
+        ref.read(settingsProvider).performanceMode == PerformanceMode.savings;
+    _refreshTimer = Timer.periodic(
+      HomeRefreshPolicy.stepRefreshInterval(savings: savings),
+      (_) {
+        if (!mounted || !_canPoll) return;
         ref.read(dailyStepsProvider.notifier).checkDateAndRefresh();
         _refreshFromDevice();
-      });
-    });
+      },
+    );
   }
 
   @override
@@ -54,13 +97,20 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) return;
-    ref.read(dailyStepsProvider.notifier).checkDateAndRefresh();
-    _refreshFromDevice();
+    final resumed = state == AppLifecycleState.resumed;
+    if (_appResumed == resumed) return;
+    _appResumed = resumed;
+    if (resumed) {
+      _startPolling();
+    } else {
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+    }
   }
 
   Future<void> _refreshFromDevice({bool requestAccess = false}) async {
-    if (_busy || !mounted) return;
+    if (_busy || !mounted || !_canPoll) return;
+    final sampledAt = DateTime.now();
     setState(() => _busy = true);
 
     try {
@@ -79,13 +129,22 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
         }
       }
 
+      // A slow sensor response after midnight or after switching tabs must
+      // never overwrite the next day's stored count or trigger reminders.
+      if (!mounted || !_canPoll ||
+          !HomeRefreshPolicy.sameLocalDay(sampledAt, DateTime.now())) {
+        return;
+      }
       if (steps != null) {
+        final preferences = ref.read(stepGoalPreferencesProvider);
+        final previous = ref.read(dailyStepsProvider);
+        final wasAtTarget = previous.steps >= preferences.targetSteps;
         await ref
             .read(dailyStepsProvider.notifier)
             .setSteps(steps, deviceSynced: true);
-
-        final preferences = ref.read(stepGoalPreferencesProvider);
-        await _syncGoalReminders(force: steps >= preferences.targetSteps);
+        if (!mounted || !_canPoll) return;
+        final isAtTarget = steps >= preferences.targetSteps;
+        await _syncGoalReminders(force: wasAtTarget != isAtTarget);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -99,6 +158,7 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
     final now = DateTime.now();
     if (!force &&
         _lastReminderSyncAt != null &&
+        HomeRefreshPolicy.sameLocalDay(_lastReminderSyncAt!, now) &&
         now.difference(_lastReminderSyncAt!) < _reminderResyncInterval) {
       return;
     }
@@ -280,6 +340,12 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(settingsProvider.select((settings) => settings.performanceMode),
+        (_, __) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _canPoll) _startPolling();
+      });
+    });
     final state = ref.watch(dailyStepsProvider);
     final preferences = ref.watch(stepGoalPreferencesProvider);
     final colors = AppColors.of(context);
@@ -347,6 +413,22 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
               ),
             ),
           ),
+          if (!state.deviceSynced &&
+              _accessStatus != DailyStepsAccessStatus.authorized) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const ValueKey('home_steps_connect'),
+                onPressed: _busy ? null : () {
+                  _refreshFromDevice(requestAccess: true);
+                },
+                icon: const Icon(Icons.link_rounded, size: 18),
+                label: Text('Conectar pasos',
+                    style: AppTypography.labelMedium),
+              ),
+            ),
+          ],
           if (!widget.compact) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(

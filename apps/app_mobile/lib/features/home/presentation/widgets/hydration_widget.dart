@@ -1,4 +1,5 @@
 import 'package:core/core/services/hydration_reminder_service.dart';
+import 'package:gym_tracker/features/home/application/home_refresh_policy.dart';
 import 'package:core/features/home/application/hydration_provider.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
 import 'dart:ui' show FontFeature;
@@ -10,22 +11,63 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 
 class HydrationWidget extends ConsumerStatefulWidget {
-  const HydrationWidget({super.key, this.compact = false});
+  const HydrationWidget({
+    super.key,
+    this.compact = false,
+    this.isVisible = true,
+  });
 
   final bool compact;
+  final bool isVisible;
 
   @override
   ConsumerState<HydrationWidget> createState() => _HydrationWidgetState();
 }
 
-class _HydrationWidgetState extends ConsumerState<HydrationWidget> {
+class _HydrationWidgetState extends ConsumerState<HydrationWidget>
+    with WidgetsBindingObserver {
+  bool _appResumed = true;
+
+  bool get _canRefresh => HomeRefreshPolicy.canPoll(
+        visible: widget.isVisible,
+        appResumed: _appResumed,
+      );
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      ref.read(hydrationProvider.notifier).checkDateAndRefresh();
-      await _syncReminder();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refreshForToday();
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant HydrationWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isVisible && widget.isVisible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refreshForToday();
+      });
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appResumed = state == AppLifecycleState.resumed;
+    if (_canRefresh) _refreshForToday();
+  }
+
+  void _refreshForToday() {
+    if (!mounted || !_canRefresh) return;
+    ref.read(hydrationProvider.notifier).checkDateAndRefresh();
+    _syncReminder();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> _syncReminder({bool requestPermission = false}) async {
@@ -161,6 +203,16 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget> {
 
   @override
   Widget build(BuildContext context) {
+    // Dashboard refreshes daily totals at midnight even when this tile is
+    // retained. Reschedule its reminder on the new day only if visible.
+    ref.listen(hydrationProvider.select((state) => state.dateString),
+        (previous, next) {
+      if (previous != next && _canRefresh) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _canRefresh) _syncReminder();
+        });
+      }
+    });
     final hydration = ref.watch(hydrationProvider);
     final preferences = ref.watch(hydrationPreferencesProvider);
     final colors = AppColors.of(context);

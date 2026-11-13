@@ -40,7 +40,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _pages = <Widget?>[
-      ProgramDashboardPage(onOpenProgress: _openProgress),
+      ProgramDashboardPage(onOpenProgress: _openProgress, isVisible: true),
       null,
       null,
       null,
@@ -62,7 +62,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _createPage(int index) {
     return switch (index) {
-      0 => ProgramDashboardPage(onOpenProgress: _openProgress),
+      0 => ProgramDashboardPage(onOpenProgress: _openProgress, isVisible: true),
       1 => const RoutinesPage(),
       2 => ProgressPage(summaryAnchorKey: _progressSummaryAnchorKey),
       3 => const ProfilePage(),
@@ -75,6 +75,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     setState(() {
       _pages[index] ??= _createPage(index);
       _currentIndex = index;
+      // IndexedStack retains the Home widget state. Explicit visibility
+      // allows sensor/clock polling to stop on the other tabs.
+      _pages[0] = ProgramDashboardPage(
+        onOpenProgress: _openProgress,
+        isVisible: index == 0,
+      );
     });
   }
 

@@ -1,3 +1,5 @@
+import 'package:core/core/theme/app_palette.dart';
+import 'package:core/domain/models/appearance_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/home_wellness_layout.dart';
@@ -40,4 +42,38 @@ void main() {
       });
     }
   }
+  testWidgets('OLED/accent theme remains safe at large text sizes',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 820);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final colors = AppColors.from(
+      const AppearanceSettings(oledBlack: true, accent: AppAccent.emerald),
+      Brightness.dark,
+    );
+    await tester.pumpWidget(MaterialApp(
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        fontFamily: 'Outfit',
+        extensions: [colors],
+      ),
+      home: Scaffold(
+        body: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.6)),
+          child: HomeWellnessLayout(
+            hydration: const Card(child: Text('Hidratación 2 500 ml')),
+            steps: const Card(child: Text('10 000 pasos del día')),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('home_wellness_vertical')),
+        findsOneWidget);
+    expect(find.text('Hidratación 2 500 ml'), findsOneWidget);
+    expect(find.text('10 000 pasos del día'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
+

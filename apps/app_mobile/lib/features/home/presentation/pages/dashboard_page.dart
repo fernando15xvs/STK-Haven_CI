@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -20,6 +22,10 @@ import 'package:core/features/routines/presentation/providers/routine_provider.d
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/todays_workout_status.dart';
 import 'package:core/features/home/application/home_dashboard_session_policy.dart';
+import 'package:core/features/home/application/hydration_provider.dart';
+import 'package:core/features/home/application/wellness_provider.dart';
+import 'package:core/features/recovery/application/recovery_provider.dart';
+import 'package:gym_tracker/features/home/application/home_refresh_policy.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/focused_exercise_progress_page.dart';
 import 'package:core/features/workout/presentation/widgets/recent_workout_details.dart';
@@ -38,13 +44,106 @@ import 'package:gym_tracker/features/home/presentation/widgets/recovery_check_in
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 
-class DashboardPage extends ConsumerWidget {
-  const DashboardPage({super.key, this.onOpenProgress});
+class DashboardPage extends ConsumerStatefulWidget {
+  const DashboardPage({
+    super.key,
+    this.onOpenProgress,
+    this.isVisible = true,
+  });
 
   final VoidCallback? onOpenProgress;
+  final bool isVisible;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends ConsumerState<DashboardPage>
+    with WidgetsBindingObserver {
+  Timer? _refreshTimer;
+  bool _appResumed = true;
+  DateTime _observedAt = DateTime.now();
+
+  bool get _shouldRefresh => HomeRefreshPolicy.canPoll(
+        visible: widget.isVisible,
+        appResumed: _appResumed,
+      );
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _restartClock();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant DashboardPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isVisible != widget.isVisible) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _restartClock();
+      });
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final resumed = state == AppLifecycleState.resumed;
+    if (_appResumed == resumed) return;
+    _appResumed = resumed;
+    if (resumed) {
+      _restartClock();
+    } else {
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+    }
+  }
+
+  void _restartClock() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    if (!_shouldRefresh) return;
+    // A retained tab has no ticker while hidden. Refresh immediately when
+    // visible again, then check time boundaries without rebuilding every tick.
+    _refreshDailyState(force: true);
+    _refreshTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _refreshDailyState(),
+    );
+  }
+
+  void _refreshDailyState({bool force = false}) {
+    if (!mounted || !_shouldRefresh) return;
+    final now = DateTime.now();
+    final changedDay =
+        !HomeRefreshPolicy.sameLocalDay(_observedAt, now);
+    if (force || changedDay) {
+      ref.read(hydrationProvider.notifier).checkDateAndRefresh();
+      ref.read(dailyStepsProvider.notifier).checkDateAndRefresh();
+    }
+    if (changedDay) {
+      // These providers otherwise cache yesterday's date while IndexedStack
+      // keeps Inicio mounted. Do not mutate persisted history.
+      ref.invalidate(nextProgramSessionProvider);
+      ref.invalidate(recoveryProvider);
+      ref.invalidate(dailyVerseProvider);
+    }
+    if (HomeRefreshPolicy.needsHeaderUpdate(_observedAt, now)) {
+      setState(() => _observedAt = now);
+    }
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final history = ref.watch(workoutHistoryProvider);
     final prRepo = ref.watch(personalRecordRepositoryProvider);
     final routineRepo = ref.watch(routineRepositoryProvider);
@@ -82,7 +181,7 @@ class DashboardPage extends ConsumerWidget {
             120,
           ),
           children: [
-            const _GreetingHeader(),
+            _GreetingHeader(now: _observedAt),
             const SizedBox(height: AppSpacing.lg),
             Text(
               'TU ENTRENAMIENTO',
@@ -128,9 +227,15 @@ class DashboardPage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            const HomeWellnessLayout(
-              hydration: HydrationWidget(compact: true),
-              steps: DailyStepsWidget(compact: true),
+            HomeWellnessLayout(
+              hydration: HydrationWidget(
+                compact: true,
+                isVisible: widget.isVisible,
+              ),
+              steps: DailyStepsWidget(
+                compact: true,
+                isVisible: widget.isVisible,
+              ),
             ),
             const SizedBox(height: AppSpacing.xxl),
             Text(
@@ -142,7 +247,7 @@ class DashboardPage extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             WeeklyActivityCard(
               history: history,
-              onOpenProgress: onOpenProgress ??
+              onOpenProgress: widget.onOpenProgress ??
                   () => Navigator.of(context).push(
                         MaterialPageRoute<void>(
                           builder: (_) => const ProgressPage(),
@@ -176,11 +281,12 @@ class DashboardPage extends ConsumerWidget {
 }
 
 class _GreetingHeader extends StatelessWidget {
-  const _GreetingHeader();
+  const _GreetingHeader({required this.now});
+
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
     final greeting = now.hour < 12
         ? 'Buenos días'
         : now.hour < 18
