@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:uuid/uuid.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/domain/models/settings_state.dart';
@@ -68,6 +69,7 @@ class ActiveWorkoutRepository {
         'exercises': session.exercises
             .map(
               (exercise) => {
+                'instanceId': exercise.instanceId,
                 'exerciseId': exercise.exerciseId,
                 'exerciseNameSnapshot': exercise.exerciseNameSnapshot,
                 'muscleGroupSnapshot': exercise.muscleGroupSnapshot,
@@ -139,6 +141,9 @@ class ActiveWorkoutRepository {
           .toList();
 
       return WorkoutExercise(
+        instanceId: (exercise['instanceId'] as String?)?.isNotEmpty == true
+            ? exercise['instanceId'] as String
+            : const Uuid().v4(),
         exerciseId: exercise['exerciseId'] as String,
         exerciseNameSnapshot:
             exercise['exerciseNameSnapshot'] as String? ?? '',

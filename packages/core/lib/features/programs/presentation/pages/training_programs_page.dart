@@ -7,6 +7,7 @@ import 'package:core/features/programs/application/program_muscle_frequency_plan
 import 'package:core/features/programs/application/program_plan_insights.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_volume_planner.dart';
+import 'package:core/features/programs/application/program_duration_choices.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
@@ -267,7 +268,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                       decoration: const InputDecoration(
                         labelText: 'Duración del mesociclo',
                       ),
-                      items: const [4, 6, 8, 10, 12, 16, 20, 24]
+                      items: ProgramDurationChoices.forSelected(durationWeeks)
                           .map(
                             (weeks) => DropdownMenuItem(
                               value: weeks,
@@ -660,13 +661,10 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                         alignment: Alignment.centerLeft,
                         child: TextButton.icon(
                           onPressed: () => setDialogState(() {
-                            durationWeeks += 1;
-                            if (deloadWeeks.contains(currentWeek)) {
-                              deloadWeeks.add(currentWeek + 1);
-                            }
+                            durationWeeks = ProgramDurationChoices.addWeek(durationWeeks);
                           }),
                           icon: const Icon(Icons.copy_all_outlined),
-                          label: const Text('Duplicar semana actual'),
+                          label: const Text('Añadir una semana al plan'),
                         ),
                       ),
                     const SizedBox(height: 8),

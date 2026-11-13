@@ -704,7 +704,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                                 exIndex == session.exercises.length - 1);
 
                         return Padding(
-                          key: ValueKey(session.exercises[exIndex].exerciseId),
+                          key: ValueKey('workout_${session.exercises[exIndex].instanceId}'),
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _ExerciseBlock(
                             exIndex: exIndex,
@@ -833,7 +833,7 @@ class _FocusedWorkoutView extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         _ExerciseBlock(
-          key: ValueKey('focus_${exercise.exerciseId}'),
+          key: ValueKey('focus_${exercise.instanceId}'),
           exIndex: focusIndex,
           workoutExercise: exercise,
           isCurrent: true,

@@ -252,6 +252,8 @@ class WorkoutSet {
 }
 
 class WorkoutExercise {
+  /// Unique occurrence within a workout, independent of the catalog ID.
+  final String instanceId;
   final String exerciseId;
   final String exerciseNameSnapshot;
   final String muscleGroupSnapshot;
@@ -267,6 +269,7 @@ class WorkoutExercise {
   final String? supersetGroupId;
 
   const WorkoutExercise({
+    this.instanceId = '',
     required this.exerciseId,
     required this.exerciseNameSnapshot,
     required this.muscleGroupSnapshot,
@@ -292,6 +295,7 @@ class WorkoutExercise {
   }
 
   WorkoutExercise copyWith({
+    String? instanceId,
     String? exerciseId,
     String? exerciseNameSnapshot,
     String? muscleGroupSnapshot,
@@ -305,6 +309,7 @@ class WorkoutExercise {
     bool clearSupersetGroup = false,
   }) {
     return WorkoutExercise(
+      instanceId: instanceId ?? this.instanceId,
       exerciseId: exerciseId ?? this.exerciseId,
       exerciseNameSnapshot:
           exerciseNameSnapshot ?? this.exerciseNameSnapshot,

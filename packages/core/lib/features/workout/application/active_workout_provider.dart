@@ -229,6 +229,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
           ];
 
           return WorkoutExercise(
+            instanceId: const Uuid().v4(),
             exerciseId: re.exerciseId,
             exerciseNameSnapshot: ex.name,
             muscleGroupSnapshot: ex.muscleGroup,
@@ -616,6 +617,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         .toList(growable: false);
 
     exercises[exerciseIndex] = WorkoutExercise(
+      instanceId: current.instanceId.isEmpty ? const Uuid().v4() : current.instanceId,
       exerciseId: replacement.id,
       exerciseNameSnapshot: replacement.name,
       muscleGroupSnapshot: replacement.muscleGroup,
@@ -771,6 +773,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     final sideRest = ref.read(settingsProvider).unilateralSideRestSeconds;
     exercises.add(
       WorkoutExercise(
+        instanceId: const Uuid().v4(),
         exerciseId: exercise.id,
         exerciseNameSnapshot: exercise.name,
         muscleGroupSnapshot: exercise.muscleGroup,
@@ -941,7 +944,12 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       startedAt: resumedStartedAt,
       finishedAt: now,
       durationSeconds: savedSession.durationSeconds,
-      exercises: savedSession.exercises,
+      exercises: [
+        for (final exercise in savedSession.exercises)
+          exercise.instanceId.isEmpty
+              ? exercise.copyWith(instanceId: const Uuid().v4())
+              : exercise,
+      ],
       notes: savedSession.notes,
     );
     await ref.read(activeWorkoutRepositoryProvider).saveDraft(resumed);
