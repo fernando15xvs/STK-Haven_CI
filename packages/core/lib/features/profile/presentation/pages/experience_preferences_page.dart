@@ -47,7 +47,9 @@ class _ExperiencePreferencesPageState
     );
     if (discard != true || !mounted) return;
     setState(() => _draft = _original);
-    Navigator.of(context).pop();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 
   @override

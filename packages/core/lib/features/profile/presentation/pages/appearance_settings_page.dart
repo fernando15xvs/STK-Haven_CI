@@ -33,8 +33,7 @@ class _AppearanceSettingsPageState
 
   @override
   Widget build(BuildContext context) {
-    final settings = ref.watch(settingsProvider);
-    final appearance = settings.appearance;
+    final appearance = ref.watch(settingsProvider).appearance;
     final colors = AppColors.of(context);
     final theme = Theme.of(context);
     const labels = {
@@ -225,17 +224,6 @@ class _AppearanceSettingsPageState
                                     : AppCardStyle.flat,
                               ),
                             ),
-                    ),
-                    const Divider(height: 1),
-                    SwitchListTile.adaptive(
-                      title: const Text('Reducir animaciones'),
-                      subtitle: const Text(
-                        'Una interfaz más tranquila. También respeta la preferencia del dispositivo.',
-                      ),
-                      value: settings.reduceMotion,
-                      onChanged: ref
-                          .read(settingsProvider.notifier)
-                          .setReduceMotion,
                     ),
                   ],
                 ),

@@ -30,6 +30,7 @@ void main() {
       expect(editor, contains('PopScope('));
       expect(editor, contains('_hasUnsavedChanges'));
       expect(editor, contains('Descartar cambios'));
+      expect(editor, contains('addPostFrameCallback'));
     }
     expect(personal, isNot(contains("Text('Mi entrenamiento'")));
     expect(experience, isNot(contains('setWeightUnit(draft.weightUnit)')));
@@ -45,4 +46,17 @@ void main() {
     expect(badges, isNot(contains('Colors.amber')));
     expect(badges, contains('colors.gold'));
   });
+  test('Reduce Motion is configured once and Appearance has no fake button', () {
+    final appearance = File(
+      '../../packages/core/lib/features/profile/presentation/pages/appearance_settings_page.dart',
+    ).readAsStringSync();
+    final device = File(
+      '../../packages/core/lib/features/profile/presentation/widgets/platform_settings_page.dart',
+    ).readAsStringSync();
+    expect(appearance, isNot(contains("title: const Text('Reducir animaciones')")));
+    expect(appearance, isNot(contains('onPressed: () {}')));
+    expect(device, contains("title: const Text('Reducir movimiento')"));
+    expect(device, isNot(contains("applicationVersion: '1.0.0'")));
+  });
+
 }

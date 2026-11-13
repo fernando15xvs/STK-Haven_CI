@@ -102,7 +102,9 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
       _draft = _original;
       _name.text = _original?.displayName ?? '';
     });
-    Navigator.pop(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).pop();
+    });
   }
 
   @override
@@ -232,7 +234,9 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                         _original = updated;
                         _saving = false;
                       });
-                      Navigator.of(context).pop();
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) Navigator.of(context).pop();
+                      });
                     } catch (_) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(

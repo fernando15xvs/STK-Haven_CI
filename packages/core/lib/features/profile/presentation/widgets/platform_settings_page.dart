@@ -77,17 +77,6 @@ class PlatformSettingsPage extends ConsumerWidget {
             children: [
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.notifications_outlined),
-                title: const Text('Notificaciones'),
-                subtitle: Text(
-                  kIsWeb
-                      ? 'Los recordatorios locales están disponibles en Android y iOS.'
-                      : 'Las horas se programan usando la zona horaria actual del dispositivo.',
-                ),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.directions_walk_outlined),
                 title: const Text('Movimiento y pasos'),
                 subtitle: Text(
