@@ -73,7 +73,7 @@ class _AppearanceSettingsPageState
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: colors.surface,
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: colors.surfaceBorder),
                   boxShadow: colors.shadows,
                 ),
@@ -127,10 +127,7 @@ class _AppearanceSettingsPageState
                           ),
                           label: const Text('3 de 4 sesiones'),
                         ),
-                        FilledButton(
-                          onPressed: () {},
-                          child: const Text('Continuar'),
-                        ),
+                        const Chip(label: Text('Ejemplo visual')),
                       ],
                     ),
                   ],

@@ -152,7 +152,7 @@ class PlatformSettingsPage extends ConsumerWidget {
                 onTap: () => showLicensePage(
                   context: context,
                   applicationName: 'STK Haven',
-                  applicationVersion: '1.0.0',
+                  // Do not display a hard-coded version that can differ from the installed build.
                 ),
               ),
             ],

@@ -1,4 +1,5 @@
 import 'package:core/features/progress/application/body_measurement_provider.dart';
+import 'package:core/features/profile/presentation/widgets/profile_section_card.dart';
 import 'package:core/features/progress/presentation/widgets/measurement_reminder_controls.dart';
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/core/services/workout_notification_service.dart';
@@ -37,7 +38,7 @@ class NotificationsSettingsPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _Section(
+          ProfileSectionCard(
             title: 'Mensajes personales',
             children: [
               ListTile(
@@ -58,7 +59,7 @@ class NotificationsSettingsPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          _Section(
+          ProfileSectionCard(
             title: 'Entrenamiento',
             children: [
               SwitchListTile.adaptive(
@@ -157,7 +158,7 @@ class NotificationsSettingsPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          _Section(
+          ProfileSectionCard(
             title: 'Medidas corporales',
             children: [
               MeasurementReminderControls(
@@ -166,7 +167,7 @@ class NotificationsSettingsPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          _Section(
+          ProfileSectionCard(
             title: 'Hidratación',
             children: [
               SwitchListTile.adaptive(
@@ -242,7 +243,7 @@ class NotificationsSettingsPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          _Section(
+          ProfileSectionCard(
             title: 'Pasos',
             children: [
               SwitchListTile.adaptive(
@@ -314,7 +315,7 @@ class NotificationsSettingsPage extends ConsumerWidget {
           ),
           if (faithEnabled) ...[
             const SizedBox(height: 14),
-            _Section(
+            ProfileSectionCard(
               title: 'Versículos',
               children: [
                 ListTile(
@@ -370,29 +371,3 @@ class NotificationsSettingsPage extends ConsumerWidget {
   }
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          ...children,
-        ],
-      ),
-    ),
-  );
-}

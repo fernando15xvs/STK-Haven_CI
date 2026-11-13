@@ -1,4 +1,5 @@
 import 'package:core/features/identity/presentation/cloud_auth_page.dart';
+import 'package:core/features/profile/presentation/widgets/profile_section_card.dart';
 import 'package:core/core/services/backup_activity_service.dart';
 import 'package:core/core/services/backup_file_service.dart';
 import 'package:core/core/services/backup_service.dart';
@@ -54,7 +55,7 @@ class BackupStatusPage extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              _Section(
+              ProfileSectionCard(
                 title: 'Nube',
                 children: [
                   if (!cloud.signedIn) ...[
@@ -200,7 +201,7 @@ class BackupStatusPage extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              _Section(
+              ProfileSectionCard(
                 title: 'Copias locales',
                 children: [
                   ListTile(
@@ -246,7 +247,7 @@ class BackupStatusPage extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              _Section(
+              ProfileSectionCard(
                 title: 'Exportación',
                 children: [
                   ListTile(
@@ -412,29 +413,3 @@ class BackupStatusPage extends ConsumerWidget {
   }
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 6),
-              ...children,
-            ],
-          ),
-        ),
-      );
-}

@@ -20,6 +20,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   UserExperienceProfile? _draft;
+  UserExperienceProfile? _original;
   bool _saving = false;
   bool _pickingPhoto = false;
 
@@ -70,6 +71,40 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
     }
   }
 
+  bool get _hasUnsavedChanges {
+    final draft = _draft, original = _original;
+    if (draft == null || original == null) return false;
+    return _name.text.trim() != original.displayName ||
+        jsonEncode(draft.toJson()) != jsonEncode(original.toJson());
+  }
+
+  Future<void> _requestDiscard(bool didPop) async {
+    if (didPop || !_hasUnsavedChanges || _saving) return;
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Descartar cambios'),
+        content: const Text('Hay cambios sin guardar. ¿Quieres salir sin guardarlos?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Seguir editando'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Descartar'),
+          ),
+        ],
+      ),
+    );
+    if (discard != true || !mounted) return;
+    setState(() {
+      _draft = _original;
+      _name.text = _original?.displayName ?? '';
+    });
+    Navigator.pop(context);
+  }
+
   @override
   void dispose() {
     _name.dispose();
@@ -79,7 +114,10 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
   @override
   Widget build(BuildContext context) {
     final profile = ref.watch(userExperienceProfileProvider);
-    return Scaffold(
+    return PopScope(
+      canPop: !_hasUnsavedChanges && !_saving && !_pickingPhoto,
+      onPopInvokedWithResult: (didPop, _) => _requestDiscard(didPop),
+      child: Scaffold(
       appBar: AppBar(title: const Text('Editar perfil')),
       body: profile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -87,6 +125,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
         data: (saved) {
           if (_draft == null) {
             _draft = saved;
+            _original = saved;
             _name.text = saved.displayName;
           }
           final draft = _draft!;
@@ -99,6 +138,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _name,
+                  onChanged: (_) => setState(() {}),
                   maxLength: 40,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
@@ -159,36 +199,6 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                Text('Mi entrenamiento', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<TrainingGoal>(
-                  value: draft.trainingGoal,
-                  decoration: const InputDecoration(labelText: 'Objetivo principal', border: OutlineInputBorder()),
-                  items: const [
-                    DropdownMenuItem(value: TrainingGoal.hypertrophy, child: Text('Ganar músculo')),
-                    DropdownMenuItem(value: TrainingGoal.strength, child: Text('Ganar fuerza')),
-                    DropdownMenuItem(value: TrainingGoal.activeLifestyle, child: Text('Vida activa')),
-                    DropdownMenuItem(value: TrainingGoal.conditioning, child: Text('Acondicionamiento')),
-                    DropdownMenuItem(value: TrainingGoal.selfDirected, child: Text('Entrenamiento libre')),
-                  ],
-                  onChanged: (value) => setState(() => _draft = draft.copyWith(
-                    trainingGoal: value, clearTrainingGoal: value == null,
-                  )),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<TrainingExperience>(
-                  value: draft.trainingExperience,
-                  decoration: const InputDecoration(labelText: 'Experiencia entrenando', border: OutlineInputBorder()),
-                  items: const [
-                    DropdownMenuItem(value: TrainingExperience.beginner, child: Text('Principiante')),
-                    DropdownMenuItem(value: TrainingExperience.intermediate, child: Text('Intermedia')),
-                    DropdownMenuItem(value: TrainingExperience.advanced, child: Text('Avanzada')),
-                  ],
-                  onChanged: (value) => setState(() => _draft = draft.copyWith(
-                    trainingExperience: value, clearTrainingExperience: value == null,
-                  )),
-                ),
-                const SizedBox(height: 24),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Reflexiones al terminar de entrenar'),
@@ -211,10 +221,18 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     if (!_formKey.currentState!.validate()) return;
                     setState(() => _saving = true);
                     try {
-                      await ref.read(userExperienceProfileProvider.notifier).updateProfile(
-                        _draft!.copyWith(displayName: _name.text.trim()),
+                      final updated = _draft!.copyWith(
+                        displayName: _name.text.trim(),
                       );
-                      if (context.mounted) Navigator.of(context).pop();
+                      await ref.read(userExperienceProfileProvider.notifier)
+                          .updateProfile(updated);
+                      if (!mounted) return;
+                      setState(() {
+                        _draft = updated;
+                        _original = updated;
+                        _saving = false;
+                      });
+                      Navigator.of(context).pop();
                     } catch (_) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -230,6 +248,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
             ),
           );
         },
+      ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:core/core/utils/weight_converter.dart';
+import 'package:core/features/profile/presentation/widgets/profile_section_card.dart';
 import 'package:core/features/profile/application/unilateral_rest_choices.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
@@ -19,7 +20,7 @@ class TrainingPreferencesPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _Section(
+          ProfileSectionCard(
             title: 'Unidades y progresión',
             children: [
               ListTile(
@@ -89,7 +90,7 @@ class TrainingPreferencesPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          _Section(
+          ProfileSectionCard(
             title: 'Registro y memoria',
             children: [
               SwitchListTile.adaptive(
@@ -114,7 +115,7 @@ class TrainingPreferencesPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          _Section(
+          ProfileSectionCard(
             title: 'Descanso y feedback',
             children: [
               SwitchListTile.adaptive(
@@ -184,7 +185,7 @@ class TrainingPreferencesPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 14),
-          _Section(
+          ProfileSectionCard(
             title: 'Unilateral Pro · predeterminados',
             children: [
               ListTile(
@@ -257,29 +258,3 @@ class TrainingPreferencesPage extends ConsumerWidget {
   }
 }
 
-class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.children});
-
-  final String title;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          ...children,
-        ],
-      ),
-    ),
-  );
-}

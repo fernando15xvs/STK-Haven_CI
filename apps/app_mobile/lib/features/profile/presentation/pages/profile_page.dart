@@ -1,12 +1,12 @@
-import 'package:core/features/profile/presentation/pages/appearance_settings_page.dart';
-import 'package:core/features/profile/presentation/pages/personal_profile_page.dart';
-import 'package:core/features/profile/presentation/widgets/personal_profile_summary.dart';
 import 'package:core/features/coach/presentation/pages/coach_connections_page.dart';
+import 'package:core/features/profile/presentation/pages/appearance_settings_page.dart';
 import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:core/features/profile/presentation/pages/notifications_settings_page.dart';
+import 'package:core/features/profile/presentation/pages/personal_profile_page.dart';
 import 'package:core/features/profile/presentation/pages/training_preferences_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/presentation/widgets/personal_profile_summary.dart';
 import 'package:core/features/profile/presentation/widgets/platform_settings_page.dart';
 import 'package:core/features/sync/presentation/backup_status_page.dart';
 import 'package:flutter/material.dart';
@@ -17,13 +17,18 @@ import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/faith/presentation/pages/favorites_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/achievements_page.dart';
 
+/// Identity and app preferences. Routines/programs live in Entrenar,
+/// performance metrics in Progreso and Motivation in the global + menu.
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
+
+  void _open(BuildContext context, Widget page) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    final notifier = ref.read(settingsProvider.notifier);
     final faithEnabled = ref.watch(
       userExperienceProfileProvider.select(
         (profile) => profile.value?.faithEnabled ?? false,
@@ -31,293 +36,130 @@ class ProfilePage extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ajustes y Perfil')),
+      appBar: AppBar(title: Text('Perfil', style: AppTypography.displaySmall)),
       body: ListView(
         padding: AppSpacing.pagePadding,
         children: [
           const SizedBox(height: AppSpacing.md),
           PersonalProfileSummary(
-            onEdit: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const PersonalProfilePage()),
-            ),
+            onEdit: () => _open(context, const PersonalProfilePage()),
           ),
           const SizedBox(height: AppSpacing.xxl),
-          const SectionHeading(title: 'PERSONALIZACIÓN'),
+          const SectionHeading(title: 'PREFERENCIAS'),
           const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              leading: Icon(
-                Icons.palette_outlined,
-                color: AppColors.of(context).primary,
+          _ProfileGroup(
+            entries: [
+              _ProfileLink(
+                icon: Icons.palette_outlined,
+                title: 'Aspecto',
+                subtitle: 'Modo claro, oscuro, OLED y colores',
+                onTap: () => _open(context, const AppearanceSettingsPage()),
               ),
-              title: Text('Aspecto', style: AppTypography.headlineMedium),
-              subtitle: const Text('Modo de pantalla, colores y acabado'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AppearanceSettingsPage(),
-                ),
+              _ProfileLink(
+                icon: Icons.tune_rounded,
+                title: 'Tu experiencia',
+                subtitle: 'Objetivos, recomendaciones y contenido de Fe',
+                onTap: () => _open(context, const ExperiencePreferencesPage()),
               ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              leading: Icon(
-                Icons.tune_rounded,
-                color: AppColors.of(context).primary,
+              _ProfileLink(
+                icon: Icons.fitness_center_outlined,
+                title: 'Entrenamiento y unidades',
+                subtitle: 'Peso, RIR, descanso y registro de series',
+                onTap: () => _open(context, const TrainingPreferencesPage()),
               ),
-              title: Text(
-                'Tu experiencia',
-                style: AppTypography.headlineMedium,
+              _ProfileLink(
+                icon: Icons.notifications_none_rounded,
+                title: 'Notificaciones',
+                subtitle: 'Entrenamiento, agua, pasos y avisos',
+                onTap: () => _open(context, const NotificationsSettingsPage()),
               ),
-              subtitle: Text(
-                'Objetivo, días, duración, entorno y Fe',
-                style: AppTypography.bodySmall,
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: AppColors.of(context).textSecondary,
-              ),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ExperiencePreferencesPage(),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              leading: Icon(
-                Icons.sports_outlined,
-                color: AppColors.of(context).primary,
-              ),
-              title: Text('Mi Coach', style: AppTypography.headlineMedium),
-              subtitle: Text(
-                'Entrenador vinculado, invitaciones y permisos que compartes',
-                style: AppTypography.bodySmall,
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: AppColors.of(context).textSecondary,
-              ),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const CoachConnectionsPage(clientOnly: true),
-                ),
-              ),
-            ),
+            ],
           ),
           const SizedBox(height: AppSpacing.xl),
-
-          const SectionHeading(title: 'AJUSTES'),
+          const SectionHeading(title: 'SERVICIOS Y PRIVACIDAD'),
           const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                ListTile(
-                  leading: Icon(
-                    Icons.fitness_center_outlined,
-                    color: AppColors.of(context).primary,
-                  ),
-                  title: Text(
-                    'Entrenamiento y unidades',
-                    style: AppTypography.headlineMedium,
-                  ),
-                  subtitle: Text(
-                    'RIR, descansos, feedback, unilateral, peso e incrementos',
-                    style: AppTypography.bodySmall,
-                  ),
-                  trailing: Icon(
-                    Icons.chevron_right,
-                    color: AppColors.of(context).textSecondary,
-                  ),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const TrainingPreferencesPage(),
-                    ),
-                  ),
-                ),
-                Divider(height: 1, color: AppColors.of(context).surfaceBorder),
-                ListTile(
-                  leading: Icon(
-                    Icons.notifications_outlined,
-                    color: AppColors.of(context).primary,
-                  ),
-                  title: Text(
-                    'Notificaciones',
-                    style: AppTypography.headlineMedium,
-                  ),
-                  subtitle: Text(
-                    'Entrenamiento, agua, pasos y fortaleza diaria',
-                    style: AppTypography.bodySmall,
-                  ),
-                  trailing: Icon(
-                    Icons.chevron_right,
-                    color: AppColors.of(context).textSecondary,
-                  ),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationsSettingsPage(),
-                    ),
-                  ),
-                ),
-                Divider(height: 1, color: AppColors.of(context).surfaceBorder),
-                ListTile(
-                  leading: Icon(
-                    Icons.cloud_sync_outlined,
-                    color: AppColors.of(context).primary,
-                  ),
-                  title: Text(
-                    'Datos y sincronización',
-                    style: AppTypography.headlineMedium,
-                  ),
-                  subtitle: Text(
-                    'Nube, copias locales, restauración y CSV',
-                    style: AppTypography.bodySmall,
-                  ),
-                  trailing: Icon(
-                    Icons.chevron_right,
-                    color: AppColors.of(context).textSecondary,
-                  ),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const BackupStatusPage()),
-                  ),
-                ),
-                Divider(height: 1, color: AppColors.of(context).surfaceBorder),
-                ListTile(
-                  leading: Icon(
-                    Icons.devices_outlined,
-                    color: AppColors.of(context).primary,
-                  ),
-                  title: Text(
-                    'App y dispositivo',
-                    style: AppTypography.headlineMedium,
-                  ),
-                  subtitle: Text(
-                    'Rendimiento, accesibilidad, sensores y licencias',
-                    style: AppTypography.bodySmall,
-                  ),
-                  trailing: Icon(
-                    Icons.chevron_right,
-                    color: AppColors.of(context).textSecondary,
-                  ),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const PlatformSettingsPage(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          _ProfileGroup(
+            entries: [
+              _ProfileLink(
+                icon: Icons.sports_outlined,
+                title: 'Mi Coach',
+                subtitle: 'Vínculos y permisos para compartir datos',
+                onTap: () =>
+                    _open(context, const CoachConnectionsPage(clientOnly: true)),
+              ),
+              _ProfileLink(
+                icon: Icons.cloud_sync_outlined,
+                title: 'Datos y sincronización',
+                subtitle: 'Copias de seguridad, cuenta y exportación',
+                onTap: () => _open(context, const BackupStatusPage()),
+              ),
+            ],
           ),
-
           const SizedBox(height: AppSpacing.xl),
-
-          const SectionHeading(title: 'GAMIFICACIÓN'),
+          const SectionHeading(title: 'RECONOCIMIENTOS'),
           const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              leading: const Icon(Icons.emoji_events, color: Colors.amber),
-              title: Text(
-                'Nivel y Logros',
-                style: AppTypography.headlineMedium,
+          _ProfileGroup(
+            entries: [
+              _ProfileLink(
+                icon: Icons.emoji_events_outlined,
+                title: 'Nivel y logros',
+                subtitle: 'Tu nivel, XP y medallas desbloqueadas',
+                onTap: () => _open(context, const AchievementsPage()),
               ),
-              subtitle: Text(
-                'Revisa tu progreso y medallas',
-                style: AppTypography.bodySmall,
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: AppColors.of(context).textSecondary,
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AchievementsPage()),
-                );
-              },
-            ),
+            ],
           ),
-
-          const SizedBox(height: AppSpacing.xl),
-
           if (faithEnabled) ...[
-            const SectionHeading(title: 'FORTALEZA'),
+            const SizedBox(height: AppSpacing.xl),
+            const SectionHeading(title: 'FE'),
             const SizedBox(height: AppSpacing.sm),
             PremiumCard(
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  SwitchListTile(
+                  SwitchListTile.adaptive(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.md,
+                    ),
                     title: Text(
                       'Mostrar tarjeta en Inicio',
                       style: AppTypography.headlineMedium,
                     ),
-                    subtitle: Text(
-                      'Fortaleza de hoy en tu dashboard',
-                      style: AppTypography.bodySmall,
-                    ),
+                    subtitle: const Text('Versículo diario de Fortaleza'),
                     value: settings.showDailyVerse,
-                    onChanged: (val) => notifier.setShowDailyVerse(val),
-                    activeThumbColor: AppColors.of(context).primary,
+                    onChanged: ref
+                        .read(settingsProvider.notifier)
+                        .setShowDailyVerse,
                   ),
-                  Divider(
-                    height: 1,
-                    color: AppColors.of(context).surfaceBorder,
-                  ),
-                  ListTile(
-                    title: Text(
-                      'Versículos Favoritos',
-                      style: AppTypography.headlineMedium,
-                    ),
-                    subtitle: Text(
-                      'Revisa tus reflexiones guardadas',
-                      style: AppTypography.bodySmall,
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: AppColors.of(context).textSecondary,
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const FavoritesPage(),
-                        ),
-                      );
-                    },
+                  Divider(height: 1, color: AppColors.of(context).surfaceBorder),
+                  _ProfileLink(
+                    icon: Icons.bookmark_border_rounded,
+                    title: 'Versículos favoritos',
+                    subtitle: 'Tus versículos guardados',
+                    onTap: () => _open(context, const FavoritesPage()),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
           ],
-
+          const SizedBox(height: AppSpacing.xl),
+          const SectionHeading(title: 'APP'),
+          const SizedBox(height: AppSpacing.sm),
+          _ProfileGroup(
+            entries: [
+              _ProfileLink(
+                icon: Icons.devices_outlined,
+                title: 'App y dispositivo',
+                subtitle: 'Rendimiento, accesibilidad y licencias',
+                onTap: () => _open(context, const PlatformSettingsPage()),
+              ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.xxxl),
           Center(
             child: Text(
-              'STK Haven v1.0.0 (RC)\nConstruido para ti',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.of(
-                  context,
-                ).textSecondary.withValues(alpha: 0.5),
-                fontSize: 12,
+              'STK Haven',
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.of(context).textSecondary,
               ),
             ),
           ),
@@ -326,5 +168,58 @@ class ProfilePage extends ConsumerWidget {
       ),
     );
   }
+}
 
+class _ProfileGroup extends StatelessWidget {
+  const _ProfileGroup({required this.entries});
+
+  final List<_ProfileLink> entries;
+
+  @override
+  Widget build(BuildContext context) => PremiumCard(
+        padding: EdgeInsets.zero,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < entries.length; index++) ...[
+              if (index > 0)
+                Divider(height: 1, color: AppColors.of(context).surfaceBorder),
+              entries[index],
+            ],
+          ],
+        ),
+      );
+}
+
+class _ProfileLink extends StatelessWidget {
+  const _ProfileLink({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      leading: Icon(icon, color: colors.primary, size: 23),
+      title: Text(title, style: AppTypography.headlineMedium),
+      subtitle: Text(
+        subtitle,
+        style: AppTypography.bodySmall.copyWith(color: colors.textSecondary),
+      ),
+      trailing: Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
+      onTap: onTap,
+    );
+  }
 }

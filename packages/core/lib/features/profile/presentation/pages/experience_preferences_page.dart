@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
@@ -19,12 +20,45 @@ class _ExperiencePreferencesPageState
   UserExperienceProfile? _original;
   bool _saving = false;
 
+  bool get _hasUnsavedChanges {
+    final draft = _draft, original = _original;
+    if (draft == null || original == null) return false;
+    return jsonEncode(draft.toJson()) != jsonEncode(original.toJson());
+  }
+
+  Future<void> _requestDiscard(bool didPop) async {
+    if (didPop || !_hasUnsavedChanges || _saving) return;
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Descartar cambios'),
+        content: const Text('Hay cambios en tus preferencias sin guardar. ¿Quieres salir?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Seguir editando'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Descartar'),
+          ),
+        ],
+      ),
+    );
+    if (discard != true || !mounted) return;
+    setState(() => _draft = _original);
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final asyncProfile = ref.watch(userExperienceProfileProvider);
     final identity = ref.watch(appIdentityProvider);
 
-    return Scaffold(
+    return PopScope(
+      canPop: !_hasUnsavedChanges && !_saving,
+      onPopInvokedWithResult: (didPop, _) => _requestDiscard(didPop),
+      child: Scaffold(
       appBar: AppBar(title: const Text('Personalización')),
       body: asyncProfile.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -209,6 +243,7 @@ class _ExperiencePreferencesPageState
             ],
           );
         },
+      ),
       ),
     );
   }

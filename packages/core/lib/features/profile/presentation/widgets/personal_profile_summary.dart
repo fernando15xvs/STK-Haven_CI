@@ -1,12 +1,12 @@
+import 'package:core/core/theme/app_palette.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/profile/presentation/widgets/profile_avatar.dart';
-import 'package:core/features/workout/application/workout_history_provider.dart';
-import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Shared identity/achievements surface for mobile and web.
+/// Identity belongs to Perfil. Historic sessions, volume and PRs belong
+/// to Progreso; do not repeat their calculations in this header.
 class PersonalProfileSummary extends ConsumerWidget {
   final VoidCallback onEdit;
   const PersonalProfileSummary({super.key, required this.onEdit});
@@ -14,12 +14,7 @@ class PersonalProfileSummary extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userExperienceProfileProvider).value;
-    final sessions = ref.watch(workoutHistoryProvider);
-    final prs = ref.watch(personalRecordRepositoryProvider).getAllPRs().length;
-    final totalSeconds = sessions.fold<int>(0, (sum, s) => sum + s.durationSeconds);
-    final hours = totalSeconds ~/ 3600;
-    final minutes = (totalSeconds % 3600) ~/ 60;
-    final duration = hours > 0 ? '${hours} h ${minutes} min' : '${minutes} min';
+    final colors = AppColors.of(context);
     final name = profile?.preferredName ?? 'Tu perfil';
     return Card(
       margin: EdgeInsets.zero,
@@ -28,36 +23,39 @@ class PersonalProfileSummary extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              ProfileAvatar(profile: profile),
-              const SizedBox(width: 16),
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: Theme.of(context).textTheme.headlineSmall),
-                  const SizedBox(height: 4),
-                  Text(_trainingLabel(profile), style: Theme.of(context).textTheme.bodyMedium),
-                ],
-              )),
-            ]),
-            const SizedBox(height: 14),
+            Row(
+              children: [
+                ProfileAvatar(profile: profile),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _trainingLabel(profile),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: colors.textSecondary,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: onEdit,
-              icon: const Icon(Icons.edit_outlined),
+              icon: const Icon(Icons.edit_outlined, size: 18),
               label: const Text('Editar perfil'),
-            ),
-            const Divider(height: 28),
-            Text('Mi recorrido', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 10),
-            Wrap(spacing: 18, runSpacing: 8, children: [
-              _Stat(label: 'Sesiones realizadas', value: '${sessions.length}'),
-              _Stat(label: 'Tiempo entrenando', value: duration),
-              _Stat(label: 'Récords personales', value: '$prs'),
-            ]),
-            const SizedBox(height: 10),
-            Text(
-              'Este resumen es privado. Solo se comparte información de entrenamiento con un entrenador al conceder permisos explícitos en Mis entrenadores.',
-              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
         ),
@@ -83,20 +81,4 @@ class PersonalProfileSummary extends ConsumerWidget {
     };
     return '$goal · $level';
   }
-}
-
-class _Stat extends StatelessWidget {
-  final String label;
-  final String value;
-  const _Stat({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Text(value, style: Theme.of(context).textTheme.titleLarge),
-      Text(label, style: Theme.of(context).textTheme.bodySmall),
-    ],
-  );
 }

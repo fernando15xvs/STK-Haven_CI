@@ -1,185 +1,165 @@
 import 'dart:math';
+
+import 'package:core/core/theme/app_palette.dart';
+import 'package:core/features/profile/application/gamification_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:core/features/profile/application/gamification_provider.dart';
 
+/// Logros son reconocimientos, no otro dashboard de Progreso.
 class AchievementsPage extends ConsumerWidget {
   const AchievementsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final gamification = ref.watch(gamificationProvider);
-
+    final data = ref.watch(gamificationProvider);
+    final colors = AppColors.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Logros y Nivel'),
-      ),
+      appBar: AppBar(title: const Text('Nivel y logros')),
       body: CustomScrollView(
         slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+            sliver: SliverToBoxAdapter(
               child: Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                margin: EdgeInsets.zero,
                 child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Nivel ${gamification.level}',
+                        'Nivel ${data.level}',
                         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                              color: colors.primary,
+                            ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(
-                        '${gamification.xp} XP Totales',
-                        style: Theme.of(context).textTheme.titleMedium,
+                        '${data.xp} XP acumulados',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: colors.textSecondary,
+                            ),
                       ),
                       const SizedBox(height: 16),
-                      // XP Progress bar to next level
-                      // Formula: Level = floor(sqrt(XP / 150)) + 1
-                      // XP = 150 * (Level - 1)^2
-                      // Next Level XP = 150 * (Level)^2
-                      _buildXpBar(context, gamification.xp, gamification.level),
+                      _levelProgress(context, data.xp, data.level),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          const SliverToBoxAdapter(
+          SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Text(
-                'Medallas',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+              child: Text('Medallas',
+                  style: Theme.of(context).textTheme.titleLarge),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.all(16.0),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.8,
+          if (data.achievements.isEmpty)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text('Aún no hay medallas. Tus logros aparecerán aquí.'),
               ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final achievement = gamification.achievements[index];
-                  return _buildAchievementCard(context, achievement);
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+              sliver: SliverList.builder(
+                itemCount: data.achievements.length,
+                itemBuilder: (context, index) {
+                  final award = data.achievements[index];
+                  final unlocked = award.isUnlocked;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Semantics(
+                              label: unlocked ? 'Medalla desbloqueada' : 'Medalla bloqueada',
+                              child: Icon(
+                                unlocked
+                                    ? Icons.emoji_events_outlined
+                                    : Icons.lock_outline,
+                                color: unlocked ? colors.gold : colors.textSecondary,
+                                size: 36,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    award.title,
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    award.description,
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: colors.textSecondary,
+                                        ),
+                                  ),
+                                  if (!unlocked && award.progress > 0) ...[
+                                    const SizedBox(height: 12),
+                                    LinearProgressIndicator(
+                                      value: (award.progress as num)
+                                          .toDouble()
+                                          .clamp(0.0, 1.0).toDouble(),
+                                      minHeight: 5,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${(award.progress * 100).clamp(0, 100).toInt()} % completado',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: colors.textSecondary,
+                                          ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
                 },
-                childCount: gamification.achievements.length,
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildXpBar(BuildContext context, int xp, int level) {
-    final int currentLevelMinXp = 150 * pow(level - 1, 2).toInt();
-    final int nextLevelMinXp = 150 * pow(level, 2).toInt();
-    
-    final int xpInCurrentLevel = xp - currentLevelMinXp;
-    final int xpNeededForNextLevel = nextLevelMinXp - currentLevelMinXp;
-    
-    final double progress = xpNeededForNextLevel > 0 
-        ? xpInCurrentLevel / xpNeededForNextLevel 
-        : 0;
-
+  Widget _levelProgress(BuildContext context, int xp, int level) {
+    final currentMin = 150 * pow(level - 1, 2).toInt();
+    final nextMin = 150 * pow(level, 2).toInt();
+    final progressXp = (xp - currentMin).clamp(0, nextMin - currentMin);
+    final requiredXp = nextMin - currentMin;
+    final progress = requiredXp == 0 ? 0.0 : progressXp / requiredXp;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          color: Theme.of(context).colorScheme.primary,
-          minHeight: 12,
+          value: progress.clamp(0.0, 1.0).toDouble(),
+          minHeight: 9,
           borderRadius: BorderRadius.circular(6),
         ),
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('$xpInCurrentLevel XP'),
-            Text('$xpNeededForNextLevel XP'),
-          ],
+        Text(
+          '$progressXp de $requiredXp XP para el siguiente nivel',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
         ),
       ],
-    );
-  }
-
-  Widget _buildAchievementCard(BuildContext context, achievement) {
-    final bool isUnlocked = achievement.isUnlocked;
-    return Card(
-      elevation: isUnlocked ? 2 : 0,
-      color: isUnlocked 
-          ? Theme.of(context).cardColor 
-          : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isUnlocked 
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5) 
-              : Colors.transparent,
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isUnlocked ? Icons.emoji_events : Icons.lock_outline,
-              size: 48,
-              color: isUnlocked ? Colors.amber : Colors.grey,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              achievement.title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isUnlocked ? null : Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              achievement.description,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: isUnlocked ? Colors.grey[400] : Colors.grey,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (!isUnlocked && achievement.progress > 0) ...[
-              const Spacer(),
-              LinearProgressIndicator(
-                value: achievement.progress,
-                minHeight: 4,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${(achievement.progress * 100).toInt()}%',
-                style: const TextStyle(fontSize: 10, color: Colors.grey),
-              ),
-            ]
-          ],
-        ),
-      ),
     );
   }
 }
