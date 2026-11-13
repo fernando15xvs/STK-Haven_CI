@@ -139,7 +139,8 @@ class BackupStatusPage extends ConsumerWidget {
                         const SizedBox(width: 10),
                         Expanded(
                           child: OutlinedButton.icon(
-                            onPressed: cloud.busy
+                            onPressed: cloud.busy ||
+                                    ref.watch(activeWorkoutProvider).session != null
                                 ? null
                                 : () async {
                                     final confirmed =
@@ -150,7 +151,7 @@ class BackupStatusPage extends ConsumerWidget {
                                           'Restaurar copia de la nube',
                                         ),
                                         content: const Text(
-                                          'La copia remota reemplazará los datos locales de este dispositivo. No se mezclan datos silenciosamente.',
+                                          'La copia remota reemplazará los datos locales de este dispositivo. No se mezclan datos silenciosamente. Finaliza cualquier entrenamiento antes de restaurar.',
                                         ),
                                         actions: [
                                           TextButton(

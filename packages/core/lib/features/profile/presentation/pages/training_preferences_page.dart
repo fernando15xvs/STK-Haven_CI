@@ -1,4 +1,5 @@
 import 'package:core/core/utils/weight_converter.dart';
+import 'package:core/features/profile/application/unilateral_rest_choices.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:flutter/foundation.dart';
@@ -195,8 +196,9 @@ class TrainingPreferencesPage extends ConsumerWidget {
                 ),
                 trailing: DropdownButton<int>(
                   value: settings.unilateralSideRestSeconds,
-                  items: const [0, 30, 45, 60, 90, 120, 180]
-                      .map(
+                  items: UnilateralRestChoices.forSelected(
+                        settings.unilateralSideRestSeconds,
+                      ).map(
                         (seconds) => DropdownMenuItem(
                           value: seconds,
                           child: Text(

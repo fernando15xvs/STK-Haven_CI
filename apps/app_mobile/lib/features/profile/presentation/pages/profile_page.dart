@@ -1,7 +1,6 @@
 import 'package:core/features/profile/presentation/pages/appearance_settings_page.dart';
 import 'package:core/features/profile/presentation/pages/personal_profile_page.dart';
 import 'package:core/features/profile/presentation/widgets/personal_profile_summary.dart';
-import 'package:core/core/constants/preset_programs.dart';
 import 'package:core/features/coach/presentation/pages/coach_connections_page.dart';
 import 'package:core/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:core/features/profile/presentation/pages/notifications_settings_page.dart';
@@ -9,17 +8,13 @@ import 'package:core/features/profile/presentation/pages/training_preferences_pa
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/profile/presentation/widgets/platform_settings_page.dart';
-import 'package:core/features/onboarding/application/program_service.dart';
 import 'package:core/features/sync/presentation/backup_status_page.dart';
-import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:gym_tracker/features/motivation/presentation/motivation_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/faith/presentation/pages/favorites_page.dart';
-import 'package:gym_tracker/features/onboarding/presentation/widgets/program_preview_modal.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/achievements_page.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -48,8 +43,6 @@ class ProfilePage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xxl),
-          const SectionHeading(title: 'CONFIGURACIÓN'),
-          const SizedBox(height: AppSpacing.md),
           const SectionHeading(title: 'PERSONALIZACIÓN'),
           const SizedBox(height: AppSpacing.sm),
           PremiumCard(
@@ -121,21 +114,6 @@ class ProfilePage extends ConsumerWidget {
                   builder: (_) => const CoachConnectionsPage(clientOnly: true),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-
-          const SectionHeading(title: 'STK MOTIVATION'),
-          const SizedBox(height: AppSpacing.sm),
-          PremiumCard(
-            padding: EdgeInsets.zero,
-            child: ListTile(
-              leading: Icon(Icons.headphones, color: AppColors.of(context).primary),
-              title: Text('Mis audios y videos', style: AppTypography.headlineMedium),
-              subtitle: const Text('MP3, MP4, playlists y reproducción en segundo plano'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const MotivationPage())),
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -249,89 +227,6 @@ class ProfilePage extends ConsumerWidget {
 
           const SizedBox(height: AppSpacing.xl),
 
-          if (settings.activeProgram != null) ...[
-            const SectionHeading(title: 'PROGRAMA ACTUAL'),
-            const SizedBox(height: AppSpacing.sm),
-            PremiumCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  ListTile(
-                    title: Text(
-                      settings.activeProgram!.programNameSnapshot,
-                      style: AppTypography.headlineMedium,
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        'Semana ${(DateTime.now().difference(settings.activeProgram!.startedAt).inDays / 7).floor() + 1} de ${settings.activeProgram!.durationWeeks}',
-                        style: AppTypography.bodySmall,
-                      ),
-                    ),
-                  ),
-                  Divider(
-                    height: 1,
-                    color: AppColors.of(context).surfaceBorder,
-                  ),
-                  ListTile(
-                    title: Text(
-                      'Ver programa',
-                      style: TextStyle(color: AppColors.of(context).primary),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: AppColors.of(context).textSecondary,
-                    ),
-                    onTap: () {
-                      final p = presetPrograms.firstWhere(
-                        (p) => p.id == settings.activeProgram!.presetProgramId,
-                        orElse: () => presetPrograms.first,
-                      );
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (ctx) => ProgramPreviewModal(
-                          program: p,
-                          mode: ProgramPreviewMode.preview,
-                        ),
-                      );
-                    },
-                  ),
-                  Divider(
-                    height: 1,
-                    color: AppColors.of(context).surfaceBorder,
-                  ),
-                  ListTile(
-                    title: Text(
-                      'Cambiar programa',
-                      style: TextStyle(color: AppColors.of(context).primary),
-                    ),
-                    trailing: Icon(
-                      Icons.autorenew,
-                      color: AppColors.of(context).textSecondary,
-                    ),
-                    onTap: () {
-                      final activeWorkout = ref.read(activeWorkoutProvider);
-                      if (activeWorkout.isActive) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Tienes un entrenamiento en curso. Finalízalo o descártalo antes de cambiar tu programa.',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      _showChangeProgramDialog(context, ref);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-          ],
-
           const SectionHeading(title: 'GAMIFICACIÓN'),
           const SizedBox(height: AppSpacing.sm),
           PremiumCard(
@@ -432,153 +327,4 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  void _showChangeProgramDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.of(context).surfaceHigh,
-        title: Text(
-          'Cambiar programa',
-          style: TextStyle(
-            color: AppColors.of(context).textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Tus entrenamientos realizados NO se eliminarán.\n\n¿Qué hacemos con las rutinas del programa actual?',
-          style: TextStyle(
-            color: AppColors.of(context).textSecondary,
-            height: 1.5,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _showProgramSelection(context, ref, keepOld: true);
-            },
-            child: Text(
-              'CONSERVAR',
-              style: TextStyle(color: AppColors.of(context).textSecondary),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _showProgramSelection(context, ref, keepOld: false);
-            },
-            child: Text(
-              'REEMPLAZAR',
-              style: TextStyle(
-                color: AppColors.of(context).primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showProgramSelection(
-    BuildContext context,
-    WidgetRef ref, {
-    required bool keepOld,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.of(context).background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-                child: Text(
-                  'Selecciona un programa',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.of(context).textPrimary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              ...presetPrograms.map(
-                (p) => ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                    vertical: AppSpacing.sm,
-                  ),
-                  title: Text(
-                    p.name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.of(context).textPrimary,
-                    ),
-                  ),
-                  subtitle: Text(
-                    '${p.daysPerWeek} días • ${p.level}',
-                    style: TextStyle(color: AppColors.of(context).primary),
-                  ),
-                  trailing: Icon(
-                    Icons.chevron_right,
-                    color: AppColors.of(context).textSecondary,
-                  ),
-                  onTap: () async {
-                    Navigator.pop(ctx);
-                    await ref
-                        .read(programServiceProvider)
-                        .replaceProgram(
-                          p,
-                          keepOld,
-                          trainingDaysPerWeek: ref
-                              .read(userExperienceProfileProvider)
-                              .value
-                              ?.trainingDaysPerWeek,
-                        );
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Programa ${p.name} activado')),
-                      );
-                    }
-                  },
-                ),
-              ),
-              Divider(color: AppColors.of(context).surfaceBorder),
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                  vertical: AppSpacing.sm,
-                ),
-                title: Text(
-                  'Crear desde cero',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.of(context).textPrimary,
-                  ),
-                ),
-                subtitle: Text(
-                  'No instalar ninguna rutina nueva',
-                  style: TextStyle(color: AppColors.of(context).textSecondary),
-                ),
-                onTap: () async {
-                  Navigator.pop(ctx);
-                  await ref
-                      .read(programServiceProvider)
-                      .removeActiveProgram(keepGeneratedRoutines: keepOld);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

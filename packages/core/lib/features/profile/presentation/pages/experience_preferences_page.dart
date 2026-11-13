@@ -1,4 +1,3 @@
-import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
@@ -170,28 +169,10 @@ class _ExperiencePreferencesPageState
                     ),
               ),
               const SizedBox(height: 12),
-              SegmentedButton<WeightUnit>(
-                segments: const [
-                  ButtonSegment(value: WeightUnit.kg, label: Text('kg')),
-                  ButtonSegment(value: WeightUnit.lb, label: Text('lb')),
-                ],
-                selected: {draft.weightUnit},
-                onSelectionChanged: (selection) => setState(
-                  () => _draft = draft.copyWith(weightUnit: selection.first),
-                ),
-              ),
-              const SizedBox(height: 10),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                value: draft.workoutRemindersWanted,
-                onChanged: (value) => setState(
-                  () => _draft =
-                      draft.copyWith(workoutRemindersWanted: value),
-                ),
-                title: const Text('Quiero recordatorios de entrenamiento'),
-                subtitle: const Text(
-                  'La hora y el permiso se administran en los ajustes de plataforma.',
-                ),
+              Text(
+                'Las unidades se configuran en Entrenamiento y unidades. '
+                'Los recordatorios reales se activan desde Notificaciones.',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 18),
               Text(
@@ -261,7 +242,6 @@ class _ExperiencePreferencesPageState
           .updateProfile(draft);
 
       final settingsNotifier = ref.read(settingsProvider.notifier);
-      settingsNotifier.setWeightUnit(draft.weightUnit);
 
       if (!original.faithEnabled && draft.faithEnabled) {
         settingsNotifier.setShowDailyVerse(true);
@@ -276,6 +256,14 @@ class _ExperiencePreferencesPageState
           const SnackBar(content: Text('Personalización actualizada.')),
         );
       }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(
+            'No se pudieron guardar las preferencias. Inténtalo de nuevo.',
+          )),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -283,7 +271,10 @@ class _ExperiencePreferencesPageState
 
   Widget _daysSelector(UserExperienceProfile draft) {
     return InputDecorator(
-      decoration: const InputDecoration(labelText: 'Días por semana'),
+      decoration: const InputDecoration(
+        labelText: 'Frecuencia preferida',
+        helperText: 'Solo para recomendaciones. El plan activo se edita en Entrenar.',
+      ),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,

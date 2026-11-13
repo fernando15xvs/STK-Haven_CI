@@ -17,6 +17,7 @@ import 'package:core/features/programs/presentation/providers/training_program_p
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
+import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
 
 enum CloudSyncOperation { idle, signingIn, signingUp, uploading, downloading }
@@ -227,6 +228,11 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
   }
 
   Future<bool> restoreFromCloud() async {
+    // Guard the service as well as its UI: no caller may restore over a workout.
+    if (ref.read(activeWorkoutProvider).session != null) {
+      _fail('Finaliza o descarta el entrenamiento actual antes de restaurar.');
+      return false;
+    }
     final identity = ref.read(appIdentityProvider);
     if (!identity.signedIn || identity.userId == null) {
       _fail('Inicia sesión antes de restaurar desde la nube.');
@@ -257,6 +263,11 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
         return false;
       }
 
+      // Network downloads can take time; check again before replacing data.
+      if (ref.read(activeWorkoutProvider).session != null) {
+        _fail('Hay un entrenamiento en curso. No se restauró la copia.');
+        return false;
+      }
       await _backupService.restoreBackup(
         validation.parsedData!,
         schemaVersion:
@@ -279,7 +290,7 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       );
       return true;
     } catch (_) {
-      _fail('No se pudo restaurar la copia remota. Tus datos locales no se modificaron si la restauración falló.');
+      _fail('No se pudo completar la restauración. Comprueba tus datos locales antes de reintentarlo.');
       return false;
     }
   }
