@@ -5,7 +5,6 @@ import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:gym_tracker/features/habits/presentation/study_habits_mobile_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
-import 'package:core/features/programs/presentation/pages/training_programs_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -363,11 +362,6 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                       spacing: 12,
                       runSpacing: 12,
                       children: [
-                        _MenuOption(
-                          icon: Icons.layers_outlined,
-                          label: 'Programas',
-                          onTap: () => _openPage(const TrainingProgramsPage()),
-                        ),
                         if (widget.coachEnabled)
                           _MenuOption(
                             icon: Icons.groups_2_outlined,

@@ -1,7 +1,7 @@
 # STK Haven · Entrenar unificado con Programas — Roadmap A/B/C (PR #57)
 
 **Fecha:** 13 de noviembre de 2026
-**Estado:** PLAN PROPUESTO · PENDIENTE DE APROBACIÓN · no iniciar implementación de la app todavía
+**Estado:** IMPLEMENTACIÓN EN CURSO · Bloque A implementado, B1 preparado; validación final pendiente
 **PR canónica:** https://github.com/fernando15xvs/STK-Haven/pull/57
 **Rama:** `fix/home-phase1-data-navigation-20261113`
 **Espejo CI:** `fernando15xvs/STK-Haven_CI`, escribir solo a `main`, sin PR de espejo.
@@ -40,28 +40,28 @@ Reglas de precedencia: si hay plan activo, el calendario visible de Entrenar der
 
 **Objetivo:** resolver defectos preexistentes y fijar contratos de estado antes de mover la navegación. **No rediseñar pantallas en este bloque.**
 
-- [ ] A1. Instancias duplicadas de un mismo ejercicio en sesión: reemplazar las keys `ValueKey(exerciseId)` de `ReorderableListView` por identidad única de *instancia* estable, sin alterar IDs canónicos del catálogo ni datos históricos. Pruebas de duplicado/reordenación/edición/enfoque.
-- [ ] A2. Duración del plan: al «Duplicar semana actual», no asignar a `durationWeeks` valores imposibles para el `DropdownButtonFormField` (lista actual 4/6/8/10/12/16/20/24); definir si duplicar semana es una operación real o simplemente extender duración. Evitar prometer duplicación que no se hace. Pruebas de límites.
-- [ ] A3. Borradores de series: guardar o drenar edición pendiente (500 ms debounce) antes de navegación, reordenación, eliminación de serie, cambio a modo enfoque, cierre/finalización y `dispose`. No sobrescribir series completadas; pruebas de cambios rápidos de kg/lb, reps, RIR y teclado.
-- [ ] A4. Fechas de entrenamientos nocturnos: unificar criterio de fecha local en Historial de ejercicios, tarjeta de Inicio, calendario y Progreso (fecha de inicio vs fecha de finalización según significado explícito). Pruebas 23:59→00:01 y cambios de zona horaria.
-- [ ] A5. Asegurar fuentes de verdad: documentar/implementar compatibilidad entre `TrainingProgram`, `nextProgramSessionProvider`, `SettingsState.activeProgram` y el onboarding. Garantizar que Inicio y Entrenar muestran el mismo programa vigente y progreso, también al activar, pausar, cambiar o eliminar; sin duplicaciones ni migraciones destructivas.
-- [ ] A6. Días opcionales de rutina frente a calendario real de programa: precisar precedencia en lógica y tests de semana fija, rotación continua y flexible; distinguir días de descanso y sesiones libres fuera de secuencia.
-- [ ] A7. Pruebas de regresión para preservar notas, rutinas, ejercicios, superseries, datos unilaterales, sesiones incompletas/continuación, recordatorios y historial tras editar un programa.
+- [x] A1. Instancias duplicadas de un mismo ejercicio en sesión: reemplazar las keys `ValueKey(exerciseId)` de `ReorderableListView` por identidad única de *instancia* estable, sin alterar IDs canónicos del catálogo ni datos históricos. Pruebas de duplicado/reordenación/edición/enfoque.
+- [x] A2. Duración del plan: al «Duplicar semana actual», no asignar a `durationWeeks` valores imposibles para el `DropdownButtonFormField` (lista actual 4/6/8/10/12/16/20/24); definir si duplicar semana es una operación real o simplemente extender duración. Evitar prometer duplicación que no se hace. Pruebas de límites.
+- [x] A3. Borradores de series: guardar o drenar edición pendiente (500 ms debounce) antes de navegación, reordenación, eliminación de serie, cambio a modo enfoque, cierre/finalización y `dispose`. No sobrescribir series completadas; pruebas de cambios rápidos de kg/lb, reps, RIR y teclado.
+- [x] A4. Fechas de entrenamientos nocturnos: unificar criterio de fecha local en Historial de ejercicios, tarjeta de Inicio, calendario y Progreso (fecha de inicio vs fecha de finalización según significado explícito). Pruebas 23:59→00:01 y cambios de zona horaria.
+- [x] A5. Asegurar fuentes de verdad: documentar/implementar compatibilidad entre `TrainingProgram`, `nextProgramSessionProvider`, `SettingsState.activeProgram` y el onboarding. Garantizar que Inicio y Entrenar muestran el mismo programa vigente y progreso, también al activar, pausar, cambiar o eliminar; sin duplicaciones ni migraciones destructivas.
+- [x] A6. Días opcionales de rutina frente a calendario real de programa: precisar precedencia en lógica y tests de semana fija, rotación continua y flexible; distinguir días de descanso y sesiones libres fuera de secuencia.
+- [x] A7. Pruebas de regresión para preservar notas, rutinas, ejercicios, superseries, datos unilaterales, sesiones incompletas/continuación, recordatorios y historial tras editar un programa.
 - [ ] A-GATE. Core + mobile tests del bloque A; CI 7/7 en espejo; revisar diffs y paridad; **sin merge**.
 
 ## 3. Bloque B — unificación de Entrenar + diseño profesional
 
 ### B1. Arquitectura y navegación (antes del pulido estético)
 
-- [ ] B1.1. Convertir la pestaña 1 en un único `Entrenar`: `Mi programa` → `Mis rutinas` → `Plantillas`. Conserva el estado de pestaña/scroll y navegación de `IndexedStack`.
-- [ ] B1.2. `Mi programa`: plan activo, nombre, semana X/Y, frecuencia/avance *de planificación*, acceso a «Ver planificación» y «Administrar». Si no hay programa, estado opcional «Organiza tus rutinas» / «Crear un plan», sin bloquear «Mis rutinas».
-- [ ] B1.3. «Ver planificación»: próximas sesiones estimadas/calendario del programa, descanso y distribución de rutinas; el calendario sigue el modo real del programa. No renderizar historiales/comparativas ni duplicar la tarjeta de Inicio.
-- [ ] B1.4. «Administrar programa»: crear, seleccionar/activar, pausar, cambiar, editar, duplicar y usar plantillas. Pantallas o sheets secundarias en lugar de una card infinita. Acciones destructivas con confirmación y sin borrar sesiones previas.
-- [ ] B1.5. «Crear plan» sencillo: elegir una o más rutinas, frecuencia/días, revisar/activar. Valores automáticos razonables sin pedir más campos; ajustes avanzados colapsados para rotación/modo, duración, descarga, calendario fijo y notas. Mantener posibilidad de editar luego.
-- [ ] B1.6. «Mis rutinas»: crear/editar/duplicar/borrar, iniciar **manualmente** cualquier rutina e ir a biblioteca de ejercicios. Mantener notas, superseries, preparación/unilateral y ejercicios personalizados. Evitar fusionar dos modelos de persistencia.
-- [ ] B1.7. «Plantillas»: plantillas de rutina y programa bajo el mismo flujo de Entrenar, diferenciadas con etiquetas claras. Conservar las plantillas existentes y las instaladas en onboarding.
-- [ ] B1.8. Eliminar «Programas» del `+` solo después de poner la nueva ruta de administración en Entrenar; mantener Coach, Hábitos, Biblia, Haven Faith, Nutrición, Motivation y Herramientas según permisos actuales; ninguna nueva pestaña inferior.
-- [ ] B1.9. Redirigir los enlaces antiguos que abrían `TrainingProgramsPage` a la nueva administración unificada. No dejar rutas huérfanas, saltos circulares ni dos pantallas de edición competidoras.
+- [x] B1.1. Convertir la pestaña 1 en un único `Entrenar`: `Mi programa` → `Mis rutinas` → `Plantillas`. Conserva el estado de pestaña/scroll y navegación de `IndexedStack`.
+- [x] B1.2. `Mi programa`: plan activo, nombre, semana X/Y, frecuencia/avance *de planificación*, acceso a «Ver planificación» y «Administrar». Si no hay programa, estado opcional «Organiza tus rutinas» / «Crear un plan», sin bloquear «Mis rutinas».
+- [x] B1.3. «Ver planificación»: próximas sesiones estimadas/calendario del programa, descanso y distribución de rutinas; el calendario sigue el modo real del programa. No renderizar historiales/comparativas ni duplicar la tarjeta de Inicio.
+- [x] B1.4. «Administrar programa»: crear, seleccionar/activar, pausar, cambiar, editar, duplicar y usar plantillas. Pantallas o sheets secundarias en lugar de una card infinita. Acciones destructivas con confirmación y sin borrar sesiones previas.
+- [x] B1.5. «Crear plan» sencillo: elegir una o más rutinas, frecuencia/días, revisar/activar. Valores automáticos razonables sin pedir más campos; ajustes avanzados colapsados para rotación/modo, duración, descarga, calendario fijo y notas. Mantener posibilidad de editar luego.
+- [x] B1.6. «Mis rutinas»: crear/editar/duplicar/borrar, iniciar **manualmente** cualquier rutina e ir a biblioteca de ejercicios. Mantener notas, superseries, preparación/unilateral y ejercicios personalizados. Evitar fusionar dos modelos de persistencia.
+- [x] B1.7. «Plantillas»: plantillas de rutina y programa bajo el mismo flujo de Entrenar, diferenciadas con etiquetas claras. Conservar las plantillas existentes y las instaladas en onboarding.
+- [x] B1.8. Eliminar «Programas» del `+` solo después de poner la nueva ruta de administración en Entrenar; mantener Coach, Hábitos, Biblia, Haven Faith, Nutrición, Motivation y Herramientas según permisos actuales; ninguna nueva pestaña inferior.
+- [x] B1.9. Redirigir los enlaces antiguos que abrían `TrainingProgramsPage` a la nueva administración unificada. No dejar rutas huérfanas, saltos circulares ni dos pantallas de edición competidoras.
 - [ ] B1-GATE. Tests de navegación Inicio→Entrenar→Programa/Rutina y de deep links, estados sin programa/con programa/pausado, programa del onboarding y workout activo, CI 7/7.
 
 ### B2. Pulido visual consistente con Inicio y Progreso
@@ -109,4 +109,4 @@ Reglas de precedencia: si hay plan activo, el calendario visible de Entrenar der
 
 **Repositorios:** `fernando15xvs/STK-Haven` = fuente canónica; `fernando15xvs/STK-Haven_CI` = espejo de Actions. Todos los cambios se acumulan en la rama existente de la PR #57. No crear otra PR. El espejo recibe snapshot directo en `main`. No fusionar la PR hasta autorización expresa.
 
-**Límites de esta actualización:** solo documentación del roadmap; el plan no da autorización automática para empezar con A, B1, B2 o C.
+**Registro de ejecución:** el usuario autorizó implementar. A1–A7 están en código y tests; su gate 7/7 está pendiente del trabajo Android de CI. B1 está preparado para desplegarse a la rama y validarse; B2/C aún no están finalizados. PR #57 no se fusiona sin autorización.

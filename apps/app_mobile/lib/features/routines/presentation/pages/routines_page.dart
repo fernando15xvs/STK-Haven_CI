@@ -5,7 +5,6 @@ import 'package:core/features/routines/presentation/providers/routine_provider.d
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/domain/models/training_program.dart';
-import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
@@ -13,8 +12,9 @@ import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/primary_button.dart';
 import 'package:gym_tracker/features/routines/presentation/pages/create_routine_page.dart';
 import 'package:gym_tracker/features/routines/presentation/pages/routine_templates_page.dart';
+import 'package:gym_tracker/features/routines/presentation/widgets/quick_training_plan_sheet.dart';
+import 'package:core/features/programs/presentation/pages/training_programs_page.dart';
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
-import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 import 'package:gym_tracker/features/motivation/presentation/widgets/motivation_mini_player.dart';
 
 class RoutinesPage extends ConsumerWidget {
@@ -23,161 +23,171 @@ class RoutinesPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final routines = ref.watch(routineListProvider);
-    final active = ref.watch(activeWorkoutProvider);
     final exercises = ref.watch(exerciseListProvider);
     final exerciseMap = {
       for (final exercise in exercises) exercise.id: exercise,
     };
 
+    void createRoutine() => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CreateRoutinePage()),
+    );
+
+    void openTemplates() { _showTemplatesChooser(context); }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Mis Rutinas', style: AppTypography.displaySmall),
+        title: Text('Entrenar', style: AppTypography.displaySmall),
         centerTitle: false,
         elevation: 0,
-        actions: [
-          IconButton(
-            tooltip: 'Plantillas',
-            icon: const Icon(Icons.auto_awesome_outlined),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RoutineTemplatesPage()),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Plan semanal',
-            icon: const Icon(Icons.calendar_view_week_outlined),
-            onPressed: () => _showWeeklyPlan(context, ref, routines),
-          ),
-          IconButton(
-            tooltip: 'Crear rutina',
-            icon: Icon(Icons.add, color: AppColors.of(context).primary),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CreateRoutinePage()),
-            ),
-          ),
-        ],
+        // Creating a routine belongs to the "Mis rutinas" section.
       ),
       body: Column(
         children: [
-          if (active.isActive)
-            Padding(
+          Expanded(
+            child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                AppSpacing.sm,
+                AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xxl,
               ),
-              child: PremiumCard(
-                backgroundColor: AppColors.of(
-                  context,
-                ).primary.withValues(alpha: 0.15),
-                borderColor: AppColors.of(
-                  context,
-                ).primary.withValues(alpha: 0.4),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ActiveWorkoutPage()),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.fitness_center,
-                      color: AppColors.of(context).primary,
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              itemCount: routines.length + 2,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _ProgramOrganizerCard(
+                        routines: routines,
+                        onViewWeek: () => _showWeeklyPlan(context, ref, routines),
+                        onManage: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const TrainingProgramsPage(),
+                          ),
+                        ),
+                        onCreate: () => QuickTrainingPlanSheet.show(context),
+                      ),
+                      const SizedBox(height: AppSpacing.xxl),
+                      Row(
                         children: [
-                          Text(
-                            'ENTRENAMIENTO EN CURSO',
-                            style: AppTypography.labelSmall.copyWith(
-                              color: AppColors.of(context).primary,
-                              letterSpacing: 1.1,
+                          Expanded(
+                            child: Text('MIS RUTINAS', style: AppTypography.labelLarge),
+                          ),
+                          if (routines.isNotEmpty)
+                            TextButton.icon(
+                              onPressed: createRoutine,
+                              icon: const Icon(Icons.add_rounded, size: 18),
+                              label: const Text('Nueva'),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                    ],
+                  );
+                }
+
+                if (routines.isEmpty && index == 1) {
+                  return _EmptyState(onCreate: createRoutine, onTemplates: openTemplates);
+                }
+
+                final templatesIndex = routines.isEmpty ? 2 : routines.length + 1;
+                if (index == templatesIndex) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.md, bottom: 24),
+                    child: PremiumCard(
+                      onTap: openTemplates,
+                      child: Row(
+                        children: [
+                          Icon(Icons.auto_awesome_outlined,
+                              color: AppColors.of(context).primary),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Plantillas', style: AppTypography.headlineMedium),
+                                Text(
+                                  'Rutinas y programas listos para personalizar',
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.of(context).textSecondary,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Text(
-                            active.session?.routineNameSnapshot ??
-                                'Entrenamiento',
-                            style: AppTypography.headlineMedium.copyWith(
-                              color: AppColors.of(context).primary,
-                            ),
-                          ),
+                          const Icon(Icons.chevron_right_rounded),
                         ],
                       ),
                     ),
-                    Icon(
-                      Icons.chevron_right,
-                      color: AppColors.of(context).primary,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          Expanded(
-            child: routines.isEmpty
-                ? _EmptyState(
-                    onCreate: () => Navigator.push(
+                  );
+                }
+
+                final routine = routines[index - 1];
+                final names = routine.exercises.map(
+                  (item) => exerciseMap[item.exerciseId]?.name ??
+                      Exercise(id: '', name: 'Ejercicio eliminado', muscleGroup: '').name,
+                ).toList(growable: false);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: _RoutineCard(
+                    routine: routine,
+                    exerciseNames: names,
+                    onStart: () => WorkoutLauncher.launch(context, ref, routine),
+                    onEdit: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const CreateRoutinePage(),
+                        builder: (_) => CreateRoutinePage(editingRoutine: routine),
                       ),
                     ),
-                    onTemplates: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const RoutineTemplatesPage(),
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md,
-                      AppSpacing.sm,
-                      AppSpacing.md,
-                      AppSpacing.xxl,
-                    ),
-                    itemCount: routines.length,
-                    itemBuilder: (context, index) {
-                      final routine = routines[index];
-                      final names = routine.exercises
-                          .map(
-                            (item) =>
-                                exerciseMap[item.exerciseId]?.name ??
-                                Exercise(
-                                  id: '',
-                                  name: 'Ejercicio eliminado',
-                                  muscleGroup: '',
-                                ).name,
-                          )
-                          .toList(growable: false);
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                        child: _RoutineCard(
-                          routine: routine,
-                          exerciseNames: names,
-                          onStart: () =>
-                              WorkoutLauncher.launch(context, ref, routine),
-                          onEdit: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  CreateRoutinePage(editingRoutine: routine),
-                            ),
-                          ),
-                          onNotes: () =>
-                              _editRoutineNotes(context, ref, routine),
-                          onDuplicate: () =>
-                              _duplicateRoutine(context, ref, routine),
-                          onDelete: () => _confirmDelete(context, ref, routine),
-                        ),
-                      );
-                    },
+                    onNotes: () => _editRoutineNotes(context, ref, routine),
+                    onDuplicate: () => _duplicateRoutine(context, ref, routine),
+                    onDelete: () => _confirmDelete(context, ref, routine),
                   ),
+                );
+              },
+            ),
           ),
           const MotivationMiniPlayer(showLauncherWhenEmpty: true),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showTemplatesChooser(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      backgroundColor: AppColors.of(context).surfaceHigh,
+      builder: (sheetContext) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Plantillas', style: AppTypography.headlineLarge),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.fitness_center_outlined),
+              title: const Text('Plantillas de rutinas'),
+              subtitle: const Text('Crea una rutina y personaliza sus ejercicios'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const RoutineTemplatesPage(),
+                ));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.layers_outlined),
+              title: const Text('Plantillas de programas'),
+              subtitle: const Text('Administra planes y plantillas reutilizables'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => const TrainingProgramsPage(),
+                ));
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -550,6 +560,118 @@ class RoutinesPage extends ConsumerWidget {
     messenger.showSnackBar(
       SnackBar(
         content: Text('“${routine.name}” se movió a ${days[destination - 1]}.'),
+      ),
+    );
+  }
+}
+
+class _ProgramOrganizerCard extends ConsumerWidget {
+  const _ProgramOrganizerCard({
+    required this.routines,
+    required this.onViewWeek,
+    required this.onManage,
+    required this.onCreate,
+  });
+
+  final List<Routine> routines;
+  final VoidCallback onViewWeek;
+  final VoidCallback onManage;
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active = ref.watch(activeTrainingProgramProvider);
+    final programs = ref.watch(trainingProgramListProvider);
+    final hasExisting = programs.any((program) => !program.isTemplate);
+    final colors = AppColors.of(context);
+    final week = active?.weekAt(DateTime.now()) ?? 0;
+    final target = active == null
+        ? 0
+        : ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
+            active, routines,
+          );
+
+    return PremiumCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.layers_outlined, color: colors.primary, size: 22),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text('MI PROGRAMA', style: AppTypography.labelLarge),
+              ),
+              if (active != null)
+                Text('ACTIVO', style: AppTypography.labelSmall.copyWith(
+                  color: colors.primary,
+                )),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (active != null) ...[
+            Text(active.name, style: AppTypography.headlineLarge),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Semana $week/${active.durationWeeks} · $target sesiones por semana',
+              style: AppTypography.bodyMedium.copyWith(color: colors.textSecondary),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            LinearProgressIndicator(
+              value: (week / active.durationWeeks.clamp(1, 9999))
+                  .clamp(0.0, 1.0).toDouble(),
+              minHeight: 6,
+              borderRadius: BorderRadius.circular(99),
+              backgroundColor: colors.surfaceHigh,
+            ),
+          ] else ...[
+            Text(
+              hasExisting ? 'Programa pausado' : 'Organiza tus rutinas',
+              style: AppTypography.headlineLarge,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              hasExisting
+                  ? 'Puedes reanudar un plan existente o crear uno diferente.'
+                  : routines.isEmpty
+                      ? 'Crea una rutina primero. No necesitas un programa para entrenar.'
+                      : 'Entrena con tus rutinas o crea un plan sencillo para organizar los días.',
+              style: AppTypography.bodyMedium.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
+            children: [
+              if (active != null)
+                OutlinedButton.icon(
+                  onPressed: onViewWeek,
+                  icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                  label: const Text('Ver planificación'),
+                ),
+              if (hasExisting)
+                TextButton.icon(
+                  onPressed: onManage,
+                  icon: const Icon(Icons.settings_outlined, size: 18),
+                  label: const Text('Administrar'),
+                )
+              if (routines.isNotEmpty && active == null)
+                FilledButton.icon(
+                  onPressed: onCreate,
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Crear plan'),
+                ),
+              if (active == null && routines.isNotEmpty)
+                TextButton(
+                  onPressed: onViewWeek,
+                  child: const Text('Días opcionales'),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
