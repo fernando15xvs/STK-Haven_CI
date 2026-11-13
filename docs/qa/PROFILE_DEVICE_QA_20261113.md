@@ -17,6 +17,8 @@ Este documento **no certifica pruebas físicas**. Las casillas se completarán c
 - [ ] Módulo Fe apagado: no aparecen preferencias de Fortaleza ni favoritos; encendido: accesos correctos.
 - [ ] Nivel y logros conserva XP y medallas; no duplica métricas detalladas de Progreso.
 
+- [ ] Versión web: Perfil no ofrece reemplazar ni eliminar rutinas a través de programas legacy; el acceso moderno desde navegación web sigue funcionando.
+
 ## Responsive y diseño global
 
 - [ ] 320dp × texto 100%, 160% y 200%: Perfil, Aspecto, Tu experiencia, Entrenamiento, Notificaciones, Copias, App y dispositivo, Logros, Editar perfil, Coach.

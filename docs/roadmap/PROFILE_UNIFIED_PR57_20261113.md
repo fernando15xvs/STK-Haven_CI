@@ -15,6 +15,12 @@
 - **Perfil:** identidad, preferencias, permisos, backups y administración del dispositivo. Los logros son reconocimientos, no gráficos de Progreso.
 - **Una identidad visual:** fuente Outfit y pesos desde `AppearanceTheme`; paleta `AppColors` contextual (8 acentos), radio 20, borde y elevación coordinados, tamaños/espaciado coherentes con `PremiumCard`. No usar colores de marca inventados ni fuentes por pantalla.
 
+## Web — coherencia de la fuente de verdad
+
+- [x] En `apps/app_web/lib/features/profile/presentation/profile_page_web.dart` se retiró la tarjeta de «Programa de entrenamiento» y los diálogos heredados que invocaban `ProgramService.replaceProgram/removeActiveProgram` y podían borrar rutinas. La web conserva su acceso moderno `TrainingProgramsPage` desde `web_layout.dart`; no se altera el onboarding ni la persistencia.
+- [x] Test contractual en `apps/app_web/test/features/profile/profile_legacy_program_removal_test.dart`.
+- [ ] Validar manualmente los cambios web en navegador, incluido selector moderno; no confundir compilación mobile con QA web.
+
 ## Bloque A — integridad funcional
 
 - [x] A1. Retirar de Perfil la tarjeta y cambios de programa heredado; conservar `TrainingProgram` en Entrenar y datos de `SettingsState.activeProgram` solo para migración compatible.
