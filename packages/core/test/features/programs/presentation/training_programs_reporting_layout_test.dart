@@ -102,4 +102,25 @@ void main() {
     expect(find.textContaining('kg·rep'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
+  testWidgets('template-only navigation hides regular plans and creator',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        trainingProgramListProvider.overrideWith(_Programs.new),
+        routineListProvider.overrideWith(_Routines.new),
+        exerciseListProvider.overrideWith(_Exercises.new),
+        workoutHistoryProvider.overrideWith(_History.new),
+      ],
+      child: const MaterialApp(
+        home: TrainingProgramsPage(templatesOnly: true),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Plantillas de programas'), findsOneWidget);
+    expect(find.textContaining('Aún no tienes plantillas de programas'),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('create_training_plan')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
 }

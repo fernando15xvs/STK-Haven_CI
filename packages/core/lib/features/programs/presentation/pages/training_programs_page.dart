@@ -42,7 +42,10 @@ String _weekdayAndDate(DateTime value) {
 }
 
 class TrainingProgramsPage extends ConsumerStatefulWidget {
-  const TrainingProgramsPage({super.key});
+  const TrainingProgramsPage({super.key, this.templatesOnly = false});
+
+  /// Opens only reusable plan templates from Entrenar > Plantillas.
+  final bool templatesOnly;
 
   @override
   ConsumerState<TrainingProgramsPage> createState() =>
@@ -63,7 +66,10 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
         );
       });
     }
-    final programs = ref.watch(trainingProgramListProvider);
+    final allPrograms = ref.watch(trainingProgramListProvider);
+    final programs = widget.templatesOnly
+        ? allPrograms.where((program) => program.isTemplate).toList(growable: false)
+        : allPrograms;
     final routines = ref.watch(routineListProvider);
     final history = ref.watch(workoutHistoryProvider);
     final exercises = ref.watch(exerciseListProvider);
@@ -76,20 +82,34 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Plan de entrenamiento'),
+        title: Text(widget.templatesOnly
+            ? 'Plantillas de programas'
+            : 'Administrar programas'),
         actions: [
-          IconButton(
-            key: const ValueKey('create_training_plan'),
-            tooltip: 'Nuevo plan',
-            onPressed: routines.isEmpty
-                ? null
-                : () => _showEditor(context, ref, routines, null),
-            icon: const Icon(Icons.add_rounded),
-          ),
+          if (!widget.templatesOnly)
+            IconButton(
+              key: const ValueKey('create_training_plan'),
+              tooltip: 'Nuevo plan',
+              onPressed: routines.isEmpty
+                  ? null
+                  : () => _showEditor(context, ref, routines, null),
+              icon: const Icon(Icons.add_rounded),
+            ),
         ],
       ),
       body: programs.isEmpty
-          ? _EmptyPrograms(hasRoutines: routines.isNotEmpty)
+          ? widget.templatesOnly
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'Aún no tienes plantillas de programas. '
+                      'Puedes guardar uno como plantilla desde Administrar.',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              : _EmptyPrograms(hasRoutines: routines.isNotEmpty)
           : ListView.builder(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               itemCount: programs.length,

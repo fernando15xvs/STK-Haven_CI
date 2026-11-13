@@ -53,7 +53,7 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
           ),
         );
 
-    _controller.forward();
+    // Animations start in didChangeDependencies to honor Reduce Motion.
 
     // Haptic feedback for PRs — heavy impact reserved for achievements
     if (widget.analysisResult.personalRecords.isNotEmpty) {
@@ -61,6 +61,20 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
       if (vibrationEnabled) {
         HapticFeedback.heavyImpact();
       }
+    }
+  }
+
+  bool _animationStarted = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = 1;
+      _animationStarted = true;
+    } else if (!_animationStarted) {
+      _animationStarted = true;
+      _controller.forward();
     }
   }
 
@@ -476,7 +490,7 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
       floatingActionButton: Padding(
         padding: const EdgeInsets.all(16.0),
         child: PrimaryButton(
-          label: 'FINALIZAR',
+          label: 'VOLVER A INICIO',
           onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
         ),
       ),

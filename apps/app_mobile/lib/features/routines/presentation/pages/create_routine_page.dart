@@ -14,6 +14,7 @@ import 'package:core/features/exercises/presentation/providers/exercise_personal
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_library_page.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
+import 'package:gym_tracker/features/routines/presentation/widgets/routine_weekday_selector.dart';
 
 class CreateRoutinePage extends ConsumerStatefulWidget {
   final Routine? editingRoutine;
@@ -29,8 +30,6 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
   final List<RoutineExercise> _selectedExercises = [];
   final _uuid = const Uuid();
   final Set<int> _scheduledDays = {};
-
-  static const _dayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
   @override
   void initState() {
@@ -785,45 +784,12 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(7, (index) {
-              final day = index + 1;
-              final selected = _scheduledDays.contains(day);
-              return GestureDetector(
-                onTap: () => setState(() {
-                  selected
-                      ? _scheduledDays.remove(day)
-                      : _scheduledDays.add(day);
-                }),
-                child: Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: selected
-                        ? AppColors.of(context).primary
-                        : AppColors.of(context).surfaceHigh,
-                    border: Border.all(
-                      color: selected
-                          ? AppColors.of(context).primary
-                          : AppColors.of(context).border,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      _dayLabels[index],
-                      style: TextStyle(
-                        color: selected
-                            ? AppColors.of(context).onPrimary
-                            : AppColors.of(context).textSecondary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
-              );
+          RoutineWeekdaySelector(
+            selectedDays: _scheduledDays,
+            onDayTapped: (day) => setState(() {
+              _scheduledDays.contains(day)
+                  ? _scheduledDays.remove(day)
+                  : _scheduledDays.add(day);
             }),
           ),
           const SizedBox(height: AppSpacing.xxxl),

@@ -184,7 +184,7 @@ class RoutinesPage extends ConsumerWidget {
               onTap: () {
                 Navigator.pop(sheetContext);
                 Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => const TrainingProgramsPage(),
+                  builder: (_) => const TrainingProgramsPage(templatesOnly: true),
                 ));
               },
             ),
@@ -777,8 +777,8 @@ class _RoutineCard extends StatelessWidget {
                           index + 1,
                         );
                         return Container(
-                          width: 23,
-                          height: 23,
+                          width: 26,
+                          height: 26,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
@@ -798,7 +798,7 @@ class _RoutineCard extends StatelessWidget {
                           child: Text(
                             labels[index],
                             style: TextStyle(
-                              fontSize: 9,
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: selected
                                   ? AppColors.of(context).primary

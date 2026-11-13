@@ -4,6 +4,7 @@ import 'package:core/features/workout/application/workout_history_provider.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_history_set_row.dart';
 import 'package:intl/intl.dart';
 import 'package:core/features/workout/application/workout_history_date_policy.dart';
@@ -79,12 +80,10 @@ class ExerciseHistoryPage extends ConsumerWidget {
                 final hasSets =
                     matchingExercises.any((item) => item.sets.isNotEmpty);
 
-                return Card(
+                return Padding(
                   key: ValueKey('exercise_history_${session.id}'),
-                  margin: const EdgeInsets.only(bottom: AppSpacing.md),
-                  color: AppColors.of(context).surface,
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  child: PremiumCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

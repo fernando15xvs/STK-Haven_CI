@@ -187,23 +187,26 @@ class _TemplateCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
-              Icon(
-                Icons.fitness_center,
-                size: 16,
-                color: AppColors.of(context).textSecondary,
-              ),
+              Icon(Icons.fitness_center, size: 17,
+                  color: AppColors.of(context).textSecondary),
               const SizedBox(width: 6),
-              Text(
-                '${template.exerciseCount} ejercicios',
-                style: AppTypography.bodySmall,
+              Flexible(
+                child: Text(
+                  '${template.exerciseCount} ejercicios',
+                  style: AppTypography.bodyMedium,
+                ),
               ),
-              const Spacer(),
-              ...List.generate(7, (index) {
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: List.generate(7, (index) {
                 final active = template.suggestedDays.contains(index + 1);
                 return Container(
-                  margin: const EdgeInsets.only(left: 3),
-                  width: 22,
-                  height: 22,
+                  width: 28,
+                  height: 28,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
@@ -221,7 +224,7 @@ class _TemplateCard extends StatelessWidget {
                   child: Text(
                     days[index],
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color: active
                           ? AppColors.of(context).primary
@@ -230,7 +233,6 @@ class _TemplateCard extends StatelessWidget {
                   ),
                 );
               }),
-            ],
           ),
           const SizedBox(height: AppSpacing.md),
           SizedBox(

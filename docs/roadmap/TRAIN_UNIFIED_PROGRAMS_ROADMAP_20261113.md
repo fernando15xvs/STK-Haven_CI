@@ -1,13 +1,13 @@
 # STK Haven · Entrenar unificado con Programas — Roadmap A/B/C (PR #57)
 
 **Fecha:** 13 de noviembre de 2026
-**Estado:** IMPLEMENTACIÓN EN CURSO · Bloque A implementado, B1 preparado; validación final pendiente
+**Estado:** IMPLEMENTACIÓN EN CURSO · A y B1 validados 7/7, B2 en implementación, C parcialmente preparado
 **PR canónica:** https://github.com/fernando15xvs/STK-Haven/pull/57
 **Rama:** `fix/home-phase1-data-navigation-20261113`
 **Espejo CI:** `fernando15xvs/STK-Haven_CI`, escribir solo a `main`, sin PR de espejo.
 
 > Sustituye la propuesta anterior de Entrenar (bloques A/B/C) sin invalidar las fases 1–3 de Inicio. 
-> Es un documento de planificación; no modifica widgets, modelos, persistencia ni comportamiento de producción.
+> Roadmap vivo: el documento registra implementación y validaciones sin reemplazar los controles de CI ni las pruebas físicas.
 
 ## 0. Decisiones de producto — innegociables
 
@@ -47,7 +47,7 @@ Reglas de precedencia: si hay plan activo, el calendario visible de Entrenar der
 - [x] A5. Asegurar fuentes de verdad: documentar/implementar compatibilidad entre `TrainingProgram`, `nextProgramSessionProvider`, `SettingsState.activeProgram` y el onboarding. Garantizar que Inicio y Entrenar muestran el mismo programa vigente y progreso, también al activar, pausar, cambiar o eliminar; sin duplicaciones ni migraciones destructivas.
 - [x] A6. Días opcionales de rutina frente a calendario real de programa: precisar precedencia en lógica y tests de semana fija, rotación continua y flexible; distinguir días de descanso y sesiones libres fuera de secuencia.
 - [x] A7. Pruebas de regresión para preservar notas, rutinas, ejercicios, superseries, datos unilaterales, sesiones incompletas/continuación, recordatorios y historial tras editar un programa.
-- [ ] A-GATE. Core + mobile tests del bloque A; CI 7/7 en espejo; revisar diffs y paridad; **sin merge**.
+- [x] A-GATE. Core + mobile tests del bloque A; CI 7/7 en espejo; revisar diffs y paridad; **sin merge**.
 
 ## 3. Bloque B — unificación de Entrenar + diseño profesional
 
@@ -62,7 +62,7 @@ Reglas de precedencia: si hay plan activo, el calendario visible de Entrenar der
 - [x] B1.7. «Plantillas»: plantillas de rutina y programa bajo el mismo flujo de Entrenar, diferenciadas con etiquetas claras. Conservar las plantillas existentes y las instaladas en onboarding.
 - [x] B1.8. Eliminar «Programas» del `+` solo después de poner la nueva ruta de administración en Entrenar; mantener Coach, Hábitos, Biblia, Haven Faith, Nutrición, Motivation y Herramientas según permisos actuales; ninguna nueva pestaña inferior.
 - [x] B1.9. Redirigir los enlaces antiguos que abrían `TrainingProgramsPage` a la nueva administración unificada. No dejar rutas huérfanas, saltos circulares ni dos pantallas de edición competidoras.
-- [ ] B1-GATE. Tests de navegación Inicio→Entrenar→Programa/Rutina y de deep links, estados sin programa/con programa/pausado, programa del onboarding y workout activo, CI 7/7.
+- [x] B1-GATE. Tests de navegación Inicio→Entrenar→Programa/Rutina y de deep links, estados sin programa/con programa/pausado, programa del onboarding y workout activo, CI 7/7.
 
 ### B2. Pulido visual consistente con Inicio y Progreso
 
@@ -109,4 +109,4 @@ Reglas de precedencia: si hay plan activo, el calendario visible de Entrenar der
 
 **Repositorios:** `fernando15xvs/STK-Haven` = fuente canónica; `fernando15xvs/STK-Haven_CI` = espejo de Actions. Todos los cambios se acumulan en la rama existente de la PR #57. No crear otra PR. El espejo recibe snapshot directo en `main`. No fusionar la PR hasta autorización expresa.
 
-**Registro de ejecución:** el usuario autorizó implementar. A1–A7 están en código y tests; su gate 7/7 está pendiente del trabajo Android de CI. B1 está preparado para desplegarse a la rama y validarse; B2/C aún no están finalizados. PR #57 no se fusiona sin autorización.
+**Registro de ejecución (13-11-2026):** Bloque A 7/7 en CI espejo `43482886539`; bloque B1 7/7 en CI espejo `43485873553`. B2 implementa de manera gradual controles adaptables (días, plantillas, series), jerarquía del resumen y gestión diferenciada de plantillas de programas; **su CI aún está pendiente de ejecutarse**. B2 y C no se darán por cerrados sin QA. PR #57 no se fusiona sin autorización.

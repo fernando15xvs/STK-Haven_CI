@@ -1422,14 +1422,15 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         flex: 2,
                         child: Text('SERIE', style: AppTypography.labelSmall),
                       ),
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          'ANTERIOR',
-                          textAlign: TextAlign.center,
-                          style: AppTypography.labelSmall,
+                      if (MediaQuery.sizeOf(context).width >= 380)
+                        Expanded(
+                          flex: 3,
+                          child: Text(
+                            'ANTERIOR',
+                            textAlign: TextAlign.center,
+                            style: AppTypography.labelSmall,
+                          ),
                         ),
-                      ),
                       Expanded(
                         flex: 2,
                         child: Text(
@@ -1807,14 +1808,15 @@ class _SetRowState extends ConsumerState<_SetRow> {
                     ],
                   ),
                 ),
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    prevText,
-                    textAlign: TextAlign.center,
-                    style: AppTypography.bodySmall,
+                if (MediaQuery.sizeOf(context).width >= 380)
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      prevText,
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodySmall,
+                    ),
                   ),
-                ),
                 Expanded(
                   flex: 2,
                   child: _MinimalCell(
@@ -1892,6 +1894,20 @@ class _SetRowState extends ConsumerState<_SetRow> {
                 ),
               ],
             ),
+            if (MediaQuery.sizeOf(context).width < 380 &&
+                widget.prevSet != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 2, 0, 4),
+                  child: Text(
+                    'Anterior: $prevText',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.of(context).textSecondary,
+                    ),
+                  ),
+                ),
+              ),
             // This is a per-set action, distinct from skipping the rest timer.
             // Historical false values remain pending until the user explicitly
             // records a skipped/failed outcome. Partial unilateral sets are
