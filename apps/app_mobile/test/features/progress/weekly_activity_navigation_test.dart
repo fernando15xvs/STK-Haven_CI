@@ -97,6 +97,7 @@ void main() {
     final empty = WorkoutSession(
       id: 'empty',
       routineId: 'routine',
+      routineNameSnapshot: 'Rutina',
       startedAt: start,
       finishedAt: start.add(const Duration(minutes: 20)),
       durationSeconds: 1200,
@@ -105,6 +106,7 @@ void main() {
     final partial = WorkoutSession(
       id: 'partial',
       routineId: 'routine',
+      routineNameSnapshot: 'Rutina',
       startedAt: start,
       finishedAt: start.add(const Duration(minutes: 20)),
       durationSeconds: 1200,
