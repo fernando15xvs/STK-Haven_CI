@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_history_set_row.dart';
 import 'package:intl/intl.dart';
+import 'package:core/features/workout/application/workout_history_date_policy.dart';
 
 /// Complete, read-only history for one exercise. Unlike the five-row
 /// previews, this renders every matching session, including partial sets.
@@ -25,7 +26,7 @@ class ExerciseHistoryPage extends ConsumerWidget {
           ),
         )
         .toList(growable: false)
-      ..sort((a, b) => b.startedAt.compareTo(a.startedAt));
+      ..sort(WorkoutHistoryDatePolicy.latestFirst);
 
     return Scaffold(
       appBar: AppBar(
@@ -96,7 +97,7 @@ class ExerciseHistoryPage extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.xxs),
                         Text(
                           DateFormat('dd MMM yyyy', 'es')
-                              .format(session.startedAt),
+                              .format(WorkoutHistoryDatePolicy.localCompletionTime(session)),
                           style: AppTypography.bodySmall.copyWith(
                             color: AppColors.of(context).textSecondary,
                           ),

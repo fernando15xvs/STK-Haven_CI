@@ -2,6 +2,9 @@ import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/programs/application/program_schedule_projector.dart';
+import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
+import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -324,6 +327,18 @@ class RoutinesPage extends ConsumerWidget {
       'Sábado',
       'Domingo',
     ];
+    final activePlan = ref.read(activeTrainingProgramProvider);
+    final today = DateTime.now();
+    final monday = DateTime(today.year, today.month, today.day)
+        .subtract(Duration(days: today.weekday - DateTime.monday));
+    final projections = activePlan == null
+        ? const <ProgramScheduledSession>[]
+        : ProgramScheduleProjector.projectWeek(
+            program: activePlan, routines: routines, weekStart: monday,
+          );
+    final routineById = <String, Routine>{
+      for (final routine in routines) routine.id: routine,
+    };
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -341,10 +356,17 @@ class RoutinesPage extends ConsumerWidget {
           controller: controller,
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
-            Text('Plan semanal', style: AppTypography.headlineLarge),
+            Text(
+              activePlan == null ? 'Días opcionales de rutinas' : 'Semana del programa',
+              style: AppTypography.headlineLarge,
+            ),
             const SizedBox(height: 4),
             Text(
-              'Usa el botón de mover para cambiar una rutina de día.',
+              activePlan == null
+                  ? 'Días opcionales cuando no hay un programa activo. Puedes mover tus rutinas.'
+                  : activePlan.scheduleMode == ProgramScheduleMode.flexible
+                      ? 'Distribución orientativa: los días no son obligatorios en un plan flexible.'
+                      : 'Calendario de “${activePlan.name}”. El plan prevalece sobre los días opcionales de cada rutina.',
               style: AppTypography.bodyMedium.copyWith(
                 color: AppColors.of(context).textSecondary,
               ),
@@ -352,9 +374,15 @@ class RoutinesPage extends ConsumerWidget {
             const SizedBox(height: AppSpacing.lg),
             ...List.generate(7, (index) {
               final weekday = index + 1;
-              final dayRoutines = routines
-                  .where((routine) => routine.scheduledDays.contains(weekday))
-                  .toList(growable: false);
+              final dayRoutines = activePlan == null
+                  ? routines
+                      .where((routine) => routine.scheduledDays.contains(weekday))
+                      .toList(growable: false)
+                  : projections
+                      .where((item) => item.date.weekday == weekday)
+                      .map((item) => routineById[item.routineId])
+                      .whereType<Routine>()
+                      .toList(growable: false);
               final today = DateTime.now().weekday == weekday;
               return Container(
                 margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -403,20 +431,15 @@ class RoutinesPage extends ConsumerWidget {
                                             style: AppTypography.headlineSmall,
                                           ),
                                         ),
-                                        IconButton(
-                                          tooltip: 'Mover a otro día',
-                                          visualDensity: VisualDensity.compact,
-                                          onPressed: () => _moveRoutineToDay(
-                                            sheetContext,
-                                            ref,
-                                            routine,
-                                            weekday,
+                                        if (activePlan == null)
+                                          IconButton(
+                                            tooltip: 'Mover a otro día',
+                                            visualDensity: VisualDensity.compact,
+                                            onPressed: () => _moveRoutineToDay(
+                                              sheetContext, ref, routine, weekday,
+                                            ),
+                                            icon: const Icon(Icons.swap_horiz, size: 20),
                                           ),
-                                          icon: const Icon(
-                                            Icons.swap_horiz,
-                                            size: 20,
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   )

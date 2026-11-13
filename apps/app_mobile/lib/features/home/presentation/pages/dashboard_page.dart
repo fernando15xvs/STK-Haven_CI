@@ -17,6 +17,7 @@ import 'package:gym_tracker/features/faith/presentation/pages/bible_reader_page.
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
+import 'package:core/features/programs/application/training_program_legacy_policy.dart';
 import 'package:core/features/routines/data/routine_repository.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
@@ -155,6 +156,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
     );
     final activeWorkout = ref.watch(activeWorkoutProvider);
     final nextProgramSession = ref.watch(nextProgramSessionProvider);
+    // The modern plan is authoritative even while paused. The onboarding
+    // snapshot is read only for users who have no modern plans yet.
+    final legacyProgram = TrainingProgramLegacyPolicy.dashboardFallback(
+      programs: ref.watch(trainingProgramListProvider),
+      legacy: settings.activeProgram,
+    );
 
     final completedToday = TodaysWorkoutStatus.latestCompletedToday(
       history,
@@ -207,15 +214,15 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
             else
               _TodayRoutineCard(
                 routineRepo: routineRepo,
-                activeProgram: settings.activeProgram,
+                activeProgram: legacyProgram,
                 programSession: nextProgramSession,
               ),
             const SizedBox(height: AppSpacing.md),
             const RecoveryCheckInCard(compact: true),
-            if (settings.activeProgram != null) ...[
+            if (legacyProgram != null) ...[
               const SizedBox(height: AppSpacing.md),
               _ActiveProgramCard(
-                activeProgram: settings.activeProgram!,
+                activeProgram: legacyProgram,
                 history: history,
               ),
             ],

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1607,7 +1605,9 @@ class _SetRowState extends ConsumerState<_SetRow> {
   late TextEditingController _weightCtrl;
   late TextEditingController _repsCtrl;
   late TextEditingController _rirCtrl;
-  Timer? _debounce;
+  bool _weightFocused = false;
+  bool _repsFocused = false;
+  bool _rirFocused = false;
 
   String _fmt(double value) => value
       .toStringAsFixed(2)
@@ -1655,17 +1655,18 @@ class _SetRowState extends ConsumerState<_SetRow> {
         oldWidget.initialSet.weight != widget.initialSet.weight;
     final repsChanged = oldWidget.initialSet.reps != widget.initialSet.reps;
     final rirChanged = oldWidget.initialSet.rir != widget.initialSet.rir;
-    if (unitChanged || (weightChanged && !widget.initialSet.completed)) {
+    if (unitChanged ||
+        (weightChanged && !widget.initialSet.completed && !_weightFocused)) {
       final newText = _displayWeight(widget.initialSet.weight);
       if (_weightCtrl.text != newText) _weightCtrl.text = newText;
     }
-    if (repsChanged && !widget.initialSet.completed) {
+    if (repsChanged && !widget.initialSet.completed && !_repsFocused) {
       final next = widget.initialSet.reps == 0
           ? ''
           : '${widget.initialSet.reps}';
       if (_repsCtrl.text != next) _repsCtrl.text = next;
     }
-    if (rirChanged && !widget.initialSet.completed) {
+    if (rirChanged && !widget.initialSet.completed && !_rirFocused) {
       final next = widget.initialSet.rir == null
           ? ''
           : '${widget.initialSet.rir}';
@@ -1675,7 +1676,6 @@ class _SetRowState extends ConsumerState<_SetRow> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
     _weightCtrl.dispose();
     _repsCtrl.dispose();
     _rirCtrl.dispose();
@@ -1701,29 +1701,23 @@ class _SetRowState extends ConsumerState<_SetRow> {
   }
 
   void _persistFields() {
-    if (!widget.initialSet.completed) {
-      ref
-          .read(activeWorkoutProvider.notifier)
-          .updateSet(widget.exIndex, widget.setIndex, _setFromFields());
-    }
+    if (widget.initialSet.completed) return;
+    final updated = _setFromFields();
+    if (updated.weight == widget.initialSet.weight &&
+        updated.reps == widget.initialSet.reps &&
+        updated.rir == widget.initialSet.rir) return;
+    // Commit to active state and its serialized Hive draft immediately.
+    // Reordering, deleting, navigating or disposing cannot drop a keystroke.
+    ref.read(activeWorkoutProvider.notifier).updateSet(
+      widget.exIndex, widget.setIndex, updated,
+    );
   }
 
-  void _flushDebounce() {
-    _debounce?.cancel();
-    _debounce = null;
-    _persistFields();
-  }
+  void _flushDebounce() => _persistFields();
 
-  void _onFieldChanged() {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      _debounce = null;
-      _persistFields();
-    });
-  }
+  void _onFieldChanged() => _persistFields();
 
   void _toggle() {
-    _debounce?.cancel();
     if (!widget.initialSet.completed && widget.vibrationEnabled) {
       HapticFeedback.mediumImpact();
     }
@@ -1737,7 +1731,6 @@ class _SetRowState extends ConsumerState<_SetRow> {
   }
 
   void _toggleSide(bool left) {
-    _debounce?.cancel();
     _flushDebounce();
     if (widget.vibrationEnabled) HapticFeedback.selectionClick();
     ref
@@ -1830,6 +1823,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
                     done: done,
                     onChanged: (_) => _onFieldChanged(),
                     onEditingComplete: _flushDebounce,
+                    onFocusChanged: (focused) => _weightFocused = focused,
                   ),
                 ),
                 Expanded(
@@ -1840,6 +1834,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
                     done: done,
                     onChanged: (_) => _onFieldChanged(),
                     onEditingComplete: _flushDebounce,
+                    onFocusChanged: (focused) => _repsFocused = focused,
                   ),
                 ),
                 if (widget.isRirEnabled)
@@ -1852,6 +1847,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
                       hint: '-',
                       onChanged: (_) => _onFieldChanged(),
                       onEditingComplete: _flushDebounce,
+                      onFocusChanged: (focused) => _rirFocused = focused,
                     ),
                   )
                 else
@@ -1909,7 +1905,6 @@ class _SetRowState extends ConsumerState<_SetRow> {
                   key: ValueKey('set_outcome_${widget.exIndex}_${widget.setIndex}'),
                   tooltip: 'Estado de la serie',
                   onSelected: (outcome) {
-                    _debounce?.cancel();
                     final updated = _setFromFields(completed: false).copyWith(
                       recordedOutcome: outcome == 'pending' ? null : outcome,
                       clearRecordedOutcome: outcome == 'pending',
@@ -2073,6 +2068,7 @@ class _MinimalCell extends StatefulWidget {
   final String hint;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onEditingComplete;
+  final ValueChanged<bool>? onFocusChanged;
 
   const _MinimalCell({
     required this.controller,
@@ -2081,6 +2077,7 @@ class _MinimalCell extends StatefulWidget {
     this.hint = '-',
     this.onChanged,
     this.onEditingComplete,
+    this.onFocusChanged,
   });
 
   @override
@@ -2095,6 +2092,7 @@ class _MinimalCellState extends State<_MinimalCell> {
   void initState() {
     super.initState();
     _focusNode.addListener(() {
+      widget.onFocusChanged?.call(_focusNode.hasFocus);
       if (mounted) {
         setState(() => _isFocused = _focusNode.hasFocus);
       }

@@ -3,6 +3,7 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_rotation_coordinator.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
+import 'package:core/features/programs/application/training_program_legacy_policy.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
@@ -152,7 +153,19 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
   }
 
   Future<void> delete(String programId) async {
+    final removed = _repository.getById(programId);
     await _repository.delete(programId);
+    if (removed != null) {
+      final settings = ref.read(settingsProvider);
+      if (TrainingProgramLegacyPolicy.shouldClearLegacyOnDelete(
+        deleted: removed,
+        legacy: settings.activeProgram,
+      )) {
+        ref.read(settingsProvider.notifier).updateSettings(
+          settings.copyWith(clearActiveProgram: true),
+        );
+      }
+    }
     refresh();
   }
 
