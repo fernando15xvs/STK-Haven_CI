@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('Entrenar owns programs, routines, and templates, without today's hero', () {
+  test("Entrenar owns programs, routines, and templates, without today's hero", () {
     final routines = File(
       'lib/features/routines/presentation/pages/routines_page.dart',
     ).readAsStringSync();

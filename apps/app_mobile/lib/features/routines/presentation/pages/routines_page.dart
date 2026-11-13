@@ -28,10 +28,12 @@ class RoutinesPage extends ConsumerWidget {
       for (final exercise in exercises) exercise.id: exercise,
     };
 
-    void createRoutine() => Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const CreateRoutinePage()),
-    );
+    void createRoutine() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CreateRoutinePage()),
+      );
+    }
 
     void openTemplates() { _showTemplatesChooser(context); }
 
@@ -657,7 +659,7 @@ class _ProgramOrganizerCard extends ConsumerWidget {
                   onPressed: onManage,
                   icon: const Icon(Icons.settings_outlined, size: 18),
                   label: const Text('Administrar'),
-                )
+                ),
               if (routines.isNotEmpty && active == null)
                 FilledButton.icon(
                   onPressed: onCreate,
