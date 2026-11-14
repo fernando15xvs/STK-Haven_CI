@@ -183,28 +183,9 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
         key: const Key('body_measurement_main_list'),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
         children: [
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 10,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                key: const Key('measurement_history_button'),
-                onPressed: measurements.isEmpty ? null
-                    : () => _showHistory(context),
-                icon: const Icon(Icons.history, size: 18),
-                label: const Text('Historial'),
-              ),
-              FilledButton.icon(
-                key: const Key('measurement_add_button'),
-                onPressed: () => _showAddMeasurementModal(context),
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('Nueva medida'),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
           BodyMeasurementSilhouette(
+            onAddMeasurement: () => _showAddMeasurementModal(context),
+            onHistory: () => _showHistory(context),
             measurements: measurements,
             selected: _selectedMeasurement,
             onSelected: (metric) =>

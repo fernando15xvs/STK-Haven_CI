@@ -123,10 +123,9 @@ void main() {
       expect(find.byKey(const Key('silhouette_back')),findsNothing);
       expect(find.byKey(const Key('measurement_anatomy_png')),findsOneWidget);
       expect(find.byKey(const Key('measure_chip_chest')),findsOneWidget);
-      expect(find.byKey(const Key('measure_chip_neck')),findsNothing);
-      expect(find.byKey(const Key('measure_chip_leftForearm')),findsNothing);
       expect(find.byKey(const Key('map_front_neck')),findsOneWidget);
-      expect(find.byKey(const Key('map_front_leftForearm')),findsOneWidget);
+      expect(find.byKey(const Key('map_front_leftForearm')),findsNothing);
+      expect(find.byKey(const Key('map_front_rightArm')),findsOneWidget);
       expect(find.byKey(const Key('measure_chip_leftCalf')),findsNothing);
       expect(find.text('101.0 cm'),findsWidgets);
       await tester.ensureVisible(find.byKey(const Key('measure_chip_chest')));
@@ -137,12 +136,9 @@ void main() {
       expect(find.byKey(const Key('measurement_detail_chart')),findsOneWidget);
       await tester.pageBack();
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.byKey(const Key('measurement_show_all')));
-      await tester.tap(find.byKey(const Key('measurement_show_all')));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const Key('measurement_all_contours_list')),findsOneWidget);
-      expect(find.byKey(const Key('measurement_all_neck')),findsOneWidget);
-      await tester.tap(find.byKey(const Key('measurement_all_neck')));
+      // Unrecorded contours remain available via the anatomical point.
+      await tester.ensureVisible(find.byKey(const Key('map_front_neck')));
+      await tester.tap(find.byKey(const Key('map_front_neck')));
       await tester.pumpAndSettle();
       expect(find.byType(MeasurementMuscleDetailPage), findsOneWidget);
       await tester.pageBack();
@@ -159,7 +155,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(selected,MeasurementMetric.rightCalf);
       expect(find.text('38.0 cm'),findsWidgets);
-      expect(find.textContaining('Anterior: 35.0 cm'),findsOneWidget);
+      expect(find.text('35.0 cm'),findsOneWidget);
+      expect(find.text('Medida anterior'), findsOneWidget);
+      expect(find.text('Cambio vs. anterior'), findsOneWidget);
       expect(tester.takeException(),isNull);
     });
   }
@@ -224,8 +222,9 @@ void main() {
     )));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('silhouette_front')),findsOneWidget);
-    await tester.ensureVisible(find.byKey(const Key('measure_chip_chest')));
-    await tester.tap(find.byKey(const Key('measure_chip_chest')));
+    expect(find.byKey(const Key('measure_chip_chest')), findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('map_front_chest')));
+    await tester.tap(find.byKey(const Key('map_front_chest')));
     await tester.pumpAndSettle();
     expect(find.text('Sin registros todavía.'),findsOneWidget);
     expect(tester.takeException(),isNull);
@@ -283,8 +282,6 @@ void main() {
           'chest': const Offset(.50, .245),
           'rightArm': const Offset(.215, .300),
           'leftArm': const Offset(.785, .300),
-          'rightForearm': const Offset(.165, .385),
-          'leftForearm': const Offset(.835, .385),
           'rightLeg': const Offset(.415, .535),
           'leftLeg': const Offset(.585, .535),
         });
@@ -301,6 +298,8 @@ void main() {
         await tester.tap(find.text('Espalda').last);
         await tester.pumpAndSettle();
         check('back', {
+          'leftForearm': const Offset(.19, .385),
+          'rightForearm': const Offset(.81, .385),
           'waist': const Offset(.50, .360),
           'hips': const Offset(.54, .460),
           'rightCalf': const Offset(.60, .730),

@@ -85,28 +85,26 @@ class _Callout {
 // Calibrated against the source front/back plates and the user's iPhone
 // captures. Each dot names a measurement contour, not an isolated muscle.
 // Front is mirrored anatomically: the person's right is image left.
+// MeasurementMetric is the authoritative contorno identifier; never invent
+// measurements named "Espalda" or "Glúteos" from illustration labels.
 const _front = <_Callout>[
   _Callout(MeasurementMetric.neck, 'Cuello', true, .085, Offset(.50, .166)),
-  // The deltoid is lateral and ABOVE the pectoral, not on the chest.
-  _Callout(MeasurementMetric.shoulders, 'Hombros', false, .155, Offset(.82, .190)),
-  _Callout(MeasurementMetric.chest, 'Tórax', true, .270, Offset(.50, .245)),
-  // Upper arms: between deltoid and elbow. Forearms: below elbow, before wrist.
-  _Callout(MeasurementMetric.rightArm, 'Brazo der.', true, .390, Offset(.215, .300)),
-  _Callout(MeasurementMetric.leftArm, 'Brazo izq.', false, .355, Offset(.785, .300)),
-  _Callout(MeasurementMetric.rightForearm, 'Ant. der.', true, .535, Offset(.165, .385)),
-  _Callout(MeasurementMetric.leftForearm, 'Ant. izq.', false, .505, Offset(.835, .385)),
-  // Mid-thigh, not the knee. Keep left and right measurement IDs intact.
-  _Callout(MeasurementMetric.rightLeg, 'Muslo der.', true, .725, Offset(.415, .535)),
-  _Callout(MeasurementMetric.leftLeg, 'Muslo izq.', false, .725, Offset(.585, .535)),
+  _Callout(MeasurementMetric.shoulders, 'Hombros', false, .160, Offset(.82, .190)),
+  _Callout(MeasurementMetric.chest, 'Tórax', true, .265, Offset(.50, .245)),
+  _Callout(MeasurementMetric.rightArm, 'Brazo der.', true, .410, Offset(.215, .300)),
+  _Callout(MeasurementMetric.leftArm, 'Brazo izq.', false, .405, Offset(.785, .300)),
+  _Callout(MeasurementMetric.rightLeg, 'Muslo der.', true, .720, Offset(.415, .535)),
+  _Callout(MeasurementMetric.leftLeg, 'Muslo izq.', false, .720, Offset(.585, .535)),
 ];
 
 const _rear = <_Callout>[
-  // Waist is ABOVE the pelvis/glutes; hip tape crosses the widest glutes.
-  _Callout(MeasurementMetric.waist, 'Cintura', true, .395, Offset(.50, .360)),
-  _Callout(MeasurementMetric.hips, 'Cadera', false, .540, Offset(.54, .460)),
-  // Calf markers belong at muscular mid-calf, not the lower ankle.
-  _Callout(MeasurementMetric.rightCalf, 'Pant. der.', false, .780, Offset(.60, .730)),
-  _Callout(MeasurementMetric.leftCalf, 'Pant. izq.', true, .835, Offset(.40, .730)),
+  // Viewed from behind, the person's right side is on the image right.
+  _Callout(MeasurementMetric.leftForearm, 'Ant. izq.', true, .260, Offset(.19, .385)),
+  _Callout(MeasurementMetric.rightForearm, 'Ant. der.', false, .270, Offset(.81, .385)),
+  _Callout(MeasurementMetric.waist, 'Cintura', true, .490, Offset(.50, .360)),
+  _Callout(MeasurementMetric.hips, 'Cadera', false, .535, Offset(.54, .460)),
+  _Callout(MeasurementMetric.leftCalf, 'Pant. izq.', true, .790, Offset(.40, .730)),
+  _Callout(MeasurementMetric.rightCalf, 'Pant. der.', false, .790, Offset(.60, .730)),
 ];
 
 /// A single authentic anatomical PNG, side labels and leader-lines.
@@ -115,12 +113,16 @@ class BodyMeasurementSilhouette extends StatefulWidget {
   final List<BodyMeasurement> measurements;
   final MeasurementMetric selected;
   final ValueChanged<MeasurementMetric> onSelected;
+  final VoidCallback? onAddMeasurement;
+  final VoidCallback? onHistory;
 
   const BodyMeasurementSilhouette({
     super.key,
     required this.measurements,
     required this.selected,
     required this.onSelected,
+    this.onAddMeasurement,
+    this.onHistory,
   });
 
   @override
@@ -143,62 +145,27 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
     );
   }
 
-  Future<void> _showAllMeasurements() async {
-    final visible = _back ? _rear : _front;
-    final selected = await showModalBottomSheet<MeasurementMetric>(
-      context: context,
-      useSafeArea: true,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        top: false,
-        child: FractionallySizedBox(
-          heightFactor: 0.72,
-          child: ListView(
-            key: const Key('measurement_all_contours_list'),
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              Text(
-                _back ? 'Medidas posteriores' : 'Medidas frontales',
-                style: Theme.of(sheetContext).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              for (final entry in visible)
-                ListTile(
-                  key: Key('measurement_all_${entry.metric.name}'),
-                  title: Text(entry.metric.label),
-                  subtitle: Text(SilhouetteMeasurementData.formatted(
-                    SilhouetteMeasurementData.latest(
-                      widget.measurements, entry.metric))),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () => Navigator.pop(sheetContext, entry.metric),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (selected != null && mounted) _open(selected);
-  }
 
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.of(context);
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.sm),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
             Expanded(child: Text('Medidas corporales',
               style: AppTypography.headlineSmall)),
-            Tooltip(
-              message:'Perímetros registrados; no tamaños individuales de músculos.',
-              child: Icon(Icons.info_outline, size: 19,
-                color: accent.textSecondary),
-            ),
-          ]),
-          const SizedBox(height: 10),
+            if (widget.onAddMeasurement != null)
+              TextButton.icon(
+                key: const Key('measurement_add_button'),
+                onPressed: widget.onAddMeasurement,
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: const Text('Nueva'),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
           SegmentedButton<bool>(
             key: const Key('measurement_view_switch'),
             segments: const [
@@ -229,10 +196,7 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
           const SizedBox(height: 12),
           Container(
             key: Key(_back ? 'silhouette_back' : 'silhouette_front'),
-            decoration: BoxDecoration(
-              color: accent.surfaceHigh,
-              borderRadius: AppRadius.lg_,
-            ),
+            color: accent.surface,
             child: LayoutBuilder(builder: (context, limits) {
               // The anatomical PNG has a 0.4 width/height ratio. Reserve
               // generous outer margins for readable left/right callouts.
@@ -263,6 +227,13 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               final figureLeft = (w - figureWidth) / 2;
               final figureTop = (h - figureHeight) / 2;
               final positions = _back ? _rear : _front;
+              // Only draw leader lines for labels that really exist.
+              // Every anatomical point remains interactive, even without data.
+              final visible = [
+                for (var i = 0; i < positions.length; i++)
+                  if (SilhouetteMeasurementData.latest(
+                        widget.measurements, positions[i].metric) != null) i,
+              ];
               final ink = accent.primary;
               // Compact screens need wider labels when the user requests
               // larger accessibility text, without shrinking Outfit glyphs.
@@ -273,9 +244,10 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
                     figureTop + c.anchor.dy * figureHeight),
               ];
               final ends = [
-                for (final c in positions)
-                  Offset(c.labelLeft ? badgeWidth+3 : w-badgeWidth-3,
-                    c.row*h+labelHeight*.5),
+                for (final i in visible)
+                  Offset(positions[i].labelLeft
+                      ? badgeWidth + 3 : w - badgeWidth - 3,
+                    positions[i].row * h + labelHeight * .5),
               ];
               return SizedBox(
                 height: h,
@@ -296,12 +268,13 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
                     ),
                   ),
                   Positioned.fill(child:IgnorePointer(child:CustomPaint(
-                    painter:_LeaderLines(anchors:anchors,ends:ends,color:ink),
+                    painter:_LeaderLines(
+                      anchors:[for(final i in visible) anchors[i]],
+                      ends:ends,color:ink),
                   ))),
-                  // Frontal focus mode: keep all anatomical touch-points,
-                  // but render only the active callout; rear stays unchanged.
-                  for(var i=0;i<positions.length;i++)
-                    if (_back || positions[i].metric == widget.selected)
+                  // Show all recorded contorno values as compact badges;
+                  // still allow opening every unrecorded contour via its dot.
+                  for (final i in visible)
                     Positioned(
                       left:positions[i].labelLeft ? 3 : w-badgeWidth-3,
                       top:positions[i].row*h,
@@ -320,8 +293,8 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
                   for(var i=0;i<positions.length;i++)
                     Positioned(
                       key: Key('map_${_back?'back':'front'}_${positions[i].metric.name}'),
-                      left:anchors[i].dx-16,top:anchors[i].dy-16,
-                      width:32,height:32,
+                      left:anchors[i].dx-22,top:anchors[i].dy-22,
+                      width:44,height:44,
                       child:Semantics(
                         button:true,
                         label:'${positions[i].metric.label}, '
@@ -329,7 +302,7 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
                             SilhouetteMeasurementData.latest(
                               widget.measurements,positions[i].metric))}',
                         child:InkResponse(
-                          radius:16,
+                          radius:22,
                           onTap:()=>_open(positions[i].metric),
                           child:Center(child:Container(
                             width:widget.selected==positions[i].metric?13:10,
@@ -348,25 +321,27 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               );
             }),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              key: const Key('measurement_show_all'),
-              onPressed: _showAllMeasurements,
-              icon: const Icon(Icons.format_list_bulleted_rounded),
-              label: const Text('Ver todas las medidas'),
+          if (widget.onHistory != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.center,
+              child: TextButton.icon(
+                key: const Key('measurement_history_button'),
+                onPressed: widget.onHistory,
+                icon: const Icon(Icons.history_rounded),
+                label: const Text('Ver historial'),
+              ),
             ),
+          ],
+          Text(
+            'Toca cualquier punto para consultar su perímetro, '
+            'aunque todavía no tenga registros.',
+            style: AppTypography.bodySmall.copyWith(
+              color: accent.textSecondary),
           ),
-          Text('Toca un punto para ver su medida e historial. '
-            'Las demás medidas están disponibles en la lista.',
-            style:AppTypography.bodySmall.copyWith(color: accent.textSecondary)),
-          Text('Los valores corresponden a perímetros registrados. '
-            'Las pantorrillas nuevas se registran por lado. El valor antiguo general sigue en el historial.',
-            style:AppTypography.bodySmall.copyWith(color: accent.textSecondary)),
-        ]),
-      ),
-    );
+        ],
+      );
+
   }
 }
 
@@ -474,7 +449,10 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
     final scheme=Theme.of(context).colorScheme;
     final value=SilhouetteMeasurementData.latest(measurements,metric);
     final progress=MeasurementProgress(measurements,metric);
-    final records=progress.points.reversed.toList();
+    // History chart progresses chronologically from left to right.
+    // Recent records are listed newest-first in their own section.
+    final chartPoints = progress.points;
+    final records = chartPoints.reversed.toList();
     final detailKey = switch (metric) {
       MeasurementMetric.shoulders => 'shoulders',
       MeasurementMetric.chest => 'chest',
@@ -509,47 +487,93 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height:12),
-        Card(child:Padding(
-          padding:const EdgeInsets.all(16),
-          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Text('Medida actual',style:Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height:6),
-            Text(SilhouetteMeasurementData.formatted(value),
-              key:const Key('measurement_detail_value'),
-              style:Theme.of(context).textTheme.headlineMedium),
-            if(value!=null)...[
-              const SizedBox(height:4),
-              Text('Registrado: ${DateFormat('dd/MM/yyyy').format(value.date)}'),
-              if(value.previous!=null)
-                Text('Anterior: ${value.previous!.toStringAsFixed(1)} cm · '
-                  '${value.delta!>0?'+':''}'
-                  '${value.delta!.toStringAsFixed(1)} cm',
-                  key:const Key('measurement_detail_delta')),
-            ] else const Text('Sin registros todavía.'),
-          ]),
-        )),
-        const SizedBox(height:12),
-        Card(child:Padding(padding:const EdgeInsets.all(16),
-          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Text('Historial',style:Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height:8),
-            if(records.length>1)
-              SizedBox(height:130,child:CustomPaint(
-                key:const Key('measurement_detail_chart'),
-                painter:_MetricHistoryPainter(records,AppColors.of(context).primary),
-                child:const SizedBox.expand(),
-              ))
-            else const Text('Registra esta medida en dos fechas para ver su evolución.'),
-            const SizedBox(height:10),
-            for(final entry in records.take(12))
-              ListTile(
-                dense:true,contentPadding:EdgeInsets.zero,
-                title:Text('${entry.value.toStringAsFixed(1)} cm'),
-                subtitle:Text(DateFormat('dd/MM/yyyy')
-                  .format(entry.date)),
-              ),
-          ]),
-        )),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Medida actual', style: AppTypography.headlineSmall),
+                const SizedBox(height: 6),
+                Text(
+                  SilhouetteMeasurementData.formatted(value),
+                  key: const Key('measurement_detail_value'),
+                  style: AppTypography.headlineLarge,
+                ),
+                if (value != null) ...[
+                  const SizedBox(height: 12),
+                  Text('Registrado el', style: AppTypography.labelMedium),
+                  Text(DateFormat('dd/MM/yyyy').format(value.date),
+                    style: AppTypography.bodyMedium),
+                  const SizedBox(height: 10),
+                  Text('Medida anterior', style: AppTypography.labelMedium),
+                  Text(
+                    value.previous == null
+                        ? 'Sin comparación'
+                        : '${value.previous!.toStringAsFixed(1)} cm',
+                    style: AppTypography.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Cambio vs. anterior',
+                    style: AppTypography.labelMedium),
+                  Text(
+                    value.delta == null ? 'Sin comparación'
+                      : value.delta!.abs() < .05 ? 'Sin cambio'
+                      : '${value.delta! > 0 ? '+' : ''}${value.delta!.toStringAsFixed(1)} cm',
+                    key: const Key('measurement_detail_delta'),
+                    style: AppTypography.bodyMedium,
+                  ),
+                ] else const Text('Sin registros todavía.'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Historial', style: AppTypography.headlineSmall),
+                const SizedBox(height: 12),
+                if (progress.canCompare)
+                  _MeasurementHistoryChart(points: chartPoints)
+                else
+                  Text(
+                    'Registra esta medida en dos fechas distintas para ver su evolución.',
+                    style: AppTypography.bodySmall,
+                  ),
+                const SizedBox(height: 14),
+                Text('Registros recientes', style: AppTypography.labelLarge),
+                for (var i = 0; i < math.min(records.length, 12); i++)
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      '${records[i].value.toStringAsFixed(1)} cm',
+                      style: AppTypography.bodyMedium,
+                    ),
+                    subtitle: Text(
+                      DateFormat('dd/MM/yyyy').format(records[i].date),
+                      style: AppTypography.bodySmall,
+                    ),
+                    trailing: i + 1 < records.length &&
+                            records[i].date.isAfter(records[i + 1].date)
+                        ? Text(
+                            (records[i].value-records[i + 1].value).abs() < .05
+                                ? 'Sin cambio'
+                                : '${records[i].value > records[i + 1].value ? '+' : ''}${(records[i].value-records[i + 1].value).toStringAsFixed(1)} cm',
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.of(context).textSecondary,
+                            ),
+                          )
+                        : null,
+                  ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height:12),
         Text(_measureInstructions(metric),style:Theme.of(context).textTheme.bodyMedium),
          const SizedBox(height:8),
@@ -562,36 +586,125 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
   }
 }
 
+/// Tappable, chronological measurement history; selection never changes
+/// the underlying recorded observations or their order.
+class _MeasurementHistoryChart extends StatefulWidget {
+  final List<MeasurementPoint> points;
+  const _MeasurementHistoryChart({required this.points});
+
+  @override
+  State<_MeasurementHistoryChart> createState() =>
+      _MeasurementHistoryChartState();
+}
+
+class _MeasurementHistoryChartState extends State<_MeasurementHistoryChart> {
+  int? _selectedIndex;
+
+  @override
+  Widget build(BuildContext context) {
+    final points = widget.points;
+    final index = (_selectedIndex ?? (points.length - 1))
+        .clamp(0, points.length - 1);
+    final selected = points[index];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(
+          builder: (context, limits) => GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) {
+              final usefulWidth = math.max(1.0, limits.maxWidth - 32);
+              final percent =
+                  ((details.localPosition.dx - 16) / usefulWidth).clamp(0.0, 1.0);
+              setState(() {
+                _selectedIndex =
+                    (percent * (points.length - 1)).round();
+              });
+            },
+            child: SizedBox(
+              height: 150,
+              child: CustomPaint(
+                key: const Key('measurement_detail_chart'),
+                painter: _MetricHistoryPainter(
+                  points, AppColors.of(context).primary, index),
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ),
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(DateFormat('dd/MM/yyyy').format(points.first.date),
+              style: AppTypography.labelSmall),
+            Text(DateFormat('dd/MM/yyyy').format(points.last.date),
+              style: AppTypography.labelSmall),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${selected.value.toStringAsFixed(1)} cm · ${DateFormat('dd/MM/yyyy').format(selected.date)}',
+          key: const Key('measurement_chart_selected_record'),
+          style: AppTypography.labelMedium,
+          textAlign: TextAlign.end,
+        ),
+      ],
+    );
+  }
+}
+
 class _MetricHistoryPainter extends CustomPainter {
   final List<MeasurementPoint> points;
   final Color color;
-  const _MetricHistoryPainter(this.points,this.color);
+  final int selectedIndex;
+  const _MetricHistoryPainter(this.points, this.color, this.selectedIndex);
+
   @override
-  void paint(Canvas canvas,Size size){
-    if(points.length<2)return;
-    final v=points.map((e)=>e.value);
-    final minV=v.reduce(math.min),maxV=v.reduce(math.max);
-    final range=math.max(1.0,maxV-minV);
-    final line=Paint()..color=color..strokeWidth=2.4
-      ..strokeCap=StrokeCap.round..style=PaintingStyle.stroke;
-    final grid=Paint()..color=color.withValues(alpha:.12)
-      ..strokeWidth=1;
-    for(var i=0;i<=3;i++){
-      final y=14+(size.height-28)*i/3;
-      canvas.drawLine(Offset(5,y),Offset(size.width-5,y),grid);
+  void paint(Canvas canvas, Size size) {
+    if (points.length < 2) return;
+    final values = points.map((p) => p.value);
+    final minValue = values.reduce(math.min);
+    final maxValue = values.reduce(math.max);
+    final range = math.max(1.0, maxValue - minValue);
+    final grid = Paint()
+      ..color = color.withValues(alpha: .12)
+      ..strokeWidth = 1;
+    for (var i = 0; i <= 3; i++) {
+      final y = 16 + (size.height - 32) * i / 3;
+      canvas.drawLine(Offset(16, y), Offset(size.width - 16, y), grid);
     }
-    final path=Path();
-    for(var i=0;i<points.length;i++){
-      final x=9+(size.width-18)*i/(points.length-1);
-      final y=size.height-12-(points[i].value-minV)/range*(size.height-24);
-      if(i==0){path.moveTo(x,y);}else{path.lineTo(x,y);}
-      canvas.drawCircle(Offset(x,y),3.2,Paint()..color=color);
+
+    Offset pointAt(int i) => Offset(
+      16 + (size.width - 32) * i / (points.length - 1),
+      size.height - 16 -
+        (points[i].value - minValue) / range * (size.height - 32),
+    );
+    final line = Paint()
+      ..color = color
+      ..strokeWidth = 2.4
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final path = Path()..moveTo(pointAt(0).dx, pointAt(0).dy);
+    for (var i = 1; i < points.length; i++) {
+      final p = pointAt(i);
+      path.lineTo(p.dx, p.dy);
     }
-    canvas.drawPath(path,line);
+    canvas.drawPath(path, line);
+    for (var i = 0; i < points.length; i++) {
+      final p = pointAt(i);
+      if (i == selectedIndex) {
+        canvas.drawCircle(p, 7, Paint()
+          ..color = color.withValues(alpha: .23));
+      }
+      canvas.drawCircle(p, i == selectedIndex ? 4.6 : 3.4,
+        Paint()..color = color);
+    }
   }
+
   @override
   bool shouldRepaint(covariant _MetricHistoryPainter old) =>
-    old.color!=color||old.points!=points;
+      old.color != color || old.points != points ||
+      old.selectedIndex != selectedIndex;
 }
 
 /// A tape records full contours, not the size of individual muscles.
