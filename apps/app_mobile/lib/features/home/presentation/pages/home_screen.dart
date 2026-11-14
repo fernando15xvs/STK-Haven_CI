@@ -18,6 +18,7 @@ import '../../../motivation/presentation/motivation_page.dart';
 import '../../../routines/presentation/pages/routines_page.dart';
 import '../../../tools/presentation/training_tools_page.dart';
 import 'program_dashboard_page.dart';
+import '../../application/home_tab_return_request.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -85,6 +86,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(homeTabReturnRequestProvider, (previous, next) {
+      if (previous != next) _selectTab(0);
+    });
     final performanceMode = ref.watch(
       settingsProvider.select((settings) => settings.performanceMode),
     );

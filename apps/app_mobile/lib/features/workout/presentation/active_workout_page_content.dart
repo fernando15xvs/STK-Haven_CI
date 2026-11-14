@@ -444,8 +444,62 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     } else if (result is EmptyWorkout) {
       _showEmptyWorkoutDialog(context, ref);
     } else {
-      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo finalizar. Tu sesión sigue disponible. Reintenta.'),
+        ),
+      );
     }
+  }
+
+  void _addRestSeconds(int seconds) {
+    final accepted = ref.read(activeWorkoutProvider.notifier).addRestSeconds(seconds);
+    if (!accepted && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se pudo ampliar: máximo 60 minutos de descanso.')),
+      );
+    }
+  }
+
+  Future<void> _askAdditionalRestSeconds() async {
+    final controller = TextEditingController();
+    String? error;
+    final additionalSeconds = await showDialog<int>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, updateDialog) => AlertDialog(
+          backgroundColor: AppColors.of(dialogContext).surfaceHigh,
+          title: Text('Añadir segundos', style: AppTypography.headlineMedium),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: 'Segundos adicionales',
+              helperText: 'Se aplican solo al descanso actual.',
+              errorText: error,
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () {
+                final seconds = int.tryParse(controller.text.trim());
+                if (seconds == null || seconds < 1 || seconds > 3600) {
+                  updateDialog(() => error = 'Introduce entre 1 y 3600 segundos');
+                  return;
+                }
+                Navigator.pop(dialogContext, seconds);
+              },
+              child: const Text('Añadir tiempo'),
+            ),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    if (additionalSeconds != null && mounted) _addRestSeconds(additionalSeconds);
   }
 
   @override
@@ -472,13 +526,6 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
     final hasSupersets = session.exercises.any(
       (exercise) => exercise.supersetGroupId != null,
     );
-
-    final effectiveWorkoutSets = session.exercises
-        .expand((exercise) => exercise.sets)
-        .where((set) => set.setType == WorkoutSetType.working)
-        .toList(growable: false);
-    final allExercisesCompleted = effectiveWorkoutSets.isNotEmpty &&
-        effectiveWorkoutSets.every((set) => set.completed);
 
     // Back/minimize returns to the app while the provider keeps the session alive.
     return Scaffold(
@@ -530,24 +577,12 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
               ),
               onSelected: (value) {
                 switch (value) {
-                  case 'finish':
-                    _finish(context);
-                    break;
                   case 'discard':
                     _confirmDiscard(context);
                     break;
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem<String>(
-                  value: 'finish',
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.flag_outlined),
-                    title: Text('Finalizar entrenamiento'),
-                    subtitle: Text('Guardar lo realizado, aunque esté incompleto'),
-                  ),
-                ),
                 PopupMenuItem<String>(
                   value: 'discard',
                   child: ListTile(
@@ -598,27 +633,41 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                         horizontal: 16,
                         vertical: 10,
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Icon(
-                            Icons.timer_outlined,
-                            color: AppColors.of(context).warning,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
+                          Row(children: [
+                            Icon(Icons.timer_outlined,
+                              color: AppColors.of(context).warning, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(
                               'Descanso ${_formatTime(activeState.restTimerSeconds)}',
+                              key: const ValueKey('workout_rest_countdown'),
                               style: AppTypography.headlineSmall.copyWith(
-                                color: AppColors.of(context).warning,
-                              ),
+                                color: AppColors.of(context).warning),
+                            )),
+                            TextButton(
+                              onPressed: () => ref.read(activeWorkoutProvider.notifier).skipRest(),
+                              child: const Text('Omitir'),
                             ),
-                          ),
-                          TextButton(
-                            onPressed: () => ref
-                                .read(activeWorkoutProvider.notifier)
-                                .skipRest(),
-                            child: const Text('Omitir'),
+                          ]),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 0,
+                            children: [
+                              TextButton(
+                                onPressed: () => _addRestSeconds(15),
+                                child: const Text('+15 s'),
+                              ),
+                              TextButton(
+                                onPressed: () => _addRestSeconds(30),
+                                child: const Text('+30 s'),
+                              ),
+                              TextButton(
+                                onPressed: _askAdditionalRestSeconds,
+                                child: const Text('Personalizar'),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -715,19 +764,15 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
             ),
           ],
         ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        floatingActionButton: allExercisesCompleted
-            ? SafeArea(
-                minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: PrimaryButton(
-                    label: 'Finalizar entrenamiento',
-                    onPressed: _isFinishing ? null : () => _finish(context),
-                  ),
-                ),
-              )
-            : null,
+        // Reserve space for the finish CTA: never cover editable sets.
+        bottomNavigationBar: SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          child: PrimaryButton(
+            label: 'Finalizar entrenamiento',
+            onPressed: _isFinishing ? null : () => _finish(context),
+          ),
+        ),
       );
   }
 

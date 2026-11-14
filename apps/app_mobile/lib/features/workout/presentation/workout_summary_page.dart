@@ -17,6 +17,7 @@ import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_comparison_summary.dart';
 import 'package:core/features/faith/presentation/widgets/workout_closing_reflection_card.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:gym_tracker/features/home/application/home_tab_return_request.dart';
 
 class WorkoutSummaryPage extends ConsumerStatefulWidget {
   final WorkoutAnalysisResult analysisResult;
@@ -491,7 +492,11 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
         padding: const EdgeInsets.all(16.0),
         child: PrimaryButton(
           label: 'VOLVER A INICIO',
-          onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
+          onPressed: () {
+            ref.read(homeTabReturnRequestProvider.notifier).state =
+                ref.read(homeTabReturnRequestProvider) + 1;
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          },
         ),
       ),
     );
