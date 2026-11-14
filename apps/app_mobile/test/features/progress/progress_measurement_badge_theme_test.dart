@@ -53,9 +53,8 @@ void main() {
         await tester.pumpAndSettle();
         final silhouette = tester.widget<Container>(
           find.byKey(const Key('silhouette_front')));
-        final background = silhouette.decoration! as BoxDecoration;
-        expect(background.color, colors.surfaceHigh,
-          reason: 'Silhouette must use semantic surface for every accent/OLED');
+        expect(silhouette.color, colors.surface,
+          reason: 'One continuous silhouette surface per accent/OLED');
         final heading = tester.widget<Text>(find.text('Medidas corporales'));
         expect(heading.style?.fontFamily, 'Outfit');
         expect(heading.style?.fontSize, AppTypography.headlineSmall.fontSize);
@@ -98,10 +97,9 @@ void main() {
           expect(rect.left, greaterThanOrEqualTo(0));
           expect(rect.right, lessThanOrEqualTo(320));
         }
-        // Non-selected front labels no longer cover the anatomical figure,
-        // but their points must remain visible and accessible.
-        expect(find.byKey(const Key('measure_chip_neck')), findsNothing);
-        expect(find.byKey(const Key('measure_chip_rightArm')), findsNothing);
+        // Recorded contours remain visible; unrecorded ones keep touch dots.
+        expect(find.byKey(const Key('measure_chip_neck')), findsOneWidget);
+        expect(find.byKey(const Key('measure_chip_rightArm')), findsOneWidget);
         expect(find.byKey(const Key('map_front_neck')), findsOneWidget);
         expect(find.byKey(const Key('map_front_rightArm')), findsOneWidget);
         expect(tester.takeException(), isNull);
