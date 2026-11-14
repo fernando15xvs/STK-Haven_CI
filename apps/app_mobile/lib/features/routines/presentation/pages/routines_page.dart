@@ -44,13 +44,10 @@ class RoutinesPage extends ConsumerWidget {
     void openTemplates() { _showTemplatesChooser(context); }
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Entrenar', style: AppTypography.displaySmall),
-        centerTitle: false,
-        elevation: 0,
-        // Creating a routine belongs to the "Mis rutinas" section.
-      ),
-      body: ListView.builder(
+      // The bottom dock already identifies Entrenar.
+      body: SafeArea(
+        bottom: false,
+        child: ListView.builder(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xxl,
               ),
@@ -157,6 +154,7 @@ class RoutinesPage extends ConsumerWidget {
                   ),
                 );
               },
+        ),
       ),
     );
   }

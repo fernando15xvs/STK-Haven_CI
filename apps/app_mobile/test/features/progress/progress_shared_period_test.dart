@@ -10,7 +10,7 @@ import 'package:core/features/workout/application/workout_history_provider.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:gym_tracker/features/progress/presentation/widgets/progress_shared_period_selector.dart';
+import 'package:core/features/progress/presentation/widgets/compact_progress_period_selector.dart';
 
 class _Exercises extends ExerciseListNotifier {
   @override
@@ -93,13 +93,8 @@ void main() {
                 data: const MediaQueryData(
                   textScaler: TextScaler.linear(1.6),
                 ),
-                child: Column(
-                  children: const [
-                    ProgressSharedPeriodSelector(),
-                    Expanded(
-                      child: ProgressExercisesPanel(useSharedPeriod: true),
-                    ),
-                  ],
+                child: const ProgressExercisesPanel(
+                  useSharedPeriod: true,
                 ),
               ),
             ),
@@ -115,12 +110,12 @@ void main() {
       expect(find.text('Prensa reciente'), findsOneWidget);
       expect(find.text('Remo antiguo'), findsNothing);
       final scope = ProviderScope.containerOf(
-        tester.element(find.byType(ProgressSharedPeriodSelector)),
+        tester.element(find.byType(ProgressExercisesPanel)),
       );
       expect(scope.read(timeFilterProvider), TimeFilter.month);
 
-      tester.widget<SegmentedButton<TimeFilter>>(selector)
-          .onSelectionChanged!({TimeFilter.year});
+      tester.widget<PopupMenuButton<TimeFilter>>(selector)
+          .onSelected!(TimeFilter.year);
       await tester.pumpAndSettle();
       expect(scope.read(timeFilterProvider), TimeFilter.year);
       // ListView.builder renders only visible exercise cards. At 320px with
@@ -135,8 +130,8 @@ void main() {
       );
       expect(find.text('Remo antiguo'), findsOneWidget);
 
-      tester.widget<SegmentedButton<TimeFilter>>(selector)
-          .onSelectionChanged!({TimeFilter.week});
+      tester.widget<PopupMenuButton<TimeFilter>>(selector)
+          .onSelected!(TimeFilter.week);
       await tester.pumpAndSettle();
       expect(find.text('Prensa reciente'), findsOneWidget);
       expect(find.text('Remo antiguo'), findsNothing);

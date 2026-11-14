@@ -386,6 +386,8 @@ void main() {
     expect(find.text('Extensiones'), findsNothing);
     expect(find.byKey(const ValueKey('progress_exercises_search')), findsNothing);
     expect(find.byKey(const ValueKey('progress_exercise_curl')), findsOneWidget);
+    expect(find.byType(ExpansionTile), findsNothing,
+      reason: 'The only focused performance card must never collapse');
     expect(find.text('SESIONES RECIENTES'), findsNothing);
     expect(find.text('Técnica y ficha del ejercicio'), findsNothing);
     final action = find.byKey(const ValueKey('progress_open_history_curl'));
@@ -394,6 +396,37 @@ void main() {
     expect(openedHistory?.id, 'curl');
     expect(tester.takeException(), isNull);
   });
+  testWidgets('compact search opens on demand and keeps its query when closed',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        exerciseListProvider.overrideWith(_Exercises.new),
+        workoutHistoryProvider.overrideWith(_History.new),
+        settingsProvider.overrideWith(_Settings.new),
+      ],
+      child: const MaterialApp(
+        home: Scaffold(body: ProgressExercisesPanel(useSharedPeriod: true)),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final control = find.byKey(const ValueKey('progress_exercises_search_toggle'));
+    expect(find.byKey(const ValueKey('progress_exercises_search')), findsNothing);
+    await tester.tap(control);
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('progress_exercises_search')), 'Curl');
+    await tester.pumpAndSettle();
+    expect(find.text('Extensiones'), findsNothing);
+    await tester.tap(control);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('progress_exercises_search')), findsNothing);
+    expect(find.text('Extensiones'), findsNothing);
+    await tester.tap(control);
+    await tester.pumpAndSettle();
+    expect(find.text('Curl'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('compact main Progress list opens one detailed performance route',
       (tester) async {
     Exercise? opened;
@@ -425,6 +458,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('progress_exercises_sort')),
         findsOneWidget);
+    await tester.tap(find.text('Ver ejercicios'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Curl de bíceps'));
     expect(opened?.id, 'curl');
     expect(tester.takeException(), isNull);

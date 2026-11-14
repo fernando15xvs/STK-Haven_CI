@@ -143,6 +143,44 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
     );
   }
 
+  Future<void> _showAllMeasurements() async {
+    final visible = _back ? _rear : _front;
+    final selected = await showModalBottomSheet<MeasurementMetric>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: FractionallySizedBox(
+          heightFactor: 0.72,
+          child: ListView(
+            key: const Key('measurement_all_contours_list'),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              Text(
+                _back ? 'Medidas posteriores' : 'Medidas frontales',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              for (final entry in visible)
+                ListTile(
+                  key: Key('measurement_all_${entry.metric.name}'),
+                  title: Text(entry.metric.label),
+                  subtitle: Text(SilhouetteMeasurementData.formatted(
+                    SilhouetteMeasurementData.latest(
+                      widget.measurements, entry.metric))),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => Navigator.pop(sheetContext, entry.metric),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (selected != null && mounted) _open(selected);
+  }
+
   @override
   Widget build(BuildContext context) {
     final accent = AppColors.of(context);
@@ -168,8 +206,15 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               ButtonSegment(value:true,label:Text('Espalda')),
             ],
             selected: {_back},
-            onSelectionChanged: (values) =>
-                setState(() => _back = values.first),
+            onSelectionChanged: (values) {
+              final nextBack = values.first;
+              setState(() => _back = nextBack);
+              final positions = nextBack ? _rear : _front;
+              if (!positions.any((entry) => entry.metric == widget.selected)) {
+                widget.onSelected(nextBack
+                    ? MeasurementMetric.waist : MeasurementMetric.chest);
+              }
+            },
             showSelectedIcon: false,
             style: ButtonStyle(
               visualDensity: VisualDensity.compact,
@@ -253,7 +298,10 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
                   Positioned.fill(child:IgnorePointer(child:CustomPaint(
                     painter:_LeaderLines(anchors:anchors,ends:ends,color:ink),
                   ))),
+                  // Frontal focus mode: keep all anatomical touch-points,
+                  // but render only the active callout; rear stays unchanged.
                   for(var i=0;i<positions.length;i++)
+                    if (_back || positions[i].metric == widget.selected)
                     Positioned(
                       left:positions[i].labelLeft ? 3 : w-badgeWidth-3,
                       top:positions[i].row*h,
@@ -300,8 +348,18 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               );
             }),
           ),
-          const SizedBox(height: 9),
-          Text('Toca una etiqueta o un punto para ver su imagen, medida e historial.',
+          const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              key: const Key('measurement_show_all'),
+              onPressed: _showAllMeasurements,
+              icon: const Icon(Icons.format_list_bulleted_rounded),
+              label: const Text('Ver todas las medidas'),
+            ),
+          ),
+          Text('Toca un punto para ver su medida e historial. '
+            'Las demás medidas están disponibles en la lista.',
             style:AppTypography.bodySmall.copyWith(color: accent.textSecondary)),
           Text('Los valores corresponden a perímetros registrados. '
             'Las pantorrillas nuevas se registran por lado. El valor antiguo general sigue en el historial.',

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:core/features/progress/presentation/widgets/compact_progress_period_selector.dart';
 
 /// Kept under the historical name for navigation/backup compatibility.
 /// All muscle analytics now live in this single Balance Muscular tab.
@@ -60,27 +61,9 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
             ],
           )),
           const SizedBox(width: 8),
-          Tooltip(
-            message: 'Período compartido con Resumen y Ejercicios',
-            child: Container(
-              key: const ValueKey('muscle_shared_period'),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: colors.primaryFaded,
-                borderRadius: BorderRadius.circular(22)),
-              child: Text(period.label,
-                style: AppTypography.labelLarge.copyWith(
-                  color: colors.primary)),
-            ),
-          ),
+          const CompactProgressPeriodSelector(),
         ]),
-        const SizedBox(height: 7),
-        Text('El período se cambia arriba y afecta a Resumen, Ejercicios '
-          'y Músculos. Las semanas completas se comparan por separado. '
-          'El trabajo registrado no demuestra crecimiento muscular.',
-          style: AppTypography.bodySmall.copyWith(
-            color: colors.textSecondary)),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.md),
         _SummaryCard(
           total: report.totalDirectSets,
           active: activeGroups.length,

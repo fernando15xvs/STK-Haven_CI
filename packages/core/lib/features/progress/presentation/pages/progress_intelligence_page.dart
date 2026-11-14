@@ -11,6 +11,7 @@ import 'package:core/features/progress/application/exercise_progress_calculator.
 import 'package:core/features/progress/application/exercise_progress_sort.dart';
 import 'package:core/features/progress/application/progress_analytics_cache.dart' as analytics;
 import 'package:core/features/progress/application/progress_metrics_service.dart';
+import 'package:core/features/progress/presentation/widgets/compact_progress_period_selector.dart';
 import 'package:core/features/progress/application/unilateral_progress_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,6 +72,9 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
   String? _muscle;
   String _search = '';
   bool _filtersExpanded = false;
+  bool _compactSearchOpen = false;
+  bool _showAllHistory = false;
+  final TextEditingController _compactSearchController = TextEditingController();
 
   @override
   void initState() {
@@ -80,6 +84,122 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
     // filters visible to preserve their established controls.
     _filtersExpanded =
         !widget.useSharedPeriod && widget.initialExerciseId == null;
+  }
+
+  @override
+  void dispose() {
+    _compactSearchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openCompactFilters(List<String> muscles) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, updateSheet) => SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20, 6, 20, MediaQuery.viewInsetsOf(sheetContext).bottom + 16,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.73,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Filtrar ejercicios',
+                      style: Theme.of(sheetContext).textTheme.titleLarge),
+                    const SizedBox(height: 14),
+                    const Text('Ordenar por'),
+                    DropdownButton<ExerciseProgressOrder>(
+                      key: const ValueKey('progress_exercises_sort'),
+                      isExpanded: true,
+                      value: _order,
+                      items: [
+                        for (final option in ExerciseProgressOrder.values)
+                          DropdownMenuItem(
+                            value: option,
+                            child: Text(option.label),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setState(() => _order = value);
+                        updateSheet(() {});
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Grupo muscular'),
+                    DropdownButton<String?>(
+                      key: const ValueKey('progress_exercises_muscle'),
+                      isExpanded: true,
+                      value: muscles.contains(_muscle) ? _muscle : null,
+                      hint: const Text('Todos'),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null, child: Text('Todos los músculos')),
+                        for (final group in muscles)
+                          DropdownMenuItem<String?>(
+                            value: group,
+                            child: Text(group, overflow: TextOverflow.ellipsis),
+                          ),
+                      ],
+                      onChanged: (value) {
+                        setState(() => _muscle = value);
+                        updateSheet(() {});
+                      },
+                    ),
+                    SwitchListTile.adaptive(
+                      key: const ValueKey('progress_exercises_all_history'),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Ver todos los ejercicios con historial'),
+                      subtitle: const Text(
+                        'Busca sesiones antiguas sin cambiar el período compartido.'),
+                      value: _showAllHistory,
+                      onChanged: (value) {
+                        setState(() {
+                          _showAllHistory = value;
+                          if (value) _muscle = null;
+                        });
+                        updateSheet(() {});
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _order = ExerciseProgressOrder.recent;
+                              _muscle = null;
+                              _showAllHistory = false;
+                            });
+                            updateSheet(() {});
+                          },
+                          child: const Text('Restablecer'),
+                        ),
+                        const Spacer(),
+                        FilledButton(
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          child: const Text('Ver ejercicios'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -101,7 +221,7 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
     // Selected Progreso tabs use the same 7D/1M/3M/1A duration.
     // Standalone/focused routes preserve 30/90/Todo local selection.
     final from = sharedPeriod != null
-        ? sharedPeriod.startDateAt(minute)
+        ? (_showAllHistory ? null : sharedPeriod.startDateAt(minute))
         : _period.days == null
             ? null
             : minute.subtract(Duration(days: _period.days!));
@@ -152,7 +272,87 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (widget.initialExerciseId == null)
+        if (widget.useSharedPeriod && widget.initialExerciseId == null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  alignment: WrapAlignment.spaceBetween,
+                  children: [
+                    Text('Tus ejercicios',
+                      style: Theme.of(context).textTheme.titleMedium),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          key: const ValueKey('progress_exercises_search_toggle'),
+                          tooltip: _compactSearchOpen
+                              ? 'Cerrar búsqueda'
+                              : 'Buscar ejercicio',
+                          onPressed: () =>
+                              setState(() => _compactSearchOpen = !_compactSearchOpen),
+                          icon: Icon(_compactSearchOpen
+                              ? Icons.close_rounded : Icons.search_rounded,
+                            color: _search.isNotEmpty
+                                ? Theme.of(context).colorScheme.primary : null),
+                        ),
+                        IconButton(
+                          key: const ValueKey('progress_exercises_toggle_filters'),
+                          tooltip: 'Filtros de ejercicios',
+                          onPressed: () => _openCompactFilters(muscles),
+                          icon: Badge(
+                            isLabelVisible: _order != ExerciseProgressOrder.recent ||
+                                selectedMuscle != null || _showAllHistory,
+                            smallSize: 7,
+                            child: const Icon(Icons.tune_rounded),
+                          ),
+                        ),
+                        const CompactProgressPeriodSelector(),
+                      ],
+                    ),
+                  ],
+                ),
+                if (_compactSearchOpen)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 4),
+                    child: TextField(
+                      key: const ValueKey('progress_exercises_search'),
+                      controller: _compactSearchController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'Buscar ejercicio',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                        suffixIcon: IconButton(
+                          tooltip: 'Limpiar búsqueda',
+                          onPressed: () {
+                            _compactSearchController.clear();
+                            setState(() => _search = '');
+                          },
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ),
+                      onChanged: (text) => setState(() => _search = text),
+                    ),
+                  ),
+                if (_showAllHistory)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      'Historial completo · no cambia el período de otras pestañas',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+              ],
+            ),
+          )
+        else if (widget.initialExerciseId == null)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Row(
@@ -212,7 +412,7 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
               ],
             ),
           ),
-        if (widget.initialExerciseId == null)
+        if (widget.initialExerciseId == null && !widget.useSharedPeriod)
           Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
           child: TextField(
@@ -226,7 +426,8 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
             onChanged: (value) => setState(() => _search = value),
           ),
         ),
-        if (widget.initialExerciseId == null && _filtersExpanded)
+        if (widget.initialExerciseId == null &&
+            !widget.useSharedPeriod && _filtersExpanded)
           Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
           child: Column(
@@ -330,6 +531,7 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
                                 widget.initialExerciseId == null &&
                                 widget.onOpenPerformance != null,
                             initiallyExpanded: widget.initialExerciseId != null,
+                            permanentlyExpanded: widget.initialExerciseId != null,
                           ),
                         );
                       },
@@ -357,6 +559,7 @@ class _ExerciseInsightCard extends StatelessWidget {
     this.onOpenPerformance,
     this.compact = false,
     this.initiallyExpanded = false,
+    this.permanentlyExpanded = false,
   });
 
   final _ProgressEntry entry;
@@ -368,6 +571,7 @@ class _ExerciseInsightCard extends StatelessWidget {
   final ValueChanged<Exercise>? onOpenPerformance;
   final bool compact;
   final bool initiallyExpanded;
+  final bool permanentlyExpanded;
 
   int get _maxReps {
     var best = 0;
@@ -417,56 +621,10 @@ class _ExerciseInsightCard extends StatelessWidget {
       );
     }
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        key: ValueKey('progress_exercise_${entry.exercise.id}'),
-        initiallyExpanded: initiallyExpanded,
-        tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-        leading: const Icon(Icons.insights_rounded),
-        title: Text(
-          entry.exercise.name,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-        // A closed card must answer when the exercise was trained and
-        // whether the latest measured strength changed, at large text sizes.
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    // The focused route has exactly one exercise: its data must never collapse.
+    // Legacy multi-card contexts retain ExpansionTile behavior.
+    final details = <Widget>[
 
-
-            Text(
-              '${_date(latest.date)} · ${latest.routineName.isEmpty ? 'Entrenamiento libre' : latest.routineName}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              trend.current1RM > 0
-                  ? 'Último e1RM: ${FitnessFormatter.formatWeight(trend.current1RM, unit)}'
-                  : 'Última sesión sin e1RM',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              estimatedDelta == null
-                  ? 'Sin comparación'
-                  : 'Vs. anterior: ${_weightDelta(estimatedDelta, unit)}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-        trailing: trend.hasPlateauSignal
-            ? const Tooltip(
-                message: 'Tres observaciones recientes dentro de un rango estrecho',
-                child: Icon(Icons.horizontal_rule_rounded),
-              )
-            : null,
-        children: [
           if (onOpenHistory != null)
             Align(
               alignment: Alignment.centerRight,
@@ -712,8 +870,119 @@ class _ExerciseInsightCard extends StatelessWidget {
                 label: const Text('Técnica y ficha del ejercicio'),
               ),
             ),
-        ],
-      ),
+    ];
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: permanentlyExpanded
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ListTile(
+                  key: ValueKey('progress_exercise_${entry.exercise.id}'),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 4),
+        leading: const Icon(Icons.insights_rounded),
+        title: Text(
+          entry.exercise.name,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        // A closed card must answer when the exercise was trained and
+        // whether the latest measured strength changed, at large text sizes.
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+
+            Text(
+              '${_date(latest.date)} · ${latest.routineName.isEmpty ? 'Entrenamiento libre' : latest.routineName}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              trend.current1RM > 0
+                  ? 'Último e1RM: ${FitnessFormatter.formatWeight(trend.current1RM, unit)}'
+                  : 'Última sesión sin e1RM',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              estimatedDelta == null
+                  ? 'Sin comparación'
+                  : 'Vs. anterior: ${_weightDelta(estimatedDelta, unit)}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        trailing: trend.hasPlateauSignal
+            ? const Tooltip(
+                message: 'Tres observaciones recientes dentro de un rango estrecho',
+                child: Icon(Icons.horizontal_rule_rounded),
+              )
+            : null,
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: details,
+                  ),
+                ),
+              ],
+            )
+          : ExpansionTile(
+              key: ValueKey('progress_exercise_${entry.exercise.id}'),
+              initiallyExpanded: initiallyExpanded,
+              tilePadding: const EdgeInsets.symmetric(
+                horizontal: 14, vertical: 4),
+              childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        leading: const Icon(Icons.insights_rounded),
+        title: Text(
+          entry.exercise.name,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+        ),
+        // A closed card must answer when the exercise was trained and
+        // whether the latest measured strength changed, at large text sizes.
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+
+
+            Text(
+              '${_date(latest.date)} · ${latest.routineName.isEmpty ? 'Entrenamiento libre' : latest.routineName}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              trend.current1RM > 0
+                  ? 'Último e1RM: ${FitnessFormatter.formatWeight(trend.current1RM, unit)}'
+                  : 'Última sesión sin e1RM',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              estimatedDelta == null
+                  ? 'Sin comparación'
+                  : 'Vs. anterior: ${_weightDelta(estimatedDelta, unit)}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        trailing: trend.hasPlateauSignal
+            ? const Tooltip(
+                message: 'Tres observaciones recientes dentro de un rango estrecho',
+                child: Icon(Icons.horizontal_rule_rounded),
+              )
+            : null,
+              children: details,
+            ),
     );
   }
 
@@ -796,6 +1065,14 @@ class _SelectableExerciseTrend extends StatefulWidget {
 class _SelectableExerciseTrendState extends State<_SelectableExerciseTrend> {
   ExerciseTrendMetric selected = ExerciseTrendMetric.estimatedOneRm;
   String? _selectedSessionId;
+  String? _lastAlignedSessionId;
+  final ScrollController _chartScroll = ScrollController();
+
+  @override
+  void dispose() {
+    _chartScroll.dispose();
+    super.dispose();
+  }
 
   double? _value(ExerciseSessionPerformance session) => switch (selected) {
     ExerciseTrendMetric.weight => session.bestWeight,
@@ -865,7 +1142,12 @@ class _SelectableExerciseTrendState extends State<_SelectableExerciseTrend> {
               ),
           ],
           onChanged: (next) {
-            if (next != null) setState(() => selected = next);
+            if (next != null) {
+              setState(() {
+                selected = next;
+                _lastAlignedSessionId = null;
+              });
+            }
           },
         ),
         const SizedBox(height: 12),
@@ -884,17 +1166,35 @@ class _SelectableExerciseTrendState extends State<_SelectableExerciseTrend> {
             builder: (context, constraints) {
               final chartWidth = math.max(
                 constraints.maxWidth,
-                math.max(1, values.length - 1) * 44.0 + 32,
+                math.max(1, values.length - 1) * 44.0 + 48,
               );
+              // Align once per selected session, after scroll dimensions are
+              // known. This makes the newest point visible instead of clipping
+              // it at the right edge of the viewport.
+              if (highlight >= 0 && _lastAlignedSessionId != selectedId) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted || !_chartScroll.hasClients) return;
+                  const inset = 24.0;
+                  final x = values.length == 1 ? chartWidth / 2
+                      : inset + (chartWidth - 2 * inset) *
+                          highlight / (values.length - 1);
+                  final target = (x - constraints.maxWidth + 30.0)
+                      .clamp(0.0, _chartScroll.position.maxScrollExtent)
+                      .toDouble();
+                  _chartScroll.jumpTo(target);
+                  _lastAlignedSessionId = selectedId;
+                });
+              }
               return SingleChildScrollView(
+                controller: _chartScroll,
                 scrollDirection: Axis.horizontal,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTapDown: (event) {
                     final index = values.length == 1
                         ? 0
-                        : (((event.localPosition.dx - 16) /
-                              (chartWidth - 32)) * (values.length - 1))
+                        : (((event.localPosition.dx - 24) /
+                              (chartWidth - 48)) * (values.length - 1))
                             .round().clamp(0, values.length - 1).toInt();
                     setState(() =>
                         _selectedSessionId = plotted[index].sessionId);
@@ -1076,7 +1376,7 @@ class _ExerciseTrendPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (points.isEmpty || size.width <= 0 || size.height <= 0) return;
-    const inset = 16.0;
+    const inset = 24.0;
     final dx = math.max(1.0, size.width - inset * 2);
     final dy = math.max(1.0, size.height - inset * 2);
     final low = points.map((p) => p.value).reduce(math.min);

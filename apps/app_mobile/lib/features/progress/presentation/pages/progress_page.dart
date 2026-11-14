@@ -15,7 +15,7 @@ import 'package:gym_tracker/features/progress/presentation/pages/focused_exercis
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_history_page.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_volume_headline.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_consistency_metrics.dart';
-import 'package:gym_tracker/features/progress/presentation/widgets/progress_shared_period_selector.dart';
+import 'package:core/features/progress/presentation/widgets/compact_progress_period_selector.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/body_measurement_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 
@@ -31,9 +31,11 @@ class ProgressPage extends ConsumerWidget {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
+        // Zero-height toolbar keeps the TabBar below the system safe area
+        // without a duplicate Progreso heading above it.
         appBar: AppBar(
-          title: Text('Progreso', style: AppTypography.displaySmall),
-          centerTitle: false,
+          toolbarHeight: 0,
+          automaticallyImplyLeading: false,
           elevation: 0,
           bottom: TabBar(
             labelColor: AppColors.of(context).primary,
@@ -64,25 +66,12 @@ class ProgressPage extends ConsumerWidget {
             ],
           ),
         ),
-        // A single period control serves Resumen, Ejercicios and Músculos.
-        // Medidas keeps its separate, measurement-specific date range.
+        // The shared period menu lives in each analytical tab's scrollable
+        // heading. No fixed selector can reduce the TabBarView viewport.
         body: Builder(
           key: summaryAnchorKey,
-          builder: (context) {
-            final tabs = DefaultTabController.of(context);
-            return AnimatedBuilder(
-              animation: tabs,
-              builder: (context, _) => Column(
-                children: [
-                  // Keep TabBarView at the same child position when the
-                  // Medidas tab hides the cross-tab selector. Otherwise
-                  // Flutter may recreate its state during tab animations.
-                  tabs.index == 3
-                      ? const SizedBox.shrink()
-                      : const ProgressSharedPeriodSelector(),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
+          builder: (context) => TabBarView(
+            children: [
                         const ProgressSummaryTab(),
                         ProgressExercisesPanel(
                           useSharedPeriod: true,
@@ -110,13 +99,8 @@ class ProgressPage extends ConsumerWidget {
                         ),
                         const MuscleHeatmapGrid(),
                         const BodyMeasurementPage(),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );
@@ -149,7 +133,14 @@ class ProgressSummaryTab extends ConsumerWidget {
         vertical: AppSpacing.lg,
       ),
       children: [
-        const SizedBox(height: AppSpacing.xl),
+        Row(
+          children: [
+            Expanded(child: Text('Tu progreso',
+                style: AppTypography.headlineMedium)),
+            const CompactProgressPeriodSelector(),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
         Text(
           'VOLUMEN TOTAL',
           style: AppTypography.labelMedium.copyWith(letterSpacing: 1.2),

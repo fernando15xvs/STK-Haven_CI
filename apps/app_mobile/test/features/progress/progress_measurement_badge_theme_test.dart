@@ -66,12 +66,6 @@ void main() {
             titleColor: colors.onPrimary,
             valueColor: colors.onPrimary,
           ),
-          (
-            key: 'measure_chip_neck',
-            background: colors.surfaceHigh,
-            titleColor: colors.textPrimary,
-            valueColor: colors.primary,
-          ),
         ]) {
           final chip = find.byKey(Key(sample.key));
           expect(chip, findsOneWidget);
@@ -104,14 +98,12 @@ void main() {
           expect(rect.left, greaterThanOrEqualTo(0));
           expect(rect.right, lessThanOrEqualTo(320));
         }
-        // These two callouts share a side: font scaling cannot overlap them.
-        final chest = tester.getRect(find.byKey(
-          const Key('measure_chip_chest'),
-        ));
-        final arm = tester.getRect(find.byKey(
-          const Key('measure_chip_rightArm'),
-        ));
-        expect(chest.bottom, lessThanOrEqualTo(arm.top));
+        // Non-selected front labels no longer cover the anatomical figure,
+        // but their points must remain visible and accessible.
+        expect(find.byKey(const Key('measure_chip_neck')), findsNothing);
+        expect(find.byKey(const Key('measure_chip_rightArm')), findsNothing);
+        expect(find.byKey(const Key('map_front_neck')), findsOneWidget);
+        expect(find.byKey(const Key('map_front_rightArm')), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     }
@@ -135,7 +127,7 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
-    final target = find.byKey(const Key('measure_chip_neck'));
+    final target = find.byKey(const Key('map_front_neck'));
     await tester.ensureVisible(target);
     await tester.tap(target);
     await tester.pumpAndSettle();

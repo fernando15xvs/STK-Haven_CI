@@ -36,8 +36,10 @@ class ProfilePage extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text('Perfil', style: AppTypography.displaySmall)),
-      body: ListView(
+      // The bottom dock identifies Perfil; preserve only the device safe area.
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
         padding: AppSpacing.pagePadding,
         children: [
           const SizedBox(height: AppSpacing.md),
@@ -165,6 +167,7 @@ class ProfilePage extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xxl),
         ],
+        ),
       ),
     );
   }

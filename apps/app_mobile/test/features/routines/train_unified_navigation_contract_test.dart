@@ -10,7 +10,8 @@ void main() {
     final shell = File(
       'lib/features/home/presentation/pages/home_screen.dart',
     ).readAsStringSync();
-    expect(routines, contains("Text('Entrenar'"));
+    expect(routines, isNot(contains("title: Text('Entrenar'")));
+    expect(routines, contains('body: SafeArea('));
     expect(routines, contains('MI PROGRAMA'));
     expect(routines, contains('MIS RUTINAS'));
     expect(routines, contains("Text('Plantillas'"));
