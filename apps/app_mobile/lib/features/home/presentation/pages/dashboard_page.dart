@@ -11,9 +11,6 @@ import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/faith/application/bible_init_provider.dart';
-import 'package:core/features/faith/application/bible_reader_provider.dart';
-import 'package:core/features/faith/presentation/widgets/contextual_passage_details.dart';
-import 'package:gym_tracker/features/faith/presentation/pages/bible_reader_page.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
@@ -219,12 +216,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
               ),
             const SizedBox(height: AppSpacing.md),
             const RecoveryCheckInCard(compact: true),
-            if (legacyProgram != null) ...[
+            if (faithEnabled && settings.showDailyVerse) ...[
               const SizedBox(height: AppSpacing.md),
-              _ActiveProgramCard(
-                activeProgram: legacyProgram,
-                history: history,
-              ),
+              const _DailyMessageCard(),
             ],
             const SizedBox(height: AppSpacing.xxl),
             Text(
@@ -275,10 +269,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                 recentPR: recentPR,
                 weightUnit: settings.weightUnit,
               ),
-            ],
-            if (faithEnabled && settings.showDailyVerse) ...[
-              const SizedBox(height: AppSpacing.xxl),
-              const _DailyMessageCard(),
             ],
           ],
         ),
@@ -409,9 +399,11 @@ class _DailyMessageCard extends ConsumerWidget {
                     const SizedBox(height: 6),
                     Text(
                       '“${verse.text}”',
-                      style: AppTypography.bodyLarge.copyWith(
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodyMedium.copyWith(
                         fontStyle: FontStyle.italic,
-                        height: 1.45,
+                        height: 1.35,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -421,16 +413,15 @@ class _DailyMessageCard extends ConsumerWidget {
                         color: AppColors.of(context).textSecondary,
                       ),
                     ),
-                    ContextualPassageDetails(
-                      verse: verse,
-                      compact: true,
-                      onReadChapter: () async {
-                        await ref.read(bibleReaderProvider.future);
-                        await ref.read(bibleReaderProvider.notifier).selectBook(verse.book);
-                        await ref.read(bibleReaderProvider.notifier).selectChapter(verse.chapter);
-                        if (!context.mounted) return;
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const BibleReaderPage()));
-                      },
+                    const SizedBox(height: AppSpacing.xs),
+                    TextButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const DailyVersePage(),
+                        ),
+                      ),
+                      child: const Text('Leer completo'),
                     ),
                   ],
                 ),
@@ -817,73 +808,6 @@ class _TodayRoutineCard extends ConsumerWidget {
               ),
               _MetaPill(icon: Icons.schedule, text: '~$estimatedMinutes min'),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActiveProgramCard extends StatelessWidget {
-  final ActiveProgramState activeProgram;
-  final List<WorkoutSession> history;
-
-  const _ActiveProgramCard({
-    required this.activeProgram,
-    required this.history,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final daysSinceStart = DateTime.now()
-        .difference(activeProgram.startedAt)
-        .inDays;
-    final rawWeek = (daysSinceStart / 7).floor() + 1;
-    final week = rawWeek.clamp(0, activeProgram.durationWeeks);
-    final completed = HomeDashboardSessionPolicy.completedProgramSessions(
-      history: history,
-      activeProgram: activeProgram,
-    );
-    final progress = activeProgram.durationWeeks <= 0
-        ? 0.0
-        : week / activeProgram.durationWeeks;
-
-    return PremiumCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.calendar_month_outlined,
-                color: AppColors.of(context).primary,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  activeProgram.programNameSnapshot,
-                  style: AppTypography.headlineMedium,
-                ),
-              ),
-              Text(
-                'Semana $week/${activeProgram.durationWeeks}',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.of(context).primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          LinearProgressIndicator(
-            value: progress,
-            minHeight: 7,
-            borderRadius: BorderRadius.circular(99),
-            backgroundColor: AppColors.of(context).surfaceHigh,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            '$completed entrenamientos completados',
-            style: AppTypography.bodySmall,
           ),
         ],
       ),

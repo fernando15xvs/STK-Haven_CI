@@ -30,14 +30,19 @@ class HomeWellnessLayout extends StatelessWidget {
             ],
           );
         }
-        return Row(
-          key: const ValueKey('home_wellness_horizontal'),
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: hydration),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: steps),
-          ],
+        // Only two small tiles are measured. Their natural heights can vary
+        // with sensor permissions and quick actions; stretch to the taller one.
+        // IntrinsicHeight is deliberately restricted to the horizontal layout.
+        return IntrinsicHeight(
+          child: Row(
+            key: const ValueKey('home_wellness_horizontal'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: hydration),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: steps),
+            ],
+          ),
         );
       },
     );

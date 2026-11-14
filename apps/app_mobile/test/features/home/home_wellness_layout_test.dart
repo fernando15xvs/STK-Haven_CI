@@ -42,6 +42,52 @@ void main() {
       });
     }
   }
+  testWidgets('horizontal wellness cards match height with different content',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: HomeWellnessLayout(
+              hydration: Card(
+                key: ValueKey('hydration_size_test'),
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text('Agua'),
+                ),
+              ),
+              steps: Card(
+                key: ValueKey('steps_size_test'),
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Pasos'),
+                      Text('Conectar sensor'),
+                      Text('Permiso pendiente'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final water = tester.getSize(find.byKey(const ValueKey('hydration_size_test')));
+    final steps = tester.getSize(find.byKey(const ValueKey('steps_size_test')));
+    expect(water.height, steps.height);
+    expect(water.width, steps.width);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('OLED/accent theme remains safe at large text sizes',
       (tester) async {
     tester.view.physicalSize = const Size(390, 820);

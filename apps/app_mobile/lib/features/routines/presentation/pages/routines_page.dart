@@ -1,4 +1,3 @@
-import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
@@ -15,7 +14,9 @@ import 'package:gym_tracker/features/routines/presentation/pages/routine_templat
 import 'package:gym_tracker/features/routines/presentation/widgets/quick_training_plan_sheet.dart';
 import 'package:core/features/programs/presentation/pages/training_programs_page.dart';
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
-import 'package:gym_tracker/features/motivation/presentation/widgets/motivation_mini_player.dart';
+import 'package:core/features/workout/application/workout_history_provider.dart';
+import 'package:gym_tracker/features/routines/application/routine_card_evidence.dart';
+import 'package:intl/intl.dart';
 
 class RoutinesPage extends ConsumerWidget {
   const RoutinesPage({super.key});
@@ -27,6 +28,11 @@ class RoutinesPage extends ConsumerWidget {
     final exerciseMap = {
       for (final exercise in exercises) exercise.id: exercise,
     };
+    final activeProgram = ref.watch(activeTrainingProgramProvider);
+    // A single pass over history replaces repeated per-card calculations.
+    final usageByRoutine = RoutineCardEvidence.fromHistory(
+      ref.watch(workoutHistoryProvider),
+    );
 
     void createRoutine() {
       Navigator.push(
@@ -44,10 +50,7 @@ class RoutinesPage extends ConsumerWidget {
         elevation: 0,
         // Creating a routine belongs to the "Mis rutinas" section.
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
+      body: ListView.builder(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xxl,
               ),
@@ -124,15 +127,23 @@ class RoutinesPage extends ConsumerWidget {
                 }
 
                 final routine = routines[index - 1];
-                final names = routine.exercises.map(
-                  (item) => exerciseMap[item.exerciseId]?.name ??
-                      Exercise(id: '', name: 'Ejercicio eliminado', muscleGroup: '').name,
-                ).toList(growable: false);
+                final muscleGroups = <String>{};
+                for (final item in routine.exercises) {
+                  final muscle = exerciseMap[item.exerciseId]?.muscleGroup.trim();
+                  if (muscle != null && muscle.isNotEmpty) {
+                    muscleGroups.add(muscle);
+                  }
+                }
+                final linkedToActiveProgram =
+                    activeProgram?.routineIds.contains(routine.id) ?? false;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: _RoutineCard(
                     routine: routine,
-                    exerciseNames: names,
+                    muscleGroups: muscleGroups.take(2).toList(growable: false),
+                    programName:
+                        linkedToActiveProgram ? activeProgram!.name : null,
+                    evidence: usageByRoutine[routine.id],
                     onStart: () => WorkoutLauncher.launch(context, ref, routine),
                     onEdit: () => Navigator.push(
                       context,
@@ -146,10 +157,6 @@ class RoutinesPage extends ConsumerWidget {
                   ),
                 );
               },
-            ),
-          ),
-          const MotivationMiniPlayer(showLauncherWhenEmpty: true),
-        ],
       ),
     );
   }
@@ -681,7 +688,9 @@ class _ProgramOrganizerCard extends ConsumerWidget {
 
 class _RoutineCard extends StatelessWidget {
   final Routine routine;
-  final List<String> exerciseNames;
+  final List<String> muscleGroups;
+  final String? programName;
+  final RoutineCardEvidence? evidence;
   final VoidCallback onStart;
   final VoidCallback onEdit;
   final VoidCallback onNotes;
@@ -690,7 +699,9 @@ class _RoutineCard extends StatelessWidget {
 
   const _RoutineCard({
     required this.routine,
-    required this.exerciseNames,
+    required this.muscleGroups,
+    required this.programName,
+    required this.evidence,
     required this.onStart,
     required this.onEdit,
     required this.onNotes,
@@ -700,38 +711,83 @@ class _RoutineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    final colors = AppColors.of(context);
+    final lastFinishedAt = evidence?.lastFinishedAt;
+    final typicalMinutes = evidence?.typicalMinutes;
+
     return Stack(
       children: [
         PremiumCard(
-          onTap: onStart,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.only(right: 34),
-                child: Text(routine.name, style: AppTypography.headlineLarge),
+                padding: const EdgeInsets.only(right: 36),
+                child: Text(
+                  routine.name,
+                  style: AppTypography.headlineLarge,
+                ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 '${routine.exercises.length} ejercicios',
                 style: AppTypography.bodyMedium,
               ),
+              if (muscleGroups.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  muscleGroups.join(' · '),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                programName == null
+                    ? 'Rutina guardada'
+                    : 'En: $programName',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelMedium.copyWith(
+                  color: programName == null
+                      ? colors.textSecondary
+                      : colors.primary,
+                ),
+              ),
+              if (lastFinishedAt != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Última vez: ${DateFormat('d MMM yyyy', 'es').format(lastFinishedAt.toLocal())}',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+              if (typicalMinutes != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Habitual: ~$typicalMinutes min',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
               if (routine.hasNotes) ...[
                 const SizedBox(height: AppSpacing.sm),
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.of(context).primaryFaded,
+                    color: colors.primaryFaded,
                     borderRadius: AppRadius.sm_,
                     border: Border.all(
-                      color: AppColors.of(
-                        context,
-                      ).primary.withValues(alpha: 0.22),
+                      color: colors.primary.withValues(alpha: 0.22),
                     ),
                   ),
                   child: Row(
@@ -740,9 +796,9 @@ class _RoutineCard extends StatelessWidget {
                       Icon(
                         Icons.sticky_note_2_outlined,
                         size: 16,
-                        color: AppColors.of(context).primary,
+                        color: colors.primary,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppSpacing.xs),
                       Expanded(
                         child: Text(
                           routine.notes,
@@ -755,74 +811,14 @@ class _RoutineCard extends StatelessWidget {
                   ),
                 ),
               ],
-              if (exerciseNames.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Text(
-                  exerciseNames.take(3).join(' · '),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.of(context).textSecondary,
-                  ),
-                ),
-              ],
               const SizedBox(height: AppSpacing.md),
-              Row(
-                children: [
-                  Expanded(
-                    child: Wrap(
-                      spacing: 4,
-                      children: List.generate(7, (index) {
-                        final selected = routine.scheduledDays.contains(
-                          index + 1,
-                        );
-                        return Container(
-                          width: 26,
-                          height: 26,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: selected
-                                ? AppColors.of(
-                                    context,
-                                  ).primary.withValues(alpha: 0.18)
-                                : AppColors.of(context).surfaceHigh,
-                            border: Border.all(
-                              color: selected
-                                  ? AppColors.of(
-                                      context,
-                                    ).primary.withValues(alpha: 0.45)
-                                  : AppColors.of(context).surfaceBorder,
-                            ),
-                          ),
-                          child: Text(
-                            labels[index],
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: selected
-                                  ? AppColors.of(context).primary
-                                  : AppColors.of(context).textDisabled,
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: AppColors.of(
-                        context,
-                      ).primary.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.play_arrow,
-                      color: AppColors.of(context).primary,
-                    ),
-                  ),
-                ],
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.icon(
+                  onPressed: onStart,
+                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                  label: const Text('Iniciar'),
+                ),
               ),
             ],
           ),
