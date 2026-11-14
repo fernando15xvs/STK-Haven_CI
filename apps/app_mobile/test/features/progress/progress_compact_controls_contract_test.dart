@@ -11,7 +11,7 @@ void main() {
     }
     expect(root, isNot(contains('const ProgressSharedPeriodSelector()')));
     expect(root, contains('const CompactProgressPeriodSelector()'));
-    expect(muscle, contains('const CompactProgressPeriodSelector()'));
+    expect(muscle, contains('child: CompactProgressPeriodSelector()'));
     expect(muscle, isNot(contains('El período se cambia arriba')));
   });
 
