@@ -81,14 +81,27 @@ class ActiveWorkoutState {
 
 /// Elapsed workout time is always derived from the persisted start timestamp;
 /// it does not depend on counting timer ticks while the app is foregrounded.
+/// Session identity and its persisted start date are stable while editing sets.
+/// Emit the first elapsed value immediately; periodic ticks only refresh it.
 final workoutTimerProvider = StreamProvider.autoDispose<int>((ref) {
-  final session = ref.watch(activeWorkoutProvider.select((s) => s.session));
-  if (session == null) return Stream.value(0);
+  final identity = ref.watch(activeWorkoutProvider.select((state) {
+    final session = state.session;
+    return session == null ? null : (session.id, session.startedAt);
+  }));
+  if (identity == null) return Stream.value(0);
+  final startedAt = identity.$2;
+  int elapsed() {
+    final seconds = DateTime.now().difference(startedAt).inSeconds;
+    return seconds < 0 ? 0 : seconds;
+  }
 
-  final start = session.startedAt;
-  return Stream.periodic(const Duration(seconds: 1), (_) {
-    return DateTime.now().difference(start).inSeconds;
-  });
+  return (() async* {
+    yield elapsed();
+    yield* Stream.periodic(
+      const Duration(seconds: 1),
+      (_) => elapsed(),
+    );
+  })();
 });
 
 final activeWorkoutProvider =

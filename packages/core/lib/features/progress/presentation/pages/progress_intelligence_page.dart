@@ -10,8 +10,6 @@ import 'package:core/features/profile/presentation/providers/settings_provider.d
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
 import 'package:core/features/progress/application/exercise_progress_sort.dart';
 import 'package:core/features/progress/application/progress_analytics_cache.dart' as analytics;
-import 'package:core/features/progress/application/progress_metrics_service.dart';
-import 'package:core/features/progress/presentation/widgets/compact_progress_period_selector.dart';
 import 'package:core/features/progress/application/unilateral_progress_summary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,7 +71,6 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
   String _search = '';
   bool _filtersExpanded = false;
   bool _compactSearchOpen = false;
-  bool _showAllHistory = false;
   final TextEditingController _compactSearchController = TextEditingController();
 
   @override
@@ -156,21 +153,6 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
                         updateSheet(() {});
                       },
                     ),
-                    SwitchListTile.adaptive(
-                      key: const ValueKey('progress_exercises_all_history'),
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Ver todos los ejercicios con historial'),
-                      subtitle: const Text(
-                        'Busca sesiones antiguas sin cambiar el período compartido.'),
-                      value: _showAllHistory,
-                      onChanged: (value) {
-                        setState(() {
-                          _showAllHistory = value;
-                          if (value) _muscle = null;
-                        });
-                        updateSheet(() {});
-                      },
-                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -179,7 +161,6 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
                             setState(() {
                               _order = ExerciseProgressOrder.recent;
                               _muscle = null;
-                              _showAllHistory = false;
                             });
                             updateSheet(() {});
                           },
@@ -207,21 +188,15 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
     final analyticsCache = ref.watch(analytics.progressAnalyticsCacheProvider);
     final exercises = ref.watch(exerciseListProvider);
     final settings = ref.watch(settingsProvider);
-    final sharedPeriod = widget.useSharedPeriod
-        ? ref.watch(timeFilterProvider)
-        : null;
     final clock = DateTime.now();
-    // Round only the cache lookup window to the minute, not displayed dates.
-    // This avoids a new analytics-cache entry on every search keystroke.
-    // The exclusive upper bound is the next minute, so fresh workouts
-    // recorded in this minute remain visible without accepting future days.
+    // Keep a stable bounded end date; the directory shows ALL real history.
     final minute = DateTime(
       clock.year, clock.month, clock.day, clock.hour, clock.minute);
     final endExclusive = minute.add(const Duration(minutes: 1));
-    // Selected Progreso tabs use the same 7D/1M/3M/1A duration.
-    // Standalone/focused routes preserve 30/90/Todo local selection.
-    final from = sharedPeriod != null
-        ? (_showAllHistory ? null : sharedPeriod.startDateAt(minute))
+    // Only standalone and focused routes retain their own local period.
+    // The main Ejercicios directory never reads the shared tab period.
+    final from = widget.useSharedPeriod
+        ? null
         : _period.days == null
             ? null
             : minute.subtract(Duration(days: _period.days!));
@@ -250,8 +225,7 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
         .toSet()
         .toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    // A period change can remove the selected muscle from the available
-    // groups. Fall back to "Todos" without keeping an invisible stale filter.
+    // Fall back to "Todos" when a muscle no longer has recorded work.
     final selectedMuscle = muscles.contains(_muscle) ? _muscle : null;
     final search = _search.trim().toLowerCase();
     final matching = entries.where((entry) =>
@@ -307,12 +281,11 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
                           onPressed: () => _openCompactFilters(muscles),
                           icon: Badge(
                             isLabelVisible: _order != ExerciseProgressOrder.recent ||
-                                selectedMuscle != null || _showAllHistory,
+                                selectedMuscle != null,
                             smallSize: 7,
                             child: const Icon(Icons.tune_rounded),
                           ),
                         ),
-                        const CompactProgressPeriodSelector(),
                       ],
                     ),
                   ],
@@ -339,14 +312,6 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
                         ),
                       ),
                       onChanged: (text) => setState(() => _search = text),
-                    ),
-                  ),
-                if (_showAllHistory)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      'Historial completo · no cambia el período de otras pestañas',
-                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
               ],
@@ -495,7 +460,7 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
           child: entries.isEmpty
               ? const Center(child: Padding(
                   padding: EdgeInsets.all(28),
-                  child: Text('Todavía no hay series efectivas registradas en este período.',
+                  child: Text('Todavía no hay series efectivas registradas.',
                       textAlign: TextAlign.center)))
               : matching.isEmpty
                   ? const Center(child: Text('No hay ejercicios con ese nombre.'))

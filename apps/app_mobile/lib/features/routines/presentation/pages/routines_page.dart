@@ -713,166 +713,118 @@ class _RoutineCard extends StatelessWidget {
     final lastFinishedAt = evidence?.lastFinishedAt;
     final typicalMinutes = evidence?.typicalMinutes;
 
-    return Stack(
-      children: [
-        PremiumCard(
-          child: Column(
+    return PremiumCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 36),
+              Expanded(
                 child: Text(
                   routine.name,
-                  style: AppTypography.headlineLarge,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                '${routine.exercises.length} ejercicios',
-                style: AppTypography.bodyMedium,
-              ),
-              if (muscleGroups.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  muscleGroups.join(' · '),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                programName == null
-                    ? 'Rutina guardada'
-                    : 'En: $programName',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.labelMedium.copyWith(
-                  color: programName == null
-                      ? colors.textSecondary
-                      : colors.primary,
+                  style: AppTypography.headlineMedium,
                 ),
               ),
-              if (lastFinishedAt != null) ...[
-                const SizedBox(height: AppSpacing.xs),
+              PopupMenuButton<String>(
+                tooltip: 'Opciones de ${routine.name}',
+                color: colors.surfaceHigh,
+                padding: EdgeInsets.zero,
+                onSelected: (value) {
+                  switch (value) {
+                    case 'edit':
+                      onEdit();
+                      break;
+                    case 'notes':
+                      onNotes();
+                      break;
+                    case 'duplicate':
+                      onDuplicate();
+                      break;
+                    case 'delete':
+                      onDelete();
+                      break;
+                  }
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'edit',
+                    child: ListTile(dense: true,
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Editar'))),
+                  const PopupMenuItem(value: 'notes',
+                    child: ListTile(dense: true,
+                      leading: Icon(Icons.sticky_note_2_outlined),
+                      title: Text('Nota'))),
+                  const PopupMenuItem(value: 'duplicate',
+                    child: ListTile(dense: true,
+                      leading: Icon(Icons.copy_all_outlined),
+                      title: Text('Duplicar'))),
+                  PopupMenuItem(value: 'delete',
+                    child: ListTile(dense: true,
+                      leading: Icon(Icons.delete_outline,
+                        color: colors.error),
+                      title: const Text('Eliminar'))),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xxs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text('${routine.exercises.length} ejercicios',
+                style: AppTypography.bodyMedium),
+              if (muscleGroups.isNotEmpty)
+                Text(muscleGroups.join(' · '),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: colors.textSecondary)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.xxs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                programName == null ? 'Rutina guardada' : 'En: $programName',
+                style: AppTypography.labelMedium.copyWith(
+                  color: programName == null
+                      ? colors.textSecondary : colors.primary),
+              ),
+              if (lastFinishedAt != null)
                 Text(
                   'Última vez: ${DateFormat('d MMM yyyy', 'es').format(lastFinishedAt.toLocal())}',
                   style: AppTypography.bodySmall.copyWith(
-                    color: colors.textSecondary,
-                  ),
+                    color: colors.textSecondary),
                 ),
-              ],
-              if (typicalMinutes != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Habitual: ~$typicalMinutes min',
+              if (typicalMinutes != null)
+                Text('~$typicalMinutes min',
                   style: AppTypography.bodySmall.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ],
-              if (routine.hasNotes) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.primaryFaded,
-                    borderRadius: AppRadius.sm_,
-                    border: Border.all(
-                      color: colors.primary.withValues(alpha: 0.22),
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.sticky_note_2_outlined,
-                        size: 16,
-                        color: colors.primary,
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      Expanded(
-                        child: Text(
-                          routine.notes,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.bodySmall,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.md),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.icon(
-                  onPressed: onStart,
-                  icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                  label: const Text('Iniciar'),
-                ),
-              ),
+                    color: colors.textSecondary)),
             ],
           ),
-        ),
-        Positioned(
-          top: 4,
-          right: 4,
-          child: PopupMenuButton<String>(
-            tooltip: 'Opciones',
-            color: AppColors.of(context).surfaceHigh,
-            onSelected: (value) {
-              if (value == 'edit') onEdit();
-              if (value == 'notes') onNotes();
-              if (value == 'duplicate') onDuplicate();
-              if (value == 'delete') onDelete();
-            },
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: 'edit',
-                child: ListTile(
-                  leading: Icon(Icons.edit_outlined),
-                  title: Text('Editar'),
-                  dense: true,
-                ),
+          if (routine.hasNotes)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onNotes,
+                icon: const Icon(Icons.sticky_note_2_outlined, size: 17),
+                label: const Text('Ver nota'),
               ),
-              PopupMenuItem(
-                value: 'notes',
-                child: ListTile(
-                  leading: Icon(Icons.sticky_note_2_outlined),
-                  title: Text('Nota'),
-                  dense: true,
-                ),
-              ),
-              PopupMenuItem(
-                value: 'duplicate',
-                child: ListTile(
-                  leading: Icon(Icons.copy_all_outlined),
-                  title: Text('Duplicar'),
-                  dense: true,
-                ),
-              ),
-              PopupMenuItem(
-                value: 'delete',
-                child: ListTile(
-                  leading: Icon(
-                    Icons.delete_outline,
-                    color: AppColors.of(context).error,
-                  ),
-                  title: Text('Eliminar'),
-                  dense: true,
-                ),
-              ),
-            ],
+            ),
+          const SizedBox(height: AppSpacing.sm),
+          FilledButton.icon(
+            onPressed: onStart,
+            icon: const Icon(Icons.play_arrow_rounded, size: 20),
+            label: const Text('Iniciar'),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

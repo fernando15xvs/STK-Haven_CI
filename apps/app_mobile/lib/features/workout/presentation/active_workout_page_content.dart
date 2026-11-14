@@ -540,7 +540,10 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                 builder: (context, ref, child) {
                   final timerValue =
                       ref.watch(workoutTimerProvider).value ??
-                      activeState.globalTimerSeconds;
+                      DateTime.now()
+                          .difference(session.startedAt)
+                          .inSeconds
+                          .clamp(0, 1 << 30);
                   return Text(
                     _formatTime(timerValue),
                     style: AppTypography.labelLarge.copyWith(

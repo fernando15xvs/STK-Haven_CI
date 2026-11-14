@@ -68,16 +68,14 @@ class _Settings extends SettingsNotifier {
 
 void main() {
   for (final brightness in [Brightness.light, Brightness.dark]) {
-    testWidgets('shared 7D/1M/3M/1A filters exact exercise sessions at 320px',
+    testWidgets('Ejercicios lists all history regardless of shared period at 320px',
         (tester) async {
       tester.view.physicalSize = const Size(320, 790);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final colors = AppColors.from(
-        const AppearanceSettings(),
-        brightness,
-      );
+        const AppearanceSettings(), brightness);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -87,53 +85,32 @@ void main() {
           ],
           child: MaterialApp(
             theme: ThemeData(brightness: brightness, extensions: [colors]),
-            home: Scaffold(
+            home: const Scaffold(
               body: MediaQuery(
-                data: const MediaQueryData(
-                  textScaler: TextScaler.linear(1.6),
-                ),
-                child: const ProgressExercisesPanel(
-                  useSharedPeriod: true,
-                ),
+                data: MediaQueryData(textScaler: TextScaler.linear(1.6)),
+                child: ProgressExercisesPanel(useSharedPeriod: true),
               ),
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
-      final selector = find.byKey(
-        const ValueKey('progress_shared_period'),
-      );
-      expect(selector, findsOneWidget);
+      expect(find.byKey(const ValueKey('progress_shared_period')), findsNothing);
       expect(find.byType(DropdownButton<ProgressPeriod>), findsNothing);
       expect(find.text('Prensa reciente'), findsOneWidget);
-      expect(find.text('Remo antiguo'), findsNothing);
       final scope = ProviderScope.containerOf(
-        tester.element(find.byType(ProgressExercisesPanel)),
-      );
-      expect(scope.read(timeFilterProvider), TimeFilter.month);
-
-      tester.widget<PopupMenuButton<TimeFilter>>(selector)
-          .onSelected!(TimeFilter.year);
+        tester.element(find.byType(ProgressExercisesPanel)));
+      scope.read(timeFilterProvider.notifier).setFilter(TimeFilter.week);
       await tester.pumpAndSettle();
-      expect(scope.read(timeFilterProvider), TimeFilter.year);
-      // ListView.builder renders only visible exercise cards. At 320px with
-      // 160% text the older card may be below the initial viewport.
+      expect(scope.read(timeFilterProvider), TimeFilter.week);
       await tester.scrollUntilVisible(
-        find.text('Remo antiguo'),
-        130,
+        find.text('Remo antiguo'), 130,
         scrollable: find.descendant(
           of: find.byType(ListView),
           matching: find.byType(Scrollable),
         ).first,
       );
       expect(find.text('Remo antiguo'), findsOneWidget);
-
-      tester.widget<PopupMenuButton<TimeFilter>>(selector)
-          .onSelected!(TimeFilter.week);
-      await tester.pumpAndSettle();
-      expect(find.text('Prensa reciente'), findsOneWidget);
-      expect(find.text('Remo antiguo'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   }
