@@ -23,7 +23,7 @@ class RoutineCardEvidence {
       if (routineId == null ||
           routineId.trim().isEmpty ||
           session.finishedAt.toLocal().isAfter(now) ||
-          session.finishedAt.isBefore(session.startedAt) ||
+          !session.finishedAt.isAfter(session.startedAt) ||
           !TodaysWorkoutStatus.isComplete(session)) {
         continue;
       }

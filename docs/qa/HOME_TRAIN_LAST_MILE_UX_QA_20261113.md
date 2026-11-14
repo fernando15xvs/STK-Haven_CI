@@ -1,7 +1,7 @@
 # STK Haven — QA para Inicio/Entrenar: mensaje, bienestar y rutinas
 
 **Plan:** [HOME_TRAIN_LAST_MILE_UX_ROADMAP_20261113.md](../roadmap/HOME_TRAIN_LAST_MILE_UX_ROADMAP_20261113.md)  
-**PR:** #57 en `STK-Haven` · **estado:** PLAN, NO IMPLEMENTADO.  
+**PR:** #57 en `STK-Haven` · **estado:** implementación de bloques A/B en PR #57; validación automatizada y física pendiente.  
 **Evidencia visual de origen:** capturas del usuario (13-11-2026) en iPhone; una card de bienestar más alta, mensaje al final, launcher de Motivation encima de la barra inferior y chips L–D no configurados en las rutinas.  
 **Regla:** ninguna casilla física se completa basándose únicamente en GitHub Actions.
 
@@ -56,3 +56,12 @@
 - [ ] Aprobación explícita de usuario antes de fusionar PR #57.
 
 **No marcar «completado» hasta que haya código implementado, pruebas y evidencia.**
+
+## Seguimiento de implementación (sin marcar QA física como realizada)
+
+- Agua/Pasos: `IntrinsicHeight` solo en horizontal, en vertical alturas naturales; prueba comparativa por tamaños, escala 100/160/200 % y 8 acentos.
+- Mensaje: entre Recuperación y Bienestar, `maxLines: 3`, acción «Leer completo», Fe opt-in, reintento de error.
+- Entrenar: sin footer Motivation ni chips semanales en cards; ruta `+ → Motivation` no tocada.
+- Mis rutinas: grupo muscular de ejercicios enlazados; etiqueta de pertenencia del programa activo; «Última vez» solo sesiones completas vinculadas por ID, «Habitual» mediana de al menos tres duraciones válidas.
+- CI: [snapshot inicial](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/43559410971); sus resultados no prueban comportamiento en iPhone o Android físicos.
+- **Mantener los checks de QA anteriores sin marcar** hasta ver evidencia de pruebas y capturas de dispositivos.

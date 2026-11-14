@@ -332,23 +332,27 @@ class _DailyMessageCard extends ConsumerWidget {
     final bibleInit = ref.watch(bibleInitProvider);
     final failed = bibleInit.status == BibleDbStatus.error;
 
-    Widget loadingCard() => PremiumCard(
+    Widget loadingCard({bool providerError = false}) => PremiumCard(
       backgroundColor: AppColors.of(context).primaryFaded,
       borderColor: AppColors.of(context).primary.withValues(alpha: 0.28),
-      onTap: failed
-          ? () => ref.read(bibleInitProvider.notifier).initialize()
+      onTap: failed || providerError
+          ? () {
+              if (failed) ref.read(bibleInitProvider.notifier).initialize();
+              ref.invalidate(dailyVerseProvider);
+            }
           : null,
       child: Row(
         children: [
-          Icon(failed ? Icons.refresh_outlined : Icons.menu_book_outlined,
+          Icon(failed || providerError ? Icons.refresh_outlined : Icons.menu_book_outlined,
                color: AppColors.of(context).primary),
           const SizedBox(width: 12),
           Expanded(child: Text(
-            failed ? 'No se pudo preparar el pasaje. Toca para reintentar.'
-                   : 'Preparando el pasaje de hoy…',
+            failed || providerError
+                ? 'No se pudo cargar el pasaje. Toca para reintentar.'
+                : 'Preparando el pasaje de hoy…',
             style: AppTypography.bodyMedium,
           )),
-          if (!failed)
+          if (!failed && !providerError)
             const SizedBox(width: 16, height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2)),
         ],
@@ -356,11 +360,12 @@ class _DailyMessageCard extends ConsumerWidget {
     );
 
     return stateAsync.when(
-      loading: loadingCard,
-      error: (_, _) => loadingCard(),
+      loading: () => loadingCard(),
+      error: (_, _) => loadingCard(providerError: true),
       data: (state) {
         final verse = state.verse;
-        if (state.isLoading || verse == null) return loadingCard();
+        if (state.isLoading) return loadingCard();
+        if (verse == null) return loadingCard(providerError: true);
 
         return PremiumCard(
           onTap: () => Navigator.push(

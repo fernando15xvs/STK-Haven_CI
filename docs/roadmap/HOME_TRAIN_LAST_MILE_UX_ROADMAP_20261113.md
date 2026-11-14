@@ -1,7 +1,7 @@
 # STK Haven — Ajustes finales de Inicio y Entrenar
 
 **Fecha:** 13-11-2026  
-**Estado:** PLAN APROBADO PARA DOCUMENTAR; **implementación NO iniciada** en este bloque.  
+**Estado:** Bloques A y B implementados en la PR #57; CI y QA física aún pendientes. El bloque C sigue abierto.  
 **PR única:** [#57](https://github.com/fernando15xvs/STK-Haven/pull/57) · rama `fix/home-phase1-data-navigation-20261113`.  
 **CI:** solamente `fernando15xvs/STK-Haven_CI/main`; sin PR espejo, sin merge.  
 **Base auditada:** `7b3838b66a92aadd0f71963306db11554f1af862` (código); última ejecución anterior `43520485700` 7/7 verde.  
@@ -30,11 +30,11 @@
 
 ## Bloque A — Inicio: jerarquía y bienestar
 
-- [ ] **A1. Igualdad visual de Agua y Pasos.** Mantener ambas columnas exactamente al 50 % del espacio disponible en modo horizontal y darles **igual altura renderizada** sin imponer una altura rígida que rompa el texto al 200 %. Usar restricciones de fila estirada y estructura interna homogénea: encabezado, valor, meta, barra y **zona inferior con espacio flexible**. Conservar CTA +250, menú, estado de sensor, permisos y conectar pasos; accesibilidad y scroll intactos.
-- [ ] **A2. Responsive.** En 320 dp o texto grande mantener disposición vertical ya prevista; en 390/430 dp con texto normal dejar dos cards equilibradas. Al apilar, permitir altura natural en cada card; no exigir mismas alturas si eso genera espacio muerto o overflow. Revisar números de 5–7 cifras, objetivos largos, sin permiso, dispositivo no disponible y 0 %/100 % de meta.
-- [ ] **A3. Orden aprobado de Inicio (alternativa A):** `Tu entrenamiento → Recuperación de hoy → Mensaje de hoy (si opt-in) → Bienestar → Actividad → Novedades`. Garantizar que una card legacy de programa no se interponga; si es redundante con el resumen de entrenamiento, retirar **solo la vista redundante**, sin borrar estado/datos de programas.
-- [ ] **A4. Mensaje compacto.** Máximo de **2–3 líneas de texto de versículo** con elipsis, etiqueta «Mensaje de hoy», referencia y acción accesible **«Leer completo»** que abre la pantalla de pasaje existente. Sin incrustar `ContextualPassageDetails` expandido en el dashboard; lectura completa/capítulo permanecen disponibles en `DailyVersePage` / lector bíblico. La acción también funciona con teclado/VoiceOver.
-- [ ] **A5. Estados y privacidad.** Respetar `dailyVerseProvider` (cargando, error, reintentar y contenido), `faithEnabled` y `showDailyVerse`, cambio de fecha y tema, sin nuevos listeners/timers ni consultas innecesarias.
+- [x] **A1. Igualdad visual de Agua y Pasos.** Mantener ambas columnas exactamente al 50 % del espacio disponible en modo horizontal y darles **igual altura renderizada** sin imponer una altura rígida que rompa el texto al 200 %. Usar restricciones de fila estirada y estructura interna homogénea: encabezado, valor, meta, barra y **zona inferior con espacio flexible**. Conservar CTA +250, menú, estado de sensor, permisos y conectar pasos; accesibilidad y scroll intactos.
+- [x] **A2. Responsive.** En 320 dp o texto grande mantener disposición vertical ya prevista; en 390/430 dp con texto normal dejar dos cards equilibradas. Al apilar, permitir altura natural en cada card; no exigir mismas alturas si eso genera espacio muerto o overflow. Revisar números de 5–7 cifras, objetivos largos, sin permiso, dispositivo no disponible y 0 %/100 % de meta.
+- [x] **A3. Orden aprobado de Inicio (alternativa A):** `Tu entrenamiento → Recuperación de hoy → Mensaje de hoy (si opt-in) → Bienestar → Actividad → Novedades`. Garantizar que una card legacy de programa no se interponga; si es redundante con el resumen de entrenamiento, retirar **solo la vista redundante**, sin borrar estado/datos de programas.
+- [x] **A4. Mensaje compacto.** Máximo de **2–3 líneas de texto de versículo** con elipsis, etiqueta «Mensaje de hoy», referencia y acción accesible **«Leer completo»** que abre la pantalla de pasaje existente. Sin incrustar `ContextualPassageDetails` expandido en el dashboard; lectura completa/capítulo permanecen disponibles en `DailyVersePage` / lector bíblico. La acción también funciona con teclado/VoiceOver.
+- [x] **A5. Estados y privacidad.** Respetar `dailyVerseProvider` (cargando, error, reintentar y contenido), `faithEnabled` y `showDailyVerse`, cambio de fecha y tema, sin nuevos listeners/timers ni consultas innecesarias.
 - [ ] **Gate A:** pruebas de disposición y orden, tarjetas a altura idéntica en horizontal, acciones y opt-in; CI espejo 7/7 antes de pasar a B.
 
 ### Resultado visual esperado Inicio
@@ -47,12 +47,12 @@
 
 ## Bloque B — Entrenar: foco y tarjetas de Mis rutinas
 
-- [ ] **B1. Retirar footer STK Motivation.** Eliminar el `MotivationMiniPlayer` en `RoutinesPage` (y su import innecesario); no crear otro launcher, botón ni duplicado en Entrenar. El audio/video que ya se reproduce **no debe detenerse ni reiniciarse** al navegar: el reproductor vive en `MotivationPlayback`, fuera de la vista eliminada. Acceso directo mediante «+ → Motivation»; si hay media activa, allí se pueden gestionar sus controles.
-- [ ] **B2. Quitar L/M/X/J/V/S/D de cada card.** Eliminar la visualización de 7 chips y su espacio. **No tocar** `Routine.scheduledDays`, el editor opcional de rutina ni el plan semanal de modo libre: los datos existentes siguen disponibles para quienes los usen. El programa activo siempre prevalece para el calendario oficial.
-- [ ] **B3. Tarjeta sobria y precisa.** Presentar nombre, «N ejercicios», uno o dos grupos musculares/enfoques **derivados de los ejercicios vinculados y sus músculos reales** (solo si hay información), y estado real de vinculación: «En: {programa activo}» si `active.routineIds` contiene ID; de lo contrario «Rutina guardada» / «Libre», sin falsos días asignados. Respetar nombres largos y datos faltantes.
-- [ ] **B4. Última ejecución real y duración.** Mostrar «Última vez: …» **solo** si existe sesión finalizada con `WorkoutSession.routineId == Routine.id`; usar fecha local `finishedAt.toLocal()`. Si falta ID histórico, omitir (no asociar por nombre). Duración como **«Habitual: ~N min»** solo con sesiones históricas suficientes y `durationSeconds` válido; si no hay evidencia, no inventar minutos ni inflar la tarjeta. Estos metadatos son secundarios, no estadísticas de Progreso.
-- [ ] **B5. Acciones.** Mantener un CTA primario «Iniciar», menú editar/notas/duplicar/eliminar, acceso a plantillas, plan rápido y gestión avanzada. Igualar alturas/márgenes según contenido razonable, no forzar a que nombres o notas largos corten botones. Conservar accesibilidad y estado vacío.
-- [ ] **B6. Separación programa vs rutina libre.** Si aporta claridad y sin duplicar tarjetas, mostrar un estado/etiqueta de pertenencia en cada rutina; no mostrar el mismo calendario en tres sitios. El gestor `Mi programa` conserva agenda, rotación y días; iniciar una rutina manual no cambia indebidamente la programación.
+- [x] **B1. Retirar footer STK Motivation.** Eliminar el `MotivationMiniPlayer` en `RoutinesPage` (y su import innecesario); no crear otro launcher, botón ni duplicado en Entrenar. El audio/video que ya se reproduce **no debe detenerse ni reiniciarse** al navegar: el reproductor vive en `MotivationPlayback`, fuera de la vista eliminada. Acceso directo mediante «+ → Motivation»; si hay media activa, allí se pueden gestionar sus controles.
+- [x] **B2. Quitar L/M/X/J/V/S/D de cada card.** Eliminar la visualización de 7 chips y su espacio. **No tocar** `Routine.scheduledDays`, el editor opcional de rutina ni el plan semanal de modo libre: los datos existentes siguen disponibles para quienes los usen. El programa activo siempre prevalece para el calendario oficial.
+- [x] **B3. Tarjeta sobria y precisa.** Presentar nombre, «N ejercicios», uno o dos grupos musculares/enfoques **derivados de los ejercicios vinculados y sus músculos reales** (solo si hay información), y estado real de vinculación: «En: {programa activo}» si `active.routineIds` contiene ID; de lo contrario «Rutina guardada» / «Libre», sin falsos días asignados. Respetar nombres largos y datos faltantes.
+- [x] **B4. Última ejecución real y duración.** Mostrar «Última vez: …» **solo** si existe sesión finalizada con `WorkoutSession.routineId == Routine.id`; usar fecha local `finishedAt.toLocal()`. Si falta ID histórico, omitir (no asociar por nombre). Duración como **«Habitual: ~N min»** solo con sesiones históricas suficientes y `durationSeconds` válido; si no hay evidencia, no inventar minutos ni inflar la tarjeta. Estos metadatos son secundarios, no estadísticas de Progreso.
+- [x] **B5. Acciones.** Mantener un CTA primario «Iniciar», menú editar/notas/duplicar/eliminar, acceso a plantillas, plan rápido y gestión avanzada. Igualar alturas/márgenes según contenido razonable, no forzar a que nombres o notas largos corten botones. Conservar accesibilidad y estado vacío.
+- [x] **B6. Separación programa vs rutina libre.** Si aporta claridad y sin duplicar tarjetas, mostrar un estado/etiqueta de pertenencia en cada rutina; no mostrar el mismo calendario en tres sitios. El gestor `Mi programa` conserva agenda, rotación y días; iniciar una rutina manual no cambia indebidamente la programación.
 - [ ] **Gate B:** no footer Motivation en Entrenar con o sin audio; no círculos de días; metadatos respaldados por datos reales; los modos fijo/continuo/flexible y sesiones libres siguen bien; CI 7/7.
 
 ## Bloque C — coherencia visual, regresiones y QA
@@ -72,4 +72,12 @@
 2. **B1–B6** (quitar duplicación y enriquecer tarjetas de rutina) → tests → mirror CI.
 3. **C1–C8** (QA transversal y paridad) → últimas correcciones → mirror 7/7.
 
-No crear PRs nuevas. Nunca fusionar la #57 sin autorización explícita. **Este commit es exclusivamente documentación: ninguna línea funcional de Flutter ha sido modificada.**
+No crear PRs nuevas. Nunca fusionar la #57 sin autorización explícita. **Nota histórica:** el commit inicial de este roadmap fue solo documentación. Los bloques A/B ya tienen código Flutter, pruebas unitarias/de contrato y snapshots en espejo; el cierre requiere CI definitivo y QA en dispositivos.
+
+## Registro de implementación
+
+- Inicio: `664541aca10f7fcdcd3ff9b27bc397d5bc0a1a26` — mensaje opt-in compacto tras Recuperación, sin tarjeta legacy duplicada; Agua/Pasos estiradas solo en dos columnas.
+- Entrenar: `90c1c2363434d7eb81f69268aa5f1902848bb1e1` — eliminado footer fijo Motivation; tarjetas sin chips L–D, con programa activo, músculos y datos reales del historial.
+- Contratos adicionales: retry del pasaje si falla, texto al 200 %, fecha de finalización válida; ocho acentos en claro/oscuro/OLED.
+- CI inicial del espejo: [run 43559410971](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/43559410971). El estado se registra únicamente cuando finaliza; no equiparar build a prueba física.
+- **Pendiente de cierre:** CI final 7/7, paridad SHA del último snapshot, QA funcional y visual real, aprobación para fusionar. La PR permanece abierta/draft.

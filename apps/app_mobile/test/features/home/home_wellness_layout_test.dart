@@ -6,7 +6,7 @@ import 'package:gym_tracker/features/home/presentation/widgets/home_wellness_lay
 
 void main() {
   for (final width in [320.0, 390.0, 430.0]) {
-    for (final scale in [1.0, 1.6]) {
+    for (final scale in [1.0, 1.6, 2.0]) {
       testWidgets('wellness stays readable at $width dp and text $scale',
           (tester) async {
         tester.view.physicalSize = Size(width, 800);
@@ -86,6 +86,58 @@ void main() {
     expect(water.height, steps.height);
     expect(water.width, steps.width);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('wellness stays aligned across eight accents and OLED',
+      (tester) async {
+    tester.view.physicalSize = const Size(430, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    for (final accent in AppAccent.values) {
+      for (final brightness in Brightness.values) {
+        for (final oled in brightness == Brightness.dark
+            ? [false, true]
+            : [false]) {
+          final colors = AppColors.from(
+            AppearanceSettings(oledBlack: oled, accent: accent),
+            brightness,
+          );
+          await tester.pumpWidget(MaterialApp(
+            theme: ThemeData(
+              brightness: brightness,
+              extensions: [colors],
+            ),
+            home: const Scaffold(
+              body: HomeWellnessLayout(
+                hydration: Card(
+                  key: ValueKey('accent_water'),
+                  child: Text('1 200 ml'),
+                ),
+                steps: Card(
+                  key: ValueKey('accent_steps'),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('12 345 pasos'),
+                      Text('Desde el dispositivo'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const ValueKey('home_wellness_horizontal')),
+              findsOneWidget);
+          expect(
+            tester.getSize(find.byKey(const ValueKey('accent_water'))).height,
+            tester.getSize(find.byKey(const ValueKey('accent_steps'))).height,
+          );
+          expect(tester.takeException(), isNull);
+        }
+      }
+    }
   });
 
   testWidgets('OLED/accent theme remains safe at large text sizes',

@@ -41,6 +41,8 @@ void main() {
       sample('missing-id', routineId: null,
           finishedAt: DateTime(2026, 11, 12)),
       sample('future', finishedAt: DateTime(2026, 11, 15)),
+      sample('zero-duration', minutes: 0,
+          finishedAt: DateTime(2026, 11, 12)),
     ], asOf: asOf);
     expect(result.keys, ['routine-a']);
     expect(result['routine-a']!.lastFinishedAt,
