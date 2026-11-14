@@ -173,11 +173,11 @@ class TrainingPreferencesPage extends ConsumerWidget {
               const Divider(height: 1),
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Sonido al terminar descanso'),
+                title: const Text('Sonido STK al terminar descanso'),
                 subtitle: Text(
                   kIsWeb
                       ? 'La preferencia se conserva para Android/iOS.'
-                      : 'Controla el sonido del aviso del temporizador.',
+                      : 'Un tono breve, una sola vez al finalizar. Los demás avisos usan el sonido del sistema.',
                 ),
                 value: settings.timerSoundEnabled,
                 onChanged: kIsWeb ? null : notifier.updateTimerSound,

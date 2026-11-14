@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.Sensor
+import android.media.MediaPlayer
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
@@ -28,6 +29,7 @@ import java.util.concurrent.TimeUnit
 
 class MainActivity : AudioServiceActivity(), SensorEventListener {
     private val channelName = "stk_haven/daily_steps"
+    private var restTonePlayer: MediaPlayer? = null
     private val legacyPermissionRequest = 7412
     private val accessPermissionRequest = 7413
 
@@ -96,6 +98,34 @@ class MainActivity : AudioServiceActivity(), SensorEventListener {
                     result.success(true)
                 }
                 else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "stk_haven/rest_tone",
+        ).setMethodCallHandler { call, result ->
+            if (call.method != "play") {
+                result.notImplemented()
+            } else {
+                try {
+                    restTonePlayer?.release()
+                    val player = MediaPlayer.create(this, R.raw.stk_rest_complete)
+                    if (player == null) {
+                        result.success(false)
+                    } else {
+                        restTonePlayer = player
+                        player.setOnCompletionListener { completed ->
+                            completed.release()
+                            if (restTonePlayer === completed) restTonePlayer = null
+                        }
+                        player.start()
+                        result.success(true)
+                    }
+                } catch (_: Exception) {
+                    restTonePlayer = null
+                    result.success(false)
+                }
             }
         }
 
