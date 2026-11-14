@@ -727,7 +727,7 @@ class _SessionOverviewCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'SESIÓN REGISTRADA',
+                      summary.isComplete ? 'SESIÓN REGISTRADA' : 'SESIÓN PARCIAL GUARDADA',
                       style: AppTypography.labelMedium.copyWith(color: color),
                     ),
                     const SizedBox(height: 4),

@@ -363,7 +363,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Guardar incompleta'),
+              child: const Text('Guardar sesión parcial'),
             ),
           ],
         ),

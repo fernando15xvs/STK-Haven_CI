@@ -8,7 +8,7 @@ void main() {
     expect(page, contains("label: 'Finalizar entrenamiento'"));
     expect(page, isNot(contains('floatingActionButton: allExercisesCompleted')));
     expect(page, isNot(contains("value: 'finish'")));
-    expect(page, contains("child: const Text('Guardar incompleta')"));
+    expect(page, contains("child: const Text('Guardar sesión parcial')"));
   });
 
   test('empty workout returns without cancelling the active timer', () {
