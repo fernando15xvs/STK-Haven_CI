@@ -1,4 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// One-shot Home destination request issued by training summary routes.
-final homeTabReturnRequestProvider = StateProvider<int>((ref) => 0);
+/// One-shot requests from nested routes to select the retained Home tab.
+class HomeTabReturnRequest extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void requestHome() => state += 1;
+}
+
+final homeTabReturnRequestProvider =
+    NotifierProvider<HomeTabReturnRequest, int>(HomeTabReturnRequest.new);

@@ -1014,7 +1014,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
   void _startRestTimer(int initialSeconds, DateTime endsAt) {
     _restTimer?.cancel();
     state = state.copyWith(isResting: true, restTimerSeconds: initialSeconds);
-    WorkoutNotificationService.scheduleRestTimerNotification(endsAt);
+    unawaited(WorkoutNotificationService.scheduleRestTimerNotification(
+      endsAt, workoutSessionId: state.session?.id,
+    ));
 
     _restTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final remaining = endsAt.difference(DateTime.now()).inSeconds;
@@ -1046,11 +1048,22 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
 
     final settings = ref.read(settingsProvider);
     if (settings.timerSoundEnabled) {
-      unawaited(SystemSound.play(SystemSoundType.alert));
+      unawaited(_playStkRestTone());
     }
     if (settings.vibrationEnabled) {
       unawaited(HapticFeedback.mediumImpact());
     }
+  }
+
+  Future<void> _playStkRestTone() async {
+    try {
+      final played = await const MethodChannel('stk_haven/rest_tone')
+          .invokeMethod<bool>('play');
+      if (played == true) return;
+    } catch (_) {
+      // Channel absent (web/older build): use the platform's single alert.
+    }
+    await SystemSound.play(SystemSoundType.alert);
   }
 
   void _cancelTimers() {

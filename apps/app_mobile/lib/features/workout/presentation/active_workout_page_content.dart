@@ -21,6 +21,7 @@ import 'package:gym_tracker/features/exercises/presentation/pages/exercise_libra
 import 'package:gym_tracker/features/workout/presentation/widgets/barbell_calculator_modal.dart';
 
 import 'package:gym_tracker/features/motivation/presentation/widgets/motivation_mini_player.dart';
+import 'package:gym_tracker/features/motivation/presentation/motivation_page.dart';
 
 class ActiveWorkoutPage extends ConsumerStatefulWidget {
   const ActiveWorkoutPage({super.key});
@@ -523,10 +524,6 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
         _focusIndex >= session.exercises.length) {
       _focusIndex = session.exercises.length - 1;
     }
-    final hasSupersets = session.exercises.any(
-      (exercise) => exercise.supersetGroupId != null,
-    );
-
     // Back/minimize returns to the app while the provider keeps the session alive.
     return Scaffold(
         appBar: AppBar(
@@ -580,9 +577,45 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                   case 'discard':
                     _confirmDiscard(context);
                     break;
+                  case 'supersets':
+                    _showSupersetManager();
+                    break;
+                  case 'plates':
+                    BarbellCalculatorModal.show(context);
+                    break;
+                  case 'motivation':
+                    Navigator.of(context).push(MaterialPageRoute<void>(
+                      builder: (_) => const MotivationPage(),
+                    ));
+                    break;
                 }
               },
               itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  value: 'supersets',
+                  enabled: session.exercises.length >= 2,
+                  child: const ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.link),
+                    title: Text('Superseries'),
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'plates',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.calculate_outlined),
+                    title: Text('Calculadora de discos'),
+                  ),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'motivation',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.music_note_outlined),
+                    title: Text('STK Motivation'),
+                  ),
+                ),
                 PopupMenuItem<String>(
                   value: 'discard',
                   child: ListTile(
@@ -598,26 +631,6 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                   ),
                 ),
               ],
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.link,
-                color: hasSupersets
-                    ? AppColors.of(context).primary
-                    : AppColors.of(context).textSecondary,
-              ),
-              onPressed: session.exercises.length < 2
-                  ? null
-                  : _showSupersetManager,
-              tooltip: 'Superseries',
-            ),
-            IconButton(
-              icon: Icon(
-                Icons.calculate_outlined,
-                color: AppColors.of(context).primary,
-              ),
-              onPressed: () => BarbellCalculatorModal.show(context),
-              tooltip: 'Calculadora de Discos',
             ),
           ],
         ),
@@ -675,7 +688,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                   : const SizedBox.shrink(key: ValueKey('no_rest')),
             ),
             // Within the normal layout flow, never over timers or Finish.
-            const MotivationMiniPlayer(showLauncherWhenEmpty: true),
+            const MotivationMiniPlayer(showLauncherWhenEmpty: false),
             Expanded(
               child: _focusMode && session.exercises.isNotEmpty
                   ? _FocusedWorkoutView(

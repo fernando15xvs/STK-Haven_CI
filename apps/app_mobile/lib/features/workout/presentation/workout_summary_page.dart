@@ -66,6 +66,7 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
   }
 
   bool _animationStarted = false;
+  bool _showFullAnalysis = false;
 
   @override
   void didChangeDependencies() {
@@ -93,6 +94,11 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
     final session = widget.analysisResult.session;
     final unit = settings.weightUnit;
     final summary = WorkoutSummarySnapshot.fromSession(session);
+    final cautionExerciseIds = widget.analysisResult.deloadSuggestions
+        .map((suggestion) => suggestion.exerciseId).toSet();
+    final progressionSuggestions = widget.analysisResult.progressionSuggestions
+        .where((suggestion) => !cautionExerciseIds.contains(suggestion.exerciseId))
+        .toList(growable: false);
     final profile = ref.watch(userExperienceProfileProvider).value;
     final showClosingReflection = profile?.faithEnabled == true &&
         profile?.showWorkoutReflections == true;
@@ -154,33 +160,6 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
                           ),
                         ],
                         const SizedBox(height: AppSpacing.xxl),
-
-                        // ── 2. Exercise completion map ──────────────────────────────
-                        if (summary.exercises.isNotEmpty) ...[
-                          const SectionHeading(title: 'MAPA DE LA SESIÓN'),
-                          const SizedBox(height: AppSpacing.sm),
-                          PremiumCard(
-                            padding: EdgeInsets.zero,
-                            child: Column(
-                              children: summary.exercises
-                                  .asMap()
-                                  .entries
-                                  .map((entry) {
-                                    return Column(
-                                      children: [
-                                        if (entry.key > 0)
-                                          const Divider(height: 1),
-                                        _ExerciseCompletionRow(
-                                          exercise: entry.value,
-                                        ),
-                                      ],
-                                    );
-                                  })
-                                  .toList(growable: false),
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xxl),
-                        ],
 
                         // ── 3. Personal Records — slide-up animation ────────────────
                         if (widget
@@ -265,6 +244,47 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
                                   ),
                                 ],
                               ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xxl),
+                        ],
+
+                        // The first screen favors the saved workout and real PRs. Keep every
+                        // secondary insight one tap away without long initial scroll.
+                        OutlinedButton.icon(
+                          key: const ValueKey('workout_summary_expand_analysis'),
+                          onPressed: () => setState(
+                            () => _showFullAnalysis = !_showFullAnalysis),
+                          icon: Icon(_showFullAnalysis
+                              ? Icons.expand_less : Icons.expand_more),
+                          label: Text(_showFullAnalysis
+                              ? 'Ocultar análisis completo'
+                              : 'Ver análisis completo'),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        if (_showFullAnalysis) ...[
+                        // ── 2. Exercise completion map ──────────────────────────────
+                        if (summary.exercises.isNotEmpty) ...[
+                          const SectionHeading(title: 'MAPA DE LA SESIÓN'),
+                          const SizedBox(height: AppSpacing.sm),
+                          PremiumCard(
+                            padding: EdgeInsets.zero,
+                            child: Column(
+                              children: summary.exercises
+                                  .asMap()
+                                  .entries
+                                  .map((entry) {
+                                    return Column(
+                                      children: [
+                                        if (entry.key > 0)
+                                          const Divider(height: 1),
+                                        _ExerciseCompletionRow(
+                                          exercise: entry.value,
+                                        ),
+                                      ],
+                                    );
+                                  })
+                                  .toList(growable: false),
                             ),
                           ),
                           const SizedBox(height: AppSpacing.xxl),
@@ -360,18 +380,13 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
                         ],
 
                         // ── 6. Next Steps ───────────────────────────────────────────
-                        if (widget
-                            .analysisResult
-                            .progressionSuggestions
-                            .isNotEmpty) ...[
+                        if (progressionSuggestions.isNotEmpty) ...[
                           const SectionHeading(title: 'PRÓXIMAS REFERENCIAS'),
                           const SizedBox(height: AppSpacing.sm),
                           PremiumCard(
                             padding: EdgeInsets.zero,
                             child: Column(
-                              children: widget
-                                  .analysisResult
-                                  .progressionSuggestions
+                              children: progressionSuggestions
                                   .asMap()
                                   .entries
                                   .map((entry) {
@@ -477,7 +492,8 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
                           const SizedBox(height: AppSpacing.xxl),
                         ],
 
-                        const SizedBox(height: 100),
+                        ],
+                                                const SizedBox(height: 100),
                       ],
                     ),
                   ),
@@ -493,8 +509,7 @@ class _WorkoutSummaryPageState extends ConsumerState<WorkoutSummaryPage>
         child: PrimaryButton(
           label: 'VOLVER A INICIO',
           onPressed: () {
-            ref.read(homeTabReturnRequestProvider.notifier).state =
-                ref.read(homeTabReturnRequestProvider) + 1;
+            ref.read(homeTabReturnRequestProvider.notifier).requestHome();
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
         ),

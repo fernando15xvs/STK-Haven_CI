@@ -2,6 +2,7 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
 import 'package:core/features/profile/data/settings_repository.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:core/core/services/local_notification_timezone.dart';
@@ -12,6 +13,32 @@ class WorkoutNotificationService {
       FlutterLocalNotificationsPlugin();
   static const int _restTimerNotificationId = 999;
   static const int _restOngoingNotificationId = 998;
+  static const _restActivityChannel = MethodChannel('stk_haven/rest_activity');
+
+  static Future<void> _updateRestLiveActivity(
+    DateTime endTime, String? workoutSessionId,
+  ) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS ||
+        workoutSessionId == null) return;
+    try {
+      await _restActivityChannel.invokeMethod<bool>('update', {
+        'sessionId': workoutSessionId,
+        'endEpochMillis': endTime.millisecondsSinceEpoch,
+      });
+    } catch (_) {
+      // ActivityKit can be unavailable or disabled; the regular timer remains.
+    }
+  }
+
+  static Future<void> _endRestLiveActivity() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return;
+    try {
+      await _restActivityChannel.invokeMethod<bool>('end');
+    } catch (_) {
+      // Never block an active workout when the widget extension is absent.
+    }
+  }
+
   // A single queue prevents stale scheduled alarms from winning a rapid
   // +15s / +30s / Skip race. Generation is invalidated synchronously.
   static Future<void> _restQueue = Future<void>.value();
@@ -92,11 +119,16 @@ class WorkoutNotificationService {
         : AndroidScheduleMode.exactAllowWhileIdle;
   }
 
-  static Future<void> scheduleRestTimerNotification(DateTime endTime) =>
+  static Future<void> scheduleRestTimerNotification(
+    DateTime endTime, {String? workoutSessionId}
+  ) =>
       _queueRest((generation) async {
         if (kIsWeb) return;
         try {
           await initialize();
+          if (generation != _restGeneration) return;
+          // Live Activities use separate authorization from notifications.
+          await _updateRestLiveActivity(endTime, workoutSessionId);
           if (generation != _restGeneration) return;
           if (!await requestNotificationPermission()) return;
           if (generation != _restGeneration) return;
@@ -111,8 +143,11 @@ class WorkoutNotificationService {
           ).getSettings();
           final sound = settings.timerSoundEnabled;
           final vibration = settings.vibrationEnabled;
-          final channelId =
-              'workout_rest_${sound ? 'sound' : 'silent'}_${vibration ? 'vibration' : 'steady'}';
+          // New versioned channel: Android cannot change sound on an
+          // existing channel, and user overrides must remain respected.
+          final channelId = sound
+              ? 'workout_rest_stk_chime_v1_${vibration ? 'vibration' : 'steady'}'
+              : 'workout_rest_silent_${vibration ? 'vibration' : 'steady'}';
 
           // Android's native chronometer updates on its own, even with the
           // Flutter app suspended. The ongoing notification is SILENT.
@@ -157,10 +192,14 @@ class WorkoutNotificationService {
               importance: Importance.max,
               priority: Priority.high,
               playSound: sound,
+              sound: sound
+                  ? const RawResourceAndroidNotificationSound('stk_rest_complete')
+                  : null,
               enableVibration: vibration,
             ),
             iOS: DarwinNotificationDetails(
               presentSound: sound,
+              sound: sound ? 'stk_rest_complete.wav' : null,
               presentAlert: true,
               presentBadge: false,
             ),
@@ -194,6 +233,7 @@ class WorkoutNotificationService {
           await initialize();
           await _notificationsPlugin.cancel(id: _restOngoingNotificationId);
           await _notificationsPlugin.cancel(id: _restTimerNotificationId);
+          await _endRestLiveActivity();
         } catch (_) {
           // Best-effort cleanup; serialized with any pending schedule.
         }
