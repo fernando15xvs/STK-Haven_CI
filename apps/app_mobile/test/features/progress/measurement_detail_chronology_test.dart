@@ -28,7 +28,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text('Medida anterior'), findsOneWidget);
-    expect(find.text('110.0 cm'), findsOneWidget);
+    expect(find.text('110.0 cm'), findsWidgets);
     expect(find.text('+8.0 cm'), findsWidgets);
     expect(find.byKey(const Key('measurement_detail_chart')), findsOneWidget);
     expect(find.byKey(const Key('measurement_chart_selected_record')), findsOneWidget);

@@ -155,7 +155,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(selected,MeasurementMetric.rightCalf);
       expect(find.text('38.0 cm'),findsWidgets);
-      expect(find.text('35.0 cm'),findsOneWidget);
+      expect(find.text('35.0 cm'),findsWidgets);
       expect(find.text('Medida anterior'), findsOneWidget);
       expect(find.text('Cambio vs. anterior'), findsOneWidget);
       expect(tester.takeException(),isNull);

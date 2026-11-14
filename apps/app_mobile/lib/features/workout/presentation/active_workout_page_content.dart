@@ -543,7 +543,8 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                       DateTime.now()
                           .difference(session.startedAt)
                           .inSeconds
-                          .clamp(0, 1 << 30);
+                          .clamp(0, 1 << 30)
+                          .toInt();
                   return Text(
                     _formatTime(timerValue),
                     style: AppTypography.labelLarge.copyWith(

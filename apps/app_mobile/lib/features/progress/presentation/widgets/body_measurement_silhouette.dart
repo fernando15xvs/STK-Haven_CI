@@ -446,46 +446,16 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme=Theme.of(context).colorScheme;
     final value=SilhouetteMeasurementData.latest(measurements,metric);
     final progress=MeasurementProgress(measurements,metric);
     // History chart progresses chronologically from left to right.
     // Recent records are listed newest-first in their own section.
     final chartPoints = progress.points;
     final records = chartPoints.reversed.toList();
-    final detailKey = switch (metric) {
-      MeasurementMetric.shoulders => 'shoulders',
-      MeasurementMetric.chest => 'chest',
-      MeasurementMetric.waist => 'waist',
-      MeasurementMetric.hips => 'hips',
-      MeasurementMetric.leftArm => 'left_arm',
-      MeasurementMetric.rightArm => 'right_arm',
-      MeasurementMetric.leftLeg => 'left_leg',
-      MeasurementMetric.rightLeg => 'right_leg',
-      MeasurementMetric.calves => 'calves',
-      _ => null, // New metric image is the complete original anatomy.
-    };
     return Scaffold(
       appBar:AppBar(title:Text(metric.label)),
       body:ListView(padding:const EdgeInsets.all(16),children:[
-        Container(
-          key:const Key('measurement_detail_anatomy'),
-          height:220,
-          clipBehavior:Clip.antiAlias,
-          decoration:BoxDecoration(
-            color:scheme.brightness==Brightness.dark
-                ? const Color(0xFF101722):const Color(0xFFF4F6F9),
-            borderRadius:BorderRadius.circular(18)),
-          child:Image.asset(
-            detailKey == null
-               ? (metric == MeasurementMetric.leftCalf || metric == MeasurementMetric.rightCalf
-                   ? 'assets/measurement_anatomy/png/body_back.png'
-                   : 'assets/measurement_anatomy/png/body_front.png')
-               : 'assets/measurement_anatomy/png/detail_$detailKey.png',
-            semanticLabel:'Región anatómica destacada: ${metric.label}',
-            fit:BoxFit.contain,
-          ),
-        ),
+        _MeasurementDetailArtwork(metric: metric),
         const SizedBox(height:12),
         Card(
           child: Padding(
@@ -586,6 +556,150 @@ class MeasurementMuscleDetailPage extends StatelessWidget {
   }
 }
 
+/// Contour-first image presentation. We preserve the approved pectoral PNG.
+/// Other legacy detail_* crops highlight unrelated muscle groups (notably
+/// waist/legs). Display an accurately focused portion of the original
+/// anatomical silhouette and a restrained circumference guide instead.
+/// The guide denotes tape placement, never muscular growth.
+class _MeasurementDetailArtwork extends StatelessWidget {
+  final MeasurementMetric metric;
+  const _MeasurementDetailArtwork({required this.metric});
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AppColors.of(context);
+    final region = _MeasurementArtworkRegion.forMetric(metric);
+    const height = 220.0;
+    return Container(
+      key: const Key('measurement_detail_anatomy'),
+      height: height,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: palette.surfaceHigh,
+        borderRadius: AppRadius.lg_,
+      ),
+      child: metric == MeasurementMetric.chest
+          ? Image.asset(
+              'assets/measurement_anatomy/png/detail_chest.png',
+              semanticLabel: 'Tórax: contorno de pecho',
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+            )
+          : LayoutBuilder(
+              builder: (context, bounds) {
+                // Source anatomy is ~0.4 width / height, matching the map.
+                // Crop around the contour instead of squashing the PNG.
+                final width = bounds.maxWidth;
+                final drawnHeight = width / .4;
+                final scrollableHeight = math.max(0.0, drawnHeight - height);
+                final yOnImage = region.anchor.dy * drawnHeight;
+                final cropTop = (yOnImage - height / 2)
+                    .clamp(0.0, scrollableHeight).toDouble();
+                final alignmentY = scrollableHeight <= 0
+                    ? 0.0 : 2 * cropTop / scrollableHeight - 1;
+                final focusedY = yOnImage - cropTop;
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.asset(
+                      region.back
+                          ? 'assets/measurement_anatomy/png/body_back.png'
+                          : 'assets/measurement_anatomy/png/body_front.png',
+                      fit: BoxFit.cover,
+                      alignment: Alignment(0, alignmentY),
+                      filterQuality: FilterQuality.high,
+                      semanticLabel:
+                          'Contorno de ${metric.label} sobre anatomía '
+                          '${region.back ? 'posterior' : 'frontal'}',
+                    ),
+                    IgnorePointer(
+                      child: CustomPaint(
+                        painter: _CircumferenceGuidePainter(
+                          center: Offset(
+                            width * region.anchor.dx, focusedY),
+                          rx: width * region.radiusX,
+                          ry: height * region.radiusY,
+                          color: palette.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _MeasurementArtworkRegion {
+  final bool back;
+  final Offset anchor;
+  final double radiusX;
+  final double radiusY;
+  const _MeasurementArtworkRegion(this.back, this.anchor,
+    this.radiusX, this.radiusY);
+
+  static _MeasurementArtworkRegion forMetric(MeasurementMetric metric) =>
+      switch (metric) {
+        MeasurementMetric.neck =>
+          const _MeasurementArtworkRegion(false, Offset(.50, .166), .14, .15),
+        MeasurementMetric.shoulders =>
+          const _MeasurementArtworkRegion(false, Offset(.50, .190), .36, .21),
+        MeasurementMetric.leftArm =>
+          const _MeasurementArtworkRegion(false, Offset(.785, .300), .11, .22),
+        MeasurementMetric.rightArm =>
+          const _MeasurementArtworkRegion(false, Offset(.215, .300), .11, .22),
+        MeasurementMetric.leftForearm =>
+          const _MeasurementArtworkRegion(true, Offset(.19, .385), .09, .20),
+        MeasurementMetric.rightForearm =>
+          const _MeasurementArtworkRegion(true, Offset(.81, .385), .09, .20),
+        MeasurementMetric.waist =>
+          const _MeasurementArtworkRegion(true, Offset(.50, .360), .25, .17),
+        MeasurementMetric.hips =>
+          const _MeasurementArtworkRegion(true, Offset(.54, .460), .32, .21),
+        MeasurementMetric.leftLeg =>
+          const _MeasurementArtworkRegion(false, Offset(.585, .535), .15, .25),
+        MeasurementMetric.rightLeg =>
+          const _MeasurementArtworkRegion(false, Offset(.415, .535), .15, .25),
+        MeasurementMetric.leftCalf =>
+          const _MeasurementArtworkRegion(true, Offset(.40, .730), .12, .24),
+        MeasurementMetric.rightCalf =>
+          const _MeasurementArtworkRegion(true, Offset(.60, .730), .12, .24),
+        // Historical general calf records are NOT attributed to either side.
+        MeasurementMetric.calves =>
+          const _MeasurementArtworkRegion(true, Offset(.50, .730), .28, .24),
+        _ =>
+          const _MeasurementArtworkRegion(false, Offset(.50, .245), .30, .20),
+      };
+}
+
+class _CircumferenceGuidePainter extends CustomPainter {
+  final Offset center;
+  final double rx, ry;
+  final Color color;
+  const _CircumferenceGuidePainter({
+    required this.center, required this.rx,
+    required this.ry, required this.color,
+  });
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Rect.fromCenter(
+      center: center, width: rx * 2, height: ry * 2);
+    canvas.drawOval(rect, Paint()
+      ..color = color.withValues(alpha: .10)
+      ..style = PaintingStyle.fill);
+    canvas.drawOval(rect, Paint()
+      ..color = color.withValues(alpha: .88)
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CircumferenceGuidePainter old) =>
+    old.center != center || old.rx != rx ||
+    old.ry != ry || old.color != color;
+}
+
 /// Tappable, chronological measurement history; selection never changes
 /// the underlying recorded observations or their order.
 class _MeasurementHistoryChart extends StatefulWidget {
@@ -604,7 +718,7 @@ class _MeasurementHistoryChartState extends State<_MeasurementHistoryChart> {
   Widget build(BuildContext context) {
     final points = widget.points;
     final index = (_selectedIndex ?? (points.length - 1))
-        .clamp(0, points.length - 1);
+        .clamp(0, points.length - 1).toInt();
     final selected = points[index];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -632,8 +746,10 @@ class _MeasurementHistoryChartState extends State<_MeasurementHistoryChart> {
             ),
           ),
         ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          spacing: 8,
+          runSpacing: 3,
+          alignment: WrapAlignment.spaceBetween,
           children: [
             Text(DateFormat('dd/MM/yyyy').format(points.first.date),
               style: AppTypography.labelSmall),
