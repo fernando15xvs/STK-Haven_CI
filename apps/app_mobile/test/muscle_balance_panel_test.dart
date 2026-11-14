@@ -95,7 +95,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Balance muscular'), findsOneWidget);
-    // One global filter: only Resumen has 7D/1M/3M/1A controls.
+    // One shared period is exposed through each analytical tab's compact menu.
     expect(find.byType(SegmentedButton<TimeFilter>), findsNothing);
     expect(find.byKey(const ValueKey('muscle_shared_period')), findsOneWidget);
     expect(find.text('1M'), findsOneWidget);
@@ -151,7 +151,7 @@ void main() {
     expect(find.textContaining('Indirecto estimado: 0.5'), findsWidgets);
     await tester.scrollUntilVisible(find.text('Piernas'), 120);
     expect(find.text('Piernas'), findsOneWidget);
-    // The shared provider updates this screen without introducing a selector.
+    // The shared provider updates the same compact selector and metrics.
     final container = ProviderScope.containerOf(
       tester.element(find.byType(MuscleHeatmapGrid)));
     container.read(timeFilterProvider.notifier).setFilter(TimeFilter.week);

@@ -10,7 +10,6 @@ import 'package:core/features/workout/application/workout_history_provider.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:core/features/progress/presentation/widgets/compact_progress_period_selector.dart';
 
 class _Exercises extends ExerciseListNotifier {
   @override

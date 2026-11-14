@@ -122,6 +122,39 @@ class _ThreeDates extends WorkoutHistoryNotifier {
   }
 }
 
+class _ManyDates extends WorkoutHistoryNotifier {
+  @override
+  List<WorkoutSession> build() {
+    final today = DateTime.now();
+    return [
+      for (var index = 0; index < 12; index++)
+        WorkoutSession(
+          id: 'long-$index',
+          routineNameSnapshot: 'Rutina extensa',
+          startedAt: today.subtract(Duration(days: 13 - index)),
+          finishedAt: today.subtract(Duration(days: 13 - index))
+              .add(const Duration(minutes: 40)),
+          durationSeconds: 2400,
+          exercises: [
+            WorkoutExercise(
+              exerciseId: 'curl',
+              exerciseNameSnapshot: 'Curl de bíceps',
+              muscleGroupSnapshot: 'Bíceps',
+              sets: [
+                WorkoutSet(
+                  weight: 20.0 + index,
+                  reps: 8,
+                  rir: 2,
+                  completed: true,
+                ),
+              ],
+            ),
+          ],
+        ),
+    ];
+  }
+}
+
 class _Settings extends SettingsNotifier {
   @override
   SettingsState build() => const SettingsState();
@@ -462,6 +495,44 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Curl de bíceps'));
     expect(opened?.id, 'curl');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('long chart initially reveals latest point and follows selected session',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 950);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        exerciseListProvider.overrideWith(_Exercises.new),
+        workoutHistoryProvider.overrideWith(_ManyDates.new),
+        settingsProvider.overrideWith(_Settings.new),
+      ],
+      child: const MaterialApp(
+        home: Scaffold(
+          body: ProgressExercisesPanel(initialExerciseId: 'curl'),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final scroller = find.byKey(const ValueKey('progress_exercise_trend_scroll'));
+    await tester.ensureVisible(scroller);
+    await tester.pumpAndSettle();
+    final controller = tester.widget<SingleChildScrollView>(scroller).controller!;
+    expect(controller.position.maxScrollExtent, greaterThan(0));
+    final initial = controller.offset;
+    expect(initial, greaterThan(0),
+      reason: 'The most recent plotted point is to the right');
+    expect(initial, closeTo(controller.position.maxScrollExtent, 5),
+      reason: 'Open with the latest observation entirely visible');
+    final session = find.byKey(const ValueKey('progress_exercise_session_selector'));
+    await tester.ensureVisible(session);
+    tester.widget<DropdownButton<String>>(session).onChanged!('long-0');
+    await tester.pumpAndSettle();
+    expect(controller.offset, lessThan(initial));
+    expect(tester.widget<DropdownButton<String>>(session).value, 'long-0');
     expect(tester.takeException(), isNull);
   });
 

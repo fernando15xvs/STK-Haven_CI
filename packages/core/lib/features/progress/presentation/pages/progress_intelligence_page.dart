@@ -1186,6 +1186,7 @@ class _SelectableExerciseTrendState extends State<_SelectableExerciseTrend> {
                 });
               }
               return SingleChildScrollView(
+                key: const ValueKey('progress_exercise_trend_scroll'),
                 controller: _chartScroll,
                 scrollDirection: Axis.horizontal,
                 child: GestureDetector(

@@ -61,7 +61,10 @@ class _MuscleHeatmapGridState extends ConsumerState<MuscleHeatmapGrid> {
             ],
           )),
           const SizedBox(width: 8),
-          const CompactProgressPeriodSelector(),
+          const KeyedSubtree(
+            key: ValueKey('muscle_shared_period'),
+            child: CompactProgressPeriodSelector(),
+          ),
         ]),
         const SizedBox(height: AppSpacing.md),
         _SummaryCard(
