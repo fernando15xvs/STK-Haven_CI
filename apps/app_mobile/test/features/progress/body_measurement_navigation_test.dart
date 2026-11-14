@@ -172,8 +172,14 @@ void main() {
   testWidgets('history is separate, edit and delete stay accessible',
     (tester) async {
       await _open(tester);
-      await tester.ensureVisible(find.byKey(const Key('measurement_history_button')));
+      await tester.scrollUntilVisible(
+        find.byKey(const Key('measurement_history_button')),
+        170,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('measurement_history_button')));
+      await tester.pumpAndSettle();
       await tester.pumpAndSettle();
       expect(find.text('Historial de registros'),findsOneWidget);
       expect(find.byKey(const ValueKey('measurement_record_2026-10-28')),findsOneWidget);

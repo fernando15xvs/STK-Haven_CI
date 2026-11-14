@@ -251,7 +251,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('all-time peak remains visible outside shared 1M period',
+  testWidgets('lifetime directory compares sessions outside shared period',
       (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -269,9 +269,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Último e1RM'), findsOneWidget);
     expect(find.text('Mejor e1RM histórico'), findsOneWidget);
-    // The old peak is outside this month's filter; it is not a valid
-    // previous-session comparison inside the selected period.
-    expect(find.text('Sin comparación'), findsOneWidget);
+    // Main Ejercicios now uses all genuine sessions. The previous session
+    // remains eligible for a real comparison, even when Resumen uses 1M.
+    expect(find.text('Sin comparación'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
