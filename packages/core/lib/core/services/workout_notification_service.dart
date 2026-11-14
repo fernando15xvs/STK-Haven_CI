@@ -11,6 +11,24 @@ class WorkoutNotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
   static const int _restTimerNotificationId = 999;
+  static const int _restOngoingNotificationId = 998;
+  // A single queue prevents stale scheduled alarms from winning a rapid
+  // +15s / +30s / Skip race. Generation is invalidated synchronously.
+  static Future<void> _restQueue = Future<void>.value();
+  static int _restGeneration = 0;
+
+  static Future<void> _queueRest(Future<void> Function(int) action) {
+    final generation = ++_restGeneration;
+    final task = _restQueue.then((_) async {
+      if (generation == _restGeneration) await action(generation);
+    });
+    _restQueue = task.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {},
+    );
+    return task;
+  }
+
   static const int _workoutReminderNotificationId = 1001;
   static const int _unfinishedWorkoutFirstId = 1041;
   static const int _unfinishedWorkoutFollowUpId = 1042;
@@ -74,67 +92,112 @@ class WorkoutNotificationService {
         : AndroidScheduleMode.exactAllowWhileIdle;
   }
 
-  static Future<void> scheduleRestTimerNotification(DateTime endTime) async {
-    if (kIsWeb) return;
-    await initialize();
-    if (!await requestNotificationPermission()) return;
+  static Future<void> scheduleRestTimerNotification(DateTime endTime) =>
+      _queueRest((generation) async {
+        if (kIsWeb) return;
+        try {
+          await initialize();
+          if (generation != _restGeneration) return;
+          if (!await requestNotificationPermission()) return;
+          if (generation != _restGeneration) return;
 
-    final settings = SettingsRepository(
-      Hive.box(HiveBoxes.metadata),
-    ).getSettings();
-    final sound = settings.timerSoundEnabled;
-    final vibration = settings.vibrationEnabled;
+          // Previous countdown and previous end alert never survive a time change.
+          await _notificationsPlugin.cancel(id: _restOngoingNotificationId);
+          await _notificationsPlugin.cancel(id: _restTimerNotificationId);
+          if (generation != _restGeneration || !endTime.isAfter(DateTime.now())) return;
 
-    // Android notification-channel capabilities are effectively persistent, so
-    // preference combinations use distinct stable channel IDs. This prevents a
-    // previously-created loud channel from ignoring a later silent preference.
-    final channelId =
-        'workout_rest_${sound ? 'sound' : 'silent'}_${vibration ? 'vibration' : 'steady'}';
-    final androidDetails = AndroidNotificationDetails(
-      channelId,
-      'Temporizador de Descanso',
-      channelDescription: 'Avisos de fin de descanso en el entrenamiento',
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: sound,
-      enableVibration: vibration,
-    );
-    final iosDetails = DarwinNotificationDetails(
-      presentSound: sound,
-      presentAlert: true,
-      presentBadge: true,
-    );
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+          final settings = SettingsRepository(
+            Hive.box(HiveBoxes.metadata),
+          ).getSettings();
+          final sound = settings.timerSoundEnabled;
+          final vibration = settings.vibrationEnabled;
+          final channelId =
+              'workout_rest_${sound ? 'sound' : 'silent'}_${vibration ? 'vibration' : 'steady'}';
 
-    final scheduledDate = tz.TZDateTime.from(
-      endTime.add(const Duration(seconds: 2)),
-      tz.local,
-    );
-    if (scheduledDate.isAfter(tz.TZDateTime.now(tz.local))) {
-      await _notificationsPlugin.zonedSchedule(
-        id: _restTimerNotificationId,
-        title: '¡Descanso finalizado!',
-        body: 'Es hora de la siguiente serie. ¡Vamos!',
-        scheduledDate: scheduledDate,
-        notificationDetails: details,
-        androidScheduleMode: await _restScheduleMode(),
-      );
-    }
-  }
+          // Android's native chronometer updates on its own, even with the
+          // Flutter app suspended. The ongoing notification is SILENT.
+          if (defaultTargetPlatform == TargetPlatform.android) {
+            final remainingMs = endTime.difference(DateTime.now()).inMilliseconds;
+            if (remainingMs > 0 && generation == _restGeneration) {
+              await _notificationsPlugin.show(
+                id: _restOngoingNotificationId,
+                title: 'Descanso STK Haven',
+                body: 'Tiempo restante para tu siguiente serie',
+                notificationDetails: NotificationDetails(
+                  android: AndroidNotificationDetails(
+                    'workout_rest_ongoing_silent_v1',
+                    'Descanso en curso',
+                    channelDescription: 'Cuenta atrás de entrenamiento sin sonido',
+                    importance: Importance.low,
+                    priority: Priority.low,
+                    playSound: false,
+                    enableVibration: false,
+                    silent: true,
+                    ongoing: true,
+                    autoCancel: false,
+                    onlyAlertOnce: true,
+                    showWhen: true,
+                    usesChronometer: true,
+                    chronometerCountDown: true,
+                    when: endTime.millisecondsSinceEpoch,
+                    timeoutAfter: remainingMs + 2000,
+                    visibility: NotificationVisibility.public,
+                  ),
+                ),
+              );
+            }
+          }
+          if (generation != _restGeneration) return;
 
-  static Future<void> cancelRestTimerNotification() async {
-    if (kIsWeb) return;
-    try {
-      await initialize();
-      await _notificationsPlugin.cancel(id: _restTimerNotificationId);
-    } catch (_) {
-      // Notification cleanup is best-effort. An unavailable platform plugin
-      // must not break workout cancellation, provider disposal, or recovery.
-    }
-  }
+          final details = NotificationDetails(
+            android: AndroidNotificationDetails(
+              channelId,
+              'Temporizador de Descanso',
+              channelDescription: 'Aviso único al terminar el descanso',
+              importance: Importance.max,
+              priority: Priority.high,
+              playSound: sound,
+              enableVibration: vibration,
+            ),
+            iOS: DarwinNotificationDetails(
+              presentSound: sound,
+              presentAlert: true,
+              presentBadge: false,
+            ),
+          );
+
+          final date = tz.TZDateTime.from(
+            endTime.add(const Duration(seconds: 2)),
+            tz.local,
+          );
+          if (!date.isAfter(tz.TZDateTime.now(tz.local))) return;
+          final mode = await _restScheduleMode();
+          if (generation != _restGeneration) return;
+          await _notificationsPlugin.zonedSchedule(
+            id: _restTimerNotificationId,
+            title: '¡Descanso finalizado!',
+            body: 'Es hora de la siguiente serie. ¡Vamos!',
+            scheduledDate: date,
+            notificationDetails: details,
+            androidScheduleMode: mode,
+          );
+        } catch (_) {
+          // No permission, unavailable plugin, or exact alarm restriction
+          // must never interrupt the active workout or its local timer.
+        }
+      });
+
+  static Future<void> cancelRestTimerNotification() =>
+      _queueRest((generation) async {
+        if (kIsWeb) return;
+        try {
+          await initialize();
+          await _notificationsPlugin.cancel(id: _restOngoingNotificationId);
+          await _notificationsPlugin.cancel(id: _restTimerNotificationId);
+        } catch (_) {
+          // Best-effort cleanup; serialized with any pending schedule.
+        }
+      });
 
   static Future<bool> scheduleDailyWorkoutReminder({
     required int hour,

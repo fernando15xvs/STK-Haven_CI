@@ -15,6 +15,7 @@ import 'package:core/features/workout/application/workout_history_provider.dart'
 import 'package:core/features/workout/application/workout_history_index.dart';
 import 'package:core/features/workout/application/workout_analysis_service.dart';
 import 'package:core/features/workout/application/workout_rest_policy.dart';
+import 'package:core/features/workout/application/rest_timer_adjustment.dart';
 import 'package:core/features/workout/application/unilateral_set_coordinator.dart';
 import 'package:core/features/workout/application/exercise_memory_actions.dart';
 import 'package:core/features/workout/application/exercise_performance_memory.dart';
@@ -808,6 +809,29 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     _persistDraft();
   }
 
+  /// Adds seconds to this active rest only. Routine and per-set durations
+  /// never change, even after the workout is resumed.
+  bool addRestSeconds(int seconds) {
+    final session = state.session;
+    if (session == null || !state.isResting) return false;
+    final end = RestTimerAdjustment.extend(
+      endsAt: session.currentRestEndsAt,
+      now: DateTime.now(),
+      additionalSeconds: seconds,
+    );
+    if (end == null) return false;
+    final remaining =
+        (end.difference(DateTime.now()).inMilliseconds + 999) ~/ 1000;
+    state = state.copyWith(
+      session: _rebuildSession(session.exercises, end),
+      isResting: true,
+      restTimerSeconds: remaining,
+    );
+    _persistDraft();
+    _startRestTimer(remaining, end);
+    return true;
+  }
+
   void skipRest() {
     if (state.session == null) return;
     _captureUndo();
@@ -825,7 +849,6 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     int? actualDurationMinutes,
   }) async {
     if (state.session == null) return null;
-    _cancelTimers();
 
     final now = DateTime.now();
     final duration = actualDurationMinutes == null
@@ -862,6 +885,10 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     }
 
     if (!hasCompletedWorkingSets) return EmptyWorkout();
+
+    final restEndBeforeFinish = state.session?.currentRestEndsAt;
+    // A zero-working-set attempt should not stop rest or discard the draft.
+    _cancelTimers();
 
     final effectiveSets = finalSession.exercises
         .expand((exercise) => exercise.sets)
@@ -915,6 +942,13 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
 
       return WorkoutFinished(analysisResult);
     } catch (_) {
+      // Keep the draft and recover the timer on failed saving/analysis.
+      final end = restEndBeforeFinish;
+      if (state.session != null && end != null && end.isAfter(DateTime.now())) {
+        final remaining =
+            (end.difference(DateTime.now()).inMilliseconds + 999) ~/ 1000;
+        _startRestTimer(remaining, end);
+      }
       return null;
     }
   }
