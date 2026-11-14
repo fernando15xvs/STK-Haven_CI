@@ -1,3 +1,4 @@
+import ActivityKit
 import SwiftUI
 import WidgetKit
 
@@ -96,7 +97,6 @@ private struct VerseView: View {
     }
 }
 
-@main
 struct StkVerseWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: VerseStore.kind, provider: VerseTimeline()) { entry in
@@ -106,4 +106,72 @@ struct StkVerseWidget: Widget {
         .description("Tu versículo de reflexión, también en la pantalla de bloqueo.")
         .supportedFamilies([.accessoryRectangular, .accessoryInline, .systemSmall])
     }
+}
+
+
+@available(iOS 16.2, *)
+private struct StkRestLiveActivityWidget: Widget {
+  var body: some WidgetConfiguration {
+    ActivityConfiguration(for: StkRestActivityAttributes.self) { context in
+      HStack(spacing: 12) {
+        Image(systemName: "timer")
+          .foregroundStyle(.blue)
+        VStack(alignment: .leading, spacing: 3) {
+          Text("STK Haven · Descanso")
+            .font(.caption.weight(.semibold))
+          Text(
+            timerInterval: context.state.startedAt...context.state.endTime,
+            countsDown: true,
+            showsHours: false
+          )
+          .font(.title2.monospacedDigit().weight(.bold))
+        }
+        Spacer(minLength: 0)
+        Text("Siguiente serie")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+      .padding(16)
+      .activityBackgroundTint(Color(red: 0.07, green: 0.11, blue: 0.17))
+      .activitySystemActionForegroundColor(.white)
+    } dynamicIsland: { context in
+      DynamicIsland {
+        DynamicIslandExpandedRegion(.leading) {
+          Label("Descanso STK", systemImage: "timer")
+            .font(.headline)
+        }
+        DynamicIslandExpandedRegion(.trailing) {
+          Text(
+            timerInterval: context.state.startedAt...context.state.endTime,
+            countsDown: true,
+            showsHours: false
+          )
+          .monospacedDigit()
+        }
+        DynamicIslandExpandedRegion(.bottom) {
+          Text("Siguiente serie al terminar el descanso")
+            .font(.caption)
+        }
+      } compactLeading: {
+        Image(systemName: "timer")
+      } compactTrailing: {
+        Text(context.state.endTime, style: .timer)
+          .monospacedDigit()
+          .frame(width: 48)
+      } minimal: {
+        Image(systemName: "timer")
+      }
+    }
+  }
+}
+
+@main
+struct StkHavenWidgetBundle: WidgetBundle {
+  @WidgetBundleBuilder
+  var body: some Widget {
+    StkVerseWidget()
+    if #available(iOS 16.2, *) {
+      StkRestLiveActivityWidget()
+    }
+  }
 }

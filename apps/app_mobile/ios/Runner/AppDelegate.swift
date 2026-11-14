@@ -1,3 +1,4 @@
+import AVFoundation
 import CoreMotion
 import Flutter
 import PDFKit
@@ -8,6 +9,7 @@ import WidgetKit
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   private let pedometer = CMPedometer()
+  private var restTonePlayer: AVAudioPlayer?
 
   override func application(
     _ application: UIApplication,
@@ -38,6 +40,63 @@ import WidgetKit
     }
 
     if let controller = window?.rootViewController as? FlutterViewController {
+      let toneChannel = FlutterMethodChannel(
+        name: "stk_haven/rest_tone",
+        binaryMessenger: controller.binaryMessenger
+      )
+      toneChannel.setMethodCallHandler { [weak self] call, result in
+        guard call.method == "play" else {
+          result(FlutterMethodNotImplemented)
+          return
+        }
+        guard let url = Bundle.main.url(
+          forResource: "stk_rest_complete", withExtension: "wav"
+        ) else {
+          result(false)
+          return
+        }
+        do {
+          let player = try AVAudioPlayer(contentsOf: url)
+          self?.restTonePlayer = player
+          result(player.play())
+        } catch {
+          result(false)
+        }
+      }
+
+      let restActivityChannel = FlutterMethodChannel(
+        name: "stk_haven/rest_activity",
+        binaryMessenger: controller.binaryMessenger
+      )
+      restActivityChannel.setMethodCallHandler { call, result in
+        if #available(iOS 16.2, *) {
+          switch call.method {
+          case "update":
+            guard let args = call.arguments as? [String: Any],
+                  let sessionId = args["sessionId"] as? String,
+                  let epoch = args["endEpochMillis"] as? NSNumber else {
+              result(false)
+              return
+            }
+            let endTime = Date(timeIntervalSince1970: epoch.doubleValue / 1000)
+            Task {
+              result(await StkRestLiveActivityBridge.update(
+                sessionId: sessionId, endTime: endTime))
+            }
+          case "end":
+            Task {
+              await StkRestLiveActivityBridge.end()
+              result(true)
+            }
+          default:
+            result(FlutterMethodNotImplemented)
+          }
+        } else {
+          // Pre-16.2 iPhones retain the in-app timer and final local alert.
+          result(false)
+        }
+      }
+
       let timezoneChannel = FlutterMethodChannel(
         name: "stk_haven/timezone",
         binaryMessenger: controller.binaryMessenger
