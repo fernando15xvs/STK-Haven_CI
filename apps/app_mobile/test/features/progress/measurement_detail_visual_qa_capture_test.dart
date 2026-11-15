@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/body_measurement_silhouette.dart';
 
@@ -44,6 +45,14 @@ final _newer = BodyMeasurement(
 );
 
 void main() {
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    // Widget tests otherwise use Ahem rectangles instead of Outfit glyphs.
+    final loader = FontLoader('Outfit')
+      ..addFont(rootBundle.load('assets/fonts/Outfit-Variable.ttf'));
+    await loader.load();
+  });
+
   for (final dark in [false, true]) {
     testWidgets('capture all 13 detail contours in ${dark ? 'dark' : 'light'}',
         (tester) async {
@@ -51,6 +60,27 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+
+      // Image.asset can produce a blank first screenshot while its async
+      // decoder is still loading. Warm all three actual detail sources before
+      // taking any capture and retain them in the test's image cache.
+      await tester.pumpWidget(
+        const MaterialApp(home: Scaffold(body: SizedBox.shrink())),
+      );
+      final assetContext = tester.element(find.byType(Scaffold));
+      await tester.runAsync(() async {
+        for (final filename in [
+          'body_front.png',
+          'body_back.png',
+          'detail_chest.png',
+        ]) {
+          await precacheImage(
+            AssetImage('assets/measurement_anatomy/png/$filename'),
+            assetContext,
+          );
+        }
+      });
+      await tester.pumpAndSettle();
 
       final folder = Directory('build/measurement_detail_qa')
         ..createSync(recursive: true);
