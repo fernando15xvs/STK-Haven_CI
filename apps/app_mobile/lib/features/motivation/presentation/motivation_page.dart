@@ -361,6 +361,27 @@ class _MotivationPageState extends State<MotivationPage> {
             if(player.currentTrack!=null)...[
               _player(),
               const SizedBox(height:20),
+            ] else if(player.resumeTitle case final title?) ...[
+              Card(
+                key:const ValueKey('motivation_resume_last'),
+                child:ListTile(
+                  leading:const Icon(Icons.history_rounded),
+                  title:Text('Retomar: $title',
+                    maxLines:2,overflow:TextOverflow.ellipsis),
+                  subtitle:const Text('Solo se reproduce cuando tú lo eliges.'),
+                  trailing:const Icon(Icons.play_arrow_rounded),
+                  onTap:()async{
+                    final resumed=await player.resumeLast();
+                    if(!mounted)return;
+                    if(resumed){
+                      _openNowPlaying();
+                    }else{
+                      _message('Ese archivo ya no está disponible.');
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height:16),
             ],
             Text('Colecciones',style:AppTypography.headlineMedium),
             const SizedBox(height:9),
