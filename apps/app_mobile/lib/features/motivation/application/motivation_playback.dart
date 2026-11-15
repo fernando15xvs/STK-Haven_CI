@@ -111,7 +111,7 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
       for(final item in _original)item.id,
     ];
     if(!queueIds.contains(track.id))queueIds.add(track.id);
-    final position=audio.position.inMilliseconds.clamp(0,24*60*60*1000);
+    final position=audio.position.inMilliseconds.clamp(0,24*60*60*1000).toInt();
     final snapshot=MotivationResumeSnapshot(
       trackId:track.id,
       queueIds:List.unmodifiable(queueIds),
