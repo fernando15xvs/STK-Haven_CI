@@ -63,7 +63,8 @@ class MeasurementSummaryData {
 }
 
 /// Reference-style dashboard beneath the front/back muscle figure.
-/// Four tiles wrap to 2x2 on phones; all text and accents remain theme aware.
+/// Secondary compact summary: the map remains the main visual on phones.
+ /// Four metrics retain their real values and accessibility descriptions.
 class BodyMeasurementSummary extends StatelessWidget {
   final List<BodyMeasurement> measurements;
   final WeightUnit weightUnit;
@@ -96,14 +97,14 @@ class BodyMeasurementSummary extends StatelessWidget {
       key: const Key('measurement_summary'),
       margin: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: const EdgeInsets.all(AppSpacing.sm),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
               Expanded(child: Text('Resumen de medidas',
-                style: AppTypography.headlineMedium.copyWith(
-                  color: colors.textPrimary, fontWeight: FontWeight.w800))),
+                style: AppTypography.headlineSmall.copyWith(
+                  color: colors.textPrimary, fontWeight: FontWeight.w700))),
               Icon(Icons.insights_outlined, size: 20, color: colors.primary),
             ]),
             const SizedBox(height: AppSpacing.sm),
@@ -121,8 +122,10 @@ class BodyMeasurementSummary extends StatelessWidget {
                     suffix: weight == null ? '' : weightUnit.label,
                     supporting: weight == null
                       ? 'Sin registro'
-                      : '${change(weight,
-                            convert: (v) => WeightConverter.displayWeight(v, weightUnit))} ${weightUnit.label}',
+                      : weight.difference == null
+                          ? 'Sin comparación'
+                          : '${change(weight,
+                                convert: (v) => WeightConverter.displayWeight(v, weightUnit))} ${weightUnit.label}',
                     colors: colors,
                   )),
                   SizedBox(width: tileWidth, child: _SummaryTile(
@@ -132,7 +135,9 @@ class BodyMeasurementSummary extends StatelessWidget {
                     value: fat == null ? '—' : fat.value.toStringAsFixed(1),
                     suffix: fat == null ? '' : '%',
                     supporting: fat == null ? 'Sin registro'
-                      : '${change(fat)} puntos',
+                      : fat.difference == null
+                          ? 'Sin comparación'
+                          : '${change(fat)} puntos',
                     colors: colors,
                   )),
                   SizedBox(width: tileWidth, child: _SummaryTile(
@@ -195,8 +200,10 @@ class _SummaryTile extends StatelessWidget {
     // A fixed 119px tile clipped values and supporting labels with large text.
     // Grow both columns equally and let long labels wrap instead of shrinking.
     final scale = (MediaQuery.textScalerOf(context).scale(14) / 14)
-        .clamp(1.0, 1.6).toDouble();
-    final tileHeight = 136.0 + 160.0 * (scale - 1.0);
+        .clamp(1.0, 2.0).toDouble();
+    // Show more of the anatomy on the same screen while allowing each
+    // summary metric to grow when the OS requests a larger font.
+    final tileHeight = 112.0 + 125.0 * (scale - 1.0);
     final spokenValue = value == '—'
         ? 'Sin registro'
         : '$value${suffix.isEmpty ? '' : ' $suffix'}';

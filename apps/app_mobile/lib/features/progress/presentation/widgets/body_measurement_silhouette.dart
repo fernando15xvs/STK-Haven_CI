@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:core/core/theme/app_palette.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
@@ -107,6 +108,55 @@ const _rear = <_Callout>[
   _Callout(MeasurementMetric.rightCalf, 'Pant. der.', false, .790, Offset(.60, .730)),
 ];
 
+/// Stable side-by-side packing of visible measurement labels.
+/// Labels on the same side never overlap, regardless of text scaling.
+/// Original anatomical anchors are untouched; only the label slots move.
+@visibleForTesting
+List<double> resolveMeasurementCalloutTops({
+  required List<double> desiredRows,
+  required List<bool> onLeft,
+  required double canvasHeight,
+  required double badgeHeight,
+  double gap = 8,
+  double inset = 4,
+}) {
+  assert(desiredRows.length == onLeft.length);
+  final result = List<double>.filled(desiredRows.length, 0);
+  final maxTop = math.max(inset, canvasHeight - inset - badgeHeight);
+  for (final side in [true, false]) {
+    final indices = <int>[
+      for (var i = 0; i < desiredRows.length; i++)
+        if (onLeft[i] == side) i,
+    ]..sort((a, b) => desiredRows[a].compareTo(desiredRows[b]));
+    if (indices.isEmpty) continue;
+    // Forward pass: keep the natural locations when they already fit.
+    for (var j = 0; j < indices.length; j++) {
+      final i = indices[j];
+      final desired = (desiredRows[i] * canvasHeight)
+          .clamp(inset, maxTop).toDouble();
+      result[i] = j == 0
+          ? desired
+          : math.max(desired, result[indices[j - 1]] + badgeHeight + gap);
+    }
+    // Backward pass: fit the last label and distribute upstream only if
+    // necessary, without changing the order of labels on each side.
+    result[indices.last] = math.min(result[indices.last], maxTop);
+    for (var j = indices.length - 2; j >= 0; j--) {
+      final current = indices[j];
+      final next = indices[j + 1];
+      result[current] = math.min(
+        result[current], result[next] - badgeHeight - gap);
+    }
+    // The canvas is sized for the maximum badges per side, so this should
+    // normally be a no-op. It also protects against negative top offsets.
+    if (result[indices.first] < inset) {
+      final correction = inset - result[indices.first];
+      for (final index in indices) result[index] += correction;
+    }
+  }
+  return result;
+}
+
 /// A single authentic anatomical PNG, side labels and leader-lines.
 /// Nothing (including cm values) is baked into the PNG asset.
 class BodyMeasurementSilhouette extends StatefulWidget {
@@ -205,16 +255,23 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               // clipping two rows in a hard-coded 42px badge. Increase
               // canvas height enough to avoid same-side overlap at 320px.
               final scaler = MediaQuery.textScalerOf(context);
+              final scale = scaler.scale(14) / 14;
+              // At accessibility sizes allow the label name to wrap; never
+              // shrink Outfit or obscure the numeric measurement.
+              final nameLines = scale > 1.4 ? 2 : 1;
               final labelHeight = math.max(
-                42.0,
+                48.0,
                 scaler.scale(AppTypography.labelSmall.fontSize!) *
-                    AppTypography.labelSmall.height! +
+                    AppTypography.labelSmall.height! * nameLines +
                     scaler.scale(AppTypography.bodySmall.fontSize!) *
                     AppTypography.bodySmall.height! +
                     AppSpacing.xxs * 2 + AppSpacing.xs,
               );
+              // Four is the maximum number of callouts on either side.
+              // Reserve actual reading space instead of inflating the
+              // canvas from a fixed percentage of screen height.
               final h = math.max(
-                math.max(405.0, labelHeight / 0.11),
+                math.max(405.0, labelHeight * 4 + 5 * 8.0),
                 math.min(570.0, w * 1.43),
               );
               // Keep the actual PNG coordinate space at its intrinsic 0.4
@@ -237,17 +294,23 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
               final ink = accent.primary;
               // Compact screens need wider labels when the user requests
               // larger accessibility text, without shrinking Outfit glyphs.
-              final badgeWidth = w * (w < 360 ? .30 : .265);
+              final badgeWidth = w * (scale > 1.4 ? .33 : (w < 360 ? .30 : .265));
               final anchors = [
                 for (final c in positions)
                   Offset(figureLeft + c.anchor.dx * figureWidth,
                     figureTop + c.anchor.dy * figureHeight),
               ];
+              final labelTops = resolveMeasurementCalloutTops(
+                desiredRows: [for (final i in visible) positions[i].row],
+                onLeft: [for (final i in visible) positions[i].labelLeft],
+                canvasHeight: h,
+                badgeHeight: labelHeight,
+              );
               final ends = [
-                for (final i in visible)
-                  Offset(positions[i].labelLeft
+                for (var j = 0; j < visible.length; j++)
+                  Offset(positions[visible[j]].labelLeft
                       ? badgeWidth + 3 : w - badgeWidth - 3,
-                    positions[i].row * h + labelHeight * .5),
+                    labelTops[j] + labelHeight * .5),
               ];
               return SizedBox(
                 height: h,
@@ -274,20 +337,21 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
                   ))),
                   // Show all recorded contorno values as compact badges;
                   // still allow opening every unrecorded contour via its dot.
-                  for (final i in visible)
+                  for (var j = 0; j < visible.length; j++)
                     Positioned(
-                      left:positions[i].labelLeft ? 3 : w-badgeWidth-3,
-                      top:positions[i].row*h,
+                      left:positions[visible[j]].labelLeft
+                          ? 3 : w-badgeWidth-3,
+                      top:labelTops[j],
                       width:badgeWidth,
                       height:labelHeight,
                       child: _MeasureCalloutBadge(
-                        key:Key('measure_chip_${positions[i].metric.name}'),
-                        metric:positions[i].metric,
-                        shortName:positions[i].shortName,
+                        key:Key('measure_chip_${positions[visible[j]].metric.name}'),
+                        metric:positions[visible[j]].metric,
+                        shortName:positions[visible[j]].shortName,
                         value:SilhouetteMeasurementData.latest(
-                          widget.measurements,positions[i].metric),
-                        selected:widget.selected == positions[i].metric,
-                        onPressed:()=>_open(positions[i].metric),
+                          widget.measurements,positions[visible[j]].metric),
+                        selected:widget.selected == positions[visible[j]].metric,
+                        onPressed:()=>_open(positions[visible[j]].metric),
                       ),
                     ),
                   for(var i=0;i<positions.length;i++)
@@ -385,8 +449,10 @@ class _MeasureCalloutBadge extends StatelessWidget {
               children: [
                 Text(
                   shortName,
-                  maxLines: 1,
+                  maxLines: MediaQuery.textScalerOf(context).scale(14) / 14 > 1.4
+                      ? 2 : 1,
                   overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: AppTypography.labelSmall.copyWith(color: foreground),
                 ),
                 const SizedBox(height: AppSpacing.xxs),
@@ -642,32 +708,32 @@ class _MeasurementArtworkRegion {
   static _MeasurementArtworkRegion forMetric(MeasurementMetric metric) =>
       switch (metric) {
         MeasurementMetric.neck =>
-          const _MeasurementArtworkRegion(false, Offset(.50, .166), .14, .15),
+          const _MeasurementArtworkRegion(false, Offset(.50, .166), .14, .055),
         MeasurementMetric.shoulders =>
-          const _MeasurementArtworkRegion(false, Offset(.50, .190), .36, .21),
+          const _MeasurementArtworkRegion(false, Offset(.50, .190), .36, .07),
         MeasurementMetric.leftArm =>
-          const _MeasurementArtworkRegion(false, Offset(.785, .300), .11, .22),
+          const _MeasurementArtworkRegion(false, Offset(.785, .300), .11, .065),
         MeasurementMetric.rightArm =>
-          const _MeasurementArtworkRegion(false, Offset(.215, .300), .11, .22),
+          const _MeasurementArtworkRegion(false, Offset(.215, .300), .11, .065),
         MeasurementMetric.leftForearm =>
-          const _MeasurementArtworkRegion(true, Offset(.19, .385), .09, .20),
+          const _MeasurementArtworkRegion(true, Offset(.19, .385), .09, .055),
         MeasurementMetric.rightForearm =>
-          const _MeasurementArtworkRegion(true, Offset(.81, .385), .09, .20),
+          const _MeasurementArtworkRegion(true, Offset(.81, .385), .09, .055),
         MeasurementMetric.waist =>
-          const _MeasurementArtworkRegion(true, Offset(.50, .360), .25, .17),
+          const _MeasurementArtworkRegion(true, Offset(.50, .360), .25, .055),
         MeasurementMetric.hips =>
-          const _MeasurementArtworkRegion(true, Offset(.54, .460), .32, .21),
+          const _MeasurementArtworkRegion(true, Offset(.54, .460), .32, .07),
         MeasurementMetric.leftLeg =>
-          const _MeasurementArtworkRegion(false, Offset(.585, .535), .15, .25),
+          const _MeasurementArtworkRegion(false, Offset(.585, .535), .15, .07),
         MeasurementMetric.rightLeg =>
-          const _MeasurementArtworkRegion(false, Offset(.415, .535), .15, .25),
+          const _MeasurementArtworkRegion(false, Offset(.415, .535), .15, .07),
         MeasurementMetric.leftCalf =>
-          const _MeasurementArtworkRegion(true, Offset(.40, .730), .12, .24),
+          const _MeasurementArtworkRegion(true, Offset(.40, .730), .12, .06),
         MeasurementMetric.rightCalf =>
-          const _MeasurementArtworkRegion(true, Offset(.60, .730), .12, .24),
+          const _MeasurementArtworkRegion(true, Offset(.60, .730), .12, .06),
         // Historical general calf records are NOT attributed to either side.
         MeasurementMetric.calves =>
-          const _MeasurementArtworkRegion(true, Offset(.50, .730), .28, .24),
+          const _MeasurementArtworkRegion(true, Offset(.50, .730), .28, .06),
         _ =>
           const _MeasurementArtworkRegion(false, Offset(.50, .245), .30, .20),
       };
@@ -685,12 +751,13 @@ class _CircumferenceGuidePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Rect.fromCenter(
       center: center, width: rx * 2, height: ry * 2);
+    // A thin tape-position guide, not a filled muscle heatmap.
     canvas.drawOval(rect, Paint()
-      ..color = color.withValues(alpha: .10)
+      ..color = color.withValues(alpha: .12)
       ..style = PaintingStyle.fill);
     canvas.drawOval(rect, Paint()
-      ..color = color.withValues(alpha: .88)
-      ..strokeWidth = 3
+      ..color = color.withValues(alpha: .92)
+      ..strokeWidth = 2.4
       ..style = PaintingStyle.stroke);
   }
 
