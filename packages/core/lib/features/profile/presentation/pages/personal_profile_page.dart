@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:core/domain/models/user_experience_profile.dart';
+import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/profile/presentation/widgets/profile_avatar.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
@@ -199,6 +200,78 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                         onSelected: (_) => setState(() => _draft = draft.copyWith(avatarEmoji: avatar, clearAvatarPhoto: true)),
                       ),
                   ],
+                ),
+                const SizedBox(height: 24),
+                Text('Datos personales opcionales',
+                  style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text(
+                  'Sirven para adaptar la experiencia y la calculadora adulta. '
+                  'Una fecha declarada no sustituye la verificación de edad.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  key:const ValueKey('profile_birth_date'),
+                  icon:const Icon(Icons.calendar_month_outlined),
+                  label:Text(draft.dateOfBirth==null
+                    ? 'Indicar fecha de nacimiento'
+                    : '${draft.dateOfBirth!.day.toString().padLeft(2,'0')}/'
+                      '${draft.dateOfBirth!.month.toString().padLeft(2,'0')}/'
+                      '${draft.dateOfBirth!.year}'),
+                  onPressed:()async{
+                    final now=DateTime.now();
+                    final picked=await showDatePicker(
+                      context:context,
+                      initialDate:draft.dateOfBirth??DateTime(now.year-18),
+                      firstDate:DateTime(1900),lastDate:now);
+                    if(picked!=null && mounted){
+                      setState(()=>_draft=draft.copyWith(dateOfBirth:picked));
+                    }
+                  },
+                ),
+                if(draft.dateOfBirth!=null)
+                  TextButton(onPressed:()=>setState(()=>
+                    _draft=draft.copyWith(clearDateOfBirth:true)),
+                    child:const Text('Quitar fecha')),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<GenderIdentity>(
+                  key:ValueKey(draft.genderIdentity?.name??'gender_none'),
+                  initialValue:draft.genderIdentity,
+                  isExpanded:true,
+                  decoration:const InputDecoration(labelText:'Género (opcional)'),
+                  items:const [
+                    DropdownMenuItem(value:GenderIdentity.woman,
+                      child:Text('Mujer')),
+                    DropdownMenuItem(value:GenderIdentity.man,
+                      child:Text('Hombre')),
+                    DropdownMenuItem(value:GenderIdentity.nonBinary,
+                      child:Text('No binario / otra identidad')),
+                    DropdownMenuItem(value:GenderIdentity.preferNotToSay,
+                      child:Text('Prefiero no decirlo')),
+                  ],
+                  onChanged:(value)=>setState(()=>_draft=value==null
+                    ?draft.copyWith(clearGenderIdentity:true)
+                    :draft.copyWith(genderIdentity:value)),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<EnergyEquationSex>(
+                  key:ValueKey(draft.equationSexForEnergy?.name??'equation_none'),
+                  initialValue:draft.equationSexForEnergy,
+                  isExpanded:true,
+                  decoration:const InputDecoration(
+                    labelText:'Parámetro de cálculo energético (opcional)',
+                    helperText:'Es independiente de tu identidad de género.',
+                  ),
+                  items:const [
+                    DropdownMenuItem(value:EnergyEquationSex.female,
+                      child:Text('Referencia femenina')),
+                    DropdownMenuItem(value:EnergyEquationSex.male,
+                      child:Text('Referencia masculina')),
+                  ],
+                  onChanged:(value)=>setState(()=>_draft=value==null
+                    ?draft.copyWith(clearEquationSexForEnergy:true)
+                    :draft.copyWith(equationSexForEnergy:value)),
                 ),
                 const SizedBox(height: 24),
                 SwitchListTile.adaptive(
