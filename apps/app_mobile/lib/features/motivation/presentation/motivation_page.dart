@@ -753,10 +753,8 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     controller=c;
     try{
       await c.initialize();
-      if(!mounted || controller!=c){
-        await c.dispose();
-        return;
-      }
+      // A replacement/dispose already owns the old controller cleanup.
+      if(!mounted || controller!=c)return;
       await c.setVolume(0);
       // Video has no audible track: just_audio is the only sound clock.
       // Its repeat-one policy must also be applied to the visual decoder.
@@ -768,7 +766,8 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
            !c.value.isInitialized || !visible)return;
         if((c.value.position-pos).inMilliseconds.abs()>900 && !seeking){
           seeking=true;
-          unawaited(c.seekTo(pos).whenComplete(()=>seeking=false));
+          unawaited(c.seekTo(pos).whenComplete(()=>seeking=false)
+            .catchError((Object _){ /* Source was switched. */ }));
         }
       });
       playing=widget.playback.audio.playerStateStream.listen((state){
@@ -782,9 +781,11 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
       });
       setState(()=>ready=true);
     }catch(_){
-      if(controller==c && mounted)setState(()=>ready=false);
-      if(controller==c)controller=null;
-      unawaited(c.dispose());
+      if(controller==c){
+        controller=null;
+        if(mounted)setState(()=>ready=false);
+        unawaited(c.dispose());
+      }
     }
   }
   void _syncVideoLoop(){
