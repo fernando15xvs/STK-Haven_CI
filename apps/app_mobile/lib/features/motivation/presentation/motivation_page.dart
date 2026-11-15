@@ -708,6 +708,7 @@ class _SilentVideoPreview extends StatefulWidget {
 class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     with WidgetsBindingObserver {
   VideoPlayerController? controller;
+  final ValueNotifier<VideoPlayerController?> _cinemaSource=ValueNotifier(null);
   StreamSubscription<Duration>? position;
   StreamSubscription<PlayerState>? playing;
   bool ready=false,visible=true,seeking=false;
@@ -734,6 +735,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
   void _resetVideoSource() {
     final previous=controller;
     controller=null;
+    _cinemaSource.value=null;
     final oldPosition=position;
     final oldPlaying=playing;
     position=null;
@@ -779,10 +781,12 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
           unawaited(c.pause());
         }
       });
+      _cinemaSource.value=c;
       setState(()=>ready=true);
     }catch(_){
       if(controller==c){
         controller=null;
+        _cinemaSource.value=null;
         if(mounted)setState(()=>ready=false);
         unawaited(c.dispose());
       }
@@ -813,6 +817,8 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     unawaited(playing?.cancel());
     final old=controller;
     controller=null;
+    _cinemaSource.value=null;
+    _cinemaSource.dispose();
     if(old!=null)unawaited(old.dispose());
     super.dispose();
   }
@@ -830,10 +836,15 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
           title:const Text('Modo cine'),
         ),
         body:SafeArea(
-          child:Center(
-            child:AspectRatio(
-              aspectRatio:c.value.aspectRatio,
-              child:VideoPlayer(c),
+          child:ValueListenableBuilder<VideoPlayerController?>(
+            valueListenable:_cinemaSource,
+            builder:(ctx,active,_)=>Center(
+              child:active==null || !active.value.isInitialized
+                ?const CircularProgressIndicator()
+                :AspectRatio(
+                  aspectRatio:active.value.aspectRatio,
+                  child:VideoPlayer(active),
+                ),
             ),
           ),
         ),
