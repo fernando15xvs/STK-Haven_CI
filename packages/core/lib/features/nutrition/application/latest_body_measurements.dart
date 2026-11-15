@@ -21,6 +21,13 @@ class LatestBodyMeasurements {
 
   bool get canEstimateEnergy => weightKg != null && heightCm != null;
 
+  /// Detects edits to an existing record ID without recalculating stored plans.
+  String get fingerprint =>
+      '${weightKg?.recordId}:${weightKg?.value}:'
+      '${weightKg?.recordedAt.microsecondsSinceEpoch}/'
+      '${heightCm?.recordId}:${heightCm?.value}:'
+      '${heightCm?.recordedAt.microsecondsSinceEpoch}';
+
   factory LatestBodyMeasurements.fromRecords(
     Iterable<BodyMeasurement> records,
   ) {
