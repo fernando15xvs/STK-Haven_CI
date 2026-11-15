@@ -54,7 +54,9 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
     }
     return track;
   }
-  bool get playing=>audio.playing;
+  /// just_audio can keep playing=true after the final sample has completed.
+  bool get completed => audio.processingState == ProcessingState.completed;
+  bool get playing => audio.playing && !completed;
   Duration get position=>audio.position;
   Duration? get duration=>audio.duration;
   List<MotivationTrack> get queue=>List.unmodifiable(_queue);
@@ -135,14 +137,15 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
     if(repeat==value)return;
     final current=currentTrack;
     final position=audio.position;
-    final wasPlaying=audio.playing;
+    final wasPlaying=playing;
     repeat=value;
     if(current==null)return;
     if(value==MotivationRepeat.stop ||
        _queue.length!=_original.length) {
       final i=_original.indexWhere((t)=>t.id==current.id);
       if(i>=0){
-        await playQueue(_original,startIndex:i,initialPosition:position);
+        await playQueue(_original,startIndex:i,
+          initialPosition:completed ? Duration.zero : position);
         if(!wasPlaying)await audio.pause();
       }
     }else{
@@ -162,9 +165,12 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> togglePlay() async {
-    if(audio.playing){
+    if(playing){
       await audio.pause();
     }else if(currentTrack!=null){
+      // completed is orthogonal to playing: simply calling play() at the
+      // end leaves the native decoder at EOF. Explicitly rewind first.
+      if(completed) await audio.seek(Duration.zero);
       unawaited(audio.play());
     }
     notifyListeners();
