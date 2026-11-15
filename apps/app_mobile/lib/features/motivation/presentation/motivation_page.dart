@@ -128,6 +128,10 @@ class _MotivationPageState extends State<MotivationPage> {
       }catch(e){_message('No se pudo guardar la portada: $e');}
     }else if(action=='clearCover'){
       await library.clearArtwork(track.id);
+    }else if(action=='thumbnail'){
+      final generated=await library.ensureVideoThumbnail(track.id);
+      if(!generated)_message('Este video no permite extraer miniatura. '
+        'Puedes elegir una imagen manual.');
     }else if(action=='mode'){
       if(!mounted)return;
       await showModalBottomSheet<void>(context:context,
@@ -479,6 +483,9 @@ class _MotivationPageState extends State<MotivationPage> {
                     const PopupMenuItem(value:'cover',child:Text('Cambiar portada')),
                     if(t.artworkFileName!=null)
                       const PopupMenuItem(value:'clearCover',child:Text('Quitar portada')),
+                    if(t.isVideo && t.thumbnailFileName==null)
+                      const PopupMenuItem(value:'thumbnail',
+                        child:Text('Generar miniatura del video')),
                     const PopupMenuItem(value:'mode',child:Text('Cambiar modo')),
                     const PopupMenuItem(value:'list',child:Text('Playlists')),
                     const PopupMenuItem(value:'delete',child:Text('Eliminar copia')),
