@@ -1,5 +1,9 @@
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
+import 'package:core/domain/models/nutrition_intelligence.dart';
+import 'package:core/domain/models/body_measurement.dart';
+import 'package:core/core/utils/weight_converter.dart';
+import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/onboarding/application/onboarding_recommendation_service.dart';
 import 'package:core/features/onboarding/application/program_service.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
@@ -18,7 +22,7 @@ class OnboardingPage extends ConsumerStatefulWidget {
 }
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
-  static const int _pageCount = 6;
+  static const int _pageCount = 7;
 
   final PageController _pageController = PageController();
   int _currentIndex = 0;
@@ -33,10 +37,18 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   bool _remindersWanted = false;
   FaithContentPreference _faith = FaithContentPreference.undecided;
   bool _saving = false;
+  DateTime? _birthDate;
+  GenderIdentity? _genderIdentity;
+  EnergyEquationSex? _equationSexForEnergy;
+  bool _saveFirstMeasurement = false;
+  final _weightController = TextEditingController();
+  final _heightController = TextEditingController();
 
   @override
   void dispose() {
     _pageController.dispose();
+    _weightController.dispose();
+    _heightController.dispose();
     super.dispose();
   }
 
@@ -63,6 +75,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       workoutRemindersWanted: _remindersWanted,
       faithPreference: _faith,
       habitsEnabled: false,
+      dateOfBirth: _birthDate,
+      genderIdentity: _genderIdentity,
+      equationSexForEnergy: _equationSexForEnergy,
       onboardingVersion: UserExperienceProfile.currentOnboardingVersion,
     );
   }
@@ -72,10 +87,42 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     setState(() => _saving = true);
 
     try {
+      final rawWeight = _weightController.text.trim();
+      final rawHeight = _heightController.text.trim();
+      final weight = double.tryParse(rawWeight.replaceAll(',', '.'));
+      final height = double.tryParse(rawHeight.replaceAll(',', '.'));
+      final weightKg = weight == null ? null :
+          WeightConverter.toCanonicalKg(weight, _weightUnit);
+      if (_saveFirstMeasurement &&
+          ((rawWeight.isNotEmpty && (weightKg == null || !weightKg.isFinite ||
+              weightKg < 35 || weightKg > 300)) ||
+           (rawHeight.isNotEmpty && (height == null || !height.isFinite ||
+              height < 120 || height > 230)) ||
+           (rawWeight.isEmpty && rawHeight.isEmpty))) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Revisa peso y altura antes de guardarlos en Medidas.'),
+        ));
+        return;
+      }
       final profile = _buildProfile();
       await ref
           .read(userExperienceProfileProvider.notifier)
           .updateProfile(profile);
+
+      // One first measurement only, with explicit opt-in; never a duplicate
+      // weight/height table in the experience profile or nutrition planner.
+      if (_saveFirstMeasurement) {
+        const id = 'stk_onboarding_first_measurement_v3';
+        if (!ref.read(bodyMeasurementProvider).any((m) => m.id == id)) {
+          await ref.read(bodyMeasurementProvider.notifier).saveMeasurement(
+            BodyMeasurement(
+              id: id, date: DateTime.now(),
+              weightKg: rawWeight.isEmpty ? null : weightKg,
+              heightCm: rawHeight.isEmpty ? null : height,
+            ),
+          );
+        }
+      }
 
       final settings = ref.read(settingsProvider);
       ref
@@ -98,6 +145,12 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             );
       } else {
         await ref.read(programServiceProvider).completeOnboardingFromScratch();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No se pudo guardar tu configuración. Inténtalo otra vez.'),
+        ));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -153,6 +206,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   _goalStep(),
                   _scheduleStep(),
                   _preferencesStep(),
+                  _personalStep(),
                   _faithStep(),
                   _summaryStep(context),
                 ],
@@ -458,6 +512,125 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     );
   }
 
+  Widget _personalStep() {
+    final dob = _birthDate;
+    final age = dob == null ? null : _buildProfile().ageAt(DateTime.now());
+    final colors = AppColors.of(context);
+    return _stepShell(
+      context,
+      title: 'Tu perfil básico',
+      subtitle: 'Estos datos son opcionales. Te evitan repetir preguntas.',
+      actionLabel: 'Continuar',
+      onAction: _next,
+      children: [
+        Text('Fecha de nacimiento (opcional)', style: AppTypography.labelLarge),
+        const SizedBox(height: 6),
+        Text(
+          'La usamos para adaptar la experiencia, no como prueba de mayoría de edad.',
+          style: AppTypography.bodySmall.copyWith(color: colors.textSecondary),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const ValueKey('onboarding_birth_date'),
+          icon: const Icon(Icons.cake_outlined),
+          label: Text(dob == null
+              ? 'Indicar fecha'
+              : '\${dob.day.toString().padLeft(2, '0')}/'
+                '\${dob.month.toString().padLeft(2, '0')}/\${dob.year}'
+                ' · \${age ?? '?'} años'),
+          onPressed: () async {
+            final now = DateTime.now();
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: dob ?? DateTime(now.year - 18, now.month, now.day),
+              firstDate: DateTime(1900),
+              lastDate: now,
+            );
+            if (picked != null && mounted) setState(() => _birthDate = picked);
+          },
+        ),
+        if (dob != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => setState(() => _birthDate = null),
+              child: const Text('No indicar'),
+            ),
+          ),
+        if (age != null && age < 18)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'STK Haven mantiene tus rutinas y hábitos. '
+              'Los objetivos calóricos personalizados no están disponibles '
+              'para menores; priorizamos técnica, descanso y alimentación variada.',
+              style: AppTypography.bodySmall.copyWith(color: colors.textSecondary),
+            ),
+          ),
+        const SizedBox(height: AppSpacing.md),
+        DropdownButtonFormField<GenderIdentity>(
+          initialValue: _genderIdentity,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Género (opcional)'),
+          items: const [
+            DropdownMenuItem(value: GenderIdentity.woman, child: Text('Mujer')),
+            DropdownMenuItem(value: GenderIdentity.man, child: Text('Hombre')),
+            DropdownMenuItem(value: GenderIdentity.nonBinary,
+              child: Text('No binario / otra identidad')),
+            DropdownMenuItem(value: GenderIdentity.preferNotToSay,
+              child: Text('Prefiero no decirlo')),
+          ],
+          onChanged: (value) => setState(() => _genderIdentity = value),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        DropdownButtonFormField<EnergyEquationSex>(
+          initialValue: _equationSexForEnergy,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Parámetro para cálculo energético (opcional)',
+            helperText: 'Solo para estimaciones adultas; independiente del género.',
+          ),
+          items: const [
+            DropdownMenuItem(value: EnergyEquationSex.female,
+              child: Text('Referencia femenina')),
+            DropdownMenuItem(value: EnergyEquationSex.male,
+              child: Text('Referencia masculina')),
+          ],
+          onChanged: (value) => setState(() => _equationSexForEnergy = value),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text('Primer registro en Medidas (opcional)',
+          style: AppTypography.headlineMedium),
+        const SizedBox(height: 8),
+        Text(
+          'El peso y la altura solo se guardarán en Medidas si lo autorizas. '
+          'No se crean campos duplicados en Nutrición.',
+          style: AppTypography.bodySmall.copyWith(color: colors.textSecondary),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _weightController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(labelText: 'Peso (\${_weightUnit.label})'),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _heightController,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'Altura (cm)'),
+        ),
+        CheckboxListTile(
+          key: const ValueKey('onboarding_save_first_measurement'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Guardar como primera medida'),
+          subtitle: const Text('Opcional. Se guardará solo una vez.'),
+          value: _saveFirstMeasurement,
+          onChanged: (v) => setState(() => _saveFirstMeasurement = v ?? false),
+        ),
+      ],
+    );
+  }
+
   Widget _faithStep() {
     return _stepShell(
       context,
@@ -537,7 +710,12 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     'Entorno',
                     _environmentLabel(_environment),
                   ),
-                  _summaryRow(context, 'Peso', _weightUnit.label),
+                  _summaryRow(context, 'Unidad de peso', _weightUnit.label),
+                  if (_birthDate != null)
+                    _summaryRow(context, 'Edad indicada',
+                      '\${_buildProfile().ageAt(DateTime.now()) ?? 'Sin dato'} años'),
+                  _summaryRow(context, 'Primeras medidas',
+                    _saveFirstMeasurement ? 'Se guardarán en Medidas' : 'No guardar'),
                   _summaryRow(context, 'Fe', switch (_faith) {
                     FaithContentPreference.enabled => 'Incluida',
                     FaithContentPreference.disabled => 'Oculta',
