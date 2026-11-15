@@ -16,5 +16,8 @@ void main() {
     final card = source.split('class _RoutineCard extends StatelessWidget')[1]
         .split('class _EmptyState extends StatelessWidget')[0];
     expect(card, isNot(contains('scheduledDays')));
+    expect(card, contains('final sideBySide = available.maxWidth >= 290'));
+    expect(card, contains('Expanded(child: metadata)'));
+    expect(card, contains('scale <= 1.3'));
   });
 }

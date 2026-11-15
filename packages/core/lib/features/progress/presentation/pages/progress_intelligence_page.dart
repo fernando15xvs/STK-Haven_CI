@@ -132,6 +132,13 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
                         updateSheet(() {});
                       },
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Mejora y descenso comparan el e1RM estimado de las '
+                      'dos últimas sesiones registradas de cada ejercicio. '
+                      'No se ordenan por el récord histórico.',
+                      style: Theme.of(sheetContext).textTheme.bodySmall,
+                    ),
                     const SizedBox(height: 12),
                     const Text('Grupo muscular'),
                     DropdownButton<String?>(

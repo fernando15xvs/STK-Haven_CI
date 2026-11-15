@@ -784,30 +784,6 @@ class _RoutineCard extends StatelessWidget {
                     color: colors.textSecondary)),
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.xxs,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(
-                programName == null ? 'Rutina guardada' : 'En: $programName',
-                style: AppTypography.labelMedium.copyWith(
-                  color: programName == null
-                      ? colors.textSecondary : colors.primary),
-              ),
-              if (lastFinishedAt != null)
-                Text(
-                  'Última vez: ${DateFormat('d MMM yyyy', 'es').format(lastFinishedAt.toLocal())}',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: colors.textSecondary),
-                ),
-              if (typicalMinutes != null)
-                Text('~$typicalMinutes min',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: colors.textSecondary)),
-            ],
-          ),
           if (routine.hasNotes)
             Align(
               alignment: Alignment.centerLeft,
@@ -818,10 +794,60 @@ class _RoutineCard extends StatelessWidget {
               ),
             ),
           const SizedBox(height: AppSpacing.sm),
-          FilledButton.icon(
-            onPressed: onStart,
-            icon: const Icon(Icons.play_arrow_rounded, size: 20),
-            label: const Text('Iniciar'),
+          LayoutBuilder(
+            builder: (context, available) {
+              final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+              final sideBySide = available.maxWidth >= 290 && scale <= 1.3;
+              final metadata = Wrap(
+                spacing: AppSpacing.sm,
+                runSpacing: AppSpacing.xxs,
+                crossAxisAlignment: WrapCrossAlignment.start,
+                children: [
+                  Text(
+                    programName == null
+                        ? 'Rutina guardada' : 'En: $programName',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: programName == null
+                          ? colors.textSecondary : colors.primary),
+                  ),
+                  if (lastFinishedAt != null)
+                    Text(
+                      'Última vez: ${DateFormat('d MMM yyyy', 'es').format(lastFinishedAt.toLocal())}',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: colors.textSecondary),
+                    ),
+                  if (typicalMinutes != null)
+                    Text(
+                      '~$typicalMinutes min',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: colors.textSecondary),
+                    ),
+                ],
+              );
+              final start = FilledButton.icon(
+                onPressed: onStart,
+                icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                label: const Text('Iniciar'),
+              );
+              if (!sideBySide) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    metadata,
+                    const SizedBox(height: AppSpacing.sm),
+                    start,
+                  ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(child: metadata),
+                  const SizedBox(width: AppSpacing.sm),
+                  start,
+                ],
+              );
+            },
           ),
         ],
       ),

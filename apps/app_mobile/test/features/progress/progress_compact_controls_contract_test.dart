@@ -16,6 +16,8 @@ void main() {
     final exercises = File('../../packages/core/lib/features/progress/presentation/pages/progress_intelligence_page.dart').readAsStringSync();
     expect(exercises, isNot(contains('const CompactProgressPeriodSelector()')));
     expect(exercises, contains('final from = widget.useSharedPeriod'));
+    expect(exercises, contains('dos últimas sesiones registradas'));
+    expect(exercises, contains('No se ordenan por el récord histórico.'));
   });
 
   test('focused performance retains period independent of main tabs', () {
