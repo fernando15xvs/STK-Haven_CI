@@ -3,6 +3,7 @@ import 'package:core/features/nutrition/presentation/pages/nutrition_intelligenc
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:gym_tracker/features/progress/presentation/pages/body_measurement_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NutritionIntelligencePageMobile extends StatefulWidget {
@@ -33,6 +34,9 @@ class _NutritionIntelligencePageMobileState
         photoPicker: _pickPhoto,
         cameraAvailable: true,
         verifiedAdultNutritionAccess: snapshot.data == true,
+        onOpenMeasurements: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const BodyMeasurementPage()),
+        ),
       ),
     );
   }
