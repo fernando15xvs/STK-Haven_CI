@@ -205,7 +205,9 @@ class _SummaryTile extends StatelessWidget {
     // summary metric to grow when the OS requests a larger font.
     // Preserve readable title and value at 200% without a fixed-height
     // support line crowding them; its details remain in Semantics.
-    final tileHeight = 136.0 + 60.0 * (scale - 1.0);
+    // Leave space for two-line labels; Flutter measures their baselines
+    // differently at 320dp and in OLED, so retain an 8dp safety margin.
+    final tileHeight = 144.0 + 60.0 * (scale - 1.0);
     final spokenValue = value == '—'
         ? 'Sin registro'
         : '$value${suffix.isEmpty ? '' : ' $suffix'}';

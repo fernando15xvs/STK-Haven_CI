@@ -140,7 +140,7 @@ void main() {
           for (final key in ['summary_weight', 'summary_fat',
               'summary_waist_hip', 'summary_height']) {
             final tile = tester.widget<Container>(find.byKey(Key(key)));
-            expect(tester.getSize(find.byKey(Key(key))).height, 172);
+            expect(tester.getSize(find.byKey(Key(key))).height, 180);
             expect(tile.padding, const EdgeInsets.all(AppSpacing.sm));
           }
           expect(find.text('178.0 cm'), findsOneWidget);
