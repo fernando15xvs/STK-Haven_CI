@@ -78,6 +78,7 @@ class _NutritionIntelligencePageState
 
   late final NutritionHistoryRepository _historyRepository;
   List<NutritionHistoryEntry> _history = const <NutritionHistoryEntry>[];
+  bool _showFavoriteMealsOnly=false;
 
   @override
   void initState() {
@@ -644,6 +645,21 @@ class _NutritionIntelligencePageState
                   ),
             ),
             const SizedBox(height: 10),
+            if (_history.isNotEmpty)
+              Wrap(spacing:8,runSpacing:8,children:[
+                ChoiceChip(
+                  label:const Text('Todos los análisis'),
+                  selected:!_showFavoriteMealsOnly,
+                  onSelected:(_)=>setState(()=>_showFavoriteMealsOnly=false),
+                ),
+                ChoiceChip(
+                  key:const ValueKey('nutrition_favorite_meals_filter'),
+                  label:const Text('Favoritos'),
+                  selected:_showFavoriteMealsOnly,
+                  onSelected:(_)=>setState(()=>_showFavoriteMealsOnly=true),
+                ),
+              ]),
+            const SizedBox(height:8),
             if (_historyRepository.hasLegacyEntries)
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -656,8 +672,12 @@ class _NutritionIntelligencePageState
               ),
             if (_history.isEmpty)
               const Text('Aún no has guardado análisis.')
+            else if(_showFavoriteMealsOnly &&
+                !_history.any((entry)=>entry.isFavorite))
+              const Text('Todavía no tienes comidas favoritas.')
             else
-              for (final entry in _history.take(20))
+              for (final entry in _history.where(
+                (entry)=>!_showFavoriteMealsOnly || entry.isFavorite).take(20))
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.restaurant_outlined),
@@ -680,16 +700,38 @@ class _NutritionIntelligencePageState
                     _dishHintController.text = entry.dishHint;
                     _photo = null;
                   }),
-                  trailing: IconButton(
-                    tooltip: 'Eliminar',
-                    onPressed: () => _deleteHistoryEntry(entry.id),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
+                  trailing: Row(mainAxisSize:MainAxisSize.min,children:[
+                    IconButton(
+                      tooltip:entry.isFavorite
+                        ?'Quitar de favoritos':'Añadir a favoritos',
+                      onPressed:()=>_setHistoryFavorite(entry),
+                      icon:Icon(entry.isFavorite
+                        ?Icons.favorite_rounded:Icons.favorite_border_rounded,
+                        color:entry.isFavorite?colors.primary:null),
+                    ),
+                    IconButton(
+                      tooltip:'Eliminar',
+                      onPressed:()=>_deleteHistoryEntry(entry.id),
+                      icon:const Icon(Icons.delete_outline),
+                    ),
+                  ]),
                 ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _setHistoryFavorite(NutritionHistoryEntry entry) async {
+    try{
+      await _historyRepository.setFavorite(entry.id,!entry.isFavorite);
+      if(mounted){
+        setState(()=>_history=_historyRepository.getEntries());
+      }
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('No se pudo actualizar el favorito.')));
+    }
   }
 
   String _historySubtitle(NutritionHistoryEntry entry) {
