@@ -272,7 +272,10 @@ class _MotivationPageState extends State<MotivationPage> {
   }
 
   Future<void> _playTrack(MotivationTrack track, List<MotivationTrack> tracks) async {
-    await player.playQueue(tracks,startIndex:tracks.indexOf(track));
+    // Opening the currently selected song must not restart its audio clock.
+    if(player.currentTrack?.id != track.id){
+      await player.playQueue(tracks,startIndex:tracks.indexOf(track));
+    }
     if(mounted && player.currentTrack!=null)_openNowPlaying();
   }
 
