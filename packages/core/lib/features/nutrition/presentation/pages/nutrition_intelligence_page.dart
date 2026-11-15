@@ -84,8 +84,12 @@ class _NutritionIntelligencePageState
   @override
   void initState() {
     super.initState();
+    var ownerId='guest';
+    try{
+      ownerId=Supabase.instance.client.auth.currentUser?.id ?? 'guest';
+    }catch(_){/* Guest nutrition stays offline and local. */}
     _historyRepository = NutritionHistoryRepository(
-      Hive.box<dynamic>(HiveBoxes.metadata),
+      Hive.box<dynamic>(HiveBoxes.metadata), ownerId:ownerId,
     );
     _history = _historyRepository.getEntries();
     try {
@@ -619,6 +623,16 @@ class _NutritionIntelligencePageState
                   ),
             ),
             const SizedBox(height: 10),
+            if (_historyRepository.hasLegacyEntries)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: const Text('Historial anterior en este dispositivo'),
+                subtitle: const Text('Hay análisis antiguos sin cuenta asignada. '
+                  'Puedes trasladarlos a esta cuenta voluntariamente.'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _importLegacyHistory,
+              ),
             if (_history.isEmpty)
               const Text('Aún no has guardado análisis.')
             else
@@ -633,10 +647,17 @@ class _NutritionIntelligencePageState
                   ),
                   subtitle: Text(_historySubtitle(entry)),
                   onTap: () => setState(() {
-                    _foodEstimate = entry.estimate;
+                    if(entry.estimate.numericNutritionAvailable &&
+                        !_hasAdultNumericAccess){
+                      _foodEstimate=null;
+                      _message='Este análisis contiene cifras de una sesión '
+                        'adulta anterior. Verifica acceso para consultarlas.';
+                    }else{
+                      _foodEstimate = entry.estimate;
+                      _message = null;
+                    }
                     _dishHintController.text = entry.dishHint;
                     _photo = null;
-                    _message = null;
                   }),
                   trailing: IconButton(
                     tooltip: 'Eliminar',
@@ -657,7 +678,8 @@ class _NutritionIntelligencePageState
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
     final details = <String>['$day/$month/${date.year} $hour:$minute'];
-    if (entry.estimate.numericNutritionAvailable &&
+    if (_hasAdultNumericAccess &&
+        entry.estimate.numericNutritionAvailable &&
         entry.estimate.caloriesLow != null &&
         entry.estimate.caloriesHigh != null) {
       details.add(
@@ -668,6 +690,11 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _saveCurrentEstimate(FoodVisionEstimate estimate) async {
+    if(estimate.numericNutritionAvailable && !_hasAdultNumericAccess){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('El acceso adulto ha cambiado. Vuelve a consultar.')));
+      return;
+    }
     final now = DateTime.now();
     final id = 'food_${now.microsecondsSinceEpoch}';
     await _historyRepository.save(
@@ -685,6 +712,37 @@ class _NutritionIntelligencePageState
         content: Text('Resultado guardado localmente. La foto no se guardó.'),
       ),
     );
+  }
+
+  Future<void> _importLegacyHistory() async {
+    final confirmed=await showDialog<bool>(
+      context:context,builder:(ctx)=>AlertDialog(
+        title:const Text('Trasladar historial anterior'),
+        content:const Text(
+          'Estos análisis se guardaron antes de separar historiales por '
+          'cuenta. Trasladarlos a tu cuenta en este dispositivo evita que '
+          'otras cuentas vean esos registros. No se subirán fotos ni archivos. '
+          'Hazlo solo si reconoces este historial como tuyo.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx,false),
+            child:const Text('Cancelar')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+            child:const Text('Trasladar a mi cuenta')),
+        ],
+      ),
+    );
+    if(confirmed!=true || !mounted)return;
+    try{
+      final count=await _historyRepository.importLegacyEntries();
+      if(!mounted)return;
+      setState(()=>_history=_historyRepository.getEntries());
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content:Text('$count registros locales trasladados.')));
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('No se completó la importación. '
+          'Tus datos anteriores permanecen guardados.')));
+    }
   }
 
   Future<void> _deleteHistoryEntry(String id) async {
