@@ -40,7 +40,8 @@ class NutritionHistoryRepository {
         }
         final movedEntry=NutritionHistoryEntry(
           id:nextId,analyzedAt:old.analyzedAt,
-          dishHint:old.dishHint,estimate:old.estimate);
+          dishHint:old.dishHint,estimate:old.estimate,
+          isFavorite:old.isFavorite);
         // Write owned copy first; remove legacy only after every write.
         await _box.put('$_prefix$nextId',movedEntry.toJson());
         moved.add(key);
@@ -77,9 +78,26 @@ class NutritionHistoryRepository {
     await _box.put('$_prefix${entry.id}', entry.toJson());
     final entries = getEntries();
     if (entries.length <= maxEntries) return;
-    for (final stale in entries.skip(maxEntries)) {
+    // Keep favorited meals when ordinary old entries can be evicted first.
+    final overflow=entries.length-maxEntries;
+    final oldest=entries.reversed.toList();
+    final evictions=<NutritionHistoryEntry>[
+      ...oldest.where((entry)=>!entry.isFavorite),
+      ...oldest.where((entry)=>entry.isFavorite),
+    ].take(overflow);
+    for(final stale in evictions){
       await _box.delete('$_prefix${stale.id}');
     }
+  }
+
+  /// Changes only a saved record belonging to this account's local prefix.
+  Future<void> setFavorite(String id,bool favorite) async {
+    final key='$_prefix$id';
+    final data=_box.get(key);
+    if(data is! Map)return;
+    final entry=NutritionHistoryEntry.fromJson(
+      Map<String,dynamic>.from(data));
+    await _box.put(key,entry.copyWith(isFavorite:favorite).toJson());
   }
 
   Future<void> delete(String id) => _box.delete('$_prefix$id');
