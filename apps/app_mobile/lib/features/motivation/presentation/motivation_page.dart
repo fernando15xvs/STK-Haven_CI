@@ -502,6 +502,31 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     if(controller!=null)unawaited(controller!.dispose());
     super.dispose();
   }
+  void _openCinema() {
+    final c=controller;
+    if(c==null || !c.value.isInitialized || !mounted)return;
+    // Reuse the existing silent controller. A second native decoder would
+    // otherwise compete with the shared just_audio clock.
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder:(pageContext)=>Scaffold(
+        backgroundColor:Colors.black,
+        appBar:AppBar(
+          backgroundColor:Colors.black,
+          foregroundColor:Colors.white,
+          title:const Text('Modo cine'),
+        ),
+        body:SafeArea(
+          child:Center(
+            child:AspectRatio(
+              aspectRatio:c.value.aspectRatio,
+              child:VideoPlayer(c),
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
+
   @override
   Widget build(BuildContext context){
     final c=controller;
@@ -510,11 +535,21 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
       color:Theme.of(context).colorScheme.surfaceContainer,
       child:const Icon(Icons.movie_outlined,size:40));
     return ClipRRect(borderRadius:AppRadius.md_,
-      child:ConstrainedBox(
-        constraints:BoxConstraints(maxHeight:widget.maxHeight),
-        child:AspectRatio(
-          aspectRatio:c.value.aspectRatio,
-          child:VideoPlayer(c))));
+      child:Stack(children:[
+        ConstrainedBox(
+          constraints:BoxConstraints(maxHeight:widget.maxHeight),
+          child:AspectRatio(
+            aspectRatio:c.value.aspectRatio,
+            child:VideoPlayer(c))),
+        Positioned(
+          right:8,top:8,
+          child:IconButton.filledTonal(
+            tooltip:'Ver video en pantalla completa',
+            onPressed:_openCinema,
+            icon:const Icon(Icons.fullscreen_rounded),
+          ),
+        ),
+      ]));
   }
 }
 
