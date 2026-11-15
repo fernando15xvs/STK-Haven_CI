@@ -13,6 +13,8 @@ void main(){
     expect(mobile,contains('snapshot.data == true'));
     expect(mobile,contains('unawaited(_authSubscription?.cancel())'));
     expect(mobile,contains('onRefreshAdultAccess: _refreshAdultAccess'));
+    expect(mobile,contains('nutrition_account_'));
+    expect(mobile,contains('Supabase.instance.client.auth.currentUser?.id'));
   });
 
   test('revoked grant hides formerly numeric cached results',(){
