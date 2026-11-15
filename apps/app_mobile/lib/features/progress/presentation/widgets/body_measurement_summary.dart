@@ -203,7 +203,9 @@ class _SummaryTile extends StatelessWidget {
         .clamp(1.0, 2.0).toDouble();
     // Show more of the anatomy on the same screen while allowing each
     // summary metric to grow when the OS requests a larger font.
-    final tileHeight = 112.0 + 125.0 * (scale - 1.0);
+    // Preserve readable title and value at 200% without a fixed-height
+    // support line crowding them; its details remain in Semantics.
+    final tileHeight = 136.0 + 60.0 * (scale - 1.0);
     final spokenValue = value == '—'
         ? 'Sin registro'
         : '$value${suffix.isEmpty ? '' : ' $suffix'}';
@@ -243,14 +245,17 @@ class _SummaryTile extends StatelessWidget {
               color: colors.textPrimary,
             ),
           ),
-          const Spacer(),
-          Text(supporting,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.labelSmall.copyWith(
-              color: colors.textSecondary,
+          if (scale <= 1.25) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              supporting,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.labelSmall.copyWith(
+                color: colors.textSecondary,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     ),

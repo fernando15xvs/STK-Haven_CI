@@ -25,7 +25,7 @@ void main() {
       id: 'restored-session',
       routineNameSnapshot: 'Anterior',
       startedAt: started,
-      finishedAt: null,
+      finishedAt: started.add(const Duration(minutes: 1)),
       durationSeconds: 0,
       exercises: const [],
     );
@@ -61,7 +61,7 @@ void main() {
       id: 'restored-session',
       routineNameSnapshot: 'Editada',
       startedAt: started,
-      finishedAt: null,
+      finishedAt: started.add(const Duration(minutes: 1)),
       durationSeconds: 0,
       exercises: const [],
     ));
