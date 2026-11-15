@@ -18,6 +18,8 @@ import 'package:core/domain/models/workout_session.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:gym_tracker/features/workout/presentation/workout_summary_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_library_page.dart';
+import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detail_page.dart';
+import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/barbell_calculator_modal.dart';
 
 import 'package:gym_tracker/features/motivation/presentation/widgets/motivation_mini_player.dart';
@@ -1143,6 +1145,27 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
     controller.dispose();
   }
 
+  void _openExerciseTechnique() {
+    final exerciseId = widget.workoutExercise.exerciseId;
+    for (final item in ref.read(exerciseListProvider)) {
+      if (item.id != exerciseId) continue;
+      FocusManager.instance.primaryFocus?.unfocus();
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ExerciseDetailPage(exercise: item),
+        ),
+      );
+      return;
+    }
+    // A deleted or unavailable exercise must not be reconstructed from a
+    // snapshot: doing so would fabricate demonstration/technical data.
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('La ficha técnica de este ejercicio no está disponible.'),
+      ),
+    );
+  }
+
   Future<void> _replaceExercise() async {
     final hasCompletedWork = widget.workoutExercise.sets.any(
       (set) => set.completed || set.leftCompleted || set.rightCompleted,
@@ -1351,7 +1374,9 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                           color: AppColors.of(context).textSecondary,
                         ),
                         onSelected: (action) {
-                          if (action == 'note') {
+                          if (action == 'technique') {
+                            _openExerciseTechnique();
+                          } else if (action == 'note') {
                             _editNotes();
                           } else if (action == 'replace') {
                             _replaceExercise();
@@ -1360,6 +1385,19 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                           }
                         },
                         itemBuilder: (_) => [
+                          PopupMenuItem<String>(
+                            value: 'technique',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.menu_book_outlined,
+                                    color: AppColors.of(context).textSecondary),
+                                const SizedBox(width: 10),
+                                Text('Técnica y ficha',
+                                    style: AppTypography.bodyMedium),
+                              ],
+                            ),
+                          ),
                           PopupMenuItem<String>(
                             value: 'note',
                             child: Row(
