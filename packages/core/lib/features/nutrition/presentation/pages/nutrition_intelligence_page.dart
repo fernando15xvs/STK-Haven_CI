@@ -593,6 +593,15 @@ class _NutritionIntelligencePageState
                     icon: const Icon(Icons.bookmark_add_outlined),
                     label: const Text('Guardar resultado local'),
                   ),
+                  if(_hasAdultNumericAccess && _activePlan!=null &&
+                     !_activePlan!.isPaused && estimate.numericNutritionAvailable &&
+                     estimate.caloriesLow!=null && estimate.caloriesHigh!=null)
+                    OutlinedButton.icon(
+                      key:const ValueKey('foodvision_plan_context'),
+                      onPressed:()=>_showFoodPlanContext(estimate),
+                      icon:const Icon(Icons.compare_arrows_rounded),
+                      label:const Text('Ver en contexto de mi plan'),
+                    ),
                   if (_photo != null)
                     OutlinedButton.icon(
                       onPressed: _analyzing
@@ -608,6 +617,34 @@ class _NutritionIntelligencePageState
         ),
       ),
     );
+  }
+
+  Future<void> _showFoodPlanContext(FoodVisionEstimate estimate) async {
+    final plan=_activePlan;
+    if(!_hasAdultNumericAccess || plan==null || plan.isPaused ||
+       !estimate.numericNutritionAvailable ||
+       estimate.caloriesLow==null || estimate.caloriesHigh==null){
+      return;
+    }
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Referencias nutricionales'),
+      content:Column(mainAxisSize:MainAxisSize.min,
+        crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('Plato estimado: ${estimate.caloriesLow}–'
+            '${estimate.caloriesHigh} kcal.'),
+          const SizedBox(height:12),
+          Text('Plan diario guardado: ${plan.estimate.targetLow}–'
+            '${plan.estimate.targetHigh} kcal.'),
+          const SizedBox(height:12),
+          const Text('Son rangos aproximados, no mediciones. '
+            'No se añadirá esta comida a un contador diario, '
+            'ni se descontarán calorías del plan.'),
+        ]),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(ctx),
+          child:const Text('Entendido')),
+      ],
+    ));
   }
 
   Widget _buildHistory(ColorScheme colors) {
