@@ -345,6 +345,26 @@ class MotivationLibrary extends ChangeNotifier {
       if(await artwork.exists())await artwork.delete();
     }
   }
+  /// Create only explicitly selected playlist suggestions, never content.
+  /// A playlist title that already exists is preserved rather than duplicated.
+  Future<int> createSuggestedPlaylists(Iterable<String> suggestions) async {
+    await load();
+    final already={
+      for(final playlist in _playlists)playlist.title.trim().toLowerCase(),
+    };
+    var created=0;
+    for(final proposed in suggestions){
+      final title=proposed.trim();
+      if(title.isEmpty || title.length>70 ||
+         !already.add(title.toLowerCase()))continue;
+      _playlists.add(MotivationPlaylist(
+        id:const Uuid().v4(),title:title,trackIds:const []));
+      created++;
+    }
+    if(created>0)await _changed();
+    return created;
+  }
+
   Future<void> createPlaylist(String title) async {
     if(title.trim().isEmpty)return;
     _playlists.add(MotivationPlaylist(id:const Uuid().v4(),
