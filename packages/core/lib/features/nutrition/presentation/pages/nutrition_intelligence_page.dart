@@ -31,6 +31,7 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
   final bool cameraAvailable;
   final bool verifiedAdultNutritionAccess;
   final VoidCallback? onOpenMeasurements;
+  final VoidCallback? onRefreshAdultAccess;
 
   const NutritionIntelligencePage({
     super.key,
@@ -38,6 +39,7 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
     this.cameraAvailable = true,
     this.verifiedAdultNutritionAccess = false,
     this.onOpenMeasurements,
+    this.onRefreshAdultAccess,
   });
 
   @override
@@ -97,6 +99,21 @@ class _NutritionIntelligencePageState
   }
 
   @override
+  void didUpdateWidget(covariant NutritionIntelligencePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A refreshed server check can revoke the grant while this route is
+    // visible. Never retain numeric food/photo or energy output in that case.
+    if(oldWidget.verifiedAdultNutritionAccess &&
+        !widget.verifiedAdultNutritionAccess){
+      _foodEstimate=null;
+      _energyEstimate=null;
+      _calculatedProfile=null;
+      _calculatedBody=null;
+      _calculationMeasurementIds=null;
+    }
+  }
+
+  @override
   void dispose() {
     _ageController.dispose();
     _dishHintController.dispose();
@@ -118,7 +135,8 @@ class _NutritionIntelligencePageState
             _HeroCard(colors: colors),
             const SizedBox(height: 16),
             if (!hasAdultAccess)
-              _AdultGateCard(colors: colors, isMinor: isMinor)
+              _AdultGateCard(colors: colors, isMinor: isMinor,
+                onRefreshAdultAccess: widget.onRefreshAdultAccess)
             else
               _buildEnergyPlanner(colors),
             const SizedBox(height: 16),
@@ -865,6 +883,13 @@ class _NutritionIntelligencePageState
         dishHint: _dishHintController.text,
       );
       if (!mounted) return;
+      if(estimate.numericNutritionAvailable && !_hasAdultNumericAccess) {
+        setState((){
+          _foodEstimate=null;
+          _message='Tu acceso cambió. Vuelve a analizar sin datos numéricos.';
+        });
+        return;
+      }
       setState(() => _foodEstimate = estimate);
     } catch (error) {
       if (!mounted) return;
@@ -1097,10 +1122,12 @@ class _HeroCard extends StatelessWidget {
 }
 
 class _AdultGateCard extends StatelessWidget {
-  const _AdultGateCard({required this.colors, required this.isMinor});
+  const _AdultGateCard({required this.colors, required this.isMinor,
+    this.onRefreshAdultAccess});
 
   final ColorScheme colors;
   final bool isMinor;
+  final VoidCallback? onRefreshAdultAccess;
 
   @override
   Widget build(BuildContext context) {
@@ -1144,6 +1171,14 @@ class _AdultGateCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: colors.onSurfaceVariant),
                   ),
+                  if (!isMinor && onRefreshAdultAccess != null) ...[
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: onRefreshAdultAccess,
+                      icon: const Icon(Icons.verified_user_outlined),
+                      label: const Text('Volver a comprobar acceso'),
+                    ),
+                  ],
                 ],
               ),
             ),
