@@ -1,4 +1,8 @@
 import 'package:core/domain/models/settings_state.dart';
+import 'package:core/domain/models/nutrition_intelligence.dart';
+
+/// Optional personal identity, deliberately separate from energy equations.
+enum GenderIdentity { woman, man, nonBinary, preferNotToSay }
 
 enum UserCapability { athlete, coach }
 
@@ -40,7 +44,7 @@ enum FaithContentPreference {
 }
 
 class UserExperienceProfile {
-  static const int currentOnboardingVersion = 2;
+  static const int currentOnboardingVersion = 3;
 
   final String displayName;
   final String? avatarEmoji;
@@ -58,6 +62,11 @@ class UserExperienceProfile {
   final bool workoutRemindersWanted;
   final FaithContentPreference faithPreference;
   final bool habitsEnabled;
+  /// Locally stored, user-entered date; NOT proof of adult access.
+  final DateTime? dateOfBirth;
+  final GenderIdentity? genderIdentity;
+  /// A separate optional physiological input for an adult energy equation.
+  final EnergyEquationSex? equationSexForEnergy;
   final int onboardingVersion;
 
   const UserExperienceProfile({
@@ -76,6 +85,9 @@ class UserExperienceProfile {
     this.workoutRemindersWanted = false,
     this.faithPreference = FaithContentPreference.undecided,
     this.habitsEnabled = false,
+    this.dateOfBirth,
+    this.genderIdentity,
+    this.equationSexForEnergy,
     this.onboardingVersion = 0,
   });
 
@@ -85,6 +97,17 @@ class UserExperienceProfile {
 
   bool get hasDecidedFaithPreference =>
       faithPreference != FaithContentPreference.undecided;
+
+  int? ageAt(DateTime now) {
+    final dob = dateOfBirth;
+    if (dob == null || dob.isAfter(now)) return null;
+    var years = now.year - dob.year;
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
+      years--;
+    }
+    return years < 0 ? null : years;
+  }
 
   bool get isCoach => capabilities.contains(UserCapability.coach);
 
@@ -112,6 +135,12 @@ class UserExperienceProfile {
     bool? workoutRemindersWanted,
     FaithContentPreference? faithPreference,
     bool? habitsEnabled,
+    DateTime? dateOfBirth,
+    bool clearDateOfBirth = false,
+    GenderIdentity? genderIdentity,
+    bool clearGenderIdentity = false,
+    EnergyEquationSex? equationSexForEnergy,
+    bool clearEquationSexForEnergy = false,
     int? onboardingVersion,
   }) {
     return UserExperienceProfile(
@@ -140,6 +169,10 @@ class UserExperienceProfile {
           workoutRemindersWanted ?? this.workoutRemindersWanted,
       faithPreference: faithPreference ?? this.faithPreference,
       habitsEnabled: habitsEnabled ?? this.habitsEnabled,
+      dateOfBirth: clearDateOfBirth ? null : (dateOfBirth ?? this.dateOfBirth),
+      genderIdentity: clearGenderIdentity ? null : (genderIdentity ?? this.genderIdentity),
+      equationSexForEnergy: clearEquationSexForEnergy
+          ? null : (equationSexForEnergy ?? this.equationSexForEnergy),
       onboardingVersion: onboardingVersion ?? this.onboardingVersion,
     );
   }
@@ -164,6 +197,12 @@ class UserExperienceProfile {
       // source of truth because onboarding supports a third "decide later" state.
       'faithEnabled': faithEnabled,
       'habitsEnabled': habitsEnabled,
+      'dateOfBirth': dateOfBirth == null
+          ? null : '${dateOfBirth!.year.toString().padLeft(4, '0')}-'
+              '${dateOfBirth!.month.toString().padLeft(2, '0')}-'
+              '${dateOfBirth!.day.toString().padLeft(2, '0')}',
+      'genderIdentity': genderIdentity?.name,
+      'equationSexForEnergy': equationSexForEnergy?.name,
       'onboardingVersion': onboardingVersion,
     };
   }
@@ -245,6 +284,11 @@ class UserExperienceProfile {
           json['workoutRemindersWanted'] as bool? ?? false,
       faithPreference: faithPreference,
       habitsEnabled: json['habitsEnabled'] as bool? ?? false,
+      dateOfBirth: _parseBirthDate(json['dateOfBirth']),
+      genderIdentity: _enumByName(
+        GenderIdentity.values, json['genderIdentity']?.toString()),
+      equationSexForEnergy: _enumByName(
+        EnergyEquationSex.values, json['equationSexForEnergy']?.toString()),
       onboardingVersion:
           rawOnboardingVersion < 0 ? 0 : rawOnboardingVersion,
     );
@@ -263,6 +307,21 @@ class UserExperienceProfile {
       onboardingVersion: settings.hasCompletedOnboarding ? 1 : 0,
     );
   }
+}
+
+DateTime? _parseBirthDate(Object? value) {
+  if (value is! String || value.isEmpty) return null;
+  final date = DateTime.tryParse(value);
+  if (date == null || date.year < 1900 || date.isAfter(DateTime.now())) {
+    return null;
+  }
+  // Reject impossible dates silently normalized by some DateTime parsers.
+  final pattern =
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+  if (value != pattern) return null;
+  return DateTime(date.year, date.month, date.day);
 }
 
 T? _enumByName<T extends Enum>(List<T> values, String? name) {
