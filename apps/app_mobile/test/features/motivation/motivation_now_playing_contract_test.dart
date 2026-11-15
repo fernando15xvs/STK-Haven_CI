@@ -25,6 +25,9 @@ void main() {
     expect(source, contains('onPressed:_showQueue'));
     expect(source, contains('player.setRepeat(repeat)'));
     expect(source, contains('player.playAtIndex(i)'));
+    expect(source, contains('void _openCinema()'));
+    expect(source, contains('Ver video en pantalla completa'));
+    expect(source.split('VideoPlayerController.file(').length-1, 1);
     expect(source, contains('onPressed:()=>unawaited(player.togglePlay())'));
   });
 }
