@@ -65,6 +65,24 @@ class WellnessRepository {
     }
   }
 
+  /// Existing local records only. A missing day is not a measured zero.
+  List<DailyStepsState> recentRecordedSteps({
+    int days = 14,
+    DateTime? now,
+  }) {
+    final today=now??DateTime.now();
+    final result=<DailyStepsState>[];
+    for(var i=0;i<days.clamp(1,30);i++){
+      final day=DateTime(today.year,today.month,today.day-i);
+      final date='${day.year}-${day.month.toString().padLeft(2,'0')}-'
+        '${day.day.toString().padLeft(2,'0')}';
+      if(_metadata.containsKey('$_stepsPrefix$date')){
+        result.add(getStepsForDate(date));
+      }
+    }
+    return result;
+  }
+
   Future<void> saveSteps(DailyStepsState state) async {
     await _metadata.put('$_stepsPrefix${state.dateString}', state.toJson());
   }
