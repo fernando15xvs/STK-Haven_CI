@@ -1,7 +1,8 @@
+import 'dart:io';
+
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/application/adult_macro_guide.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'dart:io';
 
 void main(){
   const reference=EnergyEstimate(
