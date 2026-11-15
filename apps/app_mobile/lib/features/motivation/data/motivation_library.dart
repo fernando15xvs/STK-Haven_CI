@@ -22,31 +22,38 @@ enum MotivationRepeat {
 class MotivationTrack {
   const MotivationTrack({required this.id, required this.title,
     required this.fileName, required this.mode, required this.importedAt,
-    this.favorite=false});
+    this.favorite=false, this.artworkFileName});
   final String id, title, fileName;
+  final String? artworkFileName;
   final MotivationMode mode;
   final DateTime importedAt;
   final bool favorite;
   bool get isVideo => p.extension(fileName).toLowerCase() == '.mp4';
   MotivationTrack copyWith({String? title, MotivationMode? mode,
-    bool? favorite}) =>
+    bool? favorite, String? artworkFileName, bool clearArtwork=false}) =>
     MotivationTrack(id:id, title:title??this.title, fileName:fileName,
       mode:mode??this.mode, importedAt:importedAt,
-      favorite:favorite??this.favorite);
+      favorite:favorite??this.favorite,
+      artworkFileName:clearArtwork?null:(artworkFileName??this.artworkFileName));
   Map<String,dynamic> toJson()=>{'id':id,'title':title,'fileName':fileName,
     'mode':mode.name,'importedAt':importedAt.toIso8601String(),
-    'favorite':favorite};
+    'favorite':favorite,'artworkFileName':artworkFileName};
   factory MotivationTrack.fromJson(Map<String,dynamic> j) {
     final name=j['fileName'] as String;
     if(p.basename(name)!=name || name.contains('..')) {
       throw const FormatException('Nombre de archivo inválido');
+    }
+    final artwork=j['artworkFileName'] as String?;
+    if(artwork!=null &&
+        (p.basename(artwork)!=artwork || artwork.contains('..'))) {
+      throw const FormatException('Nombre de portada inválido');
     }
     return MotivationTrack(id:j['id'] as String,title:j['title'] as String,
       fileName:name,mode:MotivationMode.values.firstWhere(
         (m)=>m.name==j['mode'],orElse:()=>MotivationMode.discipline),
       importedAt:DateTime.parse(j['importedAt'] as String),
       // Existing stage-1 records omit this field.
-      favorite:j['favorite']==true);
+      favorite:j['favorite']==true, artworkFileName:artwork);
   }
 }
 @immutable
@@ -67,6 +74,7 @@ class MotivationLibrary extends ChangeNotifier {
   static final instance=MotivationLibrary._();
   static const supportedExtensions=<String>{'mp3','m4a','aac','wav','mp4'};
   static const maxFileBytes=512*1024*1024;
+  static const maxArtworkBytes=8*1024*1024;
   static const _key='stk_motivation_library_v1';
   final _tracks=<MotivationTrack>[];
   final _playlists=<MotivationPlaylist>[];
@@ -105,6 +113,71 @@ class MotivationLibrary extends ChangeNotifier {
     if(_directory==null)throw StateError('Biblioteca sin inicializar');
     return p.join(_directory!.path,t.fileName);
   }
+  /// Local-only artwork: there are no external URLs or cloud uploads.
+  String? artworkPath(MotivationTrack track) {
+    final name=track.artworkFileName;
+    if(name==null || _directory==null)return null;
+    final file=File(p.join(_directory!.path,name));
+    return file.existsSync()?file.path:null;
+  }
+
+  Future<bool> chooseArtwork(String trackId) async {
+    await load();
+    final idx=_tracks.indexWhere((t)=>t.id==trackId);
+    if(idx<0)return false;
+    final picked=await FilePicker.pickFiles(type:FileType.custom,
+      allowedExtensions:const ['jpg','jpeg','png','webp']);
+    if(picked.isEmpty)return false;
+    final item=picked.first;
+    if(item.path==null)return false;
+    final bytes=await item.length();
+    if(bytes<=0 || bytes>maxArtworkBytes){
+      throw const FormatException('La portada debe pesar menos de 8 MB.');
+    }
+    final ext=p.extension(item.name).toLowerCase().replaceFirst('.', '');
+    if(!const {'jpg','jpeg','png','webp'}.contains(ext))return false;
+    final name='art_${const Uuid().v4()}.$ext';
+    final destination=File(p.join(_directory!.path,name));
+    final temp=File(destination.path+'.part');
+    final previous=_tracks[idx];
+    try{
+      await File(item.path!).openRead().pipe(temp.openWrite());
+      if(await temp.length()!=bytes){
+        throw const FileSystemException('Portada incompleta');
+      }
+      await temp.rename(destination.path);
+      _tracks[idx]=previous.copyWith(artworkFileName:name);
+      try{
+        await _changed();
+      }catch(_){
+        _tracks[idx]=previous;
+        rethrow;
+      }
+      final old=previous.artworkFileName;
+      if(old!=null && old!=name){
+        final file=File(p.join(_directory!.path,old));
+        if(await file.exists())await file.delete();
+      }
+      return true;
+    }catch(_){
+      if(await temp.exists())await temp.delete();
+      if(await destination.exists())await destination.delete();
+      rethrow;
+    }
+  }
+
+  Future<void> clearArtwork(String id) async {
+    final idx=_tracks.indexWhere((t)=>t.id==id);
+    if(idx<0)return;
+    final previous=_tracks[idx];
+    final old=previous.artworkFileName;
+    if(old==null)return;
+    _tracks[idx]=previous.copyWith(clearArtwork:true);
+    await _changed();
+    final file=File(p.join(_directory!.path,old));
+    if(await file.exists())await file.delete();
+  }
+
   List<MotivationTrack> forSelection(String selection){
     if(selection=='favorites'){
       return _tracks.where((t)=>t.favorite).toList();
@@ -197,6 +270,11 @@ class MotivationLibrary extends ChangeNotifier {
     await _changed();
     final file=File(filePath(t));
     if(await file.exists())await file.delete();
+    final art=t.artworkFileName;
+    if(art!=null){
+      final artwork=File(p.join(_directory!.path,art));
+      if(await artwork.exists())await artwork.delete();
+    }
   }
   Future<void> createPlaylist(String title) async {
     if(title.trim().isEmpty)return;
