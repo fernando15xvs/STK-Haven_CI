@@ -5,6 +5,9 @@ import 'package:core/features/nutrition/application/adult_energy_planner.dart';
 import 'package:core/features/nutrition/application/latest_body_measurements.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/home/application/wellness_provider.dart';
+import 'package:core/features/home/application/hydration_provider.dart';
+import 'package:core/features/nutrition/application/wellness_goal_suggestions.dart';
 import 'package:core/features/nutrition/application/food_vision_correction.dart';
 import 'package:core/features/nutrition/data/food_vision_service.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
@@ -93,6 +96,8 @@ class _NutritionIntelligencePageState
               _AdultGateCard(colors: colors, isMinor: isMinor)
             else
               _buildEnergyPlanner(colors),
+            const SizedBox(height: 16),
+            _buildWellnessSummary(colors),
             const SizedBox(height: 16),
             _buildFoodVision(colors),
             const SizedBox(height: 16),
@@ -282,6 +287,91 @@ class _NutritionIntelligencePageState
             if (_energyEstimate case final estimate?) ...[
               const SizedBox(height: 16),
               _EnergyResultCard(estimate: estimate),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWellnessSummary(ColorScheme colors) {
+    final hydration=ref.watch(hydrationProvider);
+    final water=ref.watch(hydrationPreferencesProvider);
+    final steps=ref.watch(dailyStepsProvider);
+    final stepPrefs=ref.watch(stepGoalPreferencesProvider);
+    final history=ref.read(wellnessRepositoryProvider)
+        .recentRecordedSteps(days:14);
+    final stepSuggestion=WellnessGoalSuggestions.stepsFromBaseline(
+      history.map((day)=>day.steps),
+    );
+    return Card(
+      child:Padding(
+        padding:const EdgeInsets.all(16),
+        child:Column(
+          crossAxisAlignment:CrossAxisAlignment.start,
+          children:[
+            Text('Bienestar conectado',
+              style:Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height:4),
+            Text('Tus metas siguen siendo tuyas. Cambiar a volumen, '
+              'mantenimiento o déficit no las modifica automáticamente.',
+              style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                color:colors.onSurfaceVariant)),
+            const SizedBox(height:14),
+            Row(children:[
+              Icon(Icons.water_drop_outlined,color:colors.primary),
+              const SizedBox(width:10),
+              Expanded(child:Text('Agua: ${hydration.waterMl} ml / '
+                '${water.targetMl} ml')),
+            ]),
+            const SizedBox(height:10),
+            Row(children:[
+              Icon(Icons.directions_walk_outlined,color:colors.primary),
+              const SizedBox(width:10),
+              Expanded(child:Text('Pasos: ${steps.steps} / '
+                '${stepPrefs.targetSteps}')),
+            ]),
+            const SizedBox(height:10),
+            Text('Hidratación: actividad, calor y necesidades personales '
+              'importan más que la fase nutricional. Tu meta manual se conserva.',
+              style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                color:colors.onSurfaceVariant)),
+            if(stepSuggestion==null)
+              Text('Para sugerir pasos con fundamento necesitamos '
+                'al menos 7 días registrados.',
+                style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color:colors.onSurfaceVariant))
+            else if(stepSuggestion!=stepPrefs.targetSteps) ...[
+              const SizedBox(height:8),
+              Text('Tu actividad habitual sugiere aproximadamente '
+                '$stepSuggestion pasos, según tus últimos registros.',
+                style:Theme.of(context).textTheme.bodySmall),
+              Align(alignment:Alignment.centerLeft,
+                child:TextButton.icon(
+                  icon:const Icon(Icons.tune_rounded),
+                  label:const Text('Revisar sugerencia de pasos'),
+                  onPressed:()async{
+                    final apply=await showDialog<bool>(
+                      context:context,builder:(ctx)=>AlertDialog(
+                        title:const Text('Revisar meta de pasos'),
+                        content:Text('Tu meta actual es '
+                          '${stepPrefs.targetSteps}. Basándonos en registros '
+                          'existentes, la referencia es $stepSuggestion. '
+                          'No es una prescripción y puedes conservar tu meta.'),
+                        actions:[
+                          TextButton(onPressed:()=>Navigator.pop(ctx,false),
+                            child:const Text('Mantener mi meta')),
+                          FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+                            child:const Text('Aplicar sugerencia')),
+                        ],
+                      ),
+                    );
+                    if(apply==true && mounted){
+                      await ref.read(stepGoalPreferencesProvider.notifier)
+                        .setTargetSteps(stepSuggestion);
+                    }
+                  },
+                )),
             ],
           ],
         ),
