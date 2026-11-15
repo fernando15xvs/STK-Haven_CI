@@ -535,9 +535,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           icon: const Icon(Icons.cake_outlined),
           label: Text(dob == null
               ? 'Indicar fecha'
-              : '\${dob.day.toString().padLeft(2, '0')}/'
-                '\${dob.month.toString().padLeft(2, '0')}/\${dob.year}'
-                ' · \${age ?? '?'} años'),
+              : '${dob.day.toString().padLeft(2, '0')}/'
+                '${dob.month.toString().padLeft(2, '0')}/${dob.year}'
+                ' · ${age ?? '?'} años'),
           onPressed: () async {
             final now = DateTime.now();
             final picked = await showDatePicker(
@@ -611,7 +611,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         TextField(
           controller: _weightController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(labelText: 'Peso (\${_weightUnit.label})'),
+          decoration: InputDecoration(labelText: 'Peso (${_weightUnit.label})'),
         ),
         const SizedBox(height: 10),
         TextField(
@@ -713,7 +713,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   _summaryRow(context, 'Unidad de peso', _weightUnit.label),
                   if (_birthDate != null)
                     _summaryRow(context, 'Edad indicada',
-                      '\${_buildProfile().ageAt(DateTime.now()) ?? 'Sin dato'} años'),
+                      '${_buildProfile().ageAt(DateTime.now()) ?? 'Sin dato'} años'),
                   _summaryRow(context, 'Primeras medidas',
                     _saveFirstMeasurement ? 'Se guardarán en Medidas' : 'No guardar'),
                   _summaryRow(context, 'Fe', switch (_faith) {
