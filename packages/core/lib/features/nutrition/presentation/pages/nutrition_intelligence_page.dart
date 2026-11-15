@@ -61,6 +61,16 @@ class _NutritionIntelligencePageState
   NutritionGoalPlan? _activePlan;
   NutritionGoalPlanRepository? _planRepository;
 
+  // Even when backend authorization is true, a locally declared minor is
+  // shown the safer descriptive Food Vision experience. A local birthday
+  // can NEVER grant the remote numeric authorization by itself.
+  bool get _hasAdultNumericAccess {
+    final localAge=ref.read(userExperienceProfileProvider)
+      .value?.ageAt(DateTime.now());
+    return widget.verifiedAdultNutritionAccess &&
+      (localAge==null || localAge>=18);
+  }
+
   NutritionPhoto? _photo;
   FoodVisionEstimate? _foodEstimate;
   bool _analyzing = false;
@@ -445,7 +455,7 @@ class _NutritionIntelligencePageState
             ),
             const SizedBox(height: 6),
             Text(
-              widget.verifiedAdultNutritionAccess
+              _hasAdultNumericAccess
                   ? 'Toma o sube una foto. La IA devuelve rangos, ingredientes, '
                       'porciones y nivel de confianza.'
                   : 'Toma o sube una foto. Mientras la cuenta no tenga verificación '
@@ -851,7 +861,7 @@ class _NutritionIntelligencePageState
       final estimate = await FoodVisionService(Supabase.instance.client).analyze(
         imageBytes: photo.bytes,
         mimeType: photo.mimeType,
-        adultNumericNutrition: widget.verifiedAdultNutritionAccess,
+        adultNumericNutrition: _hasAdultNumericAccess,
         dishHint: _dishHintController.text,
       );
       if (!mounted) return;
