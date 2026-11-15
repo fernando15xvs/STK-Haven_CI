@@ -51,7 +51,9 @@ void main() {
     final active = File('lib/features/workout/presentation/active_workout_page_content.dart').readAsStringSync();
     expect(active, contains("case 'supersets':"));
     expect(active, contains("case 'plates':"));
-    expect(active, contains("case 'motivation':"));
+    // Motivation's library entry is in the global + menu, not here.
+    expect(active, isNot(contains("case 'motivation':")));
+    expect(active, isNot(contains("value: 'motivation'")));
     expect(active, contains('showLauncherWhenEmpty: false'));
   });
 }
