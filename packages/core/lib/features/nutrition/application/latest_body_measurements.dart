@@ -15,9 +15,12 @@ class LatestBodyValue {
 /// Never use the most recent record for BOTH fields: a record can contain
 /// only a waist circumference, or a height taken months before the weight.
 class LatestBodyMeasurements {
-  const LatestBodyMeasurements({this.weightKg, this.heightCm});
+  const LatestBodyMeasurements({this.weightKg, this.heightCm,
+    this.bodyFatPercentage});
   final LatestBodyValue? weightKg;
   final LatestBodyValue? heightCm;
+  /// Independent from weight/height and never used to invent energy needs.
+  final LatestBodyValue? bodyFatPercentage;
 
   bool get canEstimateEnergy => weightKg != null && heightCm != null;
 
@@ -35,6 +38,7 @@ class LatestBodyMeasurements {
       ..sort((a, b) => b.date.compareTo(a.date));
     LatestBodyValue? weight;
     LatestBodyValue? height;
+    LatestBodyValue? bodyFat;
     for (final entry in ordered) {
       if (weight == null && entry.weightKg != null &&
           entry.weightKg!.isFinite &&
@@ -54,8 +58,19 @@ class LatestBodyMeasurements {
           recordedAt: entry.date,
         );
       }
-      if (weight != null && height != null) break;
+      if (bodyFat == null && entry.bodyFatPercentage != null &&
+          entry.bodyFatPercentage!.isFinite &&
+          entry.bodyFatPercentage! > 0 &&
+          entry.bodyFatPercentage! <= 100) {
+        bodyFat = LatestBodyValue(
+          value: entry.bodyFatPercentage!,
+          recordId: entry.id,
+          recordedAt: entry.date,
+        );
+      }
+      if (weight != null && height != null && bodyFat != null) break;
     }
-    return LatestBodyMeasurements(weightKg: weight, heightCm: height);
+    return LatestBodyMeasurements(
+      weightKg: weight, heightCm: height, bodyFatPercentage: bodyFat);
   }
 }
