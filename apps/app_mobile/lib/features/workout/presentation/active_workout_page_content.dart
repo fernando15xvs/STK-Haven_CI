@@ -1338,35 +1338,80 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                           style: AppTypography.bodySmall,
                         ),
                       ),
-                      IconButton(
-                        onPressed: _editNotes,
-                        tooltip: 'Nota rápida',
+                      // Secondary actions are contextual; keep set entry as
+                      // the primary content, including at 320 dp and 200% text.
+                      PopupMenuButton<String>(
+                        key: ValueKey('workout_exercise_options_${widget.exIndex}'),
+                        tooltip: 'Opciones del ejercicio',
                         icon: Icon(
-                          Icons.edit_note_outlined,
-                          color: widget.workoutExercise.notes.trim().isNotEmpty
-                              ? AppColors.of(context).primary
-                              : AppColors.of(context).textSecondary,
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: _replaceExercise,
-                        tooltip: 'Sustituir ejercicio',
-                        icon: Icon(
-                          Icons.swap_horiz,
+                          widget.workoutExercise.notes.trim().isNotEmpty
+                              ? Icons.more_horiz
+                              : Icons.more_vert,
                           color: AppColors.of(context).textSecondary,
                         ),
-                      ),
-                      IconButton(
-                        onPressed: _configureUnilateral,
-                        tooltip: widget.workoutExercise.unilateral
-                            ? 'Unilateral: ${widget.workoutExercise.unilateralTarget.label}'
-                            : 'Configurar unilateral',
-                        icon: Icon(
-                          Icons.compare_arrows,
-                          color: widget.workoutExercise.unilateral
-                              ? AppColors.of(context).primary
-                              : AppColors.of(context).textSecondary,
-                        ),
+                        onSelected: (action) {
+                          if (action == 'note') {
+                            _editNotes();
+                          } else if (action == 'replace') {
+                            _replaceExercise();
+                          } else if (action == 'unilateral') {
+                            _configureUnilateral();
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem<String>(
+                            value: 'note',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.edit_note_outlined,
+                                  color: widget.workoutExercise.notes.trim().isNotEmpty
+                                      ? AppColors.of(context).primary
+                                      : AppColors.of(context).textSecondary,
+                                ),
+                                const SizedBox(width: 10),
+                                Text('Nota rápida', style: AppTypography.bodyMedium),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'replace',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.swap_horiz,
+                                    color: AppColors.of(context).textSecondary),
+                                const SizedBox(width: 10),
+                                Text('Sustituir ejercicio',
+                                    style: AppTypography.bodyMedium),
+                              ],
+                            ),
+                          ),
+                          PopupMenuItem<String>(
+                            value: 'unilateral',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.compare_arrows,
+                                  color: widget.workoutExercise.unilateral
+                                      ? AppColors.of(context).primary
+                                      : AppColors.of(context).textSecondary,
+                                ),
+                                const SizedBox(width: 10),
+                                Flexible(
+                                  child: Text(
+                                    widget.workoutExercise.unilateral
+                                        ? 'Unilateral: ${widget.workoutExercise.unilateralTarget.label}'
+                                        : 'Configurar unilateral',
+                                    style: AppTypography.bodyMedium,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
