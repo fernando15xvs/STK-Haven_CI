@@ -169,6 +169,7 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> playQueue(List<MotivationTrack> tracks, {
     required int startIndex, Duration initialPosition=Duration.zero,
+    bool autoPlay=true,
   }) async {
     if(tracks.isEmpty || startIndex<0 || startIndex>=tracks.length)return;
     error=null;
@@ -198,8 +199,9 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
         _=>LoopMode.off,
       });
       await audio.setShuffleModeEnabled(shuffle && _queue.length>1);
-      // Intentionally not awaited: play() completes only after playback ends.
-      unawaited(audio.play());
+      // A paused user must never hear a burst of audio while changing modes.
+      // play() completes only when playback ends, so do not await it.
+      if(autoPlay)unawaited(audio.play());
       await saveResume();
     }catch(e){
       error='No se pudo reproducir este archivo. Comprueba el códec: $e';
@@ -222,8 +224,8 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
       final i=_original.indexWhere((t)=>t.id==current.id);
       if(i>=0){
         await playQueue(_original,startIndex:i,
-          initialPosition:completed ? Duration.zero : position);
-        if(!wasPlaying)await audio.pause();
+          initialPosition:completed ? Duration.zero : position,
+          autoPlay:wasPlaying);
       }
     }else{
       await audio.setLoopMode(switch(value){
