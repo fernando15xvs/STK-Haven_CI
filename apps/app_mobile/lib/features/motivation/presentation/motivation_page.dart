@@ -265,9 +265,6 @@ class _MotivationPageState extends State<MotivationPage> {
           colors.textPrimary),
         onSelected:(_)=>setState(()=>selection=key)));
   }
-  String _clock(Duration d)=>d.inMinutes.toString() + ':' +
-    d.inSeconds.remainder(60).toString().padLeft(2,'0');
-
   void _openNowPlaying() {
     Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => const MotivationNowPlayingPage(),
