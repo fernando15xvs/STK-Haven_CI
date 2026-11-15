@@ -23,7 +23,6 @@ import 'package:core/features/exercises/presentation/providers/exercise_provider
 import 'package:gym_tracker/features/workout/presentation/widgets/barbell_calculator_modal.dart';
 
 import 'package:gym_tracker/features/motivation/presentation/widgets/motivation_mini_player.dart';
-import 'package:gym_tracker/features/motivation/presentation/motivation_page.dart';
 
 class ActiveWorkoutPage extends ConsumerStatefulWidget {
   const ActiveWorkoutPage({super.key});
@@ -589,11 +588,6 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                   case 'plates':
                     BarbellCalculatorModal.show(context);
                     break;
-                  case 'motivation':
-                    Navigator.of(context).push(MaterialPageRoute<void>(
-                      builder: (_) => const MotivationPage(),
-                    ));
-                    break;
                 }
               },
               itemBuilder: (context) => [
@@ -612,14 +606,6 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(Icons.calculate_outlined),
                     title: Text('Calculadora de discos'),
-                  ),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'motivation',
-                  child: ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.music_note_outlined),
-                    title: Text('STK Motivation'),
                   ),
                 ),
                 PopupMenuItem<String>(
