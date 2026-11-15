@@ -63,6 +63,9 @@ class _NutritionIntelligencePageMobileState
     return FutureBuilder<bool>(
       future: _adultAccess,
       builder: (context, snapshot) => NutritionIntelligencePage(
+        // A different account must never inherit the previous account's
+        // private nutrition plan or Food Vision results from this widget.
+        key: ValueKey('nutrition_account_${Supabase.instance.client.auth.currentUser?.id ?? 'guest'}'),
         photoPicker: _pickPhoto,
         cameraAvailable: true,
         // FutureBuilder can retain the prior result while a new RPC is
