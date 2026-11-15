@@ -23,21 +23,23 @@ class MotivationFileDedup {
     if(!await a.exists() || !await b.exists())return false;
     if(await a.length()!=await b.length())return false;
     final first=await a.open(mode:FileMode.read);
-    RandomAccessFile? second;
     try{
-      second=await b.open(mode:FileMode.read);
-      while(true){
-        final left=await first.read(65536);
-        final right=await second.read(65536);
-        if(left.length!=right.length)return false;
-        if(left.isEmpty)return true;
-        for(var i=0;i<left.length;i++){
-          if(left[i]!=right[i])return false;
+      final second=await b.open(mode:FileMode.read);
+      try{
+        while(true){
+          final left=await first.read(65536);
+          final right=await second.read(65536);
+          if(left.length!=right.length)return false;
+          if(left.isEmpty)return true;
+          for(var i=0;i<left.length;i++){
+            if(left[i]!=right[i])return false;
+          }
         }
+      }finally{
+        await second.close();
       }
     }finally{
       await first.close();
-      if(second!=null)await second.close();
     }
   }
 }
