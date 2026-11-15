@@ -1328,8 +1328,11 @@ class _HeroCard extends StatelessWidget {
 }
 
 class _AdultGateCard extends StatelessWidget {
-  const _AdultGateCard({required this.colors, required this.access,
-    this.onRefreshAdultAccess});
+  const _AdultGateCard({
+    required this.colors,
+    required this.access,
+    this.onRefreshAdultAccess,
+  });
 
   final ColorScheme colors;
   final NutritionAccessState access;
@@ -1337,76 +1340,86 @@ class _AdultGateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.lock_outline_rounded, color: colors.primary),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    switch (access) {
-                      NutritionAccessState.minor =>
-                        'Nutrición y hábitos saludables',
-                      NutritionAccessState.ageUnknown =>
-                        'Tu bienestar, a tu ritmo',
-                      NutritionAccessState.adultUnverified =>
-                        'Calorías: acceso adulto pendiente',
-                      NutritionAccessState.adultVerified =>
-                        'Tu plan nutricional',
-                    },
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    switch(access) {
-                      NutritionAccessState.minor =>
-                        'Puedes seguir entrenando y mejorando hábitos, sin '
-                        'metas de calorías, dietas restrictivas ni macros. '
-                        'Prioriza alimentación variada, técnica y descanso. '
-                        'Para necesidades individuales, consulta con un profesional.',
-                      NutritionAccessState.ageUnknown =>
-                        'No necesitamos tu edad para entrenar ni registrar hábitos. '
-                        'Puedes añadirla opcionalmente en Perfil. '
-                        'La edad declarada no autoriza cálculos personales.',
-                      NutritionAccessState.adultUnverified =>
-                        'El cálculo personalizado necesita un permiso adulto '
-                        'confirmado por el servidor. La verificación todavía '
-                        'no puede iniciarse desde esta pantalla.',
-                      NutritionAccessState.adultVerified =>
-                        'Dispones de acceso adulto verificado.',
-                    },
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Mientras tanto puedes consultar alimentos en Food Vision '
-                    'en modo descriptivo y registrar agua, pasos y medidas.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant),
-                  ),
-                  if (access == NutritionAccessState.adultUnverified &&
-                      onRefreshAdultAccess != null) ...[
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: onRefreshAdultAccess,
-                      icon: const Icon(Icons.verified_user_outlined),
-                      label: const Text('Volver a comprobar acceso'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
+    final title=switch(access){
+      NutritionAccessState.minor=>'Hábitos para crecer con salud',
+      NutritionAccessState.ageUnknown=>'Tu bienestar, a tu ritmo',
+      NutritionAccessState.adultUnverified=>'Objetivo calórico no disponible',
+      NutritionAccessState.adultVerified=>'Tu plan nutricional',
+    };
+    final message=switch(access){
+      NutritionAccessState.minor=>
+        'Entrena y cuida tus hábitos sin contar calorías ni restringir '
+        'alimentos. Prioriza comer variado, descansar y progresar '
+        'según tu experiencia.',
+      NutritionAccessState.ageUnknown=>
+        'Puedes usar Food Vision, registrar agua y pasos y entrenar '
+        'sin indicar tu edad.',
+      NutritionAccessState.adultUnverified=>
+        'La cuenta todavía no tiene el permiso adulto necesario '
+        'para ver calorías y macros personalizados.',
+      NutritionAccessState.adultVerified=>
+        'Acceso adulto confirmado.',
+    };
+    return Container(
+      key:const ValueKey('nutrition_access_state_panel'),
+      padding:const EdgeInsets.all(16),
+      decoration:BoxDecoration(
+        border:Border.all(color:colors.outlineVariant),
+        borderRadius:BorderRadius.circular(18),
+        color:colors.surfaceContainerLow,
       ),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Icon(access.isMinor?Icons.spa_outlined:
+            Icons.info_outline_rounded,color:colors.primary,size:22),
+          const SizedBox(width:10),
+          Expanded(child:Text(title,
+            style:Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight:FontWeight.w800))),
+        ]),
+        const SizedBox(height:8),
+        Text(message,style:Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color:colors.onSurfaceVariant)),
+        if(access==NutritionAccessState.adultUnverified &&
+           onRefreshAdultAccess!=null)
+          Align(alignment:Alignment.centerLeft,
+            child:TextButton.icon(
+              onPressed:onRefreshAdultAccess,
+              icon:const Icon(Icons.refresh_rounded),
+              label:const Text('Volver a comprobar acceso'),
+            )),
+        Theme(
+          data:Theme.of(context).copyWith(
+            dividerColor:Colors.transparent,
+          ),
+          child:ExpansionTile(
+            key:const ValueKey('nutrition_how_it_works'),
+            tilePadding:EdgeInsets.zero,
+            childrenPadding:const EdgeInsets.only(bottom:8),
+            title:Text('¿Cómo funciona?',
+              style:Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight:FontWeight.w600)),
+            children:[
+              Text(
+                access==NutritionAccessState.minor
+                  ? 'En menores no habilitamos metas calóricas ni dietas '
+                    'restrictivas. Para necesidades nutricionales '
+                    'específicas consulta a un profesional cualificado.'
+                  : access==NutritionAccessState.ageUnknown
+                    ? 'La fecha que agregues en Perfil es opcional, '
+                      'y no sirve como verificación de mayoría de edad. '
+                      'Food Vision funciona en modo descriptivo.'
+                    : 'Los rangos calóricos solo se habilitan con un permiso '
+                      'válido del servidor. La app aún no dispone de un '
+                      'proceso externo para solicitarlo. Mientras tanto, '
+                      'Food Vision sigue disponible en modo descriptivo.',
+                style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color:colors.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      ]),
     );
   }
 }
