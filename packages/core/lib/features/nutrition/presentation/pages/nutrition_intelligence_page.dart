@@ -574,7 +574,7 @@ class _NutritionIntelligencePageState
             Slider(
               key:const ValueKey('nutrition_water_target_slider'),
               min:1000,max:5000,divisions:16,
-              value:draft.clamp(1000.0,5000.0),
+              value:draft.clamp(1000.0,5000.0).toDouble(),
               label:'${draft.round()} ml',
               onChanged:(v)=>update(()=>draft=v),
             ),
