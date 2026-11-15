@@ -1,6 +1,7 @@
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/nutrition_history_entry.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
+import 'package:core/domain/models/nutrition_goal_plan.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
 import 'package:core/features/nutrition/application/latest_body_measurements.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
@@ -11,6 +12,8 @@ import 'package:core/features/nutrition/application/wellness_goal_suggestions.da
 import 'package:core/features/nutrition/application/food_vision_correction.dart';
 import 'package:core/features/nutrition/data/food_vision_service.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
+import 'package:core/features/nutrition/data/nutrition_goal_plan_repository.dart';
+import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -53,6 +56,10 @@ class _NutritionIntelligencePageState
   EnergyGoal _goal = EnergyGoal.maintenance;
   EnergyEstimate? _energyEstimate;
   String? _calculationMeasurementIds;
+  AdultEnergyProfile? _calculatedProfile;
+  LatestBodyMeasurements? _calculatedBody;
+  NutritionGoalPlan? _activePlan;
+  NutritionGoalPlanRepository? _planRepository;
 
   NutritionPhoto? _photo;
   FoodVisionEstimate? _foodEstimate;
@@ -69,6 +76,14 @@ class _NutritionIntelligencePageState
       Hive.box<dynamic>(HiveBoxes.metadata),
     );
     _history = _historyRepository.getEntries();
+    try {
+      final id = Supabase.instance.client.auth.currentUser?.id;
+      if(id != null){
+        _planRepository=NutritionGoalPlanRepository(
+          Hive.box<dynamic>(HiveBoxes.metadata),id);
+        _activePlan=_planRepository?.read();
+      }
+    }catch(_){/* Keep public nutrition guidance available offline. */}
   }
 
   @override
@@ -287,6 +302,33 @@ class _NutritionIntelligencePageState
             if (_energyEstimate case final estimate?) ...[
               const SizedBox(height: 16),
               _EnergyResultCard(estimate: estimate),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: _saveEnergyPlan,
+                icon: const Icon(Icons.bookmark_add_outlined),
+                label: const Text('Guardar este plan'),
+              ),
+            ],
+            if (_activePlan case final plan?) ...[
+              const SizedBox(height: 16),
+              Text('Mi plan guardado',
+                style:Theme.of(context).textTheme.titleMedium),
+              Text('Objetivo: ${plan.estimate.targetLow}–'
+                '${plan.estimate.targetHigh} kcal estimadas',
+                style:Theme.of(context).textTheme.bodyMedium),
+              Text('Guardado el ${DateFormat('dd/MM/yyyy').format(plan.savedAt)}. '
+                'Peso ${plan.weightKg.toStringAsFixed(1)} kg y altura '
+                '${plan.heightCm.toStringAsFixed(1)} cm de Medidas.',
+                style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color:colors.onSurfaceVariant)),
+              TextButton.icon(
+                onPressed:()async{
+                  await _planRepository?.clear();
+                  if(mounted)setState(()=>_activePlan=null);
+                },
+                icon:const Icon(Icons.delete_outline),
+                label:const Text('Quitar plan guardado'),
+              ),
             ],
           ],
         ),
@@ -672,18 +714,19 @@ class _NutritionIntelligencePageState
       if (equationSex == null) {
         throw const FormatException('Selecciona el parámetro de la ecuación.');
       }
-      final estimate = const AdultEnergyPlanner().calculate(
-        AdultEnergyProfile(
-          ageYears: age,
-          heightCm: height,
-          weightKg: weight,
-          equationSex: equationSex,
-          activityLevel: _activity,
-          goal: _goal,
-        ),
+      final profile=AdultEnergyProfile(
+        ageYears: age,
+        heightCm: height,
+        weightKg: weight,
+        equationSex: equationSex,
+        activityLevel: _activity,
+        goal: _goal,
       );
+      final estimate = const AdultEnergyPlanner().calculate(profile);
       setState(() {
         _energyEstimate = estimate;
+        _calculatedProfile = profile;
+        _calculatedBody = body;
         _calculationMeasurementIds = body.fingerprint;
         _message = null;
       });
@@ -692,6 +735,69 @@ class _NutritionIntelligencePageState
         _energyEstimate = null;
         _message = error.toString();
       });
+    }
+  }
+
+  Future<void> _saveEnergyPlan() async {
+    final estimate=_energyEstimate;
+    final profile=_calculatedProfile;
+    final body=_calculatedBody;
+    final repo=_planRepository;
+    if(estimate==null || profile==null || body==null || repo==null ||
+       body.weightKg==null || body.heightCm==null)return;
+
+    // Never trust local age or a stale widget flag to grant access.
+    final verified=await NutritionAdultAccessService(
+      Supabase.instance.client).hasVerifiedAccess();
+    if(!mounted)return;
+    final declaredAge=ref.read(userExperienceProfileProvider).value
+      ?.ageAt(DateTime.now());
+    if(!verified || (declaredAge!=null && declaredAge<18)){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('El plan requiere una cuenta adulta verificada.')));
+      return;
+    }
+    final current=LatestBodyMeasurements.fromRecords(
+      ref.read(bodyMeasurementProvider));
+    if(current.fingerprint!=_calculationMeasurementIds){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('Han cambiado tus medidas. Calcula de nuevo antes de guardar.')));
+      return;
+    }
+    final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>
+      AlertDialog(
+        title:const Text('Guardar referencia nutricional'),
+        content:const Text('Se guardará en este dispositivo un rango '
+          'estimado y las medidas fechadas usadas. No es una prescripción '
+          'ni cambia automáticamente tus metas de agua o pasos.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx,false),
+            child:const Text('Cancelar')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+            child:const Text('Guardar plan')),
+        ],
+      ));
+    if(confirmed!=true || !mounted)return;
+    final plan=NutritionGoalPlan(
+      savedAt:DateTime.now(),
+      weightRecordId:body.weightKg!.recordId,
+      heightRecordId:body.heightCm!.recordId,
+      weightRecordedAt:body.weightKg!.recordedAt,
+      heightRecordedAt:body.heightCm!.recordedAt,
+      weightKg:profile.weightKg,
+      heightCm:profile.heightCm,
+      ageYears:profile.ageYears,
+      equationSex:profile.equationSex,
+      activityLevel:profile.activityLevel,
+      goal:profile.goal,
+      estimate:estimate,
+    );
+    try{
+      await repo.save(plan);
+      if(mounted)setState(()=>_activePlan=plan);
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('No se pudo guardar el plan.')));
     }
   }
 
