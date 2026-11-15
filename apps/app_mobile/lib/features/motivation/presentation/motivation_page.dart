@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:just_audio/just_audio.dart' show PlayerState, ProcessingState;
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import '../application/motivation_playback.dart';
+import '../application/motivation_library_search.dart';
 import '../data/motivation_library.dart';
 import 'widgets/motivation_audio_settings_sheet.dart';
 
@@ -19,6 +20,9 @@ class _MotivationPageState extends State<MotivationPage> {
   String selection='all';
   MotivationMode importMode=MotivationMode.discipline;
   bool busy=false;
+  String searchQuery='';
+  MotivationMediaFilter mediaFilter=MotivationMediaFilter.all;
+  final searchController=TextEditingController();
   @override
   void initState(){
     super.initState();
@@ -34,6 +38,7 @@ class _MotivationPageState extends State<MotivationPage> {
   void dispose(){
     library.removeListener(_refresh);
     player.removeListener(_refresh);
+    searchController.dispose();
     super.dispose();
   }
   void _message(String msg){
@@ -309,7 +314,8 @@ class _MotivationPageState extends State<MotivationPage> {
   @override
   Widget build(BuildContext context){
     final colors=AppColors.of(context);
-    final tracks=library.forSelection(selection);
+    final tracks=MotivationLibrarySearch.filter(
+      library.forSelection(selection),query:searchQuery,media:mediaFilter);
     return Scaffold(
       appBar:AppBar(title:const Text('STK Motivation'),
         actions:[
@@ -378,6 +384,42 @@ class _MotivationPageState extends State<MotivationPage> {
                   label:const Text('Eliminar lista')),
               ]),
             const SizedBox(height:12),
+            TextField(
+              key:const ValueKey('motivation_local_search'),
+              controller:searchController,
+              onChanged:(value)=>setState(()=>searchQuery=value),
+              textInputAction:TextInputAction.search,
+              decoration:InputDecoration(
+                prefixIcon:const Icon(Icons.search_rounded),
+                hintText:'Buscar en tus archivos',
+                border:const OutlineInputBorder(),
+                suffixIcon:searchQuery.isEmpty?null:IconButton(
+                  tooltip:'Borrar búsqueda',
+                  onPressed:(){
+                    searchController.clear();
+                    setState(()=>searchQuery='');
+                  },
+                  icon:const Icon(Icons.close_rounded)),
+              ),
+            ),
+            const SizedBox(height:8),
+            SingleChildScrollView(
+              scrollDirection:Axis.horizontal,
+              child:Row(children:[
+                for(final choice in MotivationMediaFilter.values)
+                  Padding(padding:const EdgeInsets.only(right:8),
+                    child:ChoiceChip(
+                      label:Text(switch(choice){
+                        MotivationMediaFilter.all=>'Todos los medios',
+                        MotivationMediaFilter.audio=>'Audios',
+                        MotivationMediaFilter.video=>'Videos',
+                      }),
+                      selected:mediaFilter==choice,
+                      onSelected:(_)=>setState(()=>mediaFilter=choice),
+                    )),
+              ]),
+            ),
+            const SizedBox(height:12),
             Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
               Text('Archivos ('+tracks.length.toString()+')',
                 style:AppTypography.headlineMedium),
@@ -390,8 +432,13 @@ class _MotivationPageState extends State<MotivationPage> {
                   Icon(Icons.library_music_outlined,size:54,
                     color:colors.textSecondary),
                   const SizedBox(height:12),
-                  const Text('No hay archivos en esta colección.'),
-                  const Text('Importa contenido o añádelo a una playlist.'),
+                  Text(searchQuery.isNotEmpty ||
+                      mediaFilter!=MotivationMediaFilter.all
+                    ? 'No encontramos coincidencias.'
+                    : 'No hay archivos en esta colección.'),
+                  if(searchQuery.isEmpty &&
+                      mediaFilter==MotivationMediaFilter.all)
+                    const Text('Importa contenido o añádelo a una playlist.'),
                 ])),
             for(final t in tracks)
               Card(color:colors.surface,child:ListTile(
