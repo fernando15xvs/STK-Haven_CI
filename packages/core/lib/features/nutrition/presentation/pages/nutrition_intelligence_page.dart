@@ -2,10 +2,14 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/nutrition_history_entry.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
+import 'package:core/features/nutrition/application/latest_body_measurements.dart';
+import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/nutrition/application/food_vision_correction.dart';
 import 'package:core/features/nutrition/data/food_vision_service.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -15,34 +19,36 @@ typedef NutritionPhotoPicker = Future<NutritionPhoto?> Function(
   NutritionPhotoSource source,
 );
 
-class NutritionIntelligencePage extends StatefulWidget {
+class NutritionIntelligencePage extends ConsumerStatefulWidget {
   final NutritionPhotoPicker photoPicker;
   final bool cameraAvailable;
   final bool verifiedAdultNutritionAccess;
+  final VoidCallback? onOpenMeasurements;
 
   const NutritionIntelligencePage({
     super.key,
     required this.photoPicker,
     this.cameraAvailable = true,
     this.verifiedAdultNutritionAccess = false,
+    this.onOpenMeasurements,
   });
 
   @override
-  State<NutritionIntelligencePage> createState() =>
+  ConsumerState<NutritionIntelligencePage> createState() =>
       _NutritionIntelligencePageState();
 }
 
 class _NutritionIntelligencePageState
-    extends State<NutritionIntelligencePage> {
-  final _ageController = TextEditingController(text: '25');
-  final _heightController = TextEditingController(text: '170');
-  final _weightController = TextEditingController(text: '70');
+    extends ConsumerState<NutritionIntelligencePage> {
+  // No demographic or measurement values are ever fabricated as defaults.
+  final _ageController = TextEditingController();
   final _dishHintController = TextEditingController();
 
-  EnergyEquationSex _equationSex = EnergyEquationSex.female;
+  EnergyEquationSex? _equationSex;
   EnergyActivityLevel _activity = EnergyActivityLevel.moderate;
   EnergyGoal _goal = EnergyGoal.maintenance;
   EnergyEstimate? _energyEstimate;
+  String? _calculationMeasurementIds;
 
   NutritionPhoto? _photo;
   FoodVisionEstimate? _foodEstimate;
@@ -64,8 +70,6 @@ class _NutritionIntelligencePageState
   @override
   void dispose() {
     _ageController.dispose();
-    _heightController.dispose();
-    _weightController.dispose();
     _dishHintController.dispose();
     super.dispose();
   }
@@ -96,6 +100,9 @@ class _NutritionIntelligencePageState
   }
 
   Widget _buildEnergyPlanner(ColorScheme colors) {
+    final body = LatestBodyMeasurements.fromRecords(ref.watch(bodyMeasurementProvider));
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final sourceIds = '${body.weightKg?.recordId ?? ''}/${body.heightCm?.recordId ?? ''}';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -138,31 +145,57 @@ class _NutritionIntelligencePageState
                     decoration: const InputDecoration(labelText: 'Edad'),
                   ),
                 ),
-                SizedBox(
-                  width: 150,
-                  child: TextField(
-                    controller: _heightController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Estatura (cm)'),
-                  ),
-                ),
-                SizedBox(
-                  width: 150,
-                  child: TextField(
-                    controller: _weightController,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Peso (kg)'),
-                  ),
-                ),
+
               ],
             ),
+            const SizedBox(height: 12),
+            Container(
+              key: const ValueKey('nutrition_measurements_source'),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Datos de Medidas',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 6),
+                  Text(
+                    body.weightKg == null
+                        ? 'Peso: falta un registro válido'
+                        : 'Peso: ${body.weightKg!.value.toStringAsFixed(1)} kg · '
+                            '${dateFormat.format(body.weightKg!.recordedAt)}',
+                  ),
+                  Text(
+                    body.heightCm == null
+                        ? 'Altura: falta un registro válido'
+                        : 'Altura: ${body.heightCm!.value.toStringAsFixed(1)} cm · '
+                            '${dateFormat.format(body.heightCm!.recordedAt)}',
+                  ),
+                  if (widget.onOpenMeasurements != null)
+                    TextButton.icon(
+                      onPressed: widget.onOpenMeasurements,
+                      icon: const Icon(Icons.straighten_rounded),
+                      label: const Text('Actualizar en Medidas'),
+                    ),
+                ],
+              ),
+            ),
+            if (_energyEstimate != null &&
+                _calculationMeasurementIds != sourceIds)
+              Text(
+                'Hay medidas más recientes o modificadas. '
+                'El resultado anterior no se actualizará sin tu confirmación.',
+                style: TextStyle(color: colors.onSurfaceVariant),
+              ),
             const SizedBox(height: 12),
             DropdownButtonFormField<EnergyEquationSex>(
               value: _equationSex,
               decoration: const InputDecoration(
-                labelText: 'Sexo usado por la ecuación',
+                labelText: 'Parámetro fisiológico de la ecuación',
+                helperText: 'Solo para estimar energía; no define tu identidad.',
               ),
               items: const [
                 DropdownMenuItem(
@@ -520,22 +553,31 @@ class _NutritionIntelligencePageState
   void _calculateEnergy() {
     try {
       final age = int.parse(_ageController.text.trim());
-      final height =
-          double.parse(_heightController.text.trim().replaceAll(',', '.'));
-      final weight =
-          double.parse(_weightController.text.trim().replaceAll(',', '.'));
+      final body = LatestBodyMeasurements.fromRecords(
+        ref.read(bodyMeasurementProvider),
+      );
+      final height = body.heightCm?.value;
+      final weight = body.weightKg?.value;
+      if (height == null || weight == null) {
+        throw const FormatException('Registra peso y altura en Medidas.');
+      }
+      final equationSex = _equationSex;
+      if (equationSex == null) {
+        throw const FormatException('Selecciona el parámetro de la ecuación.');
+      }
       final estimate = const AdultEnergyPlanner().calculate(
         AdultEnergyProfile(
           ageYears: age,
           heightCm: height,
           weightKg: weight,
-          equationSex: _equationSex,
+          equationSex: equationSex,
           activityLevel: _activity,
           goal: _goal,
         ),
       );
       setState(() {
         _energyEstimate = estimate;
+        _calculationMeasurementIds = '${body.weightKg!.recordId}/${body.heightCm!.recordId}';
         _message = null;
       });
     } catch (error) {
@@ -801,41 +843,27 @@ class _HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      key: const ValueKey('nutrition_compact_plan_header'),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            colors.primaryContainer,
-            colors.secondaryContainer,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
+        color: colors.surfaceContainerHigh,
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.restaurant_menu_rounded, color: colors.onPrimaryContainer),
-          const SizedBox(width: 14),
+          Icon(Icons.restaurant_menu_rounded, color: colors.primary, size: 24),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Registra con contexto, no con falsa precisión',
+                Text('Mi plan STK',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: colors.onPrimaryContainer,
-                      ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Las fotos no permiten conocer con exactitud aceite, salsas ni '
-                  'gramajes. STK Haven muestra rangos, confianza y preguntas para '
-                  'que el usuario pueda corregir la estimación.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: colors.onPrimaryContainer,
-                      ),
-                ),
+                    fontWeight: FontWeight.w800)),
+                Text('Nutrición, actividad y hábitos en un solo lugar.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant)),
               ],
             ),
           ),
@@ -873,13 +901,18 @@ class _AdultGateCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'El motor ya está preparado, pero no se habilita con una '
-                    'autodeclaración. Antes del release debe conectarse a un gate '
-                    'de edad real de la cuenta. Food Vision sigue funcionando en '
-                    'modo descriptivo sin calorías/macros numéricos.',
+                    'El cálculo personalizado necesita comprobación de edad '
+                    'por un proceso seguro de la cuenta. Esta función todavía '
+                    'no dispone de verificación desde la app.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
-                        ),
+                      color: colors.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Mientras tanto puedes consultar alimentos en Food Vision '
+                    'en modo descriptivo y registrar agua, pasos y medidas.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant),
                   ),
                 ],
               ),
