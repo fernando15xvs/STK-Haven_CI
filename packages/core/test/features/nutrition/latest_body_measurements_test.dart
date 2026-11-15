@@ -50,4 +50,29 @@ void main() {
     expect(data.heightCm?.value, 180);
     expect(records.first.id, 'bad');
   });
+
+  test('latest valid body-fat percent has its own dated source', () {
+    final latest=LatestBodyMeasurements.fromRecords([
+      BodyMeasurement(id:'recent-w',date:DateTime(2026,11,15),
+        weightKg:72, bodyFatPercentage:double.nan),
+      BodyMeasurement(id:'fat',date:DateTime(2026,11,12),
+        bodyFatPercentage:21.5),
+      BodyMeasurement(id:'height',date:DateTime(2026,11,1),
+        heightCm:177),
+    ]);
+    expect(latest.bodyFatPercentage?.value,21.5);
+    expect(latest.bodyFatPercentage?.recordId,'fat');
+    expect(latest.weightKg?.recordId,'recent-w');
+    expect(latest.heightCm?.recordId,'height');
+    expect(latest.canEstimateEnergy,isTrue);
+  });
+
+  test('body-fat alone does not satisfy energy equation requirements', () {
+    final latest=LatestBodyMeasurements.fromRecords([
+      BodyMeasurement(id:'fat',date:DateTime(2026,11,15),
+        bodyFatPercentage:20),
+    ]);
+    expect(latest.bodyFatPercentage?.value,20);
+    expect(latest.canEstimateEnergy,isFalse);
+  });
 }
