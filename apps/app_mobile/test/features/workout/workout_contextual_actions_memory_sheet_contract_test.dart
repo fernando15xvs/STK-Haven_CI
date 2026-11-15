@@ -19,6 +19,9 @@ void main() {
     expect(source, contains("Text('Nota rápida'"));
     expect(source, contains("Text('Sustituir ejercicio'"));
     expect(source, contains("'Configurar unilateral'"));
+    expect(source, contains("key: ValueKey('workout_exercise_guidance_"));
+    expect(source, contains('_showGuidance = !_showGuidance'));
+    expect(source, contains('if (_showGuidance) ...['));
     expect(source, contains("Text('Añadir serie')"));
     expect(source, contains("tooltip: 'Acciones de la serie'"));
     expect(source, contains("label: 'Finalizar entrenamiento'"));
