@@ -924,6 +924,7 @@ class _ExerciseBlock extends ConsumerStatefulWidget {
 
 class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
   bool? _manuallyExpanded;
+  bool _showGuidance = false;
 
   @override
   void didUpdateWidget(covariant _ExerciseBlock oldWidget) {
@@ -1508,18 +1509,41 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         ),
                       ),
                     ),
-                  ExerciseRepRangeNotice(
-                    exerciseId: widget.workoutExercise.exerciseId,
-                  ),
-                  ExerciseIncrementControl(
-                    exerciseId: widget.workoutExercise.exerciseId,
-                  ),
-                  if (suggestion != null) ...[
-                    const SizedBox(height: 10),
-                    _ProgressionReferenceCard(
-                      suggestion: suggestion,
-                      unit: settings.weightUnit,
+                  // Keep weight/reps/RIR and set completion directly in view.
+                  // References remain accessible without dominating every card.
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: ValueKey('workout_exercise_guidance_${widget.exIndex}'),
+                      onPressed: () => setState(
+                        () => _showGuidance = !_showGuidance,
+                      ),
+                      icon: Icon(
+                        _showGuidance ? Icons.expand_less : Icons.expand_more,
+                        size: 18,
+                      ),
+                      label: Text(
+                        _showGuidance
+                            ? 'Ocultar guía y progresión'
+                            : 'Guía y progresión',
+                        style: AppTypography.labelMedium,
+                      ),
                     ),
+                  ),
+                  if (_showGuidance) ...[
+                    ExerciseRepRangeNotice(
+                      exerciseId: widget.workoutExercise.exerciseId,
+                    ),
+                    ExerciseIncrementControl(
+                      exerciseId: widget.workoutExercise.exerciseId,
+                    ),
+                    if (suggestion != null) ...[
+                      const SizedBox(height: 10),
+                      _ProgressionReferenceCard(
+                        suggestion: suggestion,
+                        unit: settings.weightUnit,
+                      ),
+                    ],
                   ],
                   const SizedBox(height: 14),
                   Row(
