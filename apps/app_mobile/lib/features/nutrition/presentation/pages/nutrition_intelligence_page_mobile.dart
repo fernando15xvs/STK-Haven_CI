@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/presentation/pages/nutrition_intelligence_page.dart';
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
@@ -15,15 +17,45 @@ class NutritionIntelligencePageMobile extends StatefulWidget {
 }
 
 class _NutritionIntelligencePageMobileState
-    extends State<NutritionIntelligencePageMobile> {
-  late final Future<bool> _adultAccess;
+    extends State<NutritionIntelligencePageMobile>
+    with WidgetsBindingObserver {
+  late Future<bool> _adultAccess;
+  StreamSubscription<AuthState>? _authSubscription;
+
+  Future<bool> _checkAccess() => NutritionAdultAccessService(
+    Supabase.instance.client,
+  ).hasVerifiedAccess();
+
+  void _refreshAdultAccess() {
+    if(!mounted)return;
+    setState(() => _adultAccess = _checkAccess());
+  }
 
   @override
   void initState() {
     super.initState();
-    _adultAccess = NutritionAdultAccessService(
-      Supabase.instance.client,
-    ).hasVerifiedAccess();
+    WidgetsBinding.instance.addObserver(this);
+    _adultAccess = _checkAccess();
+    // Switching accounts or refreshing an expired token must not keep an
+    // old user's nutrition grant on screen.
+    _authSubscription=Supabase.instance.client.auth.onAuthStateChange.listen(
+      (_) => _refreshAdultAccess(),
+      onError:(Object error,StackTrace stackTrace){
+        if(mounted)setState(() => _adultAccess=Future<bool>.value(false));
+      },
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if(state==AppLifecycleState.resumed)_refreshAdultAccess();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    unawaited(_authSubscription?.cancel());
+    super.dispose();
   }
 
   @override
@@ -33,7 +65,12 @@ class _NutritionIntelligencePageMobileState
       builder: (context, snapshot) => NutritionIntelligencePage(
         photoPicker: _pickPhoto,
         cameraAvailable: true,
-        verifiedAdultNutritionAccess: snapshot.data == true,
+        // FutureBuilder can retain the prior result while a new RPC is
+        // waiting; only a completed fresh check can unlock numeric nutrition.
+        verifiedAdultNutritionAccess:
+            snapshot.connectionState == ConnectionState.done &&
+            snapshot.data == true,
+        onRefreshAdultAccess: _refreshAdultAccess,
         onOpenMeasurements: () => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const BodyMeasurementPage()),
         ),
