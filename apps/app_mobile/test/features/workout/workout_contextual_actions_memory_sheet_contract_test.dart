@@ -16,12 +16,15 @@ void main() {
     for (final action in ['technique', 'note', 'replace', 'unilateral']) {
       expect(source, contains("value: '$action'"));
     }
-    expect(source, contains("Text('Técnica y ficha'"));
+    expect(source, contains("label: 'Técnica y ficha'"));
     expect(source, contains('ExerciseDetailPage(exercise: item)'));
     expect(source, contains('ref.read(exerciseListProvider)'));
-    expect(source, contains("Text('Nota rápida'"));
-    expect(source, contains("Text('Sustituir ejercicio'"));
+    expect(source, contains("label: 'Nota rápida'"));
+    expect(source, contains("label: 'Sustituir ejercicio'"));
     expect(source, contains("'Configurar unilateral'"));
+    expect(source, contains('class _WorkoutExerciseActionLabel'));
+    expect(source, contains('width: 208'));
+    expect(source, contains('maxLines: 3'));
     expect(source, contains("key: ValueKey('workout_exercise_guidance_"));
     expect(source, contains('_showGuidance = !_showGuidance'));
     expect(source, contains('if (_showGuidance) ...['));
