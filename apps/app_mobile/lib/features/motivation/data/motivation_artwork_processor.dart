@@ -37,7 +37,7 @@ class MotivationArtworkProcessor {
         canvas.drawImageRect(
           original,
           ui.Rect.fromLTWH(left,top,shortest,shortest),
-          const ui.Rect.fromLTWH(0,0,squareSize.toDouble(),squareSize.toDouble()),
+          ui.Rect.fromLTWH(0,0,squareSize.toDouble(),squareSize.toDouble()),
           ui.Paint()..filterQuality=ui.FilterQuality.high,
         );
         final picture=recorder.endRecording();
