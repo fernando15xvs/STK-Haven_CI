@@ -1400,13 +1400,12 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                                       : AppColors.of(context).textSecondary,
                                 ),
                                 const SizedBox(width: 10),
-                                Flexible(
-                                  child: Text(
-                                    widget.workoutExercise.unilateral
-                                        ? 'Unilateral: ${widget.workoutExercise.unilateralTarget.label}'
-                                        : 'Configurar unilateral',
-                                    style: AppTypography.bodyMedium,
-                                  ),
+                                Text(
+                                  widget.workoutExercise.unilateral
+                                      ? 'Unilateral: ${widget.workoutExercise.unilateralTarget.label}'
+                                      : 'Configurar unilateral',
+                                  maxLines: 2,
+                                  style: AppTypography.bodyMedium,
                                 ),
                               ],
                             ),
