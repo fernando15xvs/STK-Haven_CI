@@ -4,6 +4,7 @@ import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
 import 'package:core/features/nutrition/application/latest_body_measurements.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/nutrition/application/food_vision_correction.dart';
 import 'package:core/features/nutrition/data/food_vision_service.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
@@ -77,6 +78,9 @@ class _NutritionIntelligencePageState
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final age = ref.watch(userExperienceProfileProvider).value?.ageAt(DateTime.now());
+    final isMinor = age != null && age < 18;
+    final hasAdultAccess = widget.verifiedAdultNutritionAccess && !isMinor;
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrición Inteligente')),
       body: SafeArea(
@@ -85,8 +89,8 @@ class _NutritionIntelligencePageState
           children: [
             _HeroCard(colors: colors),
             const SizedBox(height: 16),
-            if (!widget.verifiedAdultNutritionAccess)
-              _AdultGateCard(colors: colors)
+            if (!hasAdultAccess)
+              _AdultGateCard(colors: colors, isMinor: isMinor)
             else
               _buildEnergyPlanner(colors),
             const SizedBox(height: 16),
@@ -102,7 +106,8 @@ class _NutritionIntelligencePageState
   Widget _buildEnergyPlanner(ColorScheme colors) {
     final body = LatestBodyMeasurements.fromRecords(ref.watch(bodyMeasurementProvider));
     final dateFormat = DateFormat('dd/MM/yyyy');
-    final sourceIds = '${body.weightKg?.recordId ?? ''}/${body.heightCm?.recordId ?? ''}';
+    final sourceIds = body.fingerprint;
+    final demographic = ref.watch(userExperienceProfileProvider).value;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -142,7 +147,11 @@ class _NutritionIntelligencePageState
                   child: TextField(
                     controller: _ageController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Edad'),
+                    decoration: InputDecoration(
+                      labelText: 'Edad',
+                      hintText: demographic?.ageAt(DateTime.now())?.toString(),
+                      helperText: 'De Perfil, o indícala para este cálculo.',
+                    ),
                   ),
                 ),
 
@@ -192,7 +201,8 @@ class _NutritionIntelligencePageState
               ),
             const SizedBox(height: 12),
             DropdownButtonFormField<EnergyEquationSex>(
-              value: _equationSex,
+              key: ValueKey('energy_equation_${_equationSex?.name ?? demographic?.equationSexForEnergy?.name ?? 'none'}'),
+              initialValue: _equationSex ?? demographic?.equationSexForEnergy,
               decoration: const InputDecoration(
                 labelText: 'Parámetro fisiológico de la ecuación',
                 helperText: 'Solo para estimar energía; no define tu identidad.',
@@ -552,7 +562,13 @@ class _NutritionIntelligencePageState
 
   void _calculateEnergy() {
     try {
-      final age = int.parse(_ageController.text.trim());
+      final ageText = _ageController.text.trim();
+      final age = ageText.isEmpty
+          ? ref.read(userExperienceProfileProvider).value?.ageAt(DateTime.now())
+          : int.tryParse(ageText);
+      if (age == null) {
+        throw const FormatException('Indica tu edad o complétala en Perfil.');
+      }
       final body = LatestBodyMeasurements.fromRecords(
         ref.read(bodyMeasurementProvider),
       );
@@ -561,7 +577,8 @@ class _NutritionIntelligencePageState
       if (height == null || weight == null) {
         throw const FormatException('Registra peso y altura en Medidas.');
       }
-      final equationSex = _equationSex;
+      final equationSex = _equationSex ??
+          ref.read(userExperienceProfileProvider).value?.equationSexForEnergy;
       if (equationSex == null) {
         throw const FormatException('Selecciona el parámetro de la ecuación.');
       }
@@ -577,7 +594,7 @@ class _NutritionIntelligencePageState
       );
       setState(() {
         _energyEstimate = estimate;
-        _calculationMeasurementIds = '${body.weightKg!.recordId}/${body.heightCm!.recordId}';
+        _calculationMeasurementIds = body.fingerprint;
         _message = null;
       });
     } catch (error) {
@@ -874,9 +891,10 @@ class _HeroCard extends StatelessWidget {
 }
 
 class _AdultGateCard extends StatelessWidget {
-  const _AdultGateCard({required this.colors});
+  const _AdultGateCard({required this.colors, required this.isMinor});
 
   final ColorScheme colors;
+  final bool isMinor;
 
   @override
   Widget build(BuildContext context) {
@@ -893,7 +911,8 @@ class _AdultGateCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Objetivos calóricos: acceso adulto verificado',
+                    isMinor ? 'Nutrición y hábitos saludables' :
+                        'Objetivos calóricos: acceso adulto verificado',
                     style: Theme.of(context)
                         .textTheme
                         .titleMedium
@@ -901,9 +920,14 @@ class _AdultGateCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'El cálculo personalizado necesita comprobación de edad '
-                    'por un proceso seguro de la cuenta. Esta función todavía '
-                    'no dispone de verificación desde la app.',
+                    isMinor
+                        ? 'Puedes entrenar y mejorar hábitos sin objetivos de '
+                          'calorías ni dietas restrictivas. Tu cuerpo aún está '
+                          'creciendo; prioriza alimentación variada y descanso.'
+                        : 'El cálculo personalizado necesita comprobación de '
+                          'edad mediante un proceso seguro de la cuenta. '
+                          'Esta función todavía no dispone de verificación '
+                          'desde la app.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: colors.onSurfaceVariant),
                   ),
