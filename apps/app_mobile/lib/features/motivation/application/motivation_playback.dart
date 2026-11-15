@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
@@ -9,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/motivation_library.dart';
 import 'motivation_sleep_timer.dart';
+import 'motivation_resume_snapshot.dart';
 
 /// One shared native player survives navigation away from the library page.
 /// MP4 is used as a media source for its audio track while in background.
@@ -27,6 +29,10 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if(state==AppLifecycleState.resumed) sleepTimer.checkDeadline();
+    if(state==AppLifecycleState.inactive ||
+       state==AppLifecycleState.paused){
+      unawaited(saveResume());
+    }
   }
 
   static final instance=MotivationPlayback._();
@@ -34,6 +40,9 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   late final MotivationSleepTimer sleepTimer;
   static const _volumeKey='stk_motivation_volume_v1';
   static const _speedKey='stk_motivation_speed_v1';
+  static const _repeatKey='stk_motivation_repeat_v1';
+  static const _shuffleKey='stk_motivation_shuffle_v1';
+  static const _resumeKey='stk_motivation_resume_v1';
   double volume=1.0;
   double speed=1.0;
   Future<void>? _loadingPreferences;
@@ -42,7 +51,17 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   List<MotivationTrack> _queue=[];
   MotivationRepeat repeat=MotivationRepeat.next;
   bool shuffle=false;
+  MotivationResumeSnapshot? resumeSnapshot;
   String? error;
+
+  String? get resumeTitle {
+    final id=resumeSnapshot?.trackId;
+    if(id==null)return null;
+    for(final item in MotivationLibrary.instance.tracks){
+      if(item.id==id)return item.title;
+    }
+    return null;
+  }
 
   MotivationTrack? get currentTrack {
     final i=audio.currentIndex;
@@ -68,10 +87,65 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
     final prefs=await SharedPreferences.getInstance();
     volume=(prefs.getDouble(_volumeKey)??1.0).clamp(0.0,1.0).toDouble();
     speed=(prefs.getDouble(_speedKey)??1.0).clamp(0.75,1.5).toDouble();
+    repeat=MotivationRepeat.values.firstWhere(
+      (value)=>value.name==prefs.getString(_repeatKey),
+      orElse:()=>MotivationRepeat.next);
+    shuffle=prefs.getBool(_shuffleKey)??false;
+    final raw=prefs.getString(_resumeKey);
+    if(raw!=null){
+      try{
+        resumeSnapshot=MotivationResumeSnapshot.fromJson(
+          Map<String,dynamic>.from(jsonDecode(raw) as Map));
+      }catch(_){resumeSnapshot=null;}
+    }
     await audio.setVolume(volume);
     await audio.setSpeed(speed);
     notifyListeners();
   }
+  /// Persist stable metadata only on a real playback event or app pause.
+  /// This never grants permission to start media automatically.
+  Future<void> saveResume() async {
+    final track=currentTrack;
+    if(track==null)return;
+    final queueIds=<String>[
+      for(final item in _original)item.id,
+    ];
+    if(!queueIds.contains(track.id))queueIds.add(track.id);
+    final position=audio.position.inMilliseconds.clamp(0,24*60*60*1000);
+    final snapshot=MotivationResumeSnapshot(
+      trackId:track.id,
+      queueIds:List.unmodifiable(queueIds),
+      positionMs:position,
+    );
+    final prefs=await SharedPreferences.getInstance();
+    await prefs.setString(_resumeKey,jsonEncode(snapshot.toJson()));
+    resumeSnapshot=snapshot;
+    notifyListeners();
+  }
+
+  /// User initiated only. Removed tracks are skipped; the original library
+  /// is never overwritten and no playback starts without a valid selected ID.
+  Future<bool> resumeLast() async {
+    await loadAudioPreferences();
+    final snapshot=resumeSnapshot;
+    if(snapshot==null)return false;
+    await MotivationLibrary.instance.load();
+    final available={
+      for(final item in MotivationLibrary.instance.tracks)item.id:item,
+    };
+    final selected=available[snapshot.trackId];
+    if(selected==null)return false;
+    final tracks=[
+      for(final id in snapshot.queueIds)
+        if(available.containsKey(id))available[id]!,
+    ];
+    final index=tracks.indexWhere((t)=>t.id==selected.id);
+    if(index<0)return false;
+    await playQueue(tracks,startIndex:index,
+      initialPosition:Duration(milliseconds:snapshot.positionMs));
+    return error==null && currentTrack?.id==selected.id;
+  }
+
   Future<void> setVolume(double value) async {
     volume=value.clamp(0.0,1.0).toDouble();
     await audio.setVolume(volume);
@@ -126,6 +200,7 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
       await audio.setShuffleModeEnabled(shuffle && _queue.length>1);
       // Intentionally not awaited: play() completes only after playback ends.
       unawaited(audio.play());
+      await saveResume();
     }catch(e){
       error='No se pudo reproducir este archivo. Comprueba el códec: $e';
       notifyListeners();
@@ -139,7 +214,9 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
     final position=audio.position;
     final wasPlaying=playing;
     repeat=value;
-    if(current==null)return;
+    final prefs=await SharedPreferences.getInstance();
+    await prefs.setString(_repeatKey,repeat.name);
+    if(current==null){notifyListeners();return;}
     if(value==MotivationRepeat.stop ||
        _queue.length!=_original.length) {
       final i=_original.indexWhere((t)=>t.id==current.id);
@@ -161,12 +238,15 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> toggleShuffle() async {
     shuffle=!shuffle;
     await audio.setShuffleModeEnabled(shuffle && _queue.length>1);
+    final prefs=await SharedPreferences.getInstance();
+    await prefs.setBool(_shuffleKey,shuffle);
     notifyListeners();
   }
 
   Future<void> togglePlay() async {
     if(playing){
       await audio.pause();
+      await saveResume();
     }else if(currentTrack!=null){
       // completed is orthogonal to playing: simply calling play() at the
       // end leaves the native decoder at EOF. Explicitly rewind first.
@@ -179,6 +259,7 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> playAtIndex(int index) async {
     if(index<0 || index>=_queue.length)return;
     await audio.seek(Duration.zero,index:index);
+    await saveResume();
     if(!playing)unawaited(audio.play());
     notifyListeners();
   }
@@ -186,6 +267,7 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> next() async {
     if(audio.hasNext){
       await audio.seekToNext();
+      await saveResume();
       if(!audio.playing)unawaited(audio.play());
     }
   }
@@ -194,12 +276,14 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
       await audio.seek(Duration.zero);
     }else if(audio.hasPrevious){
       await audio.seekToPrevious();
+      await saveResume();
     }else{
       await audio.seek(Duration.zero);
     }
   }
   Future<void> stop() async {
     sleepTimer.cancel();
+    await saveResume();
     await audio.stop();
     _queue=[];
     _original=[];
