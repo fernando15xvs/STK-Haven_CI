@@ -72,6 +72,15 @@ class _NutritionIntelligencePageState
     nutritionAccessStateProvider(widget.verifiedAdultNutritionAccess),
   ).canViewNumericNutrition;
 
+  /// Draft values belong to the exact demographic/measurements used.
+  /// Editing a field must not leave an apparently current estimate on screen.
+  void _invalidateEnergyDraft() {
+    _energyEstimate=null;
+    _calculatedProfile=null;
+    _calculatedBody=null;
+    _calculationMeasurementIds=null;
+  }
+
   NutritionPhoto? _photo;
   FoodVisionEstimate? _foodEstimate;
   bool _analyzing = false;
@@ -201,6 +210,7 @@ class _NutritionIntelligencePageState
                   child: TextField(
                     controller: _ageController,
                     keyboardType: TextInputType.number,
+                    onChanged:(_)=>setState(_invalidateEnergyDraft),
                     decoration: InputDecoration(
                       labelText: 'Edad',
                       hintText: demographic?.ageAt(DateTime.now())?.toString(),
@@ -272,7 +282,10 @@ class _NutritionIntelligencePageState
                 ),
               ],
               onChanged: (value) {
-                if (value != null) setState(() => _equationSex = value);
+                if (value != null) setState(() {
+                  _equationSex = value;
+                  _invalidateEnergyDraft();
+                });
               },
             ),
             const SizedBox(height: 12),
@@ -302,7 +315,10 @@ class _NutritionIntelligencePageState
                 ),
               ],
               onChanged: (value) {
-                if (value != null) setState(() => _activity = value);
+                if (value != null) setState(() {
+                  _activity = value;
+                  _invalidateEnergyDraft();
+                });
               },
             ),
             const SizedBox(height: 12),
@@ -324,7 +340,10 @@ class _NutritionIntelligencePageState
                 ),
               ],
               onChanged: (value) {
-                if (value != null) setState(() => _goal = value);
+                if (value != null) setState(() {
+                  _goal = value;
+                  _invalidateEnergyDraft();
+                });
               },
             ),
             const SizedBox(height: 16),
