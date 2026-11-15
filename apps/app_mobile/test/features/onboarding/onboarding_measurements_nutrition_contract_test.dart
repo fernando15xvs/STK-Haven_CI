@@ -33,6 +33,7 @@ void main() {
     expect(core, isNot(contains("TextEditingController(text: '170')")));
     expect(core, isNot(contains("TextEditingController(text: '25')")));
     expect(mobile, contains('const BodyMeasurementPage()'));
-    expect(core, contains('verifiedAdultNutritionAccess && !isMinor'));
+    expect(core, contains('nutritionAccessStateProvider(widget.verifiedAdultNutritionAccess)'));
+    expect(core, contains('access.canViewNumericNutrition'));
   });
 }
