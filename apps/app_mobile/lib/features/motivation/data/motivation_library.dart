@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
 import 'motivation_file_dedup.dart';
+import 'motivation_artwork_processor.dart';
 
 enum MotivationMode {
   discipline('Disciplina'), gymSad('Gym Sad'), hype('Hype');
@@ -201,13 +202,15 @@ class MotivationLibrary extends ChangeNotifier {
     }
     final ext=p.extension(item.name).toLowerCase().replaceFirst('.', '');
     if(!const {'jpg','jpeg','png','webp'}.contains(ext))return false;
-    final name='art_${const Uuid().v4()}.$ext';
+    // Canonicalize all accepted photo formats to one small private PNG.
+    final name='art_${const Uuid().v4()}.png';
     final destination=File(p.join(_directory!.path,name));
     final temp=File(destination.path+'.part');
     final previous=_tracks[idx];
     try{
-      await File(item.path!).openRead().pipe(temp.openWrite());
-      if(await temp.length()!=bytes){
+      await MotivationArtworkProcessor.writeSquareCover(
+        source:File(item.path!),destination:temp);
+      if(!await temp.exists() || await temp.length()==0){
         throw const FileSystemException('Portada incompleta');
       }
       await temp.rename(destination.path);
