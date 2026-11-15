@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:just_audio/just_audio.dart' show ProcessingState;
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import '../application/motivation_playback.dart';
 import '../data/motivation_library.dart';
@@ -446,6 +447,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
   void initState(){
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    widget.playback.addListener(_syncVideoLoop);
     unawaited(_setup());
   }
   Future<void> _setup() async {
@@ -456,6 +458,9 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
       await c.initialize();
       if(!mounted || controller!=c)return;
       await c.setVolume(0);
+      // Video has no audible track: just_audio is the only sound clock.
+      // Its repeat-one policy must also be applied to the visual decoder.
+      await c.setLooping(widget.playback.repeat==MotivationRepeat.one);
       await c.seekTo(widget.playback.position);
       if(widget.playback.playing && visible)unawaited(c.play());
       position=widget.playback.audio.positionStream.listen((pos){
@@ -465,13 +470,23 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
           unawaited(c.seekTo(pos).whenComplete(()=>seeking=false));
         }
       });
-      playing=widget.playback.audio.playingStream.listen((value){
+      playing=widget.playback.audio.playerStateStream.listen((state){
         if(!mounted || !c.value.isInitialized)return;
-        if(value && visible){unawaited(c.play());}
-        else{unawaited(c.pause());}
+        if(state.playing &&
+           state.processingState!=ProcessingState.completed && visible){
+          unawaited(c.play());
+        }else{
+          unawaited(c.pause());
+        }
       });
       setState(()=>ready=true);
     }catch(_){if(mounted)setState(()=>ready=false);}
+  }
+  void _syncVideoLoop(){
+    final c=controller;
+    if(!mounted || c==null || !c.value.isInitialized)return;
+    final loop=widget.playback.repeat==MotivationRepeat.one;
+    if(c.value.isLooping!=loop)unawaited(c.setLooping(loop));
   }
   @override
   void didChangeAppLifecycleState(AppLifecycleState state){
@@ -487,6 +502,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
   @override
   void dispose(){
     WidgetsBinding.instance.removeObserver(this);
+    widget.playback.removeListener(_syncVideoLoop);
     unawaited(position?.cancel());
     unawaited(playing?.cancel());
     if(controller!=null)unawaited(controller!.dispose());
