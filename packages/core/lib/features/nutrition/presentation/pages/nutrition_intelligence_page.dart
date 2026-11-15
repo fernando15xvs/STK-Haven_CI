@@ -4,6 +4,7 @@ import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/domain/models/nutrition_goal_plan.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
 import 'package:core/features/nutrition/application/latest_body_measurements.dart';
+import 'package:core/features/nutrition/application/nutrition_access_state.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
@@ -66,12 +67,9 @@ class _NutritionIntelligencePageState
   // Even when backend authorization is true, a locally declared minor is
   // shown the safer descriptive Food Vision experience. A local birthday
   // can NEVER grant the remote numeric authorization by itself.
-  bool get _hasAdultNumericAccess {
-    final localAge=ref.read(userExperienceProfileProvider)
-      .value?.ageAt(DateTime.now());
-    return widget.verifiedAdultNutritionAccess &&
-      (localAge==null || localAge>=18);
-  }
+  bool get _hasAdultNumericAccess => ref.read(
+    nutritionAccessStateProvider(widget.verifiedAdultNutritionAccess),
+  ).canViewNumericNutrition;
 
   NutritionPhoto? _photo;
   FoodVisionEstimate? _foodEstimate;
@@ -127,9 +125,9 @@ class _NutritionIntelligencePageState
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final age = ref.watch(userExperienceProfileProvider).value?.ageAt(DateTime.now());
-    final isMinor = age != null && age < 18;
-    final hasAdultAccess = widget.verifiedAdultNutritionAccess && !isMinor;
+    final access=ref.watch(
+      nutritionAccessStateProvider(widget.verifiedAdultNutritionAccess));
+    final hasAdultAccess=access.canViewNumericNutrition;
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrición Inteligente')),
       body: SafeArea(
@@ -139,7 +137,9 @@ class _NutritionIntelligencePageState
             _HeroCard(colors: colors),
             const SizedBox(height: 16),
             if (!hasAdultAccess)
-              _AdultGateCard(colors: colors, isMinor: isMinor,
+              _AdultGateCard(
+                colors: colors,
+                access: access,
                 onRefreshAdultAccess: widget.onRefreshAdultAccess)
             else
               _buildEnergyPlanner(colors),
@@ -1286,11 +1286,11 @@ class _HeroCard extends StatelessWidget {
 }
 
 class _AdultGateCard extends StatelessWidget {
-  const _AdultGateCard({required this.colors, required this.isMinor,
+  const _AdultGateCard({required this.colors, required this.access,
     this.onRefreshAdultAccess});
 
   final ColorScheme colors;
-  final bool isMinor;
+  final NutritionAccessState access;
   final VoidCallback? onRefreshAdultAccess;
 
   @override
@@ -1308,23 +1308,38 @@ class _AdultGateCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isMinor ? 'Nutrición y hábitos saludables' :
-                        'Objetivos calóricos: acceso adulto verificado',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                    switch (access) {
+                      NutritionAccessState.minor =>
+                        'Nutrición y hábitos saludables',
+                      NutritionAccessState.ageUnknown =>
+                        'Tu bienestar, a tu ritmo',
+                      NutritionAccessState.adultUnverified =>
+                        'Calorías: acceso adulto pendiente',
+                      NutritionAccessState.adultVerified =>
+                        'Tu plan nutricional',
+                    },
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    isMinor
-                        ? 'Puedes entrenar y mejorar hábitos sin objetivos de '
-                          'calorías ni dietas restrictivas. Tu cuerpo aún está '
-                          'creciendo; prioriza alimentación variada y descanso.'
-                        : 'El cálculo personalizado necesita comprobación de '
-                          'edad mediante un proceso seguro de la cuenta. '
-                          'Esta función todavía no dispone de verificación '
-                          'desde la app.',
+                    switch(access) {
+                      NutritionAccessState.minor =>
+                        'Puedes seguir entrenando y mejorando hábitos, sin '
+                        'metas de calorías, dietas restrictivas ni macros. '
+                        'Prioriza alimentación variada, técnica y descanso. '
+                        'Para necesidades individuales, consulta con un profesional.',
+                      NutritionAccessState.ageUnknown =>
+                        'No necesitamos tu edad para entrenar ni registrar hábitos. '
+                        'Puedes añadirla opcionalmente en Perfil. '
+                        'La edad declarada no autoriza cálculos personales.',
+                      NutritionAccessState.adultUnverified =>
+                        'El cálculo personalizado necesita un permiso adulto '
+                        'confirmado por el servidor. La verificación todavía '
+                        'no puede iniciarse desde esta pantalla.',
+                      NutritionAccessState.adultVerified =>
+                        'Dispones de acceso adulto verificado.',
+                    },
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: colors.onSurfaceVariant),
                   ),
@@ -1335,7 +1350,8 @@ class _AdultGateCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: colors.onSurfaceVariant),
                   ),
-                  if (!isMinor && onRefreshAdultAccess != null) ...[
+                  if (access == NutritionAccessState.adultUnverified &&
+                      onRefreshAdultAccess != null) ...[
                     const SizedBox(height: 8),
                     TextButton.icon(
                       onPressed: onRefreshAdultAccess,
