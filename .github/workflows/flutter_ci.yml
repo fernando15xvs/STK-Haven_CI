@@ -251,6 +251,16 @@ jobs:
           test/features/exercises/exercise_selection_preview_test.dart
           test/features/exercises/muscle_hierarchy_picker_test.dart
           test/features/exercises/mobile_lottie_production_plan_test.dart
+      # These 13 x 2 synthetic Flutter renders are for visual inspection,
+      # NOT evidence of QA on an iPhone or Android device.
+      - name: Upload anatomy detail visual QA (13 contours x light/dark)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-measurement-detail-13x2-qa
+          path: apps/app_mobile/build/measurement_detail_qa/*.png
+          if-no-files-found: warn
+          retention-days: 14
       # Perfil's navigation, responsive themes, settings cards and programs
       # have their own Flutter tests. They must run, not only be analyzed.
       - name: Test Perfil navigation, forms, themes and responsive layout
