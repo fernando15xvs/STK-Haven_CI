@@ -18,7 +18,7 @@ class _MotivationPageState extends State<MotivationPage> {
   final player=MotivationPlayback.instance;
   String selection='all';
   MotivationMode importMode=MotivationMode.discipline;
-  bool busy=false, showVideo=true;
+  bool busy=false;
   @override
   void initState(){
     super.initState();
@@ -44,9 +44,48 @@ class _MotivationPageState extends State<MotivationPage> {
     if(busy)return;
     setState(()=>busy=true);
     try{
+      final before=library.tracks.map((t)=>t.id).toSet();
       final count=await library.importFromPicker(mode:importMode);
+      if(!mounted)return;
       _message(count==0?'No se añadieron archivos.':
         'Importados: '+count.toString()+' archivo(s).');
+      // Personalization is voluntary and never changes the imported original.
+      if(count==1){
+        final fresh=library.tracks.where((t)=>!before.contains(t.id)).toList();
+        if(fresh.isNotEmpty){
+          final personalize=await showModalBottomSheet<bool>(
+            context:context,useSafeArea:true,
+            builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,
+              children:[
+                const ListTile(title:Text('Personalizar archivo'),
+                  subtitle:Text('Nombre y portada opcionales. Puedes editarlos luego.')),
+                ListTile(title:const Text('Nombre y portada'),
+                  leading:const Icon(Icons.edit_outlined),
+                  onTap:()=>Navigator.pop(ctx,true)),
+                ListTile(title:const Text('Dejar como está'),
+                  leading:const Icon(Icons.check_circle_outline),
+                  onTap:()=>Navigator.pop(ctx,false)),
+              ])),
+          );
+          if(personalize==true && mounted){
+            await _edit(fresh.first,'rename');
+            if(!mounted)return;
+            final addCover=await showDialog<bool>(
+              context:context,builder:(ctx)=>AlertDialog(
+                title:const Text('¿Quieres una portada?'),
+                content:const Text('Elige una imagen privada para tu audio o video.'),
+                actions:[
+                  TextButton(onPressed:()=>Navigator.pop(ctx,false),
+                    child:const Text('Ahora no')),
+                  FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+                    child:const Text('Elegir imagen')),
+                ],
+              ),
+            );
+            if(addCover==true && mounted)await _edit(fresh.first,'cover');
+          }
+        }
+      }
     }catch(e){_message('Error de importación: '+e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
@@ -77,6 +116,13 @@ class _MotivationPageState extends State<MotivationPage> {
     }else if(action=='rename'){
       final title=await _askName('Renombrar',initial:track.title);
       if(title!=null)await library.renameTrack(track.id,title);
+    }else if(action=='cover'){
+      try{
+        final saved=await library.chooseArtwork(track.id);
+        if(saved)_message('Portada guardada en este dispositivo.');
+      }catch(e){_message('No se pudo guardar la portada: $e');}
+    }else if(action=='clearCover'){
+      await library.clearArtwork(track.id);
     }else if(action=='mode'){
       if(!mounted)return;
       await showModalBottomSheet<void>(context:context,
@@ -222,97 +268,42 @@ class _MotivationPageState extends State<MotivationPage> {
   String _clock(Duration d)=>d.inMinutes.toString() + ':' +
     d.inSeconds.remainder(60).toString().padLeft(2,'0');
 
+  void _openNowPlaying() {
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => const MotivationNowPlayingPage(),
+    ));
+  }
+
+  Future<void> _playTrack(MotivationTrack track, List<MotivationTrack> tracks) async {
+    await player.playQueue(tracks,startIndex:tracks.indexOf(track));
+    if(mounted && player.currentTrack!=null)_openNowPlaying();
+  }
+
   Widget _player(){
     final track=player.currentTrack;
     if(track==null)return const SizedBox.shrink();
     final colors=AppColors.of(context);
-    final duration=player.duration??Duration.zero;
     return Container(
       key:const ValueKey('motivation_now_playing'),
-      padding:const EdgeInsets.all(12),
-      decoration:BoxDecoration(color:colors.surface,borderRadius:AppRadius.lg_,
+      decoration:BoxDecoration(color:colors.surfaceHigh,
+        borderRadius:AppRadius.md_,
         border:Border.all(color:colors.surfaceBorder)),
-      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Row(children:[
-          Icon(track.isVideo?Icons.movie_outlined:Icons.graphic_eq,
-            color:colors.primary),
-          const SizedBox(width:10),
-          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,
-            children:[
-              Text(track.title,maxLines:1,overflow:TextOverflow.ellipsis,
-                style:AppTypography.headlineMedium),
-              Text(track.mode.label+' · '+(track.isVideo?'MP4':'Audio'),
-                style:AppTypography.bodySmall),
-            ])),
-          IconButton(
-            key:const ValueKey('motivation_favorite_current'),
-            tooltip:track.favorite?'Quitar favorito':'Añadir favorito',
-            onPressed:()=>unawaited(library.toggleFavorite(track.id)),
-            icon:Icon(track.favorite?Icons.favorite:Icons.favorite_border,
-              color:track.favorite?colors.primary:null)),
-          IconButton(tooltip:'Detener',onPressed:()=>unawaited(player.stop()),
-            icon:const Icon(Icons.stop_circle_outlined)),
-        ]),
-        if(track.isVideo)...[
-          const SizedBox(height:10),
-          if(showVideo)
-            _SilentVideoPreview(
-              key:ValueKey('preview_'+track.id),
-              path:library.filePath(track),playback:player),
-          TextButton.icon(
-            onPressed:()=>setState(()=>showVideo=!showVideo),
-            icon:Icon(showVideo?Icons.visibility_off:Icons.visibility),
-            label:Text(showVideo?'Ocultar video':'Mostrar video')),
-        ],
-        StreamBuilder<Duration>(
-          stream:player.audio.positionStream,
-          builder:(ctx,s){
-            final pos=s.data??player.position;
-            final max=duration.inMilliseconds;
-            return Column(children:[
-              Slider(value:pos.inMilliseconds.clamp(0,max).toDouble(),
-                max:max==0?1:max.toDouble(),
-                onChanged:max==0?null:(v)=>unawaited(player.seek(
-                  Duration(milliseconds:v.round())))),
-              Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,
-                children:[Text(_clock(pos)),Text(_clock(duration))]),
-            ]);
-          }),
-        Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-          IconButton(tooltip:'Anterior',iconSize:32,
-            onPressed:()=>unawaited(player.previous()),
-            icon:const Icon(Icons.skip_previous)),
-          IconButton.filled(tooltip:player.playing?'Pausar':'Reproducir',
-            onPressed:()=>unawaited(player.togglePlay()),
-            icon:Icon(player.playing?Icons.pause:Icons.play_arrow),
-            iconSize:32),
-          IconButton(tooltip:'Siguiente',iconSize:32,
-            onPressed:()=>unawaited(player.next()),
-            icon:const Icon(Icons.skip_next)),
-        ]),
-        Row(children:[
-          Expanded(child:DropdownButtonHideUnderline(child:
-            DropdownButton<MotivationRepeat>(
-              isExpanded:true,value:player.repeat,
-              items:[for(final r in MotivationRepeat.values)
-                DropdownMenuItem(value:r,child:Text(r.label))],
-              onChanged:(r){if(r!=null)unawaited(player.setRepeat(r));},
-            ))),
-          IconButton(
-            tooltip:player.shuffle?'Desactivar aleatorio':'Activar aleatorio',
-            onPressed:()=>unawaited(player.toggleShuffle()),
-            icon:Icon(Icons.shuffle,
-              color:player.shuffle?colors.primary:null)),
-        ]),
-        if(player.sleepTimer.active)
-          Text('Apagado programado activo',
-            style:TextStyle(color:colors.primary)),
-        Text('El audio continúa con la pantalla bloqueada; '
-          'el video solo se muestra dentro de STK Haven.',
+      child:ListTile(
+        contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
+        leading:_MotivationArtwork(track:track,size:52),
+        title:Text(track.title,maxLines:1,overflow:TextOverflow.ellipsis,
+          style:AppTypography.headlineSmall),
+        subtitle:Text('Abrir reproductor · ${track.mode.label}',
+          maxLines:1,overflow:TextOverflow.ellipsis,
           style:AppTypography.bodySmall.copyWith(color:colors.textSecondary)),
-        if(player.error!=null)
-          Text(player.error!,style:TextStyle(color:colors.error)),
-      ]),
+        onTap:_openNowPlaying,
+        trailing:IconButton(
+          tooltip:player.playing?'Pausar':'Reproducir',
+          onPressed:()=>unawaited(player.togglePlay()),
+          icon:Icon(player.playing?Icons.pause_circle_filled_rounded:
+            Icons.play_circle_fill_rounded,color:colors.primary,size:32),
+        ),
+      ),
     );
   }
   @override
@@ -405,13 +396,11 @@ class _MotivationPageState extends State<MotivationPage> {
             for(final t in tracks)
               Card(color:colors.surface,child:ListTile(
                 key:ValueKey('track_'+t.id),
-                leading:Icon(t.isVideo?Icons.movie_outlined:
-                  Icons.music_note_outlined,color:colors.primary),
+                leading:_MotivationArtwork(track:t,size:52),
                 title:Text(t.title,maxLines:2,
                   overflow:TextOverflow.ellipsis),
                 subtitle:Text(t.mode.label+' · '+(t.isVideo?'MP4':'Audio')),
-                onTap:()=>unawaited(player.playQueue(
-                  tracks,startIndex:tracks.indexOf(t))),
+                onTap:()=>unawaited(_playTrack(t,tracks)),
                 trailing:PopupMenuButton<String>(
                   tooltip:'Opciones de archivo',
                   onSelected:(a)=>unawaited(_edit(t,a)),
@@ -419,6 +408,9 @@ class _MotivationPageState extends State<MotivationPage> {
                     PopupMenuItem(value:'favorite',child:Text(
                       t.favorite?'Quitar de favoritos':'Añadir a favoritos')),
                     const PopupMenuItem(value:'rename',child:Text('Renombrar')),
+                    const PopupMenuItem(value:'cover',child:Text('Cambiar portada')),
+                    if(t.artworkFileName!=null)
+                      const PopupMenuItem(value:'clearCover',child:Text('Quitar portada')),
                     const PopupMenuItem(value:'mode',child:Text('Cambiar modo')),
                     const PopupMenuItem(value:'list',child:Text('Playlists')),
                     const PopupMenuItem(value:'delete',child:Text('Eliminar copia')),
@@ -431,9 +423,11 @@ class _MotivationPageState extends State<MotivationPage> {
 
 /// MP4 visuals are silent and synchronised to the background audio engine.
 class _SilentVideoPreview extends StatefulWidget {
-  const _SilentVideoPreview({super.key,required this.path,required this.playback});
+  const _SilentVideoPreview({super.key,required this.path,required this.playback,
+    this.maxHeight=260});
   final String path;
   final MotivationPlayback playback;
+  final double maxHeight;
   @override
   State<_SilentVideoPreview> createState()=>_SilentVideoPreviewState();
 }
@@ -517,9 +511,279 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
       child:const Icon(Icons.movie_outlined,size:40));
     return ClipRRect(borderRadius:AppRadius.md_,
       child:ConstrainedBox(
-        constraints:const BoxConstraints(maxHeight:260),
+        constraints:BoxConstraints(maxHeight:widget.maxHeight),
         child:AspectRatio(
           aspectRatio:c.value.aspectRatio,
           child:VideoPlayer(c))));
+  }
+}
+
+class _MotivationArtwork extends StatelessWidget {
+  const _MotivationArtwork({required this.track,required this.size});
+  final MotivationTrack track;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors=AppColors.of(context);
+    final path=MotivationLibrary.instance.artworkPath(track);
+    return ClipRRect(
+      borderRadius:BorderRadius.circular(size<80?11:20),
+      child:SizedBox(width:size,height:size,
+        child:path==null
+          ?ColoredBox(color:colors.primaryFaded,
+              child:Icon(track.isVideo?Icons.movie_outlined:
+                Icons.music_note_rounded,color:colors.primary,size:size*.35))
+          :Image.file(File(path),fit:BoxFit.cover,
+              errorBuilder:(_,__,___)=>ColoredBox(
+                color:colors.primaryFaded,
+                child:Icon(Icons.image_not_supported_outlined,
+                  color:colors.primary,size:size*.3)),
+              ),
+      ),
+    );
+  }
+}
+
+/// Dedicated STK playback surface. The engine is NOT recreated on navigation.
+class MotivationNowPlayingPage extends StatefulWidget {
+  const MotivationNowPlayingPage({super.key});
+
+  @override
+  State<MotivationNowPlayingPage> createState()=>_MotivationNowPlayingPageState();
+}
+
+class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
+  final player=MotivationPlayback.instance;
+  final library=MotivationLibrary.instance;
+  String _clock(Duration d){
+    final minutes=d.inMinutes;
+    return '${minutes.toString().padLeft(2,'0')}:'
+      '${d.inSeconds.remainder(60).toString().padLeft(2,'0')}';
+  }
+
+  Future<void> _rename(MotivationTrack track) async {
+    final ctrl=TextEditingController(text:track.title);
+    final title=await showDialog<String>(context:context,builder:(ctx)=>
+      AlertDialog(
+        title:const Text('Nombre del archivo'),
+        content:TextField(controller:ctrl,maxLength:70,autofocus:true,
+          decoration:const InputDecoration(labelText:'Título')),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx),
+            child:const Text('Cancelar')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,ctrl.text.trim()),
+            child:const Text('Guardar')),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if(title!=null && title.isNotEmpty)await library.renameTrack(track.id,title);
+  }
+
+  Future<void> _editArtwork(MotivationTrack track,{bool clear=false}) async {
+    try{
+      if(clear){
+        await library.clearArtwork(track.id);
+      }else{
+        await library.chooseArtwork(track.id);
+      }
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content:Text('No se pudo actualizar la portada: $e')));
+    }
+  }
+
+  void _showQueue(){
+    showModalBottomSheet<void>(
+      context:context,useSafeArea:true,isScrollControlled:true,
+      showDragHandle:true,
+      builder:(ctx)=>FractionallySizedBox(
+        heightFactor:.65,
+        child:Column(children:[
+          Padding(padding:const EdgeInsets.all(16),
+            child:Text('A continuación',style:AppTypography.headlineMedium)),
+          Expanded(child:ListView.builder(
+            itemCount:player.queue.length,
+            itemBuilder:(ctx,i){
+              final track=player.queue[i];
+              return ListTile(
+                leading:_MotivationArtwork(track:track,size:40),
+                title:Text(track.title,maxLines:1,overflow:TextOverflow.ellipsis),
+                selected:player.currentTrack?.id==track.id,
+                onTap:(){
+                  Navigator.pop(ctx);
+                  unawaited(player.playAtIndex(i));
+                },
+              );
+            },
+          )),
+        ]),
+      ),
+    );
+  }
+
+  void _settings(){
+    showModalBottomSheet<void>(context:context,isScrollControlled:true,
+      useSafeArea:true,builder:(_)=>const MotivationAudioSettingsSheet());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors=AppColors.of(context);
+    return AnimatedBuilder(
+      animation:Listenable.merge([player,library]),
+      builder:(context,_) {
+        final track=player.currentTrack;
+        return Scaffold(
+          backgroundColor:colors.background,
+          appBar:AppBar(
+            title:const Text('STK Motivation'),
+            actions:track==null?null:[
+              IconButton(
+                tooltip:track.favorite?'Quitar favorito':'Añadir favorito',
+                onPressed:()=>unawaited(library.toggleFavorite(track.id)),
+                icon:Icon(track.favorite?Icons.favorite:Icons.favorite_border,
+                  color:track.favorite?colors.primary:null)),
+              PopupMenuButton<String>(
+                tooltip:'Editar archivo',
+                onSelected:(value){
+                  if(value=='rename')unawaited(_rename(track));
+                  if(value=='cover')unawaited(_editArtwork(track));
+                  if(value=='clearCover')
+                    unawaited(_editArtwork(track,clear:true));
+                },
+                itemBuilder:(_)=>[
+                  const PopupMenuItem(value:'rename',
+                    child:Text('Renombrar')),
+                  const PopupMenuItem(value:'cover',
+                    child:Text('Elegir imagen')),
+                  if(track.artworkFileName!=null)
+                    const PopupMenuItem(value:'clearCover',
+                      child:Text('Quitar portada')),
+                ],
+              ),
+            ],
+          ),
+          body:SafeArea(
+            child:track==null
+              ?Center(child:Text('No hay archivos reproduciéndose.',
+                style:AppTypography.bodyMedium))
+              :LayoutBuilder(builder:(context,constraints){
+                final artSize=(constraints.maxWidth-40).clamp(180.0,380.0);
+                return ListView(
+                  key:const ValueKey('stk_now_playing_screen'),
+                  padding:const EdgeInsets.fromLTRB(20,12,20,32),
+                  children:[
+                    Center(
+                      child:track.isVideo
+                        ?_SilentVideoPreview(
+                            key:ValueKey('now_playing_video_${track.id}'),
+                            path:library.filePath(track),
+                            playback:player,
+                            maxHeight:artSize,
+                          )
+                        :_MotivationArtwork(track:track,size:artSize),
+                    ),
+                    const SizedBox(height:22),
+                    Text(track.title,maxLines:2,overflow:TextOverflow.ellipsis,
+                      style:AppTypography.headlineLarge),
+                    Text('STK Motivation · ${track.mode.label}',
+                      style:AppTypography.bodyMedium.copyWith(
+                        color:colors.textSecondary)),
+                    if(player.completed)
+                      Text('Finalizado · Puedes volver a reproducir',
+                        style:AppTypography.bodySmall.copyWith(
+                          color:colors.textSecondary)),
+                    const SizedBox(height:20),
+                    StreamBuilder<Duration>(
+                      stream:player.audio.positionStream,
+                      builder:(context,snapshot){
+                        final position=snapshot.data??player.position;
+                        final duration=player.duration??Duration.zero;
+                        final max=duration.inMilliseconds;
+                        final current=position.inMilliseconds.clamp(0,max);
+                        return Column(children:[
+                          Slider(
+                            value:current.toDouble(),
+                            max:max>0?max.toDouble():1,
+                            onChanged:max==0?null:(v)=>unawaited(
+                              player.seek(Duration(milliseconds:v.round()))),
+                          ),
+                          Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,
+                            children:[
+                              Text(_clock(position),style:AppTypography.bodySmall),
+                              Text(_clock(duration),style:AppTypography.bodySmall),
+                            ]),
+                        ]);
+                      },
+                    ),
+                    const SizedBox(height:16),
+                    Row(
+                      mainAxisAlignment:MainAxisAlignment.spaceEvenly,
+                      children:[
+                        IconButton(
+                          tooltip:player.shuffle?'Desactivar aleatorio':'Activar aleatorio',
+                          onPressed:()=>unawaited(player.toggleShuffle()),
+                          icon:Icon(Icons.shuffle_rounded,
+                            color:player.shuffle?colors.primary:colors.textSecondary)),
+                        IconButton(
+                          tooltip:'Anterior',
+                          onPressed:()=>unawaited(player.previous()),
+                          icon:const Icon(Icons.skip_previous_rounded,size:34)),
+                        IconButton.filled(
+                          tooltip:player.playing?'Pausar':'Reproducir',
+                          onPressed:()=>unawaited(player.togglePlay()),
+                          icon:Icon(player.playing?Icons.pause_rounded:
+                            (player.completed?Icons.replay_rounded:
+                            Icons.play_arrow_rounded),size:36),
+                          style:IconButton.styleFrom(minimumSize:const Size(70,70),
+                            backgroundColor:colors.primary,
+                            foregroundColor:colors.onPrimary)),
+                        IconButton(
+                          tooltip:'Siguiente',
+                          onPressed:()=>unawaited(player.next()),
+                          icon:const Icon(Icons.skip_next_rounded,size:34)),
+                        PopupMenuButton<MotivationRepeat>(
+                          tooltip:'Modo de repetición',
+                          onSelected:(repeat)=>unawaited(player.setRepeat(repeat)),
+                          icon:Icon(
+                            player.repeat==MotivationRepeat.one
+                              ?Icons.repeat_one_rounded:Icons.repeat_rounded,
+                            color:player.repeat==MotivationRepeat.next
+                              ?colors.textSecondary:colors.primary),
+                          itemBuilder:(_)=>[
+                            for(final mode in MotivationRepeat.values)
+                              PopupMenuItem(value:mode,
+                                child:Row(children:[
+                                  if(player.repeat==mode)
+                                    Icon(Icons.check,color:colors.primary,size:17),
+                                  const SizedBox(width:8),Text(mode.label),
+                                ])),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height:16),
+                    OutlinedButton.icon(
+                      onPressed:_showQueue,
+                      icon:const Icon(Icons.queue_music_rounded),
+                      label:const Text('A continuación'),
+                    ),
+                    TextButton.icon(
+                      onPressed:_settings,
+                      icon:const Icon(Icons.tune_rounded),
+                      label:const Text('Volumen · Velocidad · Apagado'),
+                    ),
+                    if(player.error!=null)
+                      Text(player.error!,style:AppTypography.bodySmall.copyWith(
+                        color:colors.error)),
+                  ],
+                );
+              }),
+          ),
+        );
+      },
+    );
   }
 }
