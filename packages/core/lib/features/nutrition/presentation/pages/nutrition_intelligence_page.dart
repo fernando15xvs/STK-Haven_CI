@@ -591,13 +591,22 @@ class _NutritionIntelligencePageState
       )),
     );
     if(chosen==null || !mounted || chosen==current.targetMl)return;
+    final contexts=<String>[
+      if(moreActivity)'actividad prolongada',
+      if(hotWeather)'ambiente caluroso',
+      if(moreSweat)'sudoración elevada',
+    ];
+    final contextLabel=contexts.isEmpty
+      ? 'No indicaste factores adicionales.'
+      : 'Factores señalados: ${contexts.join(', ')}.';
     // Confirmation for water is entirely separate from any steps suggestion.
     final confirmed=await showDialog<bool>(
       context:context,
       builder:(ctx)=>AlertDialog(
         title:const Text('Confirmar meta de agua'),
         content:Text('Actual: ${current.targetMl} ml/día. '
-          'Nueva: $chosen ml/día. Es una elección manual. '
+          'Nueva: $chosen ml/día. $contextLabel '
+          'Es una elección manual, no una prescripción. '
           'Los pasos, el plan energético y los recordatorios '
           'no cambiarán.'),
         actions:[
