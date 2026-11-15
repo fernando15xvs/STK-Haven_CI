@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 enum MotivationMode {
   discipline('Disciplina'), gymSad('Gym Sad'), hype('Hype');
@@ -22,38 +23,46 @@ enum MotivationRepeat {
 class MotivationTrack {
   const MotivationTrack({required this.id, required this.title,
     required this.fileName, required this.mode, required this.importedAt,
-    this.favorite=false, this.artworkFileName});
+    this.favorite=false, this.artworkFileName, this.thumbnailFileName});
   final String id, title, fileName;
   final String? artworkFileName;
+  final String? thumbnailFileName;
   final MotivationMode mode;
   final DateTime importedAt;
   final bool favorite;
   bool get isVideo => p.extension(fileName).toLowerCase() == '.mp4';
   MotivationTrack copyWith({String? title, MotivationMode? mode,
-    bool? favorite, String? artworkFileName, bool clearArtwork=false}) =>
+    bool? favorite, String? artworkFileName, bool clearArtwork=false,
+    String? thumbnailFileName}) =>
     MotivationTrack(id:id, title:title??this.title, fileName:fileName,
       mode:mode??this.mode, importedAt:importedAt,
       favorite:favorite??this.favorite,
-      artworkFileName:clearArtwork?null:(artworkFileName??this.artworkFileName));
+      artworkFileName:clearArtwork?null:(artworkFileName??this.artworkFileName),
+      thumbnailFileName:thumbnailFileName??this.thumbnailFileName);
   Map<String,dynamic> toJson()=>{'id':id,'title':title,'fileName':fileName,
     'mode':mode.name,'importedAt':importedAt.toIso8601String(),
-    'favorite':favorite,'artworkFileName':artworkFileName};
+    'favorite':favorite,'artworkFileName':artworkFileName,
+    'thumbnailFileName':thumbnailFileName};
   factory MotivationTrack.fromJson(Map<String,dynamic> j) {
     final name=j['fileName'] as String;
     if(p.basename(name)!=name || name.contains('..')) {
       throw const FormatException('Nombre de archivo inválido');
     }
     final artwork=j['artworkFileName'] as String?;
-    if(artwork!=null &&
-        (p.basename(artwork)!=artwork || artwork.contains('..'))) {
-      throw const FormatException('Nombre de portada inválido');
+    final thumbnail=j['thumbnailFileName'] as String?;
+    for(final name in [artwork,thumbnail]){
+      if(name!=null &&
+          (p.basename(name)!=name || name.contains('..'))){
+        throw const FormatException('Nombre de portada inválido');
+      }
     }
     return MotivationTrack(id:j['id'] as String,title:j['title'] as String,
       fileName:name,mode:MotivationMode.values.firstWhere(
         (m)=>m.name==j['mode'],orElse:()=>MotivationMode.discipline),
       importedAt:DateTime.parse(j['importedAt'] as String),
       // Existing stage-1 records omit this field.
-      favorite:j['favorite']==true, artworkFileName:artwork);
+      favorite:j['favorite']==true, artworkFileName:artwork,
+      thumbnailFileName:thumbnail);
   }
 }
 @immutable
@@ -113,12 +122,66 @@ class MotivationLibrary extends ChangeNotifier {
     if(_directory==null)throw StateError('Biblioteca sin inicializar');
     return p.join(_directory!.path,t.fileName);
   }
-  /// Local-only artwork: there are no external URLs or cloud uploads.
+  /// A manual cover takes precedence, then a locally extracted MP4 frame.
+  /// Neither path ever resolves to remote media or arbitrary user directories.
   String? artworkPath(MotivationTrack track) {
-    final name=track.artworkFileName;
-    if(name==null || _directory==null)return null;
-    final file=File(p.join(_directory!.path,name));
-    return file.existsSync()?file.path:null;
+    if(_directory==null)return null;
+    for(final name in [track.artworkFileName,track.thumbnailFileName]){
+      if(name==null || p.basename(name)!=name || name.contains('..'))continue;
+      final file=File(p.join(_directory!.path,name));
+      if(file.existsSync())return file.path;
+    }
+    return null;
+  }
+
+  /// Creates a bounded private thumbnail once per video, outside every
+  /// ListTile build. An unsupported codec must never prevent importing MP4.
+  Future<bool> ensureVideoThumbnail(String trackId) async {
+    await load();
+    final index=_tracks.indexWhere((t)=>t.id==trackId);
+    if(index<0 || !_tracks[index].isVideo)return false;
+    final track=_tracks[index];
+    if(track.thumbnailFileName!=null &&
+        artworkPath(track)!=null)return true;
+    final path=filePath(track);
+    if(!await File(path).exists())return false;
+    final name='thumb_${const Uuid().v4()}.jpg';
+    final destination=File(p.join(_directory!.path,name));
+    final temp=File(destination.path+'.part');
+    try {
+      // Native Android/iOS extraction, never a frame decoder per list tile.
+      final bytes=await VideoThumbnail.thumbnailData(
+        video:path,imageFormat:ImageFormat.JPEG,
+        timeMs:0,maxWidth:400,quality:65);
+      if(bytes==null || bytes.isEmpty || bytes.length>2*1024*1024)
+        return false;
+      await temp.writeAsBytes(bytes,flush:true);
+      await temp.rename(destination.path);
+      // A file may have been removed while extraction was running.
+      final latest=_tracks.indexWhere((t)=>t.id==trackId);
+      if(latest<0){
+        await destination.delete();
+        return false;
+      }
+      final previous=_tracks[latest];
+      _tracks[latest]=previous.copyWith(thumbnailFileName:name);
+      try {
+        await _changed();
+      }catch(_){
+        _tracks[latest]=previous;
+        rethrow;
+      }
+      final old=previous.thumbnailFileName;
+      if(old!=null && old!=name){
+        final stale=File(p.join(_directory!.path,old));
+        if(await stale.exists())await stale.delete();
+      }
+      return true;
+    }catch(_){
+      if(await temp.exists())await temp.delete();
+      if(await destination.exists())await destination.delete();
+      return false;
+    }
   }
 
   Future<bool> chooseArtwork(String trackId) async {
@@ -210,6 +273,7 @@ class MotivationLibrary extends ChangeNotifier {
     {required MotivationMode mode}) async {
     await load();
     var count=0;
+    final importedVideos=<String>[];
     for(final f in files){
       final ext=p.extension(f.name).toLowerCase().replaceFirst('.','');
       if(f.path==null || !supportedExtensions.contains(ext))continue;
@@ -229,6 +293,7 @@ class MotivationLibrary extends ChangeNotifier {
         _tracks.add(MotivationTrack(id:id,
           title:p.basenameWithoutExtension(f.name),fileName:'$id.$ext',
           mode:mode,importedAt:DateTime.now()));
+        if(ext=='mp4')importedVideos.add(id);
         count++;
       }catch(_){
         if(await temp.exists())await temp.delete();
@@ -237,6 +302,10 @@ class MotivationLibrary extends ChangeNotifier {
       }
     }
     if(count>0)await _changed();
+    // Media import has already succeeded. Thumbnail errors are only visual.
+    for(final id in importedVideos){
+      await ensureVideoThumbnail(id);
+    }
     return count;
   }
   Future<void> renameTrack(String id,String title) async {
@@ -270,9 +339,9 @@ class MotivationLibrary extends ChangeNotifier {
     await _changed();
     final file=File(filePath(t));
     if(await file.exists())await file.delete();
-    final art=t.artworkFileName;
-    if(art!=null){
-      final artwork=File(p.join(_directory!.path,art));
+    for(final name in [t.artworkFileName,t.thumbnailFileName]){
+      if(name==null || p.basename(name)!=name || name.contains('..'))continue;
+      final artwork=File(p.join(_directory!.path,name));
       if(await artwork.exists())await artwork.delete();
     }
   }
