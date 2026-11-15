@@ -10,6 +10,21 @@ import '../application/motivation_playlist_presets.dart';
 import '../data/motivation_library.dart';
 import 'widgets/motivation_audio_settings_sheet.dart';
 
+class _MotivationImportOptions {
+  const _MotivationImportOptions({
+    required this.title,
+    required this.mode,
+    required this.favorite,
+    required this.playlistIds,
+    required this.chooseArtwork,
+  });
+  final String title;
+  final MotivationMode mode;
+  final bool favorite;
+  final Set<String> playlistIds;
+  final bool chooseArtwork;
+}
+
 class MotivationPage extends StatefulWidget {
   const MotivationPage({super.key});
   @override
@@ -55,46 +70,171 @@ class _MotivationPageState extends State<MotivationPage> {
       if(!mounted)return;
       _message(count==0?'No se añadieron archivos.':
         'Importados: '+count.toString()+' archivo(s).');
-      // Personalization is voluntary and never changes the imported original.
-      if(count==1){
-        final fresh=library.tracks.where((t)=>!before.contains(t.id)).toList();
-        if(fresh.isNotEmpty){
-          final personalize=await showModalBottomSheet<bool>(
-            context:context,useSafeArea:true,
-            builder:(ctx)=>SafeArea(child:Column(mainAxisSize:MainAxisSize.min,
-              children:[
-                const ListTile(title:Text('Personalizar archivo'),
-                  subtitle:Text('Nombre y portada opcionales. Puedes editarlos luego.')),
-                ListTile(title:const Text('Nombre y portada'),
+      // Entire personalization flow is optional: the imported media already
+      // exists locally even if the user skips editing or cancels the picker.
+      if(count>0){
+        final imported=library.tracks.where((t)=>!before.contains(t.id)).toList();
+        if(imported.isNotEmpty && mounted){
+          final edit=await showModalBottomSheet<bool>(
+            context:context,useSafeArea:true,showDragHandle:true,
+            builder:(ctx)=>SafeArea(child:Column(
+              mainAxisSize:MainAxisSize.min,children:[
+                ListTile(
+                  title:Text(imported.length==1
+                    ? 'Personalizar archivo importado'
+                    : 'Personalizar ${imported.length} archivos',
+                    style:AppTypography.headlineMedium),
+                  subtitle:const Text('Opcional: nombre, modo, favorito, '
+                    'playlist y portada. Puedes editarlo después.'),
+                ),
+                ListTile(
                   leading:const Icon(Icons.edit_outlined),
-                  onTap:()=>Navigator.pop(ctx,true)),
-                ListTile(title:const Text('Dejar como está'),
+                  title:const Text('Personalizar'),
+                  onTap:()=>Navigator.pop(ctx,true),
+                ),
+                ListTile(
                   leading:const Icon(Icons.check_circle_outline),
-                  onTap:()=>Navigator.pop(ctx,false)),
-              ])),
+                  title:const Text('Importar directamente'),
+                  onTap:()=>Navigator.pop(ctx,false),
+                ),
+              ],
+            )),
           );
-          if(personalize==true && mounted){
-            await _edit(fresh.first,'rename');
-            if(!mounted)return;
-            final addCover=await showDialog<bool>(
-              context:context,builder:(ctx)=>AlertDialog(
-                title:const Text('¿Quieres una portada?'),
-                content:const Text('Elige una imagen privada para tu audio o video.'),
-                actions:[
-                  TextButton(onPressed:()=>Navigator.pop(ctx,false),
-                    child:const Text('Ahora no')),
-                  FilledButton(onPressed:()=>Navigator.pop(ctx,true),
-                    child:const Text('Elegir imagen')),
-                ],
-              ),
-            );
-            if(addCover==true && mounted)await _edit(fresh.first,'cover');
+          if(edit==true && mounted){
+            for(final track in imported){
+              if(!mounted)break;
+              final options=await _importOptions(track);
+              if(options==null)continue;
+              final current=library.tracks.where((t)=>t.id==track.id).toList();
+              if(current.isEmpty)continue;
+              final selected=current.first;
+              try{
+                if(options.title.isNotEmpty &&
+                    options.title.trim()!=selected.title){
+                  await library.renameTrack(track.id,options.title.trim());
+                }
+                if(options.mode!=selected.mode){
+                  await library.changeMode(track.id,options.mode);
+                }
+                if(options.favorite!=selected.favorite){
+                  await library.toggleFavorite(track.id);
+                }
+                for(final id in options.playlistIds){
+                  await library.togglePlaylistTrack(id,track.id);
+                }
+                if(options.chooseArtwork){
+                  await library.chooseArtwork(track.id);
+                }
+              }catch(e){
+                if(mounted)_message('No se guardó una personalización: $e');
+              }
+            }
           }
         }
       }
     }catch(e){_message('Error de importación: '+e.toString());}
     finally{if(mounted)setState(()=>busy=false);}
   }
+  Future<_MotivationImportOptions?> _importOptions(
+    MotivationTrack track) async {
+    final controller=TextEditingController(text:track.title);
+    var mode=track.mode;
+    var favorite=track.favorite;
+    var cover=false;
+    final selectedLists=<String>{};
+    try{
+      return await showModalBottomSheet<_MotivationImportOptions>(
+        context:context,useSafeArea:true,isScrollControlled:true,
+        showDragHandle:true,
+        builder:(ctx)=>StatefulBuilder(
+          builder:(ctx,refresh)=>Padding(
+            padding:EdgeInsets.only(bottom:MediaQuery.viewInsetsOf(ctx).bottom),
+            child:FractionallySizedBox(
+              heightFactor:.75,
+              child:Column(children:[
+                ListTile(
+                  title:Text('Editar archivo',style:AppTypography.headlineMedium),
+                  subtitle:Text(track.fileName,maxLines:1,
+                    overflow:TextOverflow.ellipsis),
+                ),
+                Expanded(child:ListView(padding:const EdgeInsets.all(16),
+                  children:[
+                    TextField(
+                      key:const ValueKey('motivation_import_title'),
+                      controller:controller,maxLength:70,
+                      decoration:const InputDecoration(
+                        labelText:'Nombre (opcional)',
+                        border:OutlineInputBorder()),
+                    ),
+                    DropdownButtonFormField<MotivationMode>(
+                      initialValue:mode,
+                      isExpanded:true,
+                      decoration:const InputDecoration(
+                        labelText:'Modo',border:OutlineInputBorder()),
+                      items:[for(final value in MotivationMode.values)
+                        DropdownMenuItem(value:value,child:Text(value.label))],
+                      onChanged:(value){
+                        if(value!=null)refresh(()=>mode=value);
+                      },
+                    ),
+                    CheckboxListTile(
+                      title:const Text('Añadir a favoritos'),
+                      contentPadding:EdgeInsets.zero,value:favorite,
+                      onChanged:(v)=>refresh(()=>favorite=v??false),
+                    ),
+                    CheckboxListTile(
+                      title:const Text('Elegir portada privada'),
+                      subtitle:Text(track.isVideo
+                        ?'Si no eliges una imagen se usa la miniatura del MP4.'
+                        :'Si no eliges imagen se usa el arte STK.'),
+                      contentPadding:EdgeInsets.zero,value:cover,
+                      onChanged:(v)=>refresh(()=>cover=v??false),
+                    ),
+                    if(library.playlists.isNotEmpty) ...[
+                      const Divider(),
+                      Text('Añadir a playlists',
+                        style:AppTypography.headlineSmall),
+                      for(final list in library.playlists)
+                        CheckboxListTile(
+                          title:Text(list.title),
+                          contentPadding:EdgeInsets.zero,
+                          value:selectedLists.contains(list.id),
+                          onChanged:(v)=>refresh((){
+                            if(v==true){selectedLists.add(list.id);}
+                            else{selectedLists.remove(list.id);}
+                          }),
+                        ),
+                    ],
+                  ],
+                )),
+                Padding(padding:const EdgeInsets.all(16),child:Row(children:[
+                  TextButton(
+                    onPressed:()=>Navigator.pop(ctx),
+                    child:const Text('Omitir archivo')),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed:(){
+                      final title=controller.text.trim();
+                      Navigator.pop(ctx,_MotivationImportOptions(
+                        title:title.isEmpty?track.title:title,
+                        mode:mode,favorite:favorite,
+                        playlistIds:Set.of(selectedLists),
+                        chooseArtwork:cover));
+                    },
+                    icon:const Icon(Icons.check_rounded),
+                    label:const Text('Guardar cambios'),
+                  ),
+                ])),
+              ]),
+            ),
+          ),
+        ),
+      );
+    }finally{
+      controller.dispose();
+    }
+  }
+
   Future<String?> _askName(String title,{String initial=''}) async {
     final controller=TextEditingController(text:initial);
     final name=await showDialog<String>(
