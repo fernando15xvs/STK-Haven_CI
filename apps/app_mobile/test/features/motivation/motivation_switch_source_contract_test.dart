@@ -12,6 +12,11 @@ void main(){
     expect(code,contains('oldWidget.playback.removeListener(_syncVideoLoop)'));
     expect(code,contains('widget.playback.addListener(_syncVideoLoop)'));
     expect(code,contains('void _resetVideoSource()'));
+    expect(code,contains('final ValueNotifier<VideoPlayerController?> _cinemaSource'));
+    expect(code,contains('_cinemaSource.value=null;'));
+    expect(code,contains('_cinemaSource.value=c;'));
+    expect(code,contains('ValueListenableBuilder<VideoPlayerController?>'));
+    expect(code,contains('child:VideoPlayer(active)'));
     expect(code,contains('position=null;'));
     expect(code,contains('playing=null;'));
     expect(code,contains('if(oldPosition!=null)unawaited(oldPosition.cancel())'));
