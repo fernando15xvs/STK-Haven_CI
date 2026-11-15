@@ -3,6 +3,7 @@ import 'package:core/domain/models/nutrition_history_entry.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/domain/models/nutrition_goal_plan.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
+import 'package:core/features/nutrition/application/adult_macro_guide.dart';
 import 'package:core/features/nutrition/application/latest_body_measurements.dart';
 import 'package:core/features/nutrition/application/nutrition_access_state.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
@@ -336,6 +337,13 @@ class _NutritionIntelligencePageState
               const SizedBox(height: 16),
               _EnergyResultCard(estimate: estimate),
               const SizedBox(height: 12),
+              OutlinedButton.icon(
+                key:const ValueKey('nutrition_adult_macro_guide'),
+                onPressed:()=>_showAdultMacroGuide(estimate),
+                icon:const Icon(Icons.donut_small_outlined),
+                label:const Text('Consultar macros de referencia (opcional)'),
+              ),
+              const SizedBox(height:8),
               FilledButton.icon(
                 onPressed: _saveEnergyPlan,
                 icon: const Icon(Icons.bookmark_add_outlined),
@@ -1007,6 +1015,64 @@ class _NutritionIntelligencePageState
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content:Text('No se pudo borrar el plan.')));
     }
+  }
+
+  Future<void> _showAdultMacroGuide(EnergyEstimate estimate) async {
+    final age=ref.read(userExperienceProfileProvider).value
+      ?.ageAt(DateTime.now());
+    // The published adult AMDR covers age 19+, unlike the adult energy
+    // gate which may legitimately allow an 18-year-old.
+    if(age==null || age<19 || !_hasAdultNumericAccess){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('Esta guía general requiere edad de 19 años o más '
+          'en Perfil y acceso adulto verificado.')));
+      return;
+    }
+    final verified=await NutritionAdultAccessService(
+      Supabase.instance.client).hasVerifiedAccess();
+    if(!mounted || !verified || !_hasAdultNumericAccess)return;
+
+    late final AdultMacroGuide macros;
+    try{
+      macros=AdultMacroGuide.fromEnergyEstimate(estimate);
+    }catch(_){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('No se puede obtener una referencia de macros '
+          'con el rango de energía actual.')));
+      return;
+    }
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Macronutrientes: orientación general'),
+      content:SingleChildScrollView(child:Column(
+        mainAxisSize:MainAxisSize.min,
+        crossAxisAlignment:CrossAxisAlignment.start,
+        children:[
+          const Text('Rangos amplios para adultos sanos (19+), basados '
+            'en referencias AMDR. No son una meta individual de gimnasio.'),
+          const SizedBox(height:14),
+          Text('Proteínas · 10–35 %: '
+            '${macros.proteinGramsLow}–${macros.proteinGramsHigh} g/día'),
+          const SizedBox(height:8),
+          Text('Carbohidratos · 45–65 %: '
+            '${macros.carbsGramsLow}–${macros.carbsGramsHigh} g/día'),
+          const SizedBox(height:8),
+          Text('Grasas · 20–35 %: '
+            '${macros.fatGramsLow}–${macros.fatGramsHigh} g/día'),
+          const SizedBox(height:14),
+          const Text('Los intervalos son independientes: no se deben '
+            'sumar sus máximos. No se guardan ni se aplican como dieta. '
+            'Embarazo, condiciones médicas o necesidades alimentarias '
+            'específicas requieren asesoramiento profesional.'),
+          const SizedBox(height:10),
+          const Text('Fuente: National Academies / Health Canada, '
+            'rangos AMDR para adultos.'),
+        ],
+      )),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(ctx),
+          child:const Text('Entendido')),
+      ],
+    ));
   }
 
   Future<void> _saveEnergyPlan() async {
