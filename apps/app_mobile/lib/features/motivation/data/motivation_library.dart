@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_thumbnail/video_thumbnail.dart';
 
+import 'motivation_file_dedup.dart';
+
 enum MotivationMode {
   discipline('Disciplina'), gymSad('Gym Sad'), hype('Hype');
   const MotivationMode(this.label);
@@ -281,11 +283,20 @@ class MotivationLibrary extends ChangeNotifier {
       if(expected<=0 || expected>maxFileBytes){
         throw const FormatException('Archivo vacío o superior a 512 MB');
       }
+      final incoming=File(f.path!);
+      // Equal content with a different filename is still one local copy.
+      // Compare chunks to avoid buffering long 512 MB videos in memory.
+      final existing=[
+        for(final old in _tracks)
+          if(p.extension(old.fileName).toLowerCase()=='.$ext')
+            File(filePath(old)),
+      ];
+      if(await MotivationFileDedup.matchesAny(incoming,existing))continue;
       final id=const Uuid().v4();
       final dest=File(p.join(_directory!.path,'$id.$ext'));
       final temp=File(dest.path+'.part');
       try{
-        await File(f.path!).openRead().pipe(temp.openWrite());
+        await incoming.openRead().pipe(temp.openWrite());
         if(await temp.length()!=expected){
           throw const FileSystemException('Importación incompleta');
         }
