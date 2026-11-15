@@ -345,22 +345,43 @@ class _NutritionIntelligencePageState
               const SizedBox(height: 16),
               Text('Mi plan guardado',
                 style:Theme.of(context).textTheme.titleMedium),
-              Text('Objetivo: ${plan.estimate.targetLow}–'
-                '${plan.estimate.targetHigh} kcal estimadas',
+              Text(plan.isPaused
+                  ? 'Sin objetivo activo · plan pausado'
+                  : 'Objetivo: ${plan.estimate.targetLow}–'
+                    '${plan.estimate.targetHigh} kcal estimadas',
                 style:Theme.of(context).textTheme.bodyMedium),
               Text('Guardado el ${DateFormat('dd/MM/yyyy').format(plan.savedAt)}. '
                 'Peso ${plan.weightKg.toStringAsFixed(1)} kg y altura '
                 '${plan.heightCm.toStringAsFixed(1)} cm de Medidas.',
                 style:Theme.of(context).textTheme.bodySmall?.copyWith(
                   color:colors.onSurfaceVariant)),
-              TextButton.icon(
-                onPressed:()async{
-                  await _planRepository?.clear();
-                  if(mounted)setState(()=>_activePlan=null);
-                },
-                icon:const Icon(Icons.delete_outline),
-                label:const Text('Quitar plan guardado'),
-              ),
+              if(plan.nextReviewAt!=null)
+                Text('Revisión voluntaria: '
+                  '${DateFormat('dd/MM/yyyy').format(plan.nextReviewAt!)}. '
+                  'Nunca actualiza calorías por sí sola.',
+                  style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color:colors.onSurfaceVariant)),
+              Wrap(spacing:8,runSpacing:6,children:[
+                TextButton.icon(
+                  key:const ValueKey('nutrition_pause_resume_plan'),
+                  onPressed:()=>_togglePlanPaused(plan),
+                  icon:Icon(plan.isPaused?Icons.play_circle_outline:
+                    Icons.pause_circle_outline),
+                  label:Text(plan.isPaused?'Retomar objetivo':
+                    'Pausar objetivo'),
+                ),
+                TextButton.icon(
+                  key:const ValueKey('nutrition_review_plan'),
+                  onPressed:()=>_chooseReviewInterval(plan),
+                  icon:const Icon(Icons.event_outlined),
+                  label:const Text('Programar revisión'),
+                ),
+                TextButton.icon(
+                  onPressed:()=>_confirmRemoveEnergyPlan(),
+                  icon:const Icon(Icons.delete_outline),
+                  label:const Text('Quitar plan'),
+                ),
+              ]),
             ],
           ],
         ),
@@ -821,6 +842,91 @@ class _NutritionIntelligencePageState
         _energyEstimate = null;
         _message = error.toString();
       });
+    }
+  }
+
+  Future<void> _togglePlanPaused(NutritionGoalPlan current) async {
+    final repo=_planRepository;
+    if(repo==null)return;
+    if(current.isPaused){
+      final verified=await NutritionAdultAccessService(
+        Supabase.instance.client).hasVerifiedAccess();
+      if(!mounted)return;
+      final age=ref.read(userExperienceProfileProvider).value?.ageAt(DateTime.now());
+      if(!verified || (age!=null && age<18)){
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:Text('Solo una cuenta adulta verificada puede retomar el plan.')));
+        return;
+      }
+    }
+    try{
+      final next=current.copyWith(isPaused:!current.isPaused);
+      await repo.save(next);
+      if(mounted)setState(()=>_activePlan=next);
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('No se pudo actualizar el estado del plan.')));
+    }
+  }
+
+  Future<void> _chooseReviewInterval(NutritionGoalPlan current) async {
+    final weeks=await showModalBottomSheet<int>(
+      context:context,
+      showDragHandle:true,
+      builder:(ctx)=>SafeArea(child:Column(
+        mainAxisSize:MainAxisSize.min,
+        children:[
+          const ListTile(
+            title:Text('Revisar mi plan'),
+            subtitle:Text('Es una fecha de referencia voluntaria. '
+              'No recalcula calorías ni envía recordatorios automáticamente.')),
+          ListTile(
+            title:const Text('En 2 semanas'),
+            onTap:()=>Navigator.pop(ctx,2)),
+          ListTile(
+            title:const Text('En 4 semanas'),
+            onTap:()=>Navigator.pop(ctx,4)),
+          ListTile(
+            title:const Text('Sin fecha de revisión'),
+            onTap:()=>Navigator.pop(ctx,0)),
+        ],
+      )),
+    );
+    if(weeks==null || !mounted || _planRepository==null)return;
+    final next=current.copyWith(
+      nextReviewAt:weeks==0?null:DateTime.now().add(
+        Duration(days:7*weeks)),
+      clearNextReview:weeks==0,
+    );
+    try{
+      await _planRepository!.save(next);
+      if(mounted)setState(()=>_activePlan=next);
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('No se pudo guardar la revisión.')));
+    }
+  }
+
+  Future<void> _confirmRemoveEnergyPlan() async {
+    final confirmed=await showDialog<bool>(
+      context:context,builder:(ctx)=>AlertDialog(
+        title:const Text('Quitar objetivo nutricional'),
+        content:const Text('Se elimina solo este plan local. '
+          'Tus registros de Medidas, agua, pasos y Food Vision se conservan.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx,false),
+            child:const Text('Cancelar')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+            child:const Text('Quitar plan')),
+        ],
+      ));
+    if(confirmed!=true || !mounted)return;
+    try{
+      await _planRepository?.clear();
+      if(mounted)setState(()=>_activePlan=null);
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('No se pudo borrar el plan.')));
     }
   }
 
