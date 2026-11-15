@@ -95,9 +95,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           WeightConverter.toCanonicalKg(weight, _weightUnit);
       if (_saveFirstMeasurement &&
           ((rawWeight.isNotEmpty && (weightKg == null || !weightKg.isFinite ||
-              weightKg < 35 || weightKg > 300)) ||
+              weightKg <= 0 || weightKg > 500)) ||
            (rawHeight.isNotEmpty && (height == null || !height.isFinite ||
-              height < 120 || height > 230)) ||
+              height < 40 || height > 250)) ||
            (rawWeight.isEmpty && rawHeight.isEmpty))) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Revisa peso y altura antes de guardarlos en Medidas.'),
@@ -135,7 +135,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             ),
           );
 
-      final recommended = OnboardingRecommendationService.recommend(profile);
+      final age=profile.ageAt(DateTime.now());
+      final recommended = age!=null && age<18
+          ? null : OnboardingRecommendationService.recommend(profile);
       if (installRecommended && recommended != null) {
         await ref
             .read(programServiceProvider)
@@ -666,7 +668,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Widget _summaryStep(BuildContext context) {
     final profile = _buildProfile();
-    final recommended = OnboardingRecommendationService.recommend(profile);
+    final age=profile.ageAt(DateTime.now());
+    final recommended = age!=null && age<18
+        ? null : OnboardingRecommendationService.recommend(profile);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -721,6 +725,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     FaithContentPreference.disabled => 'Oculta',
                     FaithContentPreference.undecided => 'Decidir después',
                   }),
+                  if (age != null && age < 18) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text('Tus rutinas podrán configurarse de forma gradual. '
+                      'No instalamos automáticamente un programa de alta exigencia '
+                      'para menores.',
+                      style:AppTypography.bodySmall),
+                  ],
                   if (recommended != null) ...[
                     const SizedBox(height: AppSpacing.md),
                     Container(
