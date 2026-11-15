@@ -723,14 +723,18 @@ class _MeasurementArtworkRegion {
           const _MeasurementArtworkRegion(true, Offset(.50, .360), .25, .055),
         MeasurementMetric.hips =>
           const _MeasurementArtworkRegion(true, Offset(.54, .460), .32, .07),
+        // Individual tape rings must stay on ONE limb. The source PNG uses
+        // image-right for anatomical left in front, image-left behind.
+        // A radius of .15 on thighs spanned the inter-leg gap; narrowing and
+        // moving laterally prevents falsely highlighting both thighs.
         MeasurementMetric.leftLeg =>
-          const _MeasurementArtworkRegion(false, Offset(.585, .535), .15, .07),
+          const _MeasurementArtworkRegion(false, Offset(.625, .535), .095, .07),
         MeasurementMetric.rightLeg =>
-          const _MeasurementArtworkRegion(false, Offset(.415, .535), .15, .07),
+          const _MeasurementArtworkRegion(false, Offset(.375, .535), .095, .07),
         MeasurementMetric.leftCalf =>
-          const _MeasurementArtworkRegion(true, Offset(.40, .730), .12, .06),
+          const _MeasurementArtworkRegion(true, Offset(.33, .730), .085, .06),
         MeasurementMetric.rightCalf =>
-          const _MeasurementArtworkRegion(true, Offset(.60, .730), .12, .06),
+          const _MeasurementArtworkRegion(true, Offset(.67, .730), .085, .06),
         // Historical general calf records are NOT attributed to either side.
         MeasurementMetric.calves =>
           const _MeasurementArtworkRegion(true, Offset(.50, .730), .28, .06),
