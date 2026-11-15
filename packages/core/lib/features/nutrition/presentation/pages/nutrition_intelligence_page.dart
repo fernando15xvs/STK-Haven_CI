@@ -455,10 +455,31 @@ class _NutritionIntelligencePageState
                 '${stepPrefs.targetSteps}')),
             ]),
             const SizedBox(height:10),
+            if(steps.deviceSynced)
+              Text(
+                steps.lastSyncedAt == null
+                  ? 'Pasos: fuente del dispositivo; hora no disponible.'
+                  : 'Pasos del dispositivo · última sincronización: '
+                    '${DateFormat('dd/MM HH:mm').format(steps.lastSyncedAt!.toLocal())}',
+                style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color:colors.onSurfaceVariant),
+              )
+            else
+              Text('Pasos registrados manualmente o sin sensor conectado.',
+                style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color:colors.onSurfaceVariant)),
+            const SizedBox(height:8),
             Text('Hidratación: actividad, calor y necesidades personales '
               'importan más que la fase nutricional. Tu meta manual se conserva.',
               style:Theme.of(context).textTheme.bodySmall?.copyWith(
                 color:colors.onSurfaceVariant)),
+            const SizedBox(height:8),
+            Align(alignment:Alignment.centerLeft,child:TextButton.icon(
+              key:const ValueKey('nutrition_review_water_target'),
+              onPressed:()=>_reviewWaterTarget(),
+              icon:const Icon(Icons.water_drop_outlined),
+              label:const Text('Revisar mi meta de agua'),
+            )),
             if(stepSuggestion==null)
               Text('Para sugerir pasos con fundamento necesitamos '
                 'al menos 7 días registrados.',
@@ -500,6 +521,96 @@ class _NutritionIntelligencePageState
         ),
       ),
     );
+  }
+
+  Future<void> _reviewWaterTarget() async {
+    final current=ref.read(hydrationPreferencesProvider);
+    var draft=current.targetMl.toDouble();
+    var moreActivity=false;
+    var hotWeather=false;
+    var moreSweat=false;
+
+    final chosen=await showModalBottomSheet<int>(
+      context:context,
+      isScrollControlled:true,
+      useSafeArea:true,
+      showDragHandle:true,
+      builder:(ctx)=>StatefulBuilder(builder:(ctx,update)=>Padding(
+        padding:EdgeInsets.fromLTRB(
+          16,8,16,16+MediaQuery.viewInsetsOf(ctx).bottom),
+        child:SingleChildScrollView(child:Column(
+          mainAxisSize:MainAxisSize.min,
+          crossAxisAlignment:CrossAxisAlignment.start,
+          children:[
+            Text('Revisar meta de hidratación',
+              style:Theme.of(ctx).textTheme.titleLarge),
+            const SizedBox(height:8),
+            const Text('El volumen, el déficit y el mantenimiento '
+              'no indican cuánta agua necesita una persona. '
+              'Considera tu actividad, calor, sudor y circunstancias '
+              'de salud; estos campos solo ayudan a reflexionar, '
+              'no calculan una prescripción.'),
+            CheckboxListTile(
+              contentPadding:EdgeInsets.zero,
+              title:const Text('Actividad prolongada'),
+              value:moreActivity,
+              onChanged:(v)=>update(()=>moreActivity=v??false),
+            ),
+            CheckboxListTile(
+              contentPadding:EdgeInsets.zero,
+              title:const Text('Ambiente caluroso'),
+              value:hotWeather,
+              onChanged:(v)=>update(()=>hotWeather=v??false),
+            ),
+            CheckboxListTile(
+              contentPadding:EdgeInsets.zero,
+              title:const Text('Sudoración elevada'),
+              value:moreSweat,
+              onChanged:(v)=>update(()=>moreSweat=v??false),
+            ),
+            const SizedBox(height:8),
+            Text('Meta que eliges: ${draft.round()} ml/día',
+              style:Theme.of(ctx).textTheme.titleMedium),
+            Slider(
+              key:const ValueKey('nutrition_water_target_slider'),
+              min:1000,max:5000,divisions:16,
+              value:draft.clamp(1000.0,5000.0),
+              label:'${draft.round()} ml',
+              onChanged:(v)=>update(()=>draft=v),
+            ),
+            const Text('No hay ajuste numérico automático por '
+              'actividad o clima. Si tienes restricciones de líquidos '
+              'u otra condición clínica, consulta con un profesional.'),
+            const SizedBox(height:12),
+            SizedBox(width:double.infinity,child:FilledButton(
+              onPressed:()=>Navigator.pop(ctx,draft.round()),
+              child:const Text('Revisar este valor'),
+            )),
+          ],
+        )),
+      )),
+    );
+    if(chosen==null || !mounted || chosen==current.targetMl)return;
+    // Confirmation for water is entirely separate from any steps suggestion.
+    final confirmed=await showDialog<bool>(
+      context:context,
+      builder:(ctx)=>AlertDialog(
+        title:const Text('Confirmar meta de agua'),
+        content:Text('Actual: ${current.targetMl} ml/día. '
+          'Nueva: $chosen ml/día. Es una elección manual. '
+          'Los pasos, el plan energético y los recordatorios '
+          'no cambiarán.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx,false),
+            child:const Text('Conservar mi meta')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+            child:const Text('Aplicar mi elección')),
+        ],
+      ),
+    );
+    if(confirmed!=true || !mounted)return;
+    await ref.read(hydrationPreferencesProvider.notifier)
+      .setTargetMl(chosen);
   }
 
   Widget _buildFoodVision(ColorScheme colors) {
