@@ -718,13 +718,45 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     widget.playback.addListener(_syncVideoLoop);
     unawaited(_setup());
   }
+  @override
+  void didUpdateWidget(covariant _SilentVideoPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Changing the current MP4 can keep the same element/state. Never show
+    // frames or seek events from the previous track with the new audio clock.
+    if(oldWidget.path != widget.path ||
+       oldWidget.playback != widget.playback){
+      oldWidget.playback.removeListener(_syncVideoLoop);
+      widget.playback.addListener(_syncVideoLoop);
+      _resetVideoSource();
+    }
+  }
+
+  void _resetVideoSource() {
+    final previous=controller;
+    controller=null;
+    final oldPosition=position;
+    final oldPlaying=playing;
+    position=null;
+    playing=null;
+    ready=false;
+    seeking=false;
+    if(mounted)setState((){});
+    if(oldPosition!=null)unawaited(oldPosition.cancel());
+    if(oldPlaying!=null)unawaited(oldPlaying.cancel());
+    if(previous!=null)unawaited(previous.dispose());
+    unawaited(_setup());
+  }
+
   Future<void> _setup() async {
     final c=VideoPlayerController.file(File(widget.path),
       videoPlayerOptions:VideoPlayerOptions(mixWithOthers:true));
     controller=c;
     try{
       await c.initialize();
-      if(!mounted || controller!=c)return;
+      if(!mounted || controller!=c){
+        await c.dispose();
+        return;
+      }
       await c.setVolume(0);
       // Video has no audible track: just_audio is the only sound clock.
       // Its repeat-one policy must also be applied to the visual decoder.
@@ -732,14 +764,15 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
       await c.seekTo(widget.playback.position);
       if(widget.playback.playing && visible)unawaited(c.play());
       position=widget.playback.audio.positionStream.listen((pos){
-        if(!mounted || !c.value.isInitialized || !visible)return;
+        if(!mounted || controller!=c ||
+           !c.value.isInitialized || !visible)return;
         if((c.value.position-pos).inMilliseconds.abs()>900 && !seeking){
           seeking=true;
           unawaited(c.seekTo(pos).whenComplete(()=>seeking=false));
         }
       });
       playing=widget.playback.audio.playerStateStream.listen((state){
-        if(!mounted || !c.value.isInitialized)return;
+        if(!mounted || controller!=c || !c.value.isInitialized)return;
         if(state.playing &&
            state.processingState!=ProcessingState.completed && visible){
           unawaited(c.play());
@@ -748,7 +781,11 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
         }
       });
       setState(()=>ready=true);
-    }catch(_){if(mounted)setState(()=>ready=false);}
+    }catch(_){
+      if(controller==c && mounted)setState(()=>ready=false);
+      if(controller==c)controller=null;
+      unawaited(c.dispose());
+    }
   }
   void _syncVideoLoop(){
     final c=controller;
@@ -773,7 +810,9 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     widget.playback.removeListener(_syncVideoLoop);
     unawaited(position?.cancel());
     unawaited(playing?.cancel());
-    if(controller!=null)unawaited(controller!.dispose());
+    final old=controller;
+    controller=null;
+    if(old!=null)unawaited(old.dispose());
     super.dispose();
   }
   void _openCinema() {
