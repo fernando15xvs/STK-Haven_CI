@@ -13,9 +13,12 @@ void main() {
     expect(options, greaterThan(0));
     expect(setHeader, greaterThan(options));
     expect(source, contains("tooltip: 'Opciones del ejercicio'"));
-    for (final action in ['note', 'replace', 'unilateral']) {
+    for (final action in ['technique', 'note', 'replace', 'unilateral']) {
       expect(source, contains("value: '$action'"));
     }
+    expect(source, contains("Text('Técnica y ficha'"));
+    expect(source, contains('ExerciseDetailPage(exercise: item)'));
+    expect(source, contains('ref.read(exerciseListProvider)'));
     expect(source, contains("Text('Nota rápida'"));
     expect(source, contains("Text('Sustituir ejercicio'"));
     expect(source, contains("'Configurar unilateral'"));
