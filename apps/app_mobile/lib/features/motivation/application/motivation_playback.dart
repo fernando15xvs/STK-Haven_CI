@@ -176,6 +176,13 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
   Future<void> seek(Duration to) => audio.seek(to);
+  Future<void> playAtIndex(int index) async {
+    if(index<0 || index>=_queue.length)return;
+    await audio.seek(Duration.zero,index:index);
+    if(!playing)unawaited(audio.play());
+    notifyListeners();
+  }
+
   Future<void> next() async {
     if(audio.hasNext){
       await audio.seekToNext();
