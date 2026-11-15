@@ -16,6 +16,8 @@ class NutritionGoalPlan {
     required this.activityLevel,
     required this.goal,
     required this.estimate,
+    this.isPaused=false,
+    this.nextReviewAt,
   });
 
   final DateTime savedAt;
@@ -29,10 +31,32 @@ class NutritionGoalPlan {
   final EnergyActivityLevel activityLevel;
   final EnergyGoal goal;
   final EnergyEstimate estimate;
-  static const version=1;
+  /// A paused plan remains available as an archived reference, not a goal.
+  final bool isPaused;
+  /// A voluntary review date only; no automatic calorie adjustment/reminders.
+  final DateTime? nextReviewAt;
+  static const version=2;
+
+  NutritionGoalPlan copyWith({
+    bool? isPaused,
+    DateTime? nextReviewAt,
+    bool clearNextReview=false,
+  })=>NutritionGoalPlan(
+    savedAt:savedAt,weightRecordId:weightRecordId,
+    heightRecordId:heightRecordId,
+    weightRecordedAt:weightRecordedAt,
+    heightRecordedAt:heightRecordedAt,
+    weightKg:weightKg,heightCm:heightCm,ageYears:ageYears,
+    equationSex:equationSex,activityLevel:activityLevel,goal:goal,
+    estimate:estimate,
+    isPaused:isPaused??this.isPaused,
+    nextReviewAt:clearNextReview?null:(nextReviewAt??this.nextReviewAt),
+  );
 
   Map<String,dynamic> toJson()=>{
     'version':version,
+    'isPaused':isPaused,
+    'nextReviewAt':nextReviewAt?.toIso8601String(),
     'savedAt':savedAt.toIso8601String(),
     'weightRecordId':weightRecordId,
     'heightRecordId':heightRecordId,
@@ -54,7 +78,9 @@ class NutritionGoalPlan {
   };
 
   factory NutritionGoalPlan.fromJson(Map<String,dynamic> json){
-    if(json['version']!=version)throw const FormatException('Plan versionado incompatible');
+    if(json['version']!=1 && json['version']!=version){
+      throw const FormatException('Plan versionado incompatible');
+    }
     T pick<T extends Enum>(List<T> values,String key){
       return values.firstWhere((e)=>e.name==json[key],
         orElse:()=>throw const FormatException('Valor de plan inválido'));
@@ -88,6 +114,8 @@ class NutritionGoalPlan {
       activityLevel:pick(EnergyActivityLevel.values,'activityLevel'),
       goal:pick(EnergyGoal.values,'goal'),
       estimate:estimate,
+      isPaused:json['isPaused']==true,
+      nextReviewAt:DateTime.tryParse(json['nextReviewAt']?.toString()??''),
     );
   }
 }
