@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
-import 'package:just_audio/just_audio.dart' show ProcessingState;
+import 'package:just_audio/just_audio.dart' show PlayerState, ProcessingState;
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import '../application/motivation_playback.dart';
 import '../data/motivation_library.dart';
@@ -441,7 +441,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     with WidgetsBindingObserver {
   VideoPlayerController? controller;
   StreamSubscription<Duration>? position;
-  StreamSubscription<bool>? playing;
+  StreamSubscription<PlayerState>? playing;
   bool ready=false,visible=true,seeking=false;
   @override
   void initState(){
