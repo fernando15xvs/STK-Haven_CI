@@ -1385,68 +1385,36 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                           }
                         },
                         itemBuilder: (_) => [
-                          PopupMenuItem<String>(
+                          const PopupMenuItem<String>(
                             value: 'technique',
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.menu_book_outlined,
-                                    color: AppColors.of(context).textSecondary),
-                                const SizedBox(width: 10),
-                                Text('Técnica y ficha',
-                                    style: AppTypography.bodyMedium),
-                              ],
+                            child: _WorkoutExerciseActionLabel(
+                              icon: Icons.menu_book_outlined,
+                              label: 'Técnica y ficha',
                             ),
                           ),
                           PopupMenuItem<String>(
                             value: 'note',
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.edit_note_outlined,
-                                  color: widget.workoutExercise.notes.trim().isNotEmpty
-                                      ? AppColors.of(context).primary
-                                      : AppColors.of(context).textSecondary,
-                                ),
-                                const SizedBox(width: 10),
-                                Text('Nota rápida', style: AppTypography.bodyMedium),
-                              ],
+                            child: _WorkoutExerciseActionLabel(
+                              icon: Icons.edit_note_outlined,
+                              label: 'Nota rápida',
+                              active: widget.workoutExercise.notes.trim().isNotEmpty,
                             ),
                           ),
-                          PopupMenuItem<String>(
+                          const PopupMenuItem<String>(
                             value: 'replace',
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.swap_horiz,
-                                    color: AppColors.of(context).textSecondary),
-                                const SizedBox(width: 10),
-                                Text('Sustituir ejercicio',
-                                    style: AppTypography.bodyMedium),
-                              ],
+                            child: _WorkoutExerciseActionLabel(
+                              icon: Icons.swap_horiz,
+                              label: 'Sustituir ejercicio',
                             ),
                           ),
                           PopupMenuItem<String>(
                             value: 'unilateral',
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.compare_arrows,
-                                  color: widget.workoutExercise.unilateral
-                                      ? AppColors.of(context).primary
-                                      : AppColors.of(context).textSecondary,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  widget.workoutExercise.unilateral
-                                      ? 'Unilateral: ${widget.workoutExercise.unilateralTarget.label}'
-                                      : 'Configurar unilateral',
-                                  maxLines: 2,
-                                  style: AppTypography.bodyMedium,
-                                ),
-                              ],
+                            child: _WorkoutExerciseActionLabel(
+                              icon: Icons.compare_arrows,
+                              label: widget.workoutExercise.unilateral
+                                  ? 'Unilateral: ${widget.workoutExercise.unilateralTarget.label}'
+                                  : 'Configurar unilateral',
+                              active: widget.workoutExercise.unilateral,
                             ),
                           ),
                         ],
@@ -1701,6 +1669,47 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Fixed-width popup content prevents long labels from pushing the action
+/// menu beyond narrow mobile screens at enlarged text sizes.
+class _WorkoutExerciseActionLabel extends StatelessWidget {
+  const _WorkoutExerciseActionLabel({
+    required this.icon,
+    required this.label,
+    this.active = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 208,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: active
+                ? AppColors.of(context).primary
+                : AppColors.of(context).textSecondary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.bodyMedium,
             ),
           ),
         ],
