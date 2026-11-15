@@ -29,7 +29,100 @@ class _ActiveWorkoutMemoryOverlayState
     extends ConsumerState<ActiveWorkoutMemoryOverlay> {
   String? _oneRmMessage;
   String? _oneRmExerciseId;
-  bool _compactExpanded = false;
+
+  /// A modal sheet keeps memory tools reachable without a floating panel
+  /// covering the rest countdown, set inputs or the Finish action.
+  Future<void> _openCompactMemory() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, refreshSheet) => Consumer(
+          builder: (sheetContext, sheetRef, _) {
+            final session = sheetRef.watch(
+              activeWorkoutProvider.select((state) => state.session),
+            );
+            if (session == null || session.exercises.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            var exerciseIndex = session.exercises.indexWhere(
+              (item) => !item.completed,
+            );
+            if (exerciseIndex < 0) {
+              exerciseIndex = session.exercises.length - 1;
+            }
+            final exercise = session.exercises[exerciseIndex];
+            final memory = sheetRef.watch(
+              activeWorkoutExerciseMemoryProvider.select(
+                (items) => items[exercise.exerciseId],
+              ),
+            );
+            final previousSession = sheetRef.watch(
+              activeWorkoutPreviousSessionProvider,
+            );
+            final previousAligned = _findExercise(
+              previousSession,
+              exercise.exerciseId,
+            );
+            final settings = sheetRef.watch(settingsProvider);
+            final canUndo = sheetRef.watch(
+              activeWorkoutProvider.select((state) => state.canUndo),
+            );
+            final recommendedSide = exercise.unilateral
+                ? _recommendedSide(sheetRef, exerciseIndex, exercise)
+                : null;
+
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.72,
+              ),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Memoria del ejercicio',
+                            style: Theme.of(sheetContext).textTheme.titleMedium,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Cerrar memoria',
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
+                    ),
+                    _buildPanel(
+                      sheetContext,
+                      exerciseIndex: exerciseIndex,
+                      exercise: exercise,
+                      memory: memory,
+                      previousAligned: previousAligned,
+                      settings: settings,
+                      recommendedSide: recommendedSide,
+                      canUndo: canUndo,
+                      visibleOneRmMessage:
+                          _oneRmExerciseId == exercise.exerciseId
+                              ? _oneRmMessage
+                              : null,
+                      onRefresh: () => refreshSheet(() {}),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,59 +163,48 @@ class _ActiveWorkoutMemoryOverlayState
       recommendedSide: recommendedSide,
       canUndo: canUndo,
       visibleOneRmMessage: visibleOneRmMessage,
-      showCompactClose: compact,
     );
 
     if (compact) {
-      final availableWidth = MediaQuery.sizeOf(context).width - 24;
+      // Do not float memory controls over a keyboard while editing a set.
+      final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
       return Stack(
         children: [
           widget.child,
-          Positioned(
-            right: 12,
-            bottom: MediaQuery.paddingOf(context).bottom + 96,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              child: _compactExpanded
-                  ? ConstrainedBox(
-                      key: const ValueKey('memory_panel'),
-                      constraints: const BoxConstraints(maxWidth: 420),
-                      child: SizedBox(
-                        width: availableWidth,
-                        child: panel,
-                      ),
-                    )
-                  : Material(
-                      key: const ValueKey('memory_launcher'),
-                      elevation: settings.performanceMode == PerformanceMode.savings
-                          ? 0
-                          : 6,
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(22),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(22),
-                        onTap: () => setState(() => _compactExpanded = true),
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 13,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.history_rounded, size: 18),
-                              SizedBox(width: 7),
-                              Text(
-                                'Memoria',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+          if (!keyboardOpen)
+            Positioned(
+              right: 12,
+              bottom: MediaQuery.paddingOf(context).bottom + 96,
+              child: Material(
+                key: const ValueKey('memory_launcher'),
+                elevation: settings.performanceMode == PerformanceMode.savings
+                    ? 0
+                    : 6,
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(22),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: _openCompactMemory,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 10,
                     ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.history_rounded, size: 18),
+                        SizedBox(width: 7),
+                        Text(
+                          'Memoria',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
         ],
       );
     }
@@ -155,7 +237,7 @@ class _ActiveWorkoutMemoryOverlayState
     required WorkoutSide? recommendedSide,
     required bool canUndo,
     required String? visibleOneRmMessage,
-    required bool showCompactClose,
+    VoidCallback? onRefresh,
   }) {
     return Material(
       elevation: settings.performanceMode == PerformanceMode.savings ? 0 : 8,
@@ -254,6 +336,7 @@ class _ActiveWorkoutMemoryOverlayState
                         _oneRmExerciseId = exercise.exerciseId;
                         _oneRmMessage = message;
                       });
+                      onRefresh?.call();
                     },
                     icon: const Icon(Icons.calculate_outlined),
                   ),
@@ -268,13 +351,7 @@ class _ActiveWorkoutMemoryOverlayState
                       : null,
                   icon: const Icon(Icons.undo_rounded),
                 ),
-                if (showCompactClose)
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    tooltip: 'Cerrar memoria',
-                    onPressed: () => setState(() => _compactExpanded = false),
-                    icon: const Icon(Icons.close_rounded),
-                  ),
+
               ],
             ),
             if (visibleOneRmMessage != null) ...[
@@ -305,10 +382,13 @@ class _ActiveWorkoutMemoryOverlayState
                       minHeight: 32,
                     ),
                     padding: EdgeInsets.zero,
-                    onPressed: () => setState(() {
-                      _oneRmMessage = null;
-                      _oneRmExerciseId = null;
-                    }),
+                    onPressed: () {
+                      setState(() {
+                        _oneRmMessage = null;
+                        _oneRmExerciseId = null;
+                      });
+                      onRefresh?.call();
+                    },
                     icon: const Icon(Icons.close, size: 17),
                   ),
                 ],
