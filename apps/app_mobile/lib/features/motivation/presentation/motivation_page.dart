@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart' show PlayerState, ProcessingState;
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import '../application/motivation_playback.dart';
 import '../application/motivation_library_search.dart';
+import '../application/motivation_playlist_presets.dart';
 import '../data/motivation_library.dart';
 import 'widgets/motivation_audio_settings_sheet.dart';
 
@@ -115,6 +116,55 @@ class _MotivationPageState extends State<MotivationPage> {
     final name=await _askName('Nueva playlist');
     if(name!=null)await library.createPlaylist(name);
   }
+  Future<void> _choosePlaylistIdeas() async {
+    final missing=MotivationPlaylistPresets.notYetCreated(library.playlists);
+    if(missing.isEmpty){
+      _message('Ya tienes todas las playlists sugeridas.');
+      return;
+    }
+    final selected=<String>{};
+    final chosen=await showModalBottomSheet<List<String>>(
+      context:context,useSafeArea:true,isScrollControlled:true,
+      showDragHandle:true,
+      builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>SafeArea(
+        child:Padding(
+          padding:EdgeInsets.fromLTRB(
+            16,8,16,16+MediaQuery.viewInsetsOf(ctx).bottom),
+          child:Column(mainAxisSize:MainAxisSize.min,children:[
+            ListTile(
+              title:Text('Ideas para tus playlists',
+                style:AppTypography.headlineMedium),
+              subtitle:const Text('Elige solo las que quieras crear. '
+                'No añadiremos archivos ni iniciaremos música.'),
+            ),
+            for(final name in missing)
+              CheckboxListTile(
+                key:ValueKey('motivation_preset_${name.hashCode}'),
+                title:Text(name),value:selected.contains(name),
+                onChanged:(value)=>refresh((){
+                  if(value==true){selected.add(name);}
+                  else{selected.remove(name);}
+                }),
+              ),
+            const SizedBox(height:10),
+            SizedBox(width:double.infinity,child:FilledButton(
+              onPressed:selected.isEmpty?null:
+                ()=>Navigator.pop(ctx,selected.toList()),
+              child:Text('Crear ${selected.length} playlist(s)'),
+            )),
+          ]),
+        ),
+      )),
+    );
+    if(chosen==null || chosen.isEmpty || !mounted)return;
+    try{
+      final count=await library.createSuggestedPlaylists(chosen);
+      if(mounted)_message('Playlists nuevas: $count.');
+    }catch(_){
+      if(mounted)_message('No se pudieron guardar las playlists.');
+    }
+  }
+
   Future<void> _edit(MotivationTrack track,String action) async {
     if(action=='favorite'){
       await library.toggleFavorite(track.id);
@@ -387,7 +437,16 @@ class _MotivationPageState extends State<MotivationPage> {
               ),
               const SizedBox(height:16),
             ],
-            Text('Colecciones',style:AppTypography.headlineMedium),
+            Row(children:[
+              Expanded(child:Text('Colecciones',
+                style:AppTypography.headlineMedium)),
+              TextButton.icon(
+                key:const ValueKey('motivation_playlist_ideas'),
+                onPressed:()=>unawaited(_choosePlaylistIdeas()),
+                icon:const Icon(Icons.auto_awesome_outlined),
+                label:const Text('Ideas de listas'),
+              ),
+            ]),
             const SizedBox(height:9),
             SingleChildScrollView(scrollDirection:Axis.horizontal,
               child:Row(children:[
