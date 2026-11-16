@@ -67,7 +67,10 @@ void main() {
       expect(body,contains('await _changed();'));
       expect(body,contains('if(await destination.exists())await destination.delete();'));
     }
-    expect(cover,contains('final previous=_tracks[currentIdx];'));
+    expect(cover,contains('final latestIdx=_tracks.indexWhere((track)=>track.id==trackId);'));
+    expect(cover,contains('if(latestIdx<0){'));
+    expect(cover,contains('final previous=_tracks[latestIdx];'));
+    expect(cover,contains('_tracks[latestIdx]=previous.copyWith(artworkFileName:name);'));
     expect(thumb,contains('final previous=_tracks[latest];'));
   });
 

@@ -229,7 +229,6 @@ class MotivationLibrary extends ChangeNotifier {
     final name='art_${const Uuid().v4()}.png';
     final destination=File(p.join(_directory!.path,name));
     final temp=File(destination.path+'.part');
-    final previous=_tracks[currentIdx];
     var mayStillBeReferenced=false;
     try{
       await MotivationArtworkProcessor.writeSquareCover(
@@ -238,11 +237,19 @@ class MotivationLibrary extends ChangeNotifier {
         throw const FileSystemException('Portada incompleta');
       }
       await temp.rename(destination.path);
-      _tracks[currentIdx]=previous.copyWith(artworkFileName:name);
+      // Cropping and I/O are asynchronous. The original track might have
+      // been deleted or reordered while the editor was open. Never attach
+      // its cover to another track through an outdated list index.
+      final latestIdx=_tracks.indexWhere((track)=>track.id==trackId);
+      if(latestIdx<0){
+        throw const FileSystemException('El archivo original ya no existe');
+      }
+      final previous=_tracks[latestIdx];
+      _tracks[latestIdx]=previous.copyWith(artworkFileName:name);
       try{
         await _changed();
       }catch(_){
-        _tracks[currentIdx]=previous;
+        _tracks[latestIdx]=previous;
         try{
           await _changed();
         }catch(_){
