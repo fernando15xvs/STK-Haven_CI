@@ -52,7 +52,7 @@ void main(){
     expect(result.carbsGramsHigh,isNull);
     expect(result.fatGramsLow,isNull);
     expect(result.fatGramsHigh,isNull);
-    expect(result.items,single);
+    expect(result.items,hasLength(1));
     final arroz=result.items.single;
     expect(arroz.name,'Arroz');
     expect(arroz.portionDescription,'Una porción');
@@ -78,7 +78,7 @@ void main(){
     expect(saved['caloriesLow'],isNull);
     expect(saved['fatGramsHigh'],isNull);
     final items=saved['items'] as List;
-    expect(items,single);
+    expect(items,hasLength(1));
     final first=items.single as Map;
     for(final field in [
       'gramsLow','gramsHigh','caloriesLow','caloriesHigh',
