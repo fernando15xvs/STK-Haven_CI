@@ -274,18 +274,42 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     'No verifica tu mayoría de edad ni comparte datos '
                     'con un entrenador. Puedes verlos o borrarlos aquí.'),
                   value:draft.optionalDemographicsConsented,
-                  onChanged:(enabled)=>setState((){
-                    _draft=enabled
-                      ?draft.copyWith(
-                        optionalDemographicsConsented:true,
-                        optionalDemographicsConsentedAt:DateTime.now())
-                      :draft.copyWith(
-                        optionalDemographicsConsented:false,
-                        clearOptionalDemographicsConsentAt:true,
-                        clearDateOfBirth:true,
-                        clearGenderIdentity:true,
-                        clearEquationSexForEnergy:true);
-                  }),
+                  onChanged:(enabled)async{
+                    if(!enabled &&
+                       (draft.dateOfBirth!=null ||
+                        draft.genderIdentity!=null ||
+                        draft.equationSexForEnergy!=null)){
+                      final confirmed=await showDialog<bool>(
+                        context:context,builder:(ctx)=>AlertDialog(
+                          title:const Text('Desactivar datos opcionales'),
+                          content:const Text('Se quitarán fecha de nacimiento, '
+                            'género y parámetro energético de tu borrador. '
+                            'Se aplicará al guardar. Tus rutinas, '
+                            'historial y preferencias no cambiarán.'),
+                          actions:[
+                            TextButton(onPressed:()=>Navigator.pop(ctx,false),
+                              child:const Text('Cancelar')),
+                            FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+                              child:const Text('Quitar del borrador')),
+                          ],
+                        ),
+                      );
+                      if(confirmed!=true || !mounted)return;
+                    }
+                    if(!mounted)return;
+                    setState((){
+                      _draft=enabled
+                        ?draft.copyWith(
+                          optionalDemographicsConsented:true,
+                          optionalDemographicsConsentedAt:DateTime.now())
+                        :draft.copyWith(
+                          optionalDemographicsConsented:false,
+                          clearOptionalDemographicsConsentAt:true,
+                          clearDateOfBirth:true,
+                          clearGenderIdentity:true,
+                          clearEquationSexForEnergy:true);
+                    });
+                  },
                 ),
                 if(!draft.optionalDemographicsConsented &&
                    (draft.dateOfBirth!=null ||

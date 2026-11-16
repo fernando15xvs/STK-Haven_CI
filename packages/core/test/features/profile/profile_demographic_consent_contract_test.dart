@@ -14,6 +14,11 @@ void main(){
     expect(profile,contains('optionalDemographicsConsentedAt:DateTime.now()'));
     expect(profile,contains('optionalDemographicsConsented:false'));
     expect(profile,contains('clearOptionalDemographicsConsentAt:true'));
+    expect(profile,contains('Desactivar datos opcionales'));
+    expect(profile,contains('Quitar del borrador'));
+    expect(profile,contains('if(confirmed!=true || !mounted)return;'));
+    expect(profile,contains('Se aplicará al guardar.'));
+
     expect(profile,contains('clearDateOfBirth:true'));
     expect(profile,contains('clearGenderIdentity:true'));
     expect(profile,contains('clearEquationSexForEnergy:true'));
