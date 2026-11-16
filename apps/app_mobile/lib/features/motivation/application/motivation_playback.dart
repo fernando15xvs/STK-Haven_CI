@@ -81,6 +81,11 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   bool get playing => audio.playing && !completed;
   /// A one-track queue cannot be shuffled, regardless of saved preference.
   bool get shuffleActive => shuffle && _queue.length > 1;
+  /// A stop-after-one queue or the last non-looping track has no next item.
+  /// The native player remains the source of truth for shuffled order.
+  bool get canSkipNext =>
+      repeat != MotivationRepeat.stop && audio.hasNext;
+  bool get canSkipPrevious => currentTrack != null;
   Duration get position=>audio.position;
   Duration? get duration=>audio.duration;
   List<MotivationTrack> get queue=>List.unmodifiable(_queue);
@@ -293,11 +298,12 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> next() async {
-    if(audio.hasNext){
+    if(canSkipNext){
       await audio.seekToNext();
       await saveResume();
       if(!audio.playing)unawaited(audio.play());
     }
+    notifyListeners();
   }
   Future<void> previous() async {
     if(audio.position>const Duration(seconds:3)){

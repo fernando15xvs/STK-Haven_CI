@@ -13,6 +13,7 @@ import 'package:core/features/profile/presentation/providers/user_experience_pro
 import 'package:core/features/home/application/wellness_provider.dart';
 import 'package:core/features/home/application/hydration_provider.dart';
 import 'package:core/features/nutrition/application/wellness_goal_suggestions.dart';
+import 'package:core/features/nutrition/application/hydration_context_guidance.dart';
 import 'package:core/domain/models/wellness_goal_change.dart';
 import 'package:core/features/nutrition/application/food_vision_correction.dart';
 import 'package:core/features/nutrition/data/food_vision_service.dart';
@@ -758,6 +759,7 @@ class _NutritionIntelligencePageState
     var moreActivity=false;
     var hotWeather=false;
     var moreSweat=false;
+    var hasFluidRestriction=false;
 
     final chosen=await showModalBottomSheet<int>(
       context:context,
@@ -797,6 +799,24 @@ class _NutritionIntelligencePageState
               value:moreSweat,
               onChanged:(v)=>update(()=>moreSweat=v??false),
             ),
+            CheckboxListTile(
+              contentPadding:EdgeInsets.zero,
+              key:const ValueKey('nutrition_water_fluid_restriction'),
+              title:const Text('Tengo indicación médica de limitar líquidos'),
+              subtitle:const Text('Si la seleccionas, conservaremos '
+                'tu meta hasta que la revises con un profesional.'),
+              value:hasFluidRestriction,
+              onChanged:(v)=>update(()=>hasFluidRestriction=v??false),
+            ),
+            const SizedBox(height:8),
+            Text(HydrationContextGuidance(
+                prolongedActivity:moreActivity,
+                hotEnvironment:hotWeather,
+                heavySweating:moreSweat,
+                fluidRestriction:hasFluidRestriction,
+              ).guidance,
+              key:const ValueKey('nutrition_water_context_guidance'),
+              style:Theme.of(ctx).textTheme.bodySmall),
             const SizedBox(height:8),
             Text('Meta que eliges: ${draft.round()} ml/día',
               style:Theme.of(ctx).textTheme.titleMedium),
@@ -812,7 +832,8 @@ class _NutritionIntelligencePageState
               'u otra condición clínica, consulta con un profesional.'),
             const SizedBox(height:12),
             SizedBox(width:double.infinity,child:FilledButton(
-              onPressed:()=>Navigator.pop(ctx,draft.round()),
+              onPressed:hasFluidRestriction?null:
+                ()=>Navigator.pop(ctx,draft.round()),
               child:const Text('Revisar este valor'),
             )),
           ],
@@ -820,14 +841,12 @@ class _NutritionIntelligencePageState
       )),
     );
     if(chosen==null || !mounted || chosen==current.targetMl)return;
-    final contexts=<String>[
-      if(moreActivity)'actividad prolongada',
-      if(hotWeather)'ambiente caluroso',
-      if(moreSweat)'sudoración elevada',
-    ];
-    final contextLabel=contexts.isEmpty
-      ? 'No indicaste factores adicionales.'
-      : 'Factores señalados: ${contexts.join(', ')}.';
+    final contextLabel=HydrationContextGuidance(
+      prolongedActivity:moreActivity,
+      hotEnvironment:hotWeather,
+      heavySweating:moreSweat,
+      fluidRestriction:hasFluidRestriction,
+    ).factorsSummary;
     // Confirmation for water is entirely separate from any steps suggestion.
     final confirmed=await showDialog<bool>(
       context:context,

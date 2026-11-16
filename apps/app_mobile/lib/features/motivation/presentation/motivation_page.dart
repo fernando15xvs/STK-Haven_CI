@@ -1273,11 +1273,16 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                             backgroundColor:colors.primary,
                             foregroundColor:colors.onPrimary)),
                         IconButton(
-                          tooltip:'Siguiente',
-                          onPressed:()=>unawaited(player.next()),
+                          key:const ValueKey('motivation_next_track'),
+                          tooltip:player.canSkipNext
+                            ?'Siguiente pista'
+                            :'No hay otra pista disponible',
+                          onPressed:player.canSkipNext
+                            ?()=>unawaited(player.next()):null,
                           icon:const Icon(Icons.skip_next_rounded,size:34)),
                         PopupMenuButton<MotivationRepeat>(
-                          tooltip:'Modo de repetición',
+                          key:const ValueKey('motivation_repeat_picker'),
+                          tooltip:'Reproducción: ${player.repeat.label}',
                           onSelected:(repeat)=>unawaited(player.setRepeat(repeat)),
                           icon:Icon(
                             player.repeat==MotivationRepeat.one
@@ -1295,6 +1300,16 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                           ],
                         ),
                       ],
+                    ),
+                    Semantics(
+                      liveRegion:true,
+                      child:Text(
+                        'Modo: ${player.repeat.label}',
+                        key:const ValueKey('motivation_repeat_state'),
+                        textAlign:TextAlign.center,
+                        style:AppTypography.bodySmall.copyWith(
+                          color:colors.textSecondary),
+                      ),
                     ),
                     const SizedBox(height:16),
                     OutlinedButton.icon(

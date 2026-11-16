@@ -13,6 +13,12 @@ void main(){
     expect(source,contains('Actividad prolongada'));
     expect(source,contains('Ambiente caluroso'));
     expect(source,contains('Sudoración elevada'));
+    expect(source,contains("ValueKey('nutrition_water_fluid_restriction')"));
+    expect(source,contains("ValueKey('nutrition_water_context_guidance')"));
+    expect(source,contains('onPressed:hasFluidRestriction?null:'));
+    expect(source,contains('HydrationContextGuidance('));
+    expect(source,contains('fluidRestriction:hasFluidRestriction'));
+    expect(source,contains('Tengo indicación médica de limitar líquidos'));
     expect(source,contains('Revisar este valor'));
     expect(source,contains('Confirmar meta de agua'));
     expect(source,contains('Conservar mi meta'));
