@@ -413,11 +413,16 @@ class BackupStatusPage extends ConsumerWidget {
           ),
         );
       }
-    } catch (error) {
+    } catch (_) {
+      // Hive/native errors may include filesystem paths and private values.
+      // The backup remains available; do not echo exceptions in the UI.
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al restaurar la copia: $error'),
+          const SnackBar(
+            content: Text(
+              'No se pudo completar la restauración. '
+              'Revisa tus datos y conserva el archivo de respaldo.',
+            ),
           ),
         );
       }
