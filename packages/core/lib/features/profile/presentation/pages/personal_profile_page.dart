@@ -269,9 +269,11 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                   key:const ValueKey('profile_optional_demographics_consent'),
                   contentPadding:EdgeInsets.zero,
                   title:const Text('Autorizar datos demográficos opcionales'),
-                  subtitle:const Text('Solo se guardan localmente para '
-                    'adaptar la experiencia y cálculos adultos opcionales. '
-                    'No verifica tu mayoría de edad ni comparte datos '
+                  subtitle:const Text('Se guardan en tu dispositivo '
+                    'para adaptar la experiencia y cálculos adultos '
+                    'opcionales. Si exportas o subes una copia de seguridad, '
+                    'estos datos pueden incluirse en ella. '
+                    'No verifican tu edad ni se comparten automáticamente '
                     'con un entrenador. Puedes verlos o borrarlos aquí.'),
                   value:draft.optionalDemographicsConsented,
                   onChanged:(enabled)async{

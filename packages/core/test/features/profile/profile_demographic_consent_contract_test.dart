@@ -9,7 +9,9 @@ void main(){
     ).readAsStringSync();
     expect(profile,contains("ValueKey('profile_optional_demographics_consent')"));
     expect(profile,contains('Autorizar datos demográficos opcionales'));
-    expect(profile,contains('Solo se guardan localmente'));
+    expect(profile,contains('Se guardan en tu dispositivo'));
+    expect(profile,contains('Si exportas o subes una copia de seguridad'));
+    expect(profile,contains('estos datos pueden incluirse en ella.'));
     expect(profile,contains('optionalDemographicsConsented:true'));
     expect(profile,contains('optionalDemographicsConsentedAt:DateTime.now()'));
     expect(profile,contains('optionalDemographicsConsented:false'));
