@@ -370,10 +370,29 @@ class BackupService {
     int schemaVersion,
   ) {
     final rawSettings = data['settings'];
+    if (rawSettings != null && rawSettings is! Map) {
+      throw const FormatException(
+        'Metadatos de respaldo inválidos: settings');
+    }
+    for (final key in const [
+      'gamification', 'hydration', 'recovery', 'habitTasksStore',
+    ]) {
+      final value = data[key];
+      if (value != null && value is! Map) {
+        throw FormatException('Datos de respaldo inválidos: $key');
+      }
+    }
     final settings = rawSettings is Map
         ? Map<String, dynamic>.from(_normalizeMap(rawSettings))
         : <String, dynamic>{};
     settings.remove('db_version');
+
+    // Every list below is restored into a Hive map keyed by the record ID.
+    // A backup with repeated IDs would silently overwrite the earlier
+    // record, even when the JSON parses successfully. Validate the entire
+    // payload before restoreBackup clears any user box. Older schema
+    // versions with missing optional lists remain compatible.
+    _rejectDuplicateRecordIds(data);
 
     final exercises = (data['exercises'] as List?)
             ?.map(
@@ -631,6 +650,35 @@ class BackupService {
       'recovery': recovery,
       'habitTasksStore': habitTasksStore,
     };
+  }
+
+  /// Reject destructive ID collisions before touching on-device records.
+  /// A missing optional collection is valid for historical backup schemas.
+  /// Malformed collection entries are invalid rather than silently skipped.
+  void _rejectDuplicateRecordIds(Map<String, dynamic> data) {
+    for (final name in const [
+      'exercises', 'routines', 'workouts', 'personalRecords',
+      'bodyMeasurements', 'favoriteVerses',
+    ]) {
+      final source = data[name];
+      if (source == null) continue;
+      if (source is! List) {
+        throw FormatException('Colección de respaldo inválida: $name');
+      }
+      final seen = <String>{};
+      for (final record in source) {
+        if (record is! Map) {
+          throw FormatException('Registro de respaldo inválido: $name');
+        }
+        final id = record['id'];
+        if (id is! String || id.trim().isEmpty) {
+          throw FormatException('Identificador de respaldo inválido: $name');
+        }
+        if (!seen.add(id)) {
+          throw FormatException('Identificador duplicado en respaldo: $name');
+        }
+      }
+    }
   }
 
   Map<String, dynamic> _habitTasksBackupMap(

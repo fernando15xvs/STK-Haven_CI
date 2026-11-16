@@ -339,10 +339,12 @@ class BackupStatusPage extends ConsumerWidget {
     }
 
     final parsed = result.parsedData!;
-    final routines = (parsed['routines'] as List).length;
-    final workouts = (parsed['workouts'] as List).length;
-    final exercises = (parsed['exercises'] as List).length;
-    final prs = (parsed['personalRecords'] as List).length;
+    // Older supported backups may omit collections introduced later.
+    // The preview must not crash after a successful validation.
+    final routines = (parsed['routines'] as List?)?.length ?? 0;
+    final workouts = (parsed['workouts'] as List?)?.length ?? 0;
+    final exercises = (parsed['exercises'] as List?)?.length ?? 0;
+    final prs = (parsed['personalRecords'] as List?)?.length ?? 0;
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -371,8 +373,27 @@ class BackupStatusPage extends ConsumerWidget {
 
     if (confirm != true) return;
 
+    // A session could have started while the picker or confirmation dialog
+    // was visible. Re-check before changing any Hive box.
+    if (ref.read(activeWorkoutProvider).session != null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Termina tu entrenamiento actual antes de restaurar una copia.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
     try {
-      await _backupService.restoreBackup(parsed);
+      await _backupService.restoreBackup(
+        parsed,
+        schemaVersion: result.schemaVersion ??
+            BackupService.currentBackupSchemaVersion,
+      );
       await TrainingProgramRepository.fromHive().hydrateFromBackupMetadata();
       ref.invalidate(settingsProvider);
       ref.invalidate(userExperienceProfileProvider);

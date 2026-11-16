@@ -309,6 +309,108 @@ void main() {
       expect(legacy['notes'], isNull);
     });
 
+    test('backup rejects colliding record IDs before restoring Hive boxes', () {
+      final service = BackupService();
+      for (final collection in [
+        'exercises', 'routines', 'workouts', 'personalRecords',
+        'bodyMeasurements', 'favoriteVerses',
+      ]) {
+        // Only one of the collections needs to contain duplicate IDs. The
+        // entries deliberately omit other fields to prove the safety guard
+        // runs *before* object parsing and before any device-side clearing.
+        final payload = jsonEncode({
+          'format': 'gym_tracker_backup',
+          'schemaVersion': BackupService.currentBackupSchemaVersion,
+          'data': {
+            'settings': {},
+            collection: [
+              {'id': 'same-id'},
+              {'id': 'same-id'},
+            ],
+          },
+        });
+        final check = service.validateBackup(payload);
+        expect(check.isValid, isFalse, reason: collection);
+        expect(check.errorMessage, contains('Identificador duplicado'),
+            reason: collection);
+      }
+    });
+
+    test('backup rejects malformed collections and empty IDs', () {
+      final service = BackupService();
+      for (final corruptedData in [
+        {'exercises': 'not-a-list'},
+        {'workouts': [null]},
+        {'bodyMeasurements': [{'name': 'without-id'}]},
+        {'routines': [{'id': '  '}]},
+      ]) {
+        final result = service.validateBackup(jsonEncode({
+          'format': 'gym_tracker_backup',
+          'schemaVersion': 8,
+          'data': {'settings': {}, ...corruptedData},
+        }));
+        expect(result.isValid, isFalse);
+        expect(result.errorMessage, contains('inválido'));
+      }
+    });
+
+    test('malformed settings and wellness stores cannot silently erase saved data', () {
+      final service = BackupService();
+      for (final malformed in [
+        {'settings': <String>['wrong']},
+        {'gamification': <String>['not-a-map']},
+        {'hydration': <String>['not-a-map']},
+        {'recovery': 120},
+        {'habitTasksStore': 'invalid'},
+      ]) {
+        final backup = jsonEncode({
+          'format': 'gym_tracker_backup',
+          'schemaVersion': BackupService.currentBackupSchemaVersion,
+          'data': {'settings': {}, ...malformed},
+        });
+        final result = service.validateBackup(backup);
+        expect(result.isValid, isFalse, reason: malformed.toString());
+        expect(result.errorMessage, contains('inválid'),
+            reason: malformed.toString());
+      }
+    });
+
+    test('historical empty backup lists remain valid for guest and offline', () {
+      final service = BackupService();
+      final backup = jsonEncode({
+        'format': 'gym_tracker_backup',
+        'schemaVersion': 2,
+        'data': {
+          'settings': {
+            'user_experience_profile_v1': {
+              'onboardingVersion': 1,
+              'trainingDaysPerWeek': 3,
+              'faithPreference': 'undecided',
+              'dateOfBirth': '1998-04-09T00:00:00.000',
+              // The old backup has no consent key.
+            },
+          },
+          'exercises': [],
+          'routines': [],
+          'workouts': [],
+          'personalRecords': [],
+          'bodyMeasurements': [],
+        },
+      });
+      final result = service.validateBackup(backup);
+      expect(result.isValid, isTrue);
+      expect(result.schemaVersion, 2);
+      final settings =
+        result.parsedData?['settings'] as Map<String, dynamic>;
+      final legacy = Map<String, dynamic>.from(
+        settings['user_experience_profile_v1'] as Map,
+      );
+      expect(legacy['trainingDaysPerWeek'], 3);
+      expect(legacy['faithPreference'], 'undecided');
+      expect(legacy['dateOfBirth'], isNotNull);
+      expect(legacy.containsKey('optionalDemographicsConsented'), isFalse);
+    });
+
     test('validateBackup rejects future unsupported schema versions', () {
       final service = BackupService();
       final invalidJson = jsonEncode({
