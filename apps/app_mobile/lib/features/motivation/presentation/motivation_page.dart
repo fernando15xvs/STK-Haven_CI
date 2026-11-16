@@ -841,6 +841,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
   StreamSubscription<Duration>? position;
   StreamSubscription<PlayerState>? playing;
   bool ready=false,visible=true,seeking=false;
+  bool _videoFailed=false;
   DateTime? _lastPositionCorrection;
   @override
   void initState(){
@@ -872,6 +873,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     playing=null;
     ready=false;
     seeking=false;
+    _videoFailed=false;
     _lastPositionCorrection=null;
     if(mounted)setState((){});
     if(oldPosition!=null)unawaited(oldPosition.cancel());
@@ -881,6 +883,10 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
   }
 
   Future<void> _setup() async {
+    // Only an explicit retry creates another decoder after a failure.
+    // Replacing a track disposes the previous controller in _resetVideoSource.
+    if(controller!=null)return;
+    _videoFailed=false;
     final c=VideoPlayerController.file(File(widget.path),
       videoPlayerOptions:VideoPlayerOptions(mixWithOthers:true));
     controller=c;
@@ -923,12 +929,18 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
         }
       });
       _cinemaSource.value=c;
-      setState(()=>ready=true);
+      setState((){
+        ready=true;
+        _videoFailed=false;
+      });
     }catch(_){
       if(controller==c){
         controller=null;
         _cinemaSource.value=null;
-        if(mounted)setState(()=>ready=false);
+        if(mounted)setState((){
+          ready=false;
+          _videoFailed=true;
+        });
         unawaited(c.dispose());
       }
     }
@@ -1066,7 +1078,23 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     if(!ready || c==null)return Container(
       height:180,alignment:Alignment.center,
       color:Theme.of(context).colorScheme.surfaceContainer,
-      child:const Icon(Icons.movie_outlined,size:40));
+      child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+        Icon(_videoFailed?Icons.broken_image_outlined:
+          Icons.movie_outlined,size:36),
+        if(_videoFailed)...[
+          const SizedBox(height:8),
+          Text('No se pudo mostrar el vídeo.',
+            key:const ValueKey('motivation_video_decoder_error'),
+            style:AppTypography.bodySmall),
+          const SizedBox(height:8),
+          OutlinedButton.icon(
+            key:const ValueKey('motivation_video_retry'),
+            onPressed:()=>unawaited(_setup()),
+            icon:const Icon(Icons.refresh_rounded),
+            label:const Text('Reintentar vídeo'),
+          ),
+        ],
+      ]));
     return ClipRRect(borderRadius:AppRadius.md_,
       child:Stack(children:[
         ConstrainedBox(
