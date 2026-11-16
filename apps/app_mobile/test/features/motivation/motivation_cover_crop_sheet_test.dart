@@ -1,5 +1,5 @@
+import 'dart:convert';
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,36 +11,43 @@ void main(){
 
   testWidgets('canceling the optional cover sheet returns no crop',
       (tester) async {
-    final folder=await Directory.systemTemp.createTemp('stk_cover_cancel_');
+    // A tiny, valid PNG fixture avoids awaiting Picture.toImage inside the
+    // fake-async widget test zone (which previously hung for ten minutes).
+    final folder=Directory.systemTemp.createTempSync('stk_cover_cancel_');
     try {
       final image=File('${folder.path}/preview.png');
-      final recorder=ui.PictureRecorder();
-      final picture=recorder.endRecording();
-      final output=await picture.toImage(16,16);
-      final png=(await output.toByteData(format:ui.ImageByteFormat.png))!;
-      await image.writeAsBytes(png.buffer.asUint8List());
-      output.dispose();
-      picture.dispose();
+      image.writeAsBytesSync(base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91Jpz'
+        'AAAAFklEQVR4nGMUckthYGBgYmBgYGBgAAAIqADA5KefuAAAAABJRU5ErkJggg==',
+      ));
 
       MotivationCoverFocus? result;
+      var completed=false;
       await tester.pumpWidget(MaterialApp(home:Scaffold(
         body:Builder(builder:(context)=>TextButton(
           onPressed:()async {
             result=await MotivationCoverCropSheet.show(context,image.path);
+            completed=true;
           },
           child:const Text('Abrir editor'),
         )),
       )));
       await tester.tap(find.text('Abrir editor'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds:400));
       expect(find.text('Ajustar portada'),findsOneWidget);
       expect(find.byKey(const ValueKey('motivation_crop_preview')),
         findsOneWidget);
       await tester.tap(find.text('Cancelar'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds:400));
+      expect(completed,isTrue);
       expect(result,isNull);
+      expect(find.text('Ajustar portada'),findsNothing);
+      // Unmount the Image.file before deleting its temporary source.
+      await tester.pumpWidget(const SizedBox.shrink());
     }finally{
-      await folder.delete(recursive:true);
+      folder.deleteSync(recursive:true);
     }
   });
 
