@@ -34,6 +34,23 @@ void main() {
     expect(source,contains('Never delete the media while its removal failed'));
   });
 
+  test('title, favorite and mode revert if their metadata write fails',(){
+    final source=File(
+      'lib/features/motivation/data/motivation_library.dart',
+    ).readAsStringSync();
+    for(final method in <String>['renameTrack','toggleFavorite','changeMode']){
+      final start=source.indexOf('Future<void> $method(');
+      expect(start,greaterThan(0));
+      final next=source.indexOf('  Future<void>',start+12);
+      final body=source.substring(start,next);
+      expect(body,contains('final previous=_tracks[i];'));
+      expect(body,contains('await _changed();'));
+      expect(body,contains('}catch(_){'));
+      expect(body,contains('_tracks[i]=previous;'));
+      expect(body,contains('rethrow;'));
+    }
+  });
+
   test('malicious artwork paths are rejected', () {
     expect(()=>MotivationTrack.fromJson({
       'id':'x','title':'Voz','fileName':'x.mp3',

@@ -378,20 +378,41 @@ class MotivationLibrary extends ChangeNotifier {
     if(title.trim().isEmpty)return;
     final i=_tracks.indexWhere((t)=>t.id==id);
     if(i<0)return;
-    _tracks[i]=_tracks[i].copyWith(title:title.trim());
-    await _changed();
+    final previous=_tracks[i];
+    _tracks[i]=previous.copyWith(title:title.trim());
+    try{
+      await _changed();
+    }catch(_){
+      _tracks[i]=previous;
+      notifyListeners();
+      rethrow;
+    }
   }
   Future<void> toggleFavorite(String id) async {
     final i=_tracks.indexWhere((t)=>t.id==id);
     if(i<0)return;
-    _tracks[i]=_tracks[i].copyWith(favorite:!_tracks[i].favorite);
-    await _changed();
+    final previous=_tracks[i];
+    _tracks[i]=previous.copyWith(favorite:!previous.favorite);
+    try{
+      await _changed();
+    }catch(_){
+      _tracks[i]=previous;
+      notifyListeners();
+      rethrow;
+    }
   }
   Future<void> changeMode(String id,MotivationMode mode) async {
     final i=_tracks.indexWhere((t)=>t.id==id);
     if(i<0)return;
-    _tracks[i]=_tracks[i].copyWith(mode:mode);
-    await _changed();
+    final previous=_tracks[i];
+    _tracks[i]=previous.copyWith(mode:mode);
+    try{
+      await _changed();
+    }catch(_){
+      _tracks[i]=previous;
+      notifyListeners();
+      rethrow;
+    }
   }
   Future<void> removeTrack(String id) async {
     final i=_tracks.indexWhere((t)=>t.id==id);
