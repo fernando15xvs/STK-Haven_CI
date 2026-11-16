@@ -93,6 +93,8 @@ class _NutritionIntelligencePageState
   String? _message;
 
   late final NutritionHistoryRepository _historyRepository;
+  late final String _nutritionOwnerId;
+  int _analysisEpoch=0;
   List<NutritionHistoryEntry> _history = const <NutritionHistoryEntry>[];
   bool _showFavoriteMealsOnly=false;
 
@@ -103,6 +105,7 @@ class _NutritionIntelligencePageState
     try{
       ownerId=Supabase.instance.client.auth.currentUser?.id ?? 'guest';
     }catch(_){/* Guest nutrition stays offline and local. */}
+    _nutritionOwnerId=ownerId;
     _historyRepository = NutritionHistoryRepository(
       Hive.box<dynamic>(HiveBoxes.metadata), ownerId:ownerId,
     );
@@ -117,6 +120,25 @@ class _NutritionIntelligencePageState
     }catch(_){/* Keep public nutrition guidance available offline. */}
   }
 
+  /// Revocation and account changes clear memory, never the original local
+  /// records. An in-flight Food Vision response cannot resurrect old values.
+  void _clearSensitiveSessionState() {
+    _analysisEpoch++;
+    _photo=null;
+    _foodEstimate=null;
+    _analyzing=false;
+    _invalidateEnergyDraft();
+    _activePlan=null;
+    _message=null;
+  }
+
+  bool get _sameNutritionOwner {
+    try{
+      return (Supabase.instance.client.auth.currentUser?.id ?? 'guest')==
+        _nutritionOwnerId;
+    }catch(_){return _nutritionOwnerId=='guest';}
+  }
+
   @override
   void didUpdateWidget(covariant NutritionIntelligencePage oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -124,11 +146,10 @@ class _NutritionIntelligencePageState
     // visible. Never retain numeric food/photo or energy output in that case.
     if(oldWidget.verifiedAdultNutritionAccess &&
         !widget.verifiedAdultNutritionAccess){
-      _foodEstimate=null;
-      _energyEstimate=null;
-      _calculatedProfile=null;
-      _calculatedBody=null;
-      _calculationMeasurementIds=null;
+      _clearSensitiveSessionState();
+    }else if(!oldWidget.verifiedAdultNutritionAccess &&
+        widget.verifiedAdultNutritionAccess){
+      _activePlan=_planRepository?.read();
     }
   }
 
@@ -145,6 +166,20 @@ class _NutritionIntelligencePageState
     final access=ref.watch(
       nutritionAccessStateProvider(widget.verifiedAdultNutritionAccess));
     final hasAdultAccess=access.canViewNumericNutrition;
+    // Local profile updates can downgrade a previously verified adult even
+    // without a new backend boolean. Revoke all numeric session caches.
+    ref.listen<NutritionAccessState>(
+      nutritionAccessStateProvider(widget.verifiedAdultNutritionAccess),
+      (previous,next){
+        if(previous?.canViewNumericNutrition==true &&
+           !next.canViewNumericNutrition){
+          setState(_clearSensitiveSessionState);
+        }else if(previous?.canViewNumericNutrition==false &&
+                 next.canViewNumericNutrition){
+          setState(()=>_activePlan=_planRepository?.read());
+        }
+      },
+    );
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrición Inteligente')),
       body: SafeArea(
@@ -923,7 +958,9 @@ class _NutritionIntelligencePageState
                 style: TextStyle(color: colors.error),
               ),
             ],
-            if (_foodEstimate case final estimate?) ...[
+            if (_foodEstimate case final estimate?
+                when !estimate.numericNutritionAvailable ||
+                     _hasAdultNumericAccess) ...[
               const SizedBox(height: 16),
               _FoodVisionResultCard(estimate: estimate),
               const SizedBox(height: 10),
@@ -1174,6 +1211,20 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _saveCurrentEstimate(FoodVisionEstimate estimate) async {
+    if(!_sameNutritionOwner)return;
+    if(estimate.numericNutritionAvailable){
+      final stillVerified=await NutritionAdultAccessService(
+        Supabase.instance.client).hasVerifiedAccess();
+      if(!mounted || !_sameNutritionOwner)return;
+      if(!stillVerified){
+        setState(_clearSensitiveSessionState);
+        widget.onRefreshAdultAccess?.call();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:Text('Tu permiso adulto cambió. '
+            'No se guardaron cifras nutricionales.')));
+        return;
+      }
+    }
     if(estimate.numericNutritionAvailable && !_hasAdultNumericAccess){
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content:Text('El acceso adulto ha cambiado. Vuelve a consultar.')));
@@ -1181,6 +1232,7 @@ class _NutritionIntelligencePageState
     }
     final now = DateTime.now();
     final id = 'food_${now.microsecondsSinceEpoch}';
+    if(!_sameNutritionOwner)return;
     await _historyRepository.save(
       NutritionHistoryEntry(
         id: id,
@@ -1189,7 +1241,7 @@ class _NutritionIntelligencePageState
         estimate: estimate,
       ),
     );
-    if (!mounted) return;
+    if (!mounted || !_sameNutritionOwner) return;
     setState(() => _history = _historyRepository.getEntries());
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -1603,6 +1655,8 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _analyzePhoto(NutritionPhoto photo) async {
+    final epoch=++_analysisEpoch;
+    final owner=_nutritionOwnerId;
     setState(() {
       _foodEstimate = null;
       _message = null;
@@ -1616,20 +1670,33 @@ class _NutritionIntelligencePageState
         adultNumericNutrition: _hasAdultNumericAccess,
         dishHint: _dishHintController.text,
       );
-      if (!mounted) return;
-      if(estimate.numericNutritionAvailable && !_hasAdultNumericAccess) {
-        setState((){
-          _foodEstimate=null;
-          _message='Tu acceso cambió. Vuelve a analizar sin datos numéricos.';
-        });
-        return;
+      if (!mounted || epoch!=_analysisEpoch ||
+          !_sameNutritionOwner || owner!=_nutritionOwnerId)return;
+      // An authorization may expire during a slow image upload. Requery the
+      // actual server before exposing ANY numeric result from that response.
+      if(estimate.numericNutritionAvailable){
+        final stillVerified=await NutritionAdultAccessService(
+          Supabase.instance.client).hasVerifiedAccess();
+        if(!mounted || epoch!=_analysisEpoch ||
+           !_sameNutritionOwner || owner!=_nutritionOwnerId)return;
+        if(!stillVerified || !_hasAdultNumericAccess){
+          setState((){
+            _clearSensitiveSessionState();
+            _message='El acceso adulto cambió. '
+              'Vuelve a analizar sin datos numéricos.';
+          });
+          widget.onRefreshAdultAccess?.call();
+          return;
+        }
       }
       setState(() => _foodEstimate = estimate);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _message = error.toString());
+    } catch (_) {
+      if (!mounted || epoch!=_analysisEpoch || !_sameNutritionOwner)return;
+      setState(() => _message='No se pudo analizar el plato. '
+        'Comprueba la conexión e inténtalo de nuevo.');
     } finally {
-      if (mounted) setState(() => _analyzing = false);
+      if (mounted && epoch==_analysisEpoch)
+        setState(() => _analyzing = false);
     }
   }
 }

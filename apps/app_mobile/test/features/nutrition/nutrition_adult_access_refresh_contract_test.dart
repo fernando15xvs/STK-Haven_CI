@@ -36,5 +36,14 @@ void main(){
     expect(core,contains('!freshVerified || !_hasAdultNumericAccess'));
     expect(core,contains('Supabase.instance.client.auth.currentUser?.id!=repo.ownerId'));
     expect(core,contains('accessCheckedAt:DateTime.now().toUtc()'));
+    expect(core,contains('ref.listen<NutritionAccessState>('));
+    expect(core,contains('setState(_clearSensitiveSessionState);'));
+    expect(core,contains('int _analysisEpoch=0;'));
+    expect(core,contains('epoch!=_analysisEpoch'));
+    expect(core,contains('final stillVerified=await NutritionAdultAccessService('));
+    expect(core,contains('!stillVerified || !_hasAdultNumericAccess'));
+    expect(core,contains('if(!_sameNutritionOwner)return;'));
+    expect(core,contains('when !estimate.numericNutritionAvailable ||'));
+    expect(core,contains('widget.onRefreshAdultAccess?.call()'));
   });
 }

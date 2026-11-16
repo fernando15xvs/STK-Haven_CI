@@ -310,6 +310,103 @@ class _MotivationPageState extends State<MotivationPage> {
     }
   }
 
+  /// A suggestion is shown only on request: no playlist or audio is
+  /// created, modified or started before explicit user confirmation.
+  Future<void> _suggestContextPlaylist() async {
+    if(library.tracks.isEmpty){
+      _message('Primero importa música o vídeos a tu biblioteca.');
+      return;
+    }
+    final contextChoice=await showModalBottomSheet<MotivationPlaylistContext>(
+      context:context,useSafeArea:true,showDragHandle:true,
+      builder:(ctx)=>SafeArea(child:ListView(
+        shrinkWrap:true,
+        children:[
+          ListTile(
+            title:Text('¿Para qué momento?',
+              style:AppTypography.headlineMedium),
+            subtitle:const Text('Solo usaremos archivos locales. '
+              'Elegir un contexto no inicia la reproducción.'),
+          ),
+          for(final option in MotivationPlaylistContext.values)
+            ListTile(
+              title:Text(option.title),
+              subtitle:Text('Pistas en modo ${option.reason}'),
+              trailing:const Icon(Icons.chevron_right_rounded),
+              onTap:()=>Navigator.pop(ctx,option),
+            ),
+        ],
+      )),
+    );
+    if(contextChoice==null || !mounted)return;
+    final suggestions=MotivationPlaylistPresets.suggestTracks(
+      library.tracks,contextChoice);
+    if(suggestions.isEmpty){
+      _message('No hay pistas para ese contexto. '
+        'Puedes cambiar sus modos o crear una playlist manual.');
+      return;
+    }
+    final selected=<String>{for(final track in suggestions)track.id};
+    final picked=await showModalBottomSheet<List<String>>(
+      context:context,useSafeArea:true,isScrollControlled:true,
+      showDragHandle:true,
+      builder:(ctx)=>FractionallySizedBox(
+        heightFactor:.75,
+        child:StatefulBuilder(builder:(ctx,refresh)=>Column(children:[
+          Padding(padding:const EdgeInsets.fromLTRB(16,8,16,6),
+            child:Column(
+              crossAxisAlignment:CrossAxisAlignment.start,
+              children:[
+                Text(contextChoice.title,style:AppTypography.headlineMedium),
+                const SizedBox(height:4),
+                const Text('Revisa y elige tus pistas. No se reproducirá '
+                  'ningún archivo automáticamente.'),
+              ],
+            )),
+          Expanded(child:ListView(children:[
+            for(final track in suggestions)
+              CheckboxListTile(
+                key:ValueKey('motivation_context_track_${track.id}'),
+                secondary:_MotivationArtwork(track:track,size:42),
+                title:Text(track.title,maxLines:2,
+                  overflow:TextOverflow.ellipsis),
+                subtitle:Text(track.mode.label),
+                value:selected.contains(track.id),
+                onChanged:(enabled)=>refresh((){
+                  if(enabled==true){selected.add(track.id);}
+                  else{selected.remove(track.id);}
+                }),
+              ),
+          ])),
+          SafeArea(top:false,child:Padding(
+            padding:const EdgeInsets.all(16),
+            child:SizedBox(width:double.infinity,child:FilledButton(
+              onPressed:selected.isEmpty?null:()=>Navigator.pop(ctx,[
+                for(final track in suggestions)
+                  if(selected.contains(track.id))track.id,
+              ]),
+              child:Text('Continuar con ${selected.length} pistas'),
+            )),
+          )),
+        ])),
+      ),
+    );
+    if(picked==null || picked.isEmpty || !mounted)return;
+    final title=await _askName('Guardar playlist sugerida',
+      initial:contextChoice.title);
+    if(title==null || !mounted)return;
+    try{
+      final created=await library.createContextPlaylist(title,picked);
+      if(!mounted)return;
+      _message(created
+        ?'Playlist guardada. Puedes reproducirla cuando quieras.'
+        :'No se creó la lista: revisa el nombre y que no exista otra igual.');
+    }catch(_){
+      if(mounted)_message('No se pudo guardar la playlist. '
+        'Tus archivos originales se conservan.');
+    }
+  }
+
   Future<void> _edit(MotivationTrack track,String action) async {
     if(action=='favorite'){
       await library.toggleFavorite(track.id);
@@ -601,6 +698,16 @@ class _MotivationPageState extends State<MotivationPage> {
                 label:const Text('Ideas de listas'),
               ),
             ]),
+            if(library.tracks.isNotEmpty)
+              Align(
+                alignment:Alignment.centerLeft,
+                child:TextButton.icon(
+                  key:const ValueKey('motivation_context_playlist_suggestion'),
+                  onPressed:()=>unawaited(_suggestContextPlaylist()),
+                  icon:const Icon(Icons.playlist_add_check_circle_outlined),
+                  label:const Text('Sugerir según mi entrenamiento'),
+                ),
+              ),
             const SizedBox(height:9),
             SingleChildScrollView(scrollDirection:Axis.horizontal,
               child:Row(children:[

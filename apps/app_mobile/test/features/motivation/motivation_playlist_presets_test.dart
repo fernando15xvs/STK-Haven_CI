@@ -27,6 +27,58 @@ void main(){
     expect(remaining, isNot(contains('Concentración')));
     expect(have.single.trackIds,['audio-a']);
   });
+  MotivationTrack local(String id,MotivationMode mode,{bool favorite=false})=>
+    MotivationTrack(id:id,title:id,fileName:'$id.mp3',
+      mode:mode,importedAt:DateTime(2026,11,15),favorite:favorite);
+
+  test('context suggestions use only matching private tracks, prioritizing favorites',(){
+    final tracks=[
+      local('sad',MotivationMode.gymSad),
+      local('hype',MotivationMode.hype),
+      local('focus',MotivationMode.discipline),
+      local('fav-hype',MotivationMode.hype,favorite:true),
+    ];
+    final warm=MotivationPlaylistPresets.suggestTracks(
+      tracks,MotivationPlaylistContext.warmUp);
+    expect(warm.map((t)=>t.id),['fav-hype','hype']);
+    final during=MotivationPlaylistPresets.suggestTracks(
+      tracks,MotivationPlaylistContext.session);
+    expect(during.map((t)=>t.id),['fav-hype','hype','focus']);
+    final focus=MotivationPlaylistPresets.suggestTracks(
+      tracks,MotivationPlaylistContext.focus);
+    expect(focus.map((t)=>t.id),['focus']);
+    final recovery=MotivationPlaylistPresets.suggestTracks(
+      tracks,MotivationPlaylistContext.recovery);
+    expect(recovery.map((t)=>t.id),['sad']);
+    expect(MotivationPlaylistPresets.suggestTracks(
+      tracks,MotivationPlaylistContext.recovery,limit:0),isEmpty);
+    expect(tracks.map((t)=>t.id),['sad','hype','focus','fav-hype']);
+  });
+
+  test('preview preserves track identity and never creates or autoplays',(){
+    final source=File(
+      'lib/features/motivation/presentation/motivation_page.dart',
+    ).readAsStringSync();
+    final start=source.indexOf('Future<void> _suggestContextPlaylist()');
+    final stop=source.indexOf('Future<void> _edit(',start);
+    final preview=source.substring(start,stop);
+    expect(preview,contains('MotivationPlaylistPresets.suggestTracks('));
+    expect(preview,contains('CheckboxListTile('));
+    expect(preview,contains('selected.isEmpty?null'));
+    expect(preview,contains('library.createContextPlaylist(title,picked)'));
+    expect(preview,isNot(contains('player.playQueue(')));
+    expect(preview,isNot(contains('player.playAtIndex(')));
+    final library=File(
+      'lib/features/motivation/data/motivation_library.dart',
+    ).readAsStringSync();
+    final begin=library.indexOf('Future<bool> createContextPlaylist(');
+    final end=library.indexOf('/// Flutter ReorderableListView',begin);
+    final save=library.substring(begin,end);
+    expect(save,contains('final unique=<String>{};'));
+    expect(save,contains('await _changed();'));
+    expect(save,contains('_playlists.removeWhere((list)=>list.id==added.id);'));
+  });
+
   test('UI asks for selections before saving, never autoplays',(){
     final source=File(
       'lib/features/motivation/presentation/motivation_page.dart',

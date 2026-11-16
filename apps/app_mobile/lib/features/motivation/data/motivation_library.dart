@@ -468,6 +468,34 @@ class MotivationLibrary extends ChangeNotifier {
       title:title.trim(),trackIds:const []));
     await _changed();
   }
+  /// Builds a new playlist only after the user reviews a local suggestion.
+  /// This method never starts playback and never uploads media. Existing
+  /// playlists and their order remain untouched if persistence fails.
+  Future<bool> createContextPlaylist(String title,List<String> selectedIds) async {
+    await load();
+    final name=title.trim();
+    if(name.isEmpty || name.length>70 || selectedIds.isEmpty)return false;
+    if(_playlists.any((item)=>
+        item.title.trim().toLowerCase()==name.toLowerCase()))return false;
+    final available={for(final track in _tracks)track.id};
+    final unique=<String>{};
+    for(final id in selectedIds){
+      if(available.contains(id))unique.add(id);
+    }
+    if(unique.isEmpty)return false;
+    final added=MotivationPlaylist(id:const Uuid().v4(),
+      title:name,trackIds:List<String>.unmodifiable(unique));
+    _playlists.add(added);
+    try{
+      await _changed();
+      return true;
+    }catch(_){
+      _playlists.removeWhere((list)=>list.id==added.id);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   /// Flutter ReorderableListView passes newIndex one greater when dragging
   /// toward the bottom. Keep the resulting order persistent and stable.
   static List<String> moveIds(List<String> ids,int oldIndex,int newIndex){
