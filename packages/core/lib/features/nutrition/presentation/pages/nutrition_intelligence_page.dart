@@ -321,7 +321,8 @@ class _NutritionIntelligencePageState
               Text(
                 'Hay medidas más recientes o modificadas. '
                 'El resultado anterior no se actualizará sin tu confirmación.',
-                style: TextStyle(color: colors.onSurfaceVariant),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant),
               ),
             const SizedBox(height: 12),
             DropdownButtonFormField<EnergyEquationSex>(
@@ -1031,7 +1032,8 @@ class _NutritionIntelligencePageState
               const SizedBox(height: 12),
               Text(
                 _message!,
-                style: TextStyle(color: colors.error),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colors.error),
               ),
             ],
             if (_foodEstimate case final estimate?
