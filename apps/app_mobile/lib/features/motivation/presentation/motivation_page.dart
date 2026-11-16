@@ -1032,7 +1032,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
                 valueListenable:_cinemaSource,
                 builder:(ctx,active,_)=>Center(
                   child:active==null || !active.value.isInitialized
-                    ?const Text('Video no disponible',
+                    ?Text('Video no disponible',
                         style:AppTypography.bodyMedium.copyWith(color:Colors.white))
                     :AspectRatio(
                       aspectRatio:active.value.aspectRatio,
