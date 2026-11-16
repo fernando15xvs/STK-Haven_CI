@@ -90,7 +90,7 @@ void main(){
     }
   });
 
-  test('the suggestion never edits the user's current energy plan',(){
+  test('suggestion never edits the existing energy plan',(){
     final suggestion=AdultActivitySuggestionPolicy.suggest(
       recordedSteps:sensorDays(6500),sessions:training,now:now);
     expect(suggestion,isNotNull);
