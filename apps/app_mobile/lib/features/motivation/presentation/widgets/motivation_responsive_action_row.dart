@@ -8,10 +8,15 @@ class MotivationResponsiveActionRow extends StatelessWidget {
     super.key,
     required this.leading,
     required this.action,
+    this.compactAction,
   });
 
   final Widget leading;
   final Widget action;
+  /// Optional text-first action for large-text or narrow screens. Omitting an
+  /// icon here preserves the full label instead of shrinking accessibility
+  /// text or hiding a primary action behind horizontal scrolling.
+  final Widget? compactAction;
 
   @override
   Widget build(BuildContext context) {
@@ -26,10 +31,11 @@ class MotivationResponsiveActionRow extends StatelessWidget {
           children: [
             leading,
             const SizedBox(height: AppSpacing.sm),
-            // Icon+label buttons need a tight, finite width here. An Align
-            // passes loose constraints, allowing their intrinsic Row to grow
-            // wider than the 320dp viewport under accessibility text scaling.
-            SizedBox(width: double.infinity, child: action),
+            // Icons and long labels can overflow an internal button Row at
+            // 160%-200% text despite tight width constraints. Prefer the
+            // caller's full-width text-first alternative in that case.
+            SizedBox(width: double.infinity,
+              child: compactAction ?? action),
           ],
         );
       }
