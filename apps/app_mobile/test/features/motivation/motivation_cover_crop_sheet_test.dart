@@ -51,6 +51,58 @@ void main(){
     }
   });
 
+  testWidgets('cover editor wraps actions at 320/390/430dp and 200% text',
+      (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final folder=Directory.systemTemp.createTempSync('stk_crop_scale_');
+    try {
+      final image=File('${folder.path}/source.png');
+      image.writeAsBytesSync(base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91Jpz'
+        'AAAAFklEQVR4nGMUckthYGBgYmBgYGBgAAAIqADA5KefuAAAAABJRU5ErkJggg==',
+      ));
+      for (final width in <double>[320,390,430]) {
+        tester.view.physicalSize=Size(width,740);
+        tester.view.devicePixelRatio=1;
+        for (final scale in <double>[1,1.6,2]) {
+          MotivationCoverFocus? selected;
+          await tester.pumpWidget(MaterialApp(
+            builder:(context,child)=>MediaQuery(
+              data:MediaQuery.of(context).copyWith(
+                textScaler:TextScaler.linear(scale)),
+              child:child!,
+            ),
+            home:Scaffold(body:Builder(builder:(ctx)=>TextButton(
+              onPressed:() async {
+                selected=await MotivationCoverCropSheet.show(ctx,image.path);
+              },
+              child:const Text('Abrir editor'),
+            ))),
+          ));
+          await tester.tap(find.text('Abrir editor'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds:400));
+          expect(find.byKey(const ValueKey('motivation_crop_responsive_actions')),
+            findsOneWidget);
+          expect(find.byKey(const ValueKey('motivation_crop_apply')),
+            findsOneWidget);
+          expect(tester.takeException(),isNull,
+            reason:'Cover editor width=$width scale=$scale');
+          await tester.ensureVisible(find.text('Cancelar'));
+          await tester.tap(find.text('Cancelar'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds:400));
+          expect(selected,isNull);
+          expect(find.text('Ajustar portada'),findsNothing);
+        }
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    }finally{
+      folder.deleteSync(recursive:true);
+    }
+  });
+
   test('source is only written after a chosen focus, never on cancel',(){
     final source=File(
       'lib/features/motivation/data/motivation_library.dart',
