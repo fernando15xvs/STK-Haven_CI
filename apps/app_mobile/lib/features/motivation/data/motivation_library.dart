@@ -151,6 +151,7 @@ class MotivationLibrary extends ChangeNotifier {
     final name='thumb_${const Uuid().v4()}.jpg';
     final destination=File(p.join(_directory!.path,name));
     final temp=File(destination.path+'.part');
+    var mayStillBeReferenced=false;
     try {
       // Native Android/iOS extraction, never a frame decoder per list tile.
       final bytes=await VideoThumbnail.thumbnailData(
@@ -172,17 +173,29 @@ class MotivationLibrary extends ChangeNotifier {
         await _changed();
       }catch(_){
         _tracks[latest]=previous;
+        try{
+          // A failed first write may already be on disk. Confirm that the
+          // previous metadata is persisted before deleting new artwork.
+          await _changed();
+        }catch(_){
+          mayStillBeReferenced=true;
+          notifyListeners();
+        }
         rethrow;
       }
       final old=previous.thumbnailFileName;
       if(old!=null && old!=name){
         final stale=File(p.join(_directory!.path,old));
-        if(await stale.exists())await stale.delete();
+        try{
+          if(await stale.exists())await stale.delete();
+        }catch(_){/* A stale cover is safer than a broken new reference. */}
       }
       return true;
     }catch(_){
-      if(await temp.exists())await temp.delete();
-      if(await destination.exists())await destination.delete();
+      try{if(await temp.exists())await temp.delete();}catch(_){}
+      if(!mayStillBeReferenced){
+        try{if(await destination.exists())await destination.delete();}catch(_){}
+      }
       return false;
     }
   }
@@ -217,6 +230,7 @@ class MotivationLibrary extends ChangeNotifier {
     final destination=File(p.join(_directory!.path,name));
     final temp=File(destination.path+'.part');
     final previous=_tracks[currentIdx];
+    var mayStillBeReferenced=false;
     try{
       await MotivationArtworkProcessor.writeSquareCover(
         source:File(item.path!),destination:temp,focus:focus);
@@ -229,17 +243,29 @@ class MotivationLibrary extends ChangeNotifier {
         await _changed();
       }catch(_){
         _tracks[currentIdx]=previous;
+        try{
+          await _changed();
+        }catch(_){
+          // The new cover may still be referenced by a partially persisted
+          // snapshot. Keep the file instead of creating a broken image.
+          mayStillBeReferenced=true;
+          notifyListeners();
+        }
         rethrow;
       }
       final old=previous.artworkFileName;
       if(old!=null && old!=name){
         final file=File(p.join(_directory!.path,old));
-        if(await file.exists())await file.delete();
+        try{
+          if(await file.exists())await file.delete();
+        }catch(_){/* Keep an orphan instead of failing a saved cover. */}
       }
       return true;
     }catch(_){
-      if(await temp.exists())await temp.delete();
-      if(await destination.exists())await destination.delete();
+      try{if(await temp.exists())await temp.delete();}catch(_){}
+      if(!mayStillBeReferenced){
+        try{if(await destination.exists())await destination.delete();}catch(_){}
+      }
       rethrow;
     }
   }
@@ -449,6 +475,7 @@ class MotivationLibrary extends ChangeNotifier {
     final already={
       for(final playlist in _playlists)playlist.title.trim().toLowerCase(),
     };
+    final previous=List<MotivationPlaylist>.of(_playlists);
     var created=0;
     for(final proposed in suggestions){
       final title=proposed.trim();
@@ -458,15 +485,19 @@ class MotivationLibrary extends ChangeNotifier {
         id:const Uuid().v4(),title:title,trackIds:const []));
       created++;
     }
-    if(created>0)await _changed();
+    if(created>0)await _savePlaylistsWithRollback(previous);
     return created;
   }
 
   Future<void> createPlaylist(String title) async {
-    if(title.trim().isEmpty)return;
+    final name=title.trim();
+    if(name.isEmpty || name.length>70)return;
+    if(_playlists.any((p)=>p.title.trim().toLowerCase()==name.toLowerCase()))
+      return;
+    final previous=List<MotivationPlaylist>.of(_playlists);
     _playlists.add(MotivationPlaylist(id:const Uuid().v4(),
-      title:title.trim(),trackIds:const []));
-    await _changed();
+      title:name,trackIds:const []));
+    await _savePlaylistsWithRollback(previous);
   }
   /// Builds a new playlist only after the user reviews a local suggestion.
   /// This method never starts playback and never uploads media. Existing
@@ -483,17 +514,12 @@ class MotivationLibrary extends ChangeNotifier {
       if(available.contains(id))unique.add(id);
     }
     if(unique.isEmpty)return false;
+    final previous=List<MotivationPlaylist>.of(_playlists);
     final added=MotivationPlaylist(id:const Uuid().v4(),
       title:name,trackIds:List<String>.unmodifiable(unique));
     _playlists.add(added);
-    try{
-      await _changed();
-      return true;
-    }catch(_){
-      _playlists.removeWhere((list)=>list.id==added.id);
-      notifyListeners();
-      rethrow;
-    }
+    await _savePlaylistsWithRollback(previous);
+    return true;
   }
 
   /// Flutter ReorderableListView passes newIndex one greater when dragging
@@ -514,21 +540,45 @@ class MotivationLibrary extends ChangeNotifier {
     if(i<0)return;
     final current=_playlists[i];
     final ids=moveIds(current.trackIds,oldIndex,newIndex);
+    if(listEquals(ids,current.trackIds))return;
+    final previous=List<MotivationPlaylist>.of(_playlists);
     _playlists[i]=MotivationPlaylist(id:current.id,title:current.title,
       trackIds:ids);
-    await _changed();
+    await _savePlaylistsWithRollback(previous);
   }
   Future<void> deletePlaylist(String id) async {
+    if(!_playlists.any((list)=>list.id==id))return;
+    final previous=List<MotivationPlaylist>.of(_playlists);
     _playlists.removeWhere((x)=>x.id==id);
-    await _changed();
+    await _savePlaylistsWithRollback(previous);
   }
   Future<void> togglePlaylistTrack(String playlistId,String trackId) async {
     final i=_playlists.indexWhere((x)=>x.id==playlistId);
     if(i<0 || !_tracks.any((x)=>x.id==trackId))return;
     final list=_playlists[i], ids=List<String>.from(list.trackIds);
     if(ids.contains(trackId)){ids.remove(trackId);}else{ids.add(trackId);}
+    final previous=List<MotivationPlaylist>.of(_playlists);
     _playlists[i]=MotivationPlaylist(id:list.id,title:list.title,trackIds:ids);
-    await _changed();
+    await _savePlaylistsWithRollback(previous);
+  }
+
+  /// Restores the previous playlist snapshot and retries its persistence if
+  /// writing the new metadata fails. No media files are ever deleted here.
+  Future<void> _savePlaylistsWithRollback(
+    List<MotivationPlaylist> previous,
+  ) async {
+    try{
+      await _changed();
+    }catch(_){
+      _playlists..clear()..addAll(previous);
+      try{
+        await _changed();
+      }catch(_){
+        notifyListeners();
+        // Recovery will retry at the next successful metadata operation.
+      }
+      rethrow;
+    }
   }
   Future<void> _changed() async {
     final prefs=await SharedPreferences.getInstance();

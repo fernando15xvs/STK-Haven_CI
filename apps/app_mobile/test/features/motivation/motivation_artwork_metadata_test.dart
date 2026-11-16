@@ -51,6 +51,26 @@ void main() {
     }
   });
 
+  test('uncertain thumbnail and cover metadata never deletes referenced images',(){
+    final source=File('lib/features/motivation/data/motivation_library.dart')
+      .readAsStringSync();
+    final thumb=source.substring(
+      source.indexOf('Future<bool> ensureVideoThumbnail('),
+      source.indexOf('Future<bool> chooseArtwork('));
+    final cover=source.substring(
+      source.indexOf('Future<bool> chooseArtwork('),
+      source.indexOf('Future<void> clearArtwork('));
+    for(final body in [thumb,cover]){
+      expect(body,contains('var mayStillBeReferenced=false;'));
+      expect(body,contains('mayStillBeReferenced=true;'));
+      expect(body,contains('if(!mayStillBeReferenced){'));
+      expect(body,contains('await _changed();'));
+      expect(body,contains('if(await destination.exists())await destination.delete();'));
+    }
+    expect(cover,contains('final previous=_tracks[currentIdx];'));
+    expect(thumb,contains('final previous=_tracks[latest];'));
+  });
+
   test('malicious artwork paths are rejected', () {
     expect(()=>MotivationTrack.fromJson({
       'id':'x','title':'Voz','fileName':'x.mp3',

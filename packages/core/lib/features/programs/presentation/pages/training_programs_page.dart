@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
+import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/programs/application/program_plan_insights.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_duration_choices.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -67,6 +69,9 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
         ? allPrograms.where((program) => program.isTemplate).toList(growable: false)
         : allPrograms;
     final routines = ref.watch(routineListProvider);
+    final profile=ref.watch(userExperienceProfileProvider).value;
+    final isMinor=(profile?.ageAt(DateTime.now()) ?? 99)<18;
+    final beginner=profile?.trainingExperience==TrainingExperience.beginner;
     final routineById = <String, Routine>{
       for (final routine in routines) routine.id: routine,
     };
@@ -88,7 +93,43 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
             ),
         ],
       ),
-      body: programs.isEmpty
+      body: Column(children:[
+        if(isMinor)
+          Padding(
+            padding:const EdgeInsets.fromLTRB(16,12,16,0),
+            child:Card(
+              key:const ValueKey('training_youth_guidance'),
+              child:Padding(
+                padding:const EdgeInsets.all(14),
+                child:Column(
+                  crossAxisAlignment:CrossAxisAlignment.start,
+                  children:[
+                    Row(children:[
+                      Icon(Icons.health_and_safety_outlined,
+                        color:Theme.of(context).colorScheme.primary),
+                      const SizedBox(width:8),
+                      Expanded(child:Text('Entrenar con buena técnica',
+                        style:Theme.of(context).textTheme.titleMedium)),
+                    ]),
+                    const SizedBox(height:6),
+                    Text(beginner
+                      ?'Empieza con movimientos que puedas controlar, '
+                        'descanso suficiente y ayuda de un entrenador '
+                        'cualificado cuando la necesites.'
+                      :'Prioriza técnica, progresión gradual y recuperación. '
+                        'Consulta a un entrenador cualificado ante dudas '
+                        'sobre cargas y supervisión.',
+                      style:Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height:4),
+                    Text('Tus rutinas anteriores se conservan; '
+                      'no instalamos automáticamente un programa adulto.',
+                      style:Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        Expanded(child:programs.isEmpty
           ? widget.templatesOnly
               ? const Center(
                   child: Padding(
@@ -157,6 +198,8 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                 );
               },
             ),
+        ),
+      ]),
     );
   }
 

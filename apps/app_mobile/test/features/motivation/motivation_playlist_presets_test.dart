@@ -75,8 +75,29 @@ void main(){
     final end=library.indexOf('/// Flutter ReorderableListView',begin);
     final save=library.substring(begin,end);
     expect(save,contains('final unique=<String>{};'));
-    expect(save,contains('await _changed();'));
-    expect(save,contains('_playlists.removeWhere((list)=>list.id==added.id);'));
+    expect(save,contains('final previous=List<MotivationPlaylist>.of(_playlists);'));
+    expect(save,contains('await _savePlaylistsWithRollback(previous);'));
+    expect(save,isNot(contains('player.playQueue(')));
+  });
+
+  test('every playlist mutation restores the prior list on a failed write',(){
+    final library=File('lib/features/motivation/data/motivation_library.dart')
+      .readAsStringSync();
+    final index=library.indexOf('Future<void> _savePlaylistsWithRollback(');
+    final helper=library.substring(index,library.indexOf('Future<void> _changed()',index));
+    expect(helper,contains('await _changed();'));
+    expect(helper,contains('_playlists..clear()..addAll(previous);'));
+    expect(helper,contains('rethrow;'));
+    for(final method in [
+      'createSuggestedPlaylists','createPlaylist','createContextPlaylist',
+      'reorderPlaylist','deletePlaylist','togglePlaylistTrack'
+    ]){
+      final start=library.indexOf(' $method(');
+      expect(start,greaterThan(0));
+      final end=library.indexOf('\n  }',start);
+      expect(library.substring(start,end),
+        contains('await _savePlaylistsWithRollback(previous);'));
+    }
   });
 
   test('UI asks for selections before saving, never autoplays',(){
