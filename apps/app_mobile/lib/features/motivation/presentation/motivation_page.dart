@@ -484,7 +484,12 @@ class _MotivationPageState extends State<MotivationPage> {
     if(player.currentTrack?.id != track.id){
       await player.playQueue(tracks,startIndex:tracks.indexOf(track));
     }
-    if(mounted && player.currentTrack!=null)_openNowPlaying();
+    if(!mounted)return;
+    if(player.error!=null){
+      _message(player.error!);
+      return;
+    }
+    if(player.currentTrack!=null)_openNowPlaying();
   }
 
   Widget _player(){
