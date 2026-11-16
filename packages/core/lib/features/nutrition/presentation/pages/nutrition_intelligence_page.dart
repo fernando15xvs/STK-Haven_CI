@@ -1654,7 +1654,7 @@ class _AdultGateCard extends StatelessWidget {
     final title=switch(access){
       NutritionAccessState.minor=>'Hábitos para crecer con salud',
       NutritionAccessState.ageUnknown=>'Tu bienestar, a tu ritmo',
-      NutritionAccessState.adultUnverified=>'Objetivo calórico no disponible',
+      NutritionAccessState.adultUnverified=>'Acceso calórico pendiente de verificación',
       NutritionAccessState.adultVerified=>'Tu plan nutricional',
     };
     final message=switch(access){
@@ -1666,8 +1666,10 @@ class _AdultGateCard extends StatelessWidget {
         'Puedes usar Food Vision, registrar agua y pasos y entrenar '
         'sin indicar tu edad.',
       NutritionAccessState.adultUnverified=>
-        'La cuenta todavía no tiene el permiso adulto necesario '
-        'para ver calorías y macros personalizados.',
+        'Tu cuenta aún no tiene verificación adulta en el servidor. '
+        'El proceso externo de verificación no está disponible en esta '
+        'versión; no basta con cambiar tu fecha de nacimiento. '
+        'Puedes seguir usando agua, pasos y Food Vision descriptivo.',
       NutritionAccessState.adultVerified=>
         'Acceso adulto confirmado.',
     };

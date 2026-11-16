@@ -27,6 +27,10 @@ void main(){
     expect(core,contains('_energyEstimate=null;'));
     expect(core,contains('onRefreshAdultAccess'));
     expect(core,contains('Volver a comprobar acceso'));
+    expect(core,contains('Acceso calórico pendiente de verificación'));
+    expect(core,contains('proceso externo de verificación no está disponible'));
+    expect(core,contains('no basta con cambiar tu fecha de nacimiento'));
+
     expect(core,contains('estimate.numericNutritionAvailable && !_hasAdultNumericAccess'));
   });
 }
