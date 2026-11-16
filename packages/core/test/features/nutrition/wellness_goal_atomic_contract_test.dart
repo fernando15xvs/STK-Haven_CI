@@ -15,7 +15,7 @@ void main() {
         expect(start,greaterThanOrEqualTo(0));
         from=start+1;
       }
-      final end=source.indexOf('\n  }',start);
+      // Match a complete method-closing line, not the `}) async {`\n      // that ends the multiline parameter list of setSteps.\n      final end=source.indexOf('\n  }\n',start);
       expect(end,greaterThan(start));
       final body=source.substring(start,end);
       final save=body.indexOf('await _repository.$saveMethod(updated);');
