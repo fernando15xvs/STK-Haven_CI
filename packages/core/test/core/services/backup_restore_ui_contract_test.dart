@@ -66,6 +66,24 @@ void main(){
       'La cuenta cambió durante la descarga. No se restauró la copia.'));
   });
 
+  test('local restore UI never renders raw Hive/native exception details',(){
+    final screen=File(
+      'lib/features/sync/presentation/backup_status_page.dart',
+    ).readAsStringSync();
+    final start=screen.indexOf('static Future<void> _restoreLocalBackup(');
+    expect(start,greaterThanOrEqualTo(0));
+    final restore=screen.substring(start);
+    expect(restore,contains('catch (_)'));
+    expect(restore,contains('conserva el archivo de respaldo.'));
+    expect(restore,isNot(contains(r'Error al restaurar la copia: $error')));
+    final service=File(
+      'lib/core/services/backup_service.dart',
+    ).readAsStringSync();
+    expect(service,contains('La restauración falló y no se pudo confirmar'));
+    expect(service,contains('Se recuperaron los datos locales anteriores.'));
+    expect(service,isNot(contains(r'Error: $e')));
+  });
+
   test('backup data is preflighted before replacing metadata, history or routines',(){
     final source=File(
       'lib/core/services/backup_service.dart',
