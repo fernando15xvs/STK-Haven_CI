@@ -695,6 +695,7 @@ class _MotivationPageState extends State<MotivationPage> {
             MotivationResponsiveActionRow(
               key:const ValueKey('motivation_responsive_import'),
               leading:DropdownButtonFormField<MotivationMode>(
+                isExpanded:true,
                 initialValue:importMode,
                 decoration:const InputDecoration(
                   labelText:'Modo',border:OutlineInputBorder()),
