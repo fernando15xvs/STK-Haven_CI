@@ -707,6 +707,10 @@ class _MotivationPageState extends State<MotivationPage> {
                 onPressed:busy?null:()=>unawaited(_import()),
                 icon:const Icon(Icons.add),
                 label:const Text('Importar')),
+              compactAction:FilledButton(
+                key:const ValueKey('motivation_import'),
+                onPressed:busy?null:()=>unawaited(_import()),
+                child:const Text('Importar')),
             ),
             const SizedBox(height:16),
             if(player.currentTrack!=null)...[
@@ -743,6 +747,11 @@ class _MotivationPageState extends State<MotivationPage> {
                 onPressed:()=>unawaited(_choosePlaylistIdeas()),
                 icon:const Icon(Icons.auto_awesome_outlined),
                 label:const Text('Ideas de listas'),
+              ),
+              compactAction:TextButton(
+                key:const ValueKey('motivation_playlist_ideas'),
+                onPressed:()=>unawaited(_choosePlaylistIdeas()),
+                child:const Text('Ideas de listas'),
               ),
             ),
             if(library.tracks.isNotEmpty)
@@ -825,6 +834,9 @@ class _MotivationPageState extends State<MotivationPage> {
               action:TextButton.icon(
                 onPressed:()=>unawaited(_createPlaylist()),
                 icon:const Icon(Icons.add),label:const Text('Crear lista')),
+              compactAction:TextButton(
+                onPressed:()=>unawaited(_createPlaylist()),
+                child:const Text('Crear lista')),
             ),
             if(tracks.isEmpty)
               Padding(padding:const EdgeInsets.symmetric(vertical:40),
