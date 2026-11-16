@@ -18,6 +18,8 @@ class NutritionGoalPlan {
     required this.estimate,
     this.isPaused=false,
     this.nextReviewAt,
+    this.accessCheckedAt,
+    this.formulaVersion='mifflin_st_jeor_v1',
   });
 
   final DateTime savedAt;
@@ -31,11 +33,16 @@ class NutritionGoalPlan {
   final EnergyActivityLevel activityLevel;
   final EnergyGoal goal;
   final EnergyEstimate estimate;
+  /// Backend authorization recheck timestamp is provenance, NOT a grant.
+  /// Rendering and saving always require fresh server permission.
+  final DateTime? accessCheckedAt;
+  /// Existing v1/v2 plans keep their original stored estimates unchanged.
+  final String formulaVersion;
   /// A paused plan remains available as an archived reference, not a goal.
   final bool isPaused;
   /// A voluntary review date only; no automatic calorie adjustment/reminders.
   final DateTime? nextReviewAt;
-  static const version=2;
+  static const version=3;
 
   NutritionGoalPlan copyWith({
     bool? isPaused,
@@ -49,12 +56,17 @@ class NutritionGoalPlan {
     weightKg:weightKg,heightCm:heightCm,ageYears:ageYears,
     equationSex:equationSex,activityLevel:activityLevel,goal:goal,
     estimate:estimate,
+    accessCheckedAt:accessCheckedAt,formulaVersion:formulaVersion,
     isPaused:isPaused??this.isPaused,
     nextReviewAt:clearNextReview?null:(nextReviewAt??this.nextReviewAt),
   );
 
   Map<String,dynamic> toJson()=>{
     'version':version,
+    'formulaVersion':formulaVersion,
+    'units':const {'weight':'kg','height':'cm','energy':'kcal/day'},
+    'accessCheckedAt':accessCheckedAt?.toUtc().toIso8601String(),
+    'accessEvidence':accessCheckedAt==null?null:'stk_has_adult_nutrition_access',
     'isPaused':isPaused,
     'nextReviewAt':nextReviewAt?.toIso8601String(),
     'savedAt':savedAt.toIso8601String(),
@@ -78,12 +90,18 @@ class NutritionGoalPlan {
   };
 
   factory NutritionGoalPlan.fromJson(Map<String,dynamic> json){
-    if(json['version']!=1 && json['version']!=version){
+    if(json['version']!=1 && json['version']!=2 &&
+       json['version']!=version){
       throw const FormatException('Plan versionado incompatible');
     }
     T pick<T extends Enum>(List<T> values,String key){
       return values.firstWhere((e)=>e.name==json[key],
         orElse:()=>throw const FormatException('Valor de plan inválido'));
+    }
+    final units=json['units'];
+    if(units is Map && (units['weight']!='kg'||
+        units['height']!='cm'||units['energy']!='kcal/day')){
+      throw const FormatException('Unidades de plan incompatibles');
     }
     final weight=(json['weightKg'] as num).toDouble();
     final height=(json['heightCm'] as num).toDouble();
@@ -114,6 +132,8 @@ class NutritionGoalPlan {
       activityLevel:pick(EnergyActivityLevel.values,'activityLevel'),
       goal:pick(EnergyGoal.values,'goal'),
       estimate:estimate,
+      formulaVersion:json['formulaVersion'] as String? ?? 'legacy_unspecified',
+      accessCheckedAt:DateTime.tryParse(json['accessCheckedAt']?.toString()??''),
       isPaused:json['isPaused']==true,
       nextReviewAt:DateTime.tryParse(json['nextReviewAt']?.toString()??''),
     );

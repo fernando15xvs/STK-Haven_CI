@@ -406,6 +406,32 @@ class _NutritionIntelligencePageState
                 '${plan.heightCm.toStringAsFixed(1)} cm de Medidas.',
                 style:Theme.of(context).textTheme.bodySmall?.copyWith(
                   color:colors.onSurfaceVariant)),
+              ExpansionTile(
+                key:const ValueKey('nutrition_plan_snapshot_details'),
+                tilePadding:EdgeInsets.zero,
+                title:const Text('Origen de mi cálculo'),
+                children:[
+                  Text('Peso: ${plan.weightKg.toStringAsFixed(1)} kg, '
+                    'registro del ${dateFormat.format(plan.weightRecordedAt)}. '
+                    'Altura: ${plan.heightCm.toStringAsFixed(1)} cm, '
+                    'registro del ${dateFormat.format(plan.heightRecordedAt)}.'),
+                  const SizedBox(height:6),
+                  Text('Edad indicada: ${plan.ageYears} años · '
+                    'actividad: ${plan.activityLevel.name} · '
+                    'objetivo: ${plan.goal.name}.'),
+                  const SizedBox(height:6),
+                  Text('Método: ${plan.estimate.method}. '
+                    'Versión de fórmula: ${plan.formulaVersion}.'),
+                  const SizedBox(height:6),
+                  Text(plan.accessCheckedAt==null
+                    ?'El registro anterior no conservaba fecha de '
+                      'comprobación de acceso adulto.'
+                    :'Acceso adulto consultado en servidor al guardar: '
+                      '${DateFormat('dd/MM/yyyy HH:mm').format(plan.accessCheckedAt!.toLocal())}. '
+                      'Esto no concede ni mantiene un permiso actual.'),
+                  const SizedBox(height:8),
+                ],
+              ),
               if(review!=null && review.needsReview) ...[
                 const SizedBox(height:8),
                 Text(review.canRecalculate
@@ -1448,8 +1474,21 @@ class _NutritionIntelligencePageState
         ],
       ));
     if(confirmed!=true || !mounted)return;
+    // The permission checked before opening the dialog may have expired or
+    // been revoked while the user was reading it. Recheck before persisting,
+    // and never write an account-scoped plan into a different user's box.
+    final freshVerified=await NutritionAdultAccessService(
+      Supabase.instance.client).hasVerifiedAccess();
+    if(!mounted)return;
+    if(!freshVerified || !_hasAdultNumericAccess ||
+       Supabase.instance.client.auth.currentUser?.id!=repo.ownerId){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content:Text('El acceso adulto cambió. No se guardó el plan.')));
+      return;
+    }
     final plan=NutritionGoalPlan(
       savedAt:DateTime.now(),
+      accessCheckedAt:DateTime.now().toUtc(),
       weightRecordId:body.weightKg!.recordId,
       heightRecordId:body.heightCm!.recordId,
       weightRecordedAt:body.weightKg!.recordedAt,

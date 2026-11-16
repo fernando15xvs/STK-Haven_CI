@@ -32,5 +32,9 @@ void main(){
     expect(core,contains('no basta con cambiar tu fecha de nacimiento'));
 
     expect(core,contains('estimate.numericNutritionAvailable && !_hasAdultNumericAccess'));
+    expect(core,contains('final freshVerified=await NutritionAdultAccessService('));
+    expect(core,contains('!freshVerified || !_hasAdultNumericAccess'));
+    expect(core,contains('Supabase.instance.client.auth.currentUser?.id!=repo.ownerId'));
+    expect(core,contains('accessCheckedAt:DateTime.now().toUtc()'));
   });
 }

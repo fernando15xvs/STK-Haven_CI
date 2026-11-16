@@ -26,6 +26,18 @@ void main() {
     expect(page,contains('No representa por sí sola éxito o fracaso.'));
   });
 
+  test('saved plan discloses dated sources and server-check provenance',(){
+    final page=File(
+      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
+    ).readAsStringSync();
+    expect(page,contains("ValueKey('nutrition_plan_snapshot_details')"));
+    expect(page,contains('plan.weightRecordedAt'));
+    expect(page,contains('plan.heightRecordedAt'));
+    expect(page,contains('plan.formulaVersion'));
+    expect(page,contains('plan.accessCheckedAt'));
+    expect(page,contains('Esto no concede ni mantiene un permiso actual.'));
+  });
+
   test('planner rejects non-finite weights and heights', () {
     final planner=File(
       'lib/features/nutrition/application/adult_energy_planner.dart',

@@ -35,20 +35,36 @@ void main(){
     expect(restored.copyWith(clearNextReview:true).nextReviewAt,isNull);
   });
 
-  test('v1 saved adults are readable in v2 without pausing silently',(){
+  test('v1 saved adults migrate to v3 without changing past ranges',(){
     final old=plan().toJson()..remove('isPaused')..remove('nextReviewAt');
     old['version']=1;
     final restored=NutritionGoalPlan.fromJson(old);
     expect(restored.isPaused,isFalse);
     expect(restored.nextReviewAt,isNull);
     expect(restored.weightKg,72);
-    expect(restored.toJson()['version'],2);
+    expect(restored.toJson()['version'],3);
+    expect(restored.formulaVersion,'legacy_unspecified');
+    expect(restored.accessCheckedAt,isNull);
+  });
+
+  test('v2 saved adults remain readable without inventing verification',(){
+    final old=plan().toJson();
+    old['version']=2;
+    old.remove('formulaVersion');
+    old.remove('units');
+    old.remove('accessCheckedAt');
+    old.remove('accessEvidence');
+    final restored=NutritionGoalPlan.fromJson(old);
+    expect(restored.weightRecordId,'w-1');
+    expect(restored.estimate.targetLow,2100);
+    expect(restored.formulaVersion,'legacy_unspecified');
+    expect(restored.accessCheckedAt,isNull);
   });
 
   test('future incompatible plan versions remain rejected',(){
     expect(()=>NutritionGoalPlan.fromJson({
       ...plan().toJson(),
-      'version':3,
+      'version':4,
     }),throwsFormatException);
   });
 }
