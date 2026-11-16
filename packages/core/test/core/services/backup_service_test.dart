@@ -411,6 +411,67 @@ void main() {
       expect(legacy.containsKey('optionalDemographicsConsented'), isFalse);
     });
 
+    test('invalid dates never expose sensitive backup data in validation', () {
+      final privateValue = '/var/mobile/Containers/Data/private-profile.json';
+      final payload = jsonEncode({
+        'format': 'gym_tracker_backup',
+        'schemaVersion': BackupService.currentBackupSchemaVersion,
+        'data': {
+          'settings': {},
+          'routines': [
+            {
+              'id': 'routine-with-private-date',
+              'name': 'A',
+              'createdAt': privateValue,
+              'exercises': [],
+            },
+          ],
+        },
+      });
+      final result = BackupService().validateBackup(payload);
+      expect(result.isValid, isFalse);
+      expect(result.errorMessage, contains('El archivo está corrupto'));
+      expect(result.errorMessage, isNot(contains(privateValue)));
+      expect(result.errorMessage, isNot(contains('/var/mobile')));
+    });
+
+    test('guest/offline empty backups validate across schema 1 to current', () {
+      final service = BackupService();
+      for (var version = 1;
+          version <= BackupService.currentBackupSchemaVersion;
+          version++) {
+        final result = service.validateBackup(jsonEncode({
+          'format': 'gym_tracker_backup',
+          'schemaVersion': version,
+          'data': {
+            'settings': {},
+            'exercises': [],
+            'routines': [],
+            'workouts': [],
+            'personalRecords': [],
+            'bodyMeasurements': [],
+            'favoriteVerses': [],
+          },
+        }));
+        expect(result.isValid, isTrue, reason: 'historical schema $version');
+        expect(result.schemaVersion, version);
+      }
+    });
+
+    test('restore preflight rejects duplicate IDs before opening Hive', () async {
+      final service = BackupService();
+      await expectLater(
+        service.restoreBackup({
+          'settings': {},
+          'exercises': [
+            {'id': 'duplicate'},
+            {'id': 'duplicate'},
+          ],
+        }, schemaVersion: BackupService.currentBackupSchemaVersion),
+        throwsA(isA<FormatException>()),
+      );
+    });
+
     test('validateBackup rejects future unsupported schema versions', () {
       final service = BackupService();
       final invalidJson = jsonEncode({
