@@ -26,7 +26,10 @@ class MotivationResponsiveActionRow extends StatelessWidget {
           children: [
             leading,
             const SizedBox(height: AppSpacing.sm),
-            Align(alignment: Alignment.centerRight, child: action),
+            // Icon+label buttons need a tight, finite width here. An Align
+            // passes loose constraints, allowing their intrinsic Row to grow
+            // wider than the 320dp viewport under accessibility text scaling.
+            SizedBox(width: double.infinity, child: action),
           ],
         );
       }
