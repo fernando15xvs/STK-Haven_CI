@@ -31,6 +31,27 @@ void main(){
     expect(code.split('VideoPlayerController.file(').length-1,1);
   });
 
+  test('asynchronous MP4 setup cannot publish a replaced decoder',(){
+    final code=File(
+      'lib/features/motivation/presentation/motivation_page.dart',
+    ).readAsStringSync();
+    final start=code.indexOf('Future<void> _setup() async');
+    final end=code.indexOf('void _syncVideoLoop()',start);
+    expect(start,greaterThanOrEqualTo(0));
+    expect(end,greaterThan(start));
+    final setup=code.substring(start,end);
+    // Guard after initialize, setVolume, setLooping and seekTo.
+    expect(setup.split('if(!mounted || controller!=c)return;').length-1,
+      greaterThanOrEqualTo(4));
+    expect(setup,contains('if(controller==c)seeking=false;'));
+    expect(setup,contains('if(!mounted || controller!=c ||'));
+    expect(setup,contains('position=widget.playback.audio.positionStream.listen'));
+    expect(setup,contains('playing=widget.playback.audio.playerStateStream.listen'));
+    // No old decoder may publish to cinema after source replacement.
+    expect(setup.lastIndexOf('if(!mounted || controller!=c)return;'),
+      lessThan(setup.indexOf('_cinemaSource.value=c;')));
+  });
+
   test('silent video errors do not silently restart the audio clock',(){
     final code=File(
       'lib/features/motivation/presentation/motivation_page.dart',
