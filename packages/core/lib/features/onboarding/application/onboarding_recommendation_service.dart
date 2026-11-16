@@ -6,6 +6,10 @@ class OnboardingRecommendationService {
   const OnboardingRecommendationService._();
 
   static PresetProgram? recommend(UserExperienceProfile profile) {
+    // A known minor keeps access to training, but no adult-oriented preset
+    // is automatically installed. This policy applies to mobile and web.
+    final declaredAge=profile.ageAt(DateTime.now());
+    if(declaredAge!=null && declaredAge<18)return null;
     if (profile.planningPreference == PlanningPreference.selfDirected ||
         profile.trainingGoal == TrainingGoal.selfDirected) {
       return null;

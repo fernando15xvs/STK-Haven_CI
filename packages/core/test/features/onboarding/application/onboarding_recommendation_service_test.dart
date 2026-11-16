@@ -31,6 +31,17 @@ void main() {
       expect(result?.id, 'prog_fullbody_3');
     });
 
+    test('a declared minor never receives an adult preset automatically', () {
+      final minor=UserExperienceProfile(
+        dateOfBirth:DateTime(DateTime.now().year-16,1,1),
+        trainingDaysPerWeek:6,
+        trainingGoal:TrainingGoal.hypertrophy,
+        trainingExperience:TrainingExperience.advanced,
+        planningPreference:PlanningPreference.recommendation,
+      );
+      expect(OnboardingRecommendationService.recommend(minor),isNull);
+    });
+
     test('does not force a program when days are unknown', () {
       final result = OnboardingRecommendationService.recommend(
         const UserExperienceProfile(

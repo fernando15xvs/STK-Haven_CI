@@ -79,6 +79,53 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
         jsonEncode(draft.toJson()) != jsonEncode(original.toJson());
   }
 
+  /// Explicit local data access. Nothing is sent to a remote service or
+  /// copied to the clipboard automatically; the user can select the text.
+  Future<void> _showOptionalProfileData(UserExperienceProfile draft) async {
+    final data=const JsonEncoder.withIndent('  ').convert({
+      'dateOfBirth':draft.dateOfBirth?.toIso8601String(),
+      'genderIdentity':draft.genderIdentity?.name,
+      'equationSexForEnergy':draft.equationSexForEnergy?.name,
+    });
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Mis datos opcionales'),
+      content:SingleChildScrollView(child:Column(
+        mainAxisSize:MainAxisSize.min,
+        crossAxisAlignment:CrossAxisAlignment.start,
+        children:[
+          const Text('Esta vista solo muestra los datos demográficos locales. '
+            'Mantén privada cualquier copia que decidas realizar.'),
+          const SizedBox(height:12),
+          SelectableText(data),
+        ],
+      )),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+        child:const Text('Cerrar'))],
+    ));
+  }
+
+  Future<void> _clearOptionalProfileData(UserExperienceProfile draft) async {
+    final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>
+      AlertDialog(
+        title:const Text('Quitar datos demográficos'),
+        content:const Text('Se quitarán la fecha de nacimiento, el género '
+          'y el parámetro de ecuación del borrador. Tus rutinas, medidas '
+          'e historial no cambian. Se aplicará al pulsar Guardar perfil.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx,false),
+            child:const Text('Cancelar')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+            child:const Text('Quitar datos')),
+        ],
+      ));
+    if(confirmed!=true || !mounted)return;
+    setState(()=>_draft=draft.copyWith(
+      clearDateOfBirth:true,
+      clearGenderIdentity:true,
+      clearEquationSexForEnergy:true,
+    ));
+  }
+
   Future<void> _requestDiscard(bool didPop) async {
     if (didPop || !_hasUnsavedChanges || _saving) return;
     final discard = await showDialog<bool>(
@@ -273,6 +320,21 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     ?draft.copyWith(clearEquationSexForEnergy:true)
                     :draft.copyWith(equationSexForEnergy:value)),
                 ),
+                const SizedBox(height:12),
+                Wrap(spacing:8,runSpacing:8,children:[
+                  OutlinedButton.icon(
+                    key:const ValueKey('profile_view_optional_data'),
+                    onPressed:()=>_showOptionalProfileData(draft),
+                    icon:const Icon(Icons.visibility_outlined),
+                    label:const Text('Ver mis datos opcionales'),
+                  ),
+                  TextButton.icon(
+                    key:const ValueKey('profile_clear_optional_data'),
+                    onPressed:()=>_clearOptionalProfileData(draft),
+                    icon:const Icon(Icons.delete_outline),
+                    label:const Text('Quitar datos demográficos'),
+                  ),
+                ]),
                 const SizedBox(height: 24),
                 SwitchListTile.adaptive(
                   contentPadding: EdgeInsets.zero,
