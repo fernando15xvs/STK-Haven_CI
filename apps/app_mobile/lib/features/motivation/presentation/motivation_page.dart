@@ -969,17 +969,84 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
           title:const Text('Modo cine'),
         ),
         body:SafeArea(
-          child:ValueListenableBuilder<VideoPlayerController?>(
-            valueListenable:_cinemaSource,
-            builder:(ctx,active,_)=>Center(
-              child:active==null || !active.value.isInitialized
-                ?const CircularProgressIndicator()
-                :AspectRatio(
-                  aspectRatio:active.value.aspectRatio,
-                  child:VideoPlayer(active),
+          child:Column(children:[
+            Expanded(
+              child:ValueListenableBuilder<VideoPlayerController?>(
+                valueListenable:_cinemaSource,
+                builder:(ctx,active,_)=>Center(
+                  child:active==null || !active.value.isInitialized
+                    ?const Text('Video no disponible',
+                        style:TextStyle(color:Colors.white))
+                    :AspectRatio(
+                      aspectRatio:active.value.aspectRatio,
+                      child:VideoPlayer(active),
+                    ),
                 ),
+              ),
             ),
-          ),
+            AnimatedBuilder(
+              animation:widget.playback,
+              builder:(ctx,_) {
+                final player=widget.playback;
+                return Padding(
+                  key:const ValueKey('motivation_cinema_shared_controls'),
+                  padding:const EdgeInsets.fromLTRB(16,8,16,16),
+                  child:Column(
+                    mainAxisSize:MainAxisSize.min,
+                    children:[
+                      Text(
+                        player.currentTrack?.title??'STK Motivation',
+                        maxLines:1,overflow:TextOverflow.ellipsis,
+                        style:AppTypography.bodyMedium.copyWith(
+                          color:Colors.white),
+                      ),
+                      const SizedBox(height:4),
+                      Text(
+                        player.completed?'Reproducción finalizada':
+                          player.playing?'Reproduciendo':'En pausa',
+                        style:AppTypography.bodySmall.copyWith(
+                          color:Colors.white70),
+                      ),
+                      const SizedBox(height:8),
+                      Row(mainAxisAlignment:MainAxisAlignment.center,
+                        children:[
+                          IconButton(
+                            tooltip:'Anterior',
+                            color:Colors.white,
+                            onPressed:player.currentTrack==null?null:
+                              ()=>unawaited(player.previous()),
+                            icon:const Icon(Icons.skip_previous_rounded,
+                              size:32),
+                          ),
+                          const SizedBox(width:8),
+                          IconButton.filled(
+                            key:const ValueKey('motivation_cinema_toggle'),
+                            tooltip:player.playing?'Pausar':'Reproducir',
+                            onPressed:player.currentTrack==null?null:
+                              ()=>unawaited(player.togglePlay()),
+                            icon:Icon(player.playing?Icons.pause_rounded:
+                              (player.completed?Icons.replay_rounded:
+                                Icons.play_arrow_rounded),size:32),
+                            style:IconButton.styleFrom(
+                              minimumSize:const Size(56,56)),
+                          ),
+                          const SizedBox(width:8),
+                          IconButton(
+                            tooltip:player.canSkipNext
+                              ?'Siguiente pista':'No hay otra pista',
+                            color:Colors.white,
+                            onPressed:player.canSkipNext
+                              ?()=>unawaited(player.next()):null,
+                            icon:const Icon(Icons.skip_next_rounded,size:32),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ]),
         ),
       ),
     ));

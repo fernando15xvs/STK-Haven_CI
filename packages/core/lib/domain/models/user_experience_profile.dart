@@ -68,6 +68,9 @@ class UserExperienceProfile {
   /// A separate optional physiological input for an adult energy equation.
   final EnergyEquationSex? equationSexForEnergy;
   final int onboardingVersion;
+  /// Optional legacy follow-up can be declined without changing or
+  /// repeating the user's completed onboarding answers.
+  final bool legacyTrainingFollowupDismissed;
 
   const UserExperienceProfile({
     this.displayName = '',
@@ -89,6 +92,7 @@ class UserExperienceProfile {
     this.genderIdentity,
     this.equationSexForEnergy,
     this.onboardingVersion = 0,
+    this.legacyTrainingFollowupDismissed = false,
   });
 
   String get preferredName => displayName.trim().isEmpty ? 'Tu perfil' : displayName.trim();
@@ -108,6 +112,18 @@ class UserExperienceProfile {
     }
     return years < 0 ? null : years;
   }
+
+  /// Only missing training choices are worth surfacing for legacy profiles.
+  /// No birth date, equation input, faith answer or age verification is
+  /// required to dismiss the suggestion or continue training.
+  bool get needsOptionalTrainingFollowup =>
+      !legacyTrainingFollowupDismissed &&
+      onboardingVersion > 0 &&
+      onboardingVersion < currentOnboardingVersion &&
+      (trainingGoal == null ||
+       trainingExperience == null ||
+       trainingDaysPerWeek == null ||
+       trainingEnvironment == null);
 
   bool get isCoach => capabilities.contains(UserCapability.coach);
 
@@ -142,6 +158,7 @@ class UserExperienceProfile {
     EnergyEquationSex? equationSexForEnergy,
     bool clearEquationSexForEnergy = false,
     int? onboardingVersion,
+    bool? legacyTrainingFollowupDismissed,
   }) {
     return UserExperienceProfile(
       displayName: displayName ?? this.displayName,
@@ -174,6 +191,9 @@ class UserExperienceProfile {
       equationSexForEnergy: clearEquationSexForEnergy
           ? null : (equationSexForEnergy ?? this.equationSexForEnergy),
       onboardingVersion: onboardingVersion ?? this.onboardingVersion,
+      legacyTrainingFollowupDismissed:
+          legacyTrainingFollowupDismissed ??
+          this.legacyTrainingFollowupDismissed,
     );
   }
 
@@ -204,6 +224,7 @@ class UserExperienceProfile {
       'genderIdentity': genderIdentity?.name,
       'equationSexForEnergy': equationSexForEnergy?.name,
       'onboardingVersion': onboardingVersion,
+      'legacyTrainingFollowupDismissed': legacyTrainingFollowupDismissed,
     };
   }
 
@@ -291,6 +312,9 @@ class UserExperienceProfile {
         EnergyEquationSex.values, json['equationSexForEnergy']?.toString()),
       onboardingVersion:
           rawOnboardingVersion < 0 ? 0 : rawOnboardingVersion,
+      // Old backups without this key retain a voluntary, dismissible prompt.
+      legacyTrainingFollowupDismissed:
+          json['legacyTrainingFollowupDismissed'] == true,
     );
   }
 

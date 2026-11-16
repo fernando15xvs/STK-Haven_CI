@@ -29,6 +29,7 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
+    final savedProfile=ref.watch(userExperienceProfileProvider).value;
     final faithEnabled = ref.watch(
       userExperienceProfileProvider.select(
         (profile) => profile.value?.faithEnabled ?? false,
@@ -46,6 +47,55 @@ class ProfilePage extends ConsumerWidget {
           PersonalProfileSummary(
             onEdit: () => _open(context, const PersonalProfilePage()),
           ),
+          if(savedProfile?.needsOptionalTrainingFollowup == true) ...[
+            const SizedBox(height: AppSpacing.md),
+            PremiumCard(
+              key:const ValueKey('profile_legacy_training_followup'),
+              child:Column(
+                crossAxisAlignment:CrossAxisAlignment.start,
+                children:[
+                  Row(children:[
+                    Icon(Icons.tune_rounded,
+                      color:AppColors.of(context).primary),
+                    const SizedBox(width:AppSpacing.sm),
+                    Expanded(child:Text(
+                      'Personaliza tu entrenamiento cuando quieras',
+                      style:AppTypography.headlineMedium)),
+                  ]),
+                  const SizedBox(height:AppSpacing.xs),
+                  Text('Puedes completar solo los ajustes que falten. '
+                    'Tus rutinas, respuestas anteriores y cuenta se conservan.',
+                    style:AppTypography.bodySmall.copyWith(
+                      color:AppColors.of(context).textSecondary)),
+                  const SizedBox(height:AppSpacing.sm),
+                  Wrap(spacing:8,runSpacing:4,children:[
+                    FilledButton.tonal(
+                      key:const ValueKey('profile_complete_legacy_training'),
+                      onPressed:()=>_open(context,
+                        const ExperiencePreferencesPage()),
+                      child:const Text('Revisar mis ajustes'),
+                    ),
+                    TextButton(
+                      key:const ValueKey('profile_skip_legacy_training'),
+                      onPressed:()async{
+                        try{
+                          await ref.read(userExperienceProfileProvider.notifier)
+                            .updateProfile(savedProfile!.copyWith(
+                              legacyTrainingFollowupDismissed:true));
+                        }catch(_){
+                          if(context.mounted)ScaffoldMessenger.of(context)
+                            .showSnackBar(const SnackBar(content:Text(
+                              'No se pudo guardar tu elección. '
+                              'Puedes reintentarlo.')));
+                        }
+                      },
+                      child:const Text('Ahora no'),
+                    ),
+                  ]),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.xxl),
           const SectionHeading(title: 'PREFERENCIAS'),
           const SizedBox(height: AppSpacing.sm),
