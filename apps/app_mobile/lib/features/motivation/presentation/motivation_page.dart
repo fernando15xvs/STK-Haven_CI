@@ -9,6 +9,7 @@ import '../application/motivation_library_search.dart';
 import '../application/motivation_playlist_presets.dart';
 import '../data/motivation_library.dart';
 import 'widgets/motivation_audio_settings_sheet.dart';
+import 'widgets/motivation_cover_crop_sheet.dart';
 
 class _MotivationImportOptions {
   const _MotivationImportOptions({
@@ -123,7 +124,11 @@ class _MotivationPageState extends State<MotivationPage> {
                   await library.togglePlaylistTrack(id,track.id);
                 }
                 if(options.chooseArtwork){
-                  await library.chooseArtwork(track.id);
+                  await library.chooseArtwork(
+                    track.id,
+                    requestFocus:(filePath)=>MotivationCoverCropSheet.show(
+                      context,filePath),
+                  );
                 }
               }catch(e){
                 if(mounted)_message('No se guardó una personalización: $e');
@@ -313,7 +318,11 @@ class _MotivationPageState extends State<MotivationPage> {
       if(title!=null)await library.renameTrack(track.id,title);
     }else if(action=='cover'){
       try{
-        final saved=await library.chooseArtwork(track.id);
+        final saved=await library.chooseArtwork(
+                    track.id,
+                    requestFocus:(filePath)=>MotivationCoverCropSheet.show(
+                      context,filePath),
+                  );
         if(saved)_message('Portada guardada en este dispositivo.');
       }catch(e){_message('No se pudo guardar la portada: $e');}
     }else if(action=='clearCover'){
@@ -946,7 +955,11 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
       if(clear){
         await library.clearArtwork(track.id);
       }else{
-        await library.chooseArtwork(track.id);
+        await library.chooseArtwork(
+                    track.id,
+                    requestFocus:(filePath)=>MotivationCoverCropSheet.show(
+                      context,filePath),
+                  );
       }
     }catch(e){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(
