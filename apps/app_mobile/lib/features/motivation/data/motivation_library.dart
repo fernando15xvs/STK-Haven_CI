@@ -293,7 +293,12 @@ class MotivationLibrary extends ChangeNotifier {
       rethrow;
     }
     final file=File(p.join(_directory!.path,old));
-    if(await file.exists())await file.delete();
+    try{
+      if(await file.exists())await file.delete();
+    }catch(_){
+      // Metadata is already committed: an orphaned cover is safer than
+      // reporting that the user's successful change failed.
+    }
   }
 
   List<MotivationTrack> forSelection(String selection){
@@ -468,11 +473,20 @@ class MotivationLibrary extends ChangeNotifier {
       rethrow;
     }
     final file=File(filePath(t));
-    if(await file.exists())await file.delete();
+    try{
+      if(await file.exists())await file.delete();
+    }catch(_){
+      // The library no longer references this media. Do not roll back
+      // committed metadata because an OS file delete was refused.
+    }
     for(final name in [t.artworkFileName,t.thumbnailFileName]){
       if(name==null || p.basename(name)!=name || name.contains('..'))continue;
       final artwork=File(p.join(_directory!.path,name));
-      if(await artwork.exists())await artwork.delete();
+      try{
+        if(await artwork.exists())await artwork.delete();
+      }catch(_){
+        // A stale cover is preferable to a broken user-facing library.
+      }
     }
   }
   /// Create only explicitly selected playlist suggestions, never content.

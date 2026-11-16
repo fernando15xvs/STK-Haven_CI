@@ -463,10 +463,18 @@ class _MotivationPageState extends State<MotivationPage> {
               child:const Text('Listo')),
           ]))));
     }else if(action=='delete'){
+      // The native queue may still contain this file even if another track
+      // is currently selected. Deleting it without stopping the queue
+      // could break playback several songs later.
+      final queued=player.queue.any((item)=>item.id==track.id);
       final yes=await showDialog<bool>(context:context,
         builder:(ctx)=>AlertDialog(
           title:const Text('Eliminar archivo importado'),
-          content:const Text('Solo se eliminará la copia privada de STK Haven.'),
+          content:Text(queued
+            ?'Solo se eliminará la copia privada de STK Haven. '
+              'Este archivo está en la cola; se detendrá la reproducción '
+              'antes de eliminarlo.'
+            :'Solo se eliminará la copia privada de STK Haven.'),
           actions:[
             TextButton(onPressed:()=>Navigator.pop(ctx,false),
               child:const Text('Cancelar')),
@@ -474,7 +482,7 @@ class _MotivationPageState extends State<MotivationPage> {
               child:const Text('Eliminar')),
           ]));
       if(yes==true){
-        if(player.currentTrack?.id==track.id)await player.stop();
+        if(queued)await player.stop();
         await library.removeTrack(track.id);
       }
     }
