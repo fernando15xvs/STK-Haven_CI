@@ -11,7 +11,7 @@ void main(){
     expect(source,contains('_queue=[];'));
     expect(source,contains('_original=[];'));
     expect(source,contains('Comprueba si su formato es compatible.'));
-    expect(source,isNot(contains('Comprueba el códec: $e')));
+    expect(source,isNot(contains('Comprueba el códec:')));
   });
 
   test('library shows a user error instead of opening an empty player',(){
