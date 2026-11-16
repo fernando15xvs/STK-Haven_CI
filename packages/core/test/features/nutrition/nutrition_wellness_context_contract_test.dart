@@ -31,8 +31,22 @@ void main(){
     expect(source,contains('Pasos registrados manualmente'));
     expect(source,contains('recentRecordedSteps(days:14)'));
     expect(source,contains('Conservar mi meta'));
-    expect(source,contains('.setTargetSteps(stepSuggestion)'));
+    expect(source,contains('.setTargetSteps(suggestion)'));
     expect(source,contains('al menos 7 días registrados'));
+  });
+
+  test('saving a nutrition plan never overrides water or steps',(){
+    final source=File(
+      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
+    ).readAsStringSync();
+    expect(source,contains('await repo.save(plan);'));
+    expect(source,contains('Plan guardado. Las metas de agua y pasos'));
+    expect(source,contains('Revisar metas'));
+    expect(source,contains('Future<void> _reviewWellnessAfterPlanSave() async'));
+    expect(source,contains("if(selected=='water')await _reviewWaterTarget();"));
+    expect(source,contains("if(selected=='steps')await _reviewStepTarget();"));
+    expect(source,contains("onPressed:stepSuggestion==null?null:"));
+    expect(source,contains('Conservar mis metas'));
   });
 
   test('draft energy values are invalidated if age, goal or activity changes',(){

@@ -563,33 +563,79 @@ class _NutritionIntelligencePageState
                 child:TextButton.icon(
                   icon:const Icon(Icons.tune_rounded),
                   label:const Text('Revisar sugerencia de pasos'),
-                  onPressed:()async{
-                    final apply=await showDialog<bool>(
-                      context:context,builder:(ctx)=>AlertDialog(
-                        title:const Text('Revisar meta de pasos'),
-                        content:Text('Tu meta actual es '
-                          '${stepPrefs.targetSteps}. Basándonos en registros '
-                          'existentes, la referencia es $stepSuggestion. '
-                          'No es una prescripción y puedes conservar tu meta.'),
-                        actions:[
-                          TextButton(onPressed:()=>Navigator.pop(ctx,false),
-                            child:const Text('Mantener mi meta')),
-                          FilledButton(onPressed:()=>Navigator.pop(ctx,true),
-                            child:const Text('Aplicar sugerencia')),
-                        ],
-                      ),
-                    );
-                    if(apply==true && mounted){
-                      await ref.read(stepGoalPreferencesProvider.notifier)
-                        .setTargetSteps(stepSuggestion);
-                    }
-                  },
+                  onPressed:_reviewStepTarget,
                 )),
             ],
           ],
         ),
       ),
     );
+  }
+
+  /// Only the user's explicit choice can update a step target.
+  Future<void> _reviewStepTarget() async {
+    final current=ref.read(stepGoalPreferencesProvider);
+    final history=ref.read(wellnessRepositoryProvider)
+      .recentRecordedSteps(days:14);
+    final suggestion=WellnessGoalSuggestions.stepsFromBaseline(
+      history.map((day)=>day.steps));
+    if(suggestion==null){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content:Text('Necesitamos al menos 7 días reales '
+          'de pasos para ofrecer una sugerencia. Tu meta se conserva.')));
+      return;
+    }
+    if(suggestion==current.targetSteps)return;
+    final apply=await showDialog<bool>(
+      context:context,builder:(ctx)=>AlertDialog(
+        title:const Text('Revisar meta de pasos'),
+        content:Text('Meta actual: ${current.targetSteps}. '
+          'Sugerencia según tus días registrados: $suggestion. '
+          'No es una prescripción ni depende de tu objetivo calórico.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx,false),
+            child:const Text('Mantener mi meta')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+            child:const Text('Aplicar sugerencia')),
+        ],
+      ),
+    );
+    if(apply==true && mounted){
+      await ref.read(stepGoalPreferencesProvider.notifier)
+        .setTargetSteps(suggestion);
+    }
+  }
+
+  /// A nutrition-plan edit never changes either target. Offer an optional,
+  /// one-time review rather than introducing a second set of Home controls.
+  Future<void> _reviewWellnessAfterPlanSave() async {
+    final water=ref.read(hydrationPreferencesProvider);
+    final steps=ref.read(stepGoalPreferencesProvider);
+    final history=ref.read(wellnessRepositoryProvider)
+      .recentRecordedSteps(days:14);
+    final stepSuggestion=WellnessGoalSuggestions.stepsFromBaseline(
+      history.map((day)=>day.steps));
+    final selected=await showDialog<String>(context:context,
+      builder:(ctx)=>AlertDialog(
+        title:const Text('Tus metas de bienestar'),
+        content:Text('Agua actual: ${water.targetMl} ml/día. '
+          'Pasos actuales: ${steps.targetSteps}. '
+          'Guardar el plan no modifica ninguna meta ni recordatorio. '
+          '${stepSuggestion==null ? "Aún no hay 7 días de pasos para sugerir otra meta." : "Puedes revisar cada meta por separado."}'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx),
+            child:const Text('Conservar mis metas')),
+          TextButton(onPressed:()=>Navigator.pop(ctx,'water'),
+            child:const Text('Revisar agua')),
+          TextButton(
+            onPressed:stepSuggestion==null?null:
+              ()=>Navigator.pop(ctx,'steps'),
+            child:const Text('Revisar pasos')),
+        ],
+      ));
+    if(!mounted)return;
+    if(selected=='water')await _reviewWaterTarget();
+    if(selected=='steps')await _reviewStepTarget();
   }
 
   Future<void> _reviewWaterTarget() async {
@@ -1365,7 +1411,17 @@ class _NutritionIntelligencePageState
     );
     try{
       await repo.save(plan);
-      if(mounted)setState(()=>_activePlan=plan);
+      if(mounted){
+        setState(()=>_activePlan=plan);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:const Text('Plan guardado. Las metas de agua y pasos '
+            'no se han modificado.'),
+          action:SnackBarAction(
+            label:'Revisar metas',
+            onPressed:()=>_reviewWellnessAfterPlanSave(),
+          ),
+        ));
+      }
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content:Text('No se pudo guardar el plan.')));
