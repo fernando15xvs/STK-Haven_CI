@@ -726,6 +726,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
   StreamSubscription<Duration>? position;
   StreamSubscription<PlayerState>? playing;
   bool ready=false,visible=true,seeking=false;
+  DateTime? _lastPositionCorrection;
   @override
   void initState(){
     super.initState();
@@ -756,6 +757,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     playing=null;
     ready=false;
     seeking=false;
+    _lastPositionCorrection=null;
     if(mounted)setState((){});
     if(oldPosition!=null)unawaited(oldPosition.cancel());
     if(oldPlaying!=null)unawaited(oldPlaying.cancel());
@@ -780,7 +782,17 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
       position=widget.playback.audio.positionStream.listen((pos){
         if(!mounted || controller!=c ||
            !c.value.isInitialized || !visible)return;
-        if((c.value.position-pos).inMilliseconds.abs()>900 && !seeking){
+        final drift=(c.value.position-pos).inMilliseconds.abs();
+        final now=DateTime.now();
+        final loopJustRestarted=pos< const Duration(milliseconds:500) &&
+          c.value.position>const Duration(seconds:2);
+        final elapsed=_lastPositionCorrection==null
+          ?const Duration(seconds:5)
+          :now.difference(_lastPositionCorrection!);
+        // Correct large drift, but not on every short position tick.
+        if(drift>900 && !seeking &&
+           (loopJustRestarted || elapsed>const Duration(milliseconds:900))){
+          _lastPositionCorrection=now;
           seeking=true;
           unawaited(c.seekTo(pos).whenComplete(()=>seeking=false)
             .catchError((Object _){ /* Source was switched. */ }));
@@ -930,6 +942,8 @@ class MotivationNowPlayingPage extends StatefulWidget {
 class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
   final player=MotivationPlayback.instance;
   final library=MotivationLibrary.instance;
+  double? _scrubMs;
+  String? _scrubTrackId;
   String _clock(Duration d){
     final minutes=d.inMinutes;
     return '${minutes.toString().padLeft(2,'0')}:'
@@ -1013,6 +1027,10 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
       animation:Listenable.merge([player,library]),
       builder:(context,_) {
         final track=player.currentTrack;
+        if(_scrubTrackId!=track?.id){
+          _scrubTrackId=track?.id;
+          _scrubMs=null;
+        }
         return Scaffold(
           backgroundColor:colors.background,
           appBar:AppBar(
@@ -1081,16 +1099,28 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                         final duration=player.duration??Duration.zero;
                         final max=duration.inMilliseconds;
                         final current=position.inMilliseconds.clamp(0,max);
+                        final preview=_scrubMs?.clamp(0,max.toDouble()) ??
+                          current.toDouble();
                         return Column(children:[
                           Slider(
-                            value:current.toDouble(),
+                            key:const ValueKey('motivation_scrubber'),
+                            value:preview,
                             max:max>0?max.toDouble():1,
-                            onChanged:max==0?null:(v)=>unawaited(
-                              player.seek(Duration(milliseconds:v.round()))),
+                            onChangeStart:max==0?null:(v)=>
+                              setState(()=>_scrubMs=v),
+                            onChanged:max==0?null:(v)=>
+                              setState(()=>_scrubMs=v),
+                            // One seek on release, never a burst per pixel.
+                            onChangeEnd:max==0?null:(v){
+                              setState(()=>_scrubMs=null);
+                              unawaited(player.seek(
+                                Duration(milliseconds:v.round())));
+                            },
                           ),
                           Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,
                             children:[
-                              Text(_clock(position),style:AppTypography.bodySmall),
+                              Text(_clock(Duration(milliseconds:preview.round())),
+                                style:AppTypography.bodySmall),
                               Text(_clock(duration),style:AppTypography.bodySmall),
                             ]),
                         ]);
