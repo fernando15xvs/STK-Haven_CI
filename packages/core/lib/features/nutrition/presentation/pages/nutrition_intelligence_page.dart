@@ -5,6 +5,7 @@ import 'package:core/domain/models/nutrition_goal_plan.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
 import 'package:core/features/nutrition/application/adult_macro_guide.dart';
 import 'package:core/features/nutrition/application/latest_body_measurements.dart';
+import 'package:core/features/nutrition/application/nutrition_plan_measurement_review.dart';
 import 'package:core/features/nutrition/application/nutrition_access_state.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -53,6 +54,7 @@ class _NutritionIntelligencePageState
     extends ConsumerState<NutritionIntelligencePage> {
   // No demographic or measurement values are ever fabricated as defaults.
   final _ageController = TextEditingController();
+  final _energyFormKey=GlobalKey();
   final _dishHintController = TextEditingController();
 
   EnergyEquationSex? _equationSex;
@@ -171,7 +173,10 @@ class _NutritionIntelligencePageState
     final dateFormat = DateFormat('dd/MM/yyyy');
     final sourceIds = body.fingerprint;
     final demographic = ref.watch(userExperienceProfileProvider).value;
+    final review=_activePlan==null?null:
+      NutritionPlanMeasurementReview.compare(_activePlan!,body);
     return Card(
+      key:_energyFormKey,
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
@@ -383,6 +388,30 @@ class _NutritionIntelligencePageState
                 '${plan.heightCm.toStringAsFixed(1)} cm de Medidas.',
                 style:Theme.of(context).textTheme.bodySmall?.copyWith(
                   color:colors.onSurfaceVariant)),
+              if(review!=null && review.needsReview) ...[
+                const SizedBox(height:8),
+                Text(review.canRecalculate
+                  ?'Tus registros de Medidas cambiaron desde que guardaste '
+                    'este plan. Puedes revisar un nuevo cálculo; el plan '
+                    'anterior no se modificará hasta que lo guardes.'
+                  :'Faltan medidas válidas para revisar el plan. '
+                    'El plan guardado se conserva sin cambios.',
+                  style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color:colors.onSurfaceVariant)),
+                if(review.canRecalculate)
+                  TextButton.icon(
+                    key:const ValueKey('nutrition_review_changed_measures'),
+                    onPressed:()=>_preparePlanReview(plan),
+                    icon:const Icon(Icons.refresh_rounded),
+                    label:const Text('Recalcular con Medidas actuales'),
+                  )
+                else if(widget.onOpenMeasurements!=null)
+                  TextButton.icon(
+                    onPressed:widget.onOpenMeasurements,
+                    icon:const Icon(Icons.straighten_outlined),
+                    label:const Text('Registrar medidas faltantes'),
+                  ),
+              ],
               if(plan.nextReviewAt!=null)
                 Text('Revisión voluntaria: '
                   '${DateFormat('dd/MM/yyyy').format(plan.nextReviewAt!)}. '
@@ -1068,6 +1097,27 @@ class _NutritionIntelligencePageState
         _energyEstimate = null;
         _message = error.toString();
       });
+    }
+  }
+
+  void _preparePlanReview(NutritionGoalPlan plan) {
+    if(!_hasAdultNumericAccess)return;
+    final currentAge=ref.read(userExperienceProfileProvider).value
+      ?.ageAt(DateTime.now());
+    setState((){
+      // This changes editable form fields, NOT the saved plan or Medidas.
+      _ageController.text=(currentAge??plan.ageYears).toString();
+      _equationSex=plan.equationSex;
+      _activity=plan.activityLevel;
+      _goal=plan.goal;
+      _invalidateEnergyDraft();
+    });
+    final target=_energyFormKey.currentContext;
+    if(target!=null){
+      Scrollable.ensureVisible(target,
+        duration:const Duration(milliseconds:300),
+        curve:Curves.easeOut,
+        alignment:0.04);
     }
   }
 
