@@ -17,8 +17,10 @@ class HydrationPreferencesNotifier extends Notifier<HydrationPreferences> {
   HydrationPreferences build() => _repository.getHydrationPreferences();
 
   Future<void> setTargetMl(int value) async {
-    state = state.copyWith(targetMl: value.clamp(1000, 5000).toInt());
-    await _repository.saveHydrationPreferences(state);
+    // Do not present an unpersisted goal as saved when Hive write fails.
+    final updated=state.copyWith(targetMl:value.clamp(1000,5000).toInt());
+    await _repository.saveHydrationPreferences(updated);
+    state=updated;
   }
 
   Future<void> setReminderEnabled(bool enabled) async {
@@ -51,10 +53,11 @@ class StepGoalPreferencesNotifier extends Notifier<StepGoalPreferences> {
   StepGoalPreferences build() => _repository.getStepGoalPreferences();
 
   Future<void> setTargetSteps(int value) async {
-    state = state.copyWith(
-      targetSteps: value.clamp(1000, 50000).toInt(),
+    final updated=state.copyWith(
+      targetSteps: value.clamp(1000,50000).toInt(),
     );
-    await _repository.saveStepGoalPreferences(state);
+    await _repository.saveStepGoalPreferences(updated);
+    state=updated;
   }
 
   Future<void> setReminderEnabled(bool enabled) async {
