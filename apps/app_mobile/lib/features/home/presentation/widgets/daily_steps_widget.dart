@@ -4,6 +4,7 @@ import 'dart:ui' show FontFeature;
 import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
+import 'package:core/features/home/application/steps_reading_freshness.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:gym_tracker/features/home/application/home_refresh_policy.dart';
@@ -355,6 +356,25 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
         ? 0.0
         : (state.steps / target).clamp(0.0, 1.0).toDouble();
     final format = NumberFormat.decimalPattern('es');
+    final freshness=StepsReadingFreshnessPolicy.resolve(
+      state,now:DateTime.now());
+    final readingLabel=switch(freshness){
+      StepsReadingFreshness.manual=>'Sin sincronizar',
+      StepsReadingFreshness.unknownTime=>'Dispositivo · hora desconocida',
+      StepsReadingFreshness.recent=>'Desde el dispositivo',
+      StepsReadingFreshness.stale=>'Lectura antigua',
+    };
+    final readingTime=state.lastSyncedAt;
+    final readingDescription=readingTime==null
+      ?'No se dispone de la hora de la última lectura.'
+      :'Última lectura del dispositivo: '
+        '${DateFormat('dd/MM HH:mm').format(readingTime.toLocal())}.';
+    final deviceTooltip=state.deviceSynced
+      ?'$readingDescription '
+        '${freshness==StepsReadingFreshness.stale ?
+           "La lectura puede no reflejar los pasos actuales." :
+           "El número procede del dispositivo."}'
+      :_deviceStatusText(false);
 
     return PremiumCard(
       key: const ValueKey('home_steps_card'),
@@ -401,15 +421,18 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
           ),
           const SizedBox(height: AppSpacing.sm),
           Tooltip(
-            message: _deviceStatusText(state.deviceSynced),
-            child: Text(
+            key:const ValueKey('home_steps_reading_provenance'),
+            message:deviceTooltip,
+            child:Text(
               widget.compact
-                  ? state.deviceSynced
-                      ? 'Desde el dispositivo'
-                      : 'Sin sincronizar'
-                  : _deviceStatusText(state.deviceSynced),
-              style: AppTypography.bodySmall.copyWith(
-                color: colors.textSecondary,
+                ?readingLabel
+                :state.deviceSynced
+                  ?'$readingLabel · $readingDescription'
+                  :_deviceStatusText(false),
+              maxLines:widget.compact?2:3,
+              overflow:TextOverflow.ellipsis,
+              style:AppTypography.bodySmall.copyWith(
+                color:colors.textSecondary,
               ),
             ),
           ),

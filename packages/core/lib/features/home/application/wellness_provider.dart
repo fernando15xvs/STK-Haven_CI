@@ -36,20 +36,27 @@ class HydrationPreferencesNotifier extends Notifier<HydrationPreferences> {
   }
 
   Future<void> setReminderEnabled(bool enabled) async {
-    state = state.copyWith(reminderEnabled: enabled);
-    await _repository.saveHydrationPreferences(state);
+    if(state.reminderEnabled==enabled)return;
+    final updated=state.copyWith(reminderEnabled:enabled);
+    await _repository.saveHydrationPreferences(updated);
+    state=updated;
   }
 
   Future<void> setReminderHour(int hour) async {
-    state = state.copyWith(reminderHour: hour.clamp(6, 22).toInt());
-    await _repository.saveHydrationPreferences(state);
+    final chosen=hour.clamp(6,22).toInt();
+    if(state.reminderHour==chosen)return;
+    final updated=state.copyWith(reminderHour:chosen);
+    await _repository.saveHydrationPreferences(updated);
+    state=updated;
   }
 
   Future<void> markReminderSent(DateTime instant) async {
     final date =
         '${instant.year}-${instant.month.toString().padLeft(2, '0')}-${instant.day.toString().padLeft(2, '0')}';
-    state = state.copyWith(lastReminderDate: date);
-    await _repository.saveHydrationPreferences(state);
+    if(state.lastReminderDate==date)return;
+    final updated=state.copyWith(lastReminderDate:date);
+    await _repository.saveHydrationPreferences(updated);
+    state=updated;
   }
 }
 
@@ -81,13 +88,17 @@ class StepGoalPreferencesNotifier extends Notifier<StepGoalPreferences> {
   }
 
   Future<void> setReminderEnabled(bool enabled) async {
-    state = state.copyWith(reminderEnabled: enabled);
-    await _repository.saveStepGoalPreferences(state);
+    if(state.reminderEnabled==enabled)return;
+    final updated=state.copyWith(reminderEnabled:enabled);
+    await _repository.saveStepGoalPreferences(updated);
+    state=updated;
   }
 
   Future<void> setReminderCadence(StepReminderCadence cadence) async {
-    state = state.copyWith(reminderCadence: cadence);
-    await _repository.saveStepGoalPreferences(state);
+    if(state.reminderCadence==cadence)return;
+    final updated=state.copyWith(reminderCadence:cadence);
+    await _repository.saveStepGoalPreferences(updated);
+    state=updated;
   }
 }
 
@@ -119,12 +130,14 @@ class DailyStepsNotifier extends Notifier<DailyStepsState> {
     bool deviceSynced = false,
   }) async {
     checkDateAndRefresh();
-    state = state.copyWith(
+    final updated=state.copyWith(
       steps: value.clamp(0, 250000).toInt(),
       deviceSynced: deviceSynced,
       lastSyncedAt: deviceSynced ? DateTime.now() : state.lastSyncedAt,
     );
-    await _repository.saveSteps(state);
+    // Never display sensor readings not yet committed to the dated record.
+    await _repository.saveSteps(updated);
+    state=updated;
   }
 
   Future<void> addSteps(int delta) =>
