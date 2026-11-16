@@ -38,6 +38,7 @@ import 'package:gym_tracker/features/home/presentation/widgets/home_wellness_lay
 import 'package:gym_tracker/features/home/presentation/widgets/weekly_activity_card.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/progress_page.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/daily_steps_widget.dart';
+import 'package:gym_tracker/features/nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/recovery_check_in_card.dart';
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
@@ -221,11 +222,24 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
               const _DailyMessageCard(),
             ],
             const SizedBox(height: AppSpacing.xxl),
-            Text(
-              'BIENESTAR',
-              style: AppTypography.labelLarge.copyWith(
-                color: AppColors.of(context).textSecondary,
-              ),
+            Row(
+              children: [
+                Expanded(child:Text(
+                  'BIENESTAR',
+                  style:AppTypography.labelLarge.copyWith(
+                    color:AppColors.of(context).textSecondary),
+                )),
+                TextButton.icon(
+                  key:const ValueKey('home_open_nutrition_plan'),
+                  onPressed:()=>Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder:(_)=>const NutritionIntelligencePageMobile(),
+                    ),
+                  ),
+                  icon:const Icon(Icons.restaurant_menu_outlined,size:18),
+                  label:const Text('Mi plan'),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.sm),
             HomeWellnessLayout(

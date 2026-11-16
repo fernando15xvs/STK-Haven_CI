@@ -2,6 +2,23 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('Inicio exposes one compact Mi plan link without extra wellness cards',(){
+    final dashboard=File(
+      'lib/features/home/presentation/pages/dashboard_page.dart',
+    ).readAsStringSync();
+    expect(dashboard.split('HomeWellnessLayout(').length-1,1);
+    expect(dashboard.split("ValueKey('home_open_nutrition_plan')").length-1,1);
+    expect(dashboard,contains("label:const Text('Mi plan')"));
+    expect(dashboard,contains('const NutritionIntelligencePageMobile()'));
+    expect(dashboard.indexOf("ValueKey('home_open_nutrition_plan')"),
+      lessThan(dashboard.indexOf('HomeWellnessLayout(')));
+    final layout=File(
+      'lib/features/home/presentation/widgets/home_wellness_layout.dart',
+    ).readAsStringSync();
+    expect(layout,contains('IntrinsicHeight('));
+    expect(layout,contains('crossAxisAlignment: CrossAxisAlignment.stretch'));
+  });
+
   test('Inicio keeps daily message immediately after recovery and opt-in',
       () {
     final source = File(
