@@ -105,10 +105,31 @@ class BackupService {
         parsedData: data,
         schemaVersion: schemaVersion,
       );
-    } catch (e) {
+    } on FormatException catch (error) {
+      // JSON/DateTime errors can quote a user's private original backup
+      // contents, including local file paths. Only fixed service-generated
+      // collection messages are safe to display to the user.
+      const safePrefixes = [
+        'Metadatos de respaldo inválidos:',
+        'Datos de respaldo inválidos:',
+        'Colección de respaldo inválida:',
+        'Registro de respaldo inválido:',
+        'Identificador de respaldo inválido:',
+        'Identificador duplicado en respaldo:',
+      ];
+      final safeMessage = safePrefixes.any(
+        (prefix) => error.message.startsWith(prefix),
+      );
       return BackupValidationResult(
         isValid: false,
-        errorMessage: 'El archivo está corrupto o mal formado: $e',
+        errorMessage: safeMessage
+            ? error.message
+            : 'El archivo está corrupto o mal formado.',
+      );
+    } catch (_) {
+      return const BackupValidationResult(
+        isValid: false,
+        errorMessage: 'El archivo está corrupto o mal formado.',
       );
     }
   }
@@ -196,33 +217,42 @@ class BackupService {
       if (habitTasksStore.isNotEmpty) {
         await habitTasksBox.putAll(habitTasksStore);
       }
-    } catch (e) {
-      await metaBox.clear();
-      await exercisesBox.clear();
-      await routinesBox.clear();
-      await historyBox.clear();
-      await prBox.clear();
-      await bodyBox.clear();
-      await favVerseBox.clear();
-      await gamificationBox.clear();
-      await hydrationBox.clear();
-      await recoveryBox.clear();
-      await habitTasksBox.clear();
+    } catch (_) {
+      // Rollback is best-effort across multiple Hive boxes, not an atomic
+      // transaction. Never claim success if rollback itself fails.
+      try {
+        await metaBox.clear();
+        await exercisesBox.clear();
+        await routinesBox.clear();
+        await historyBox.clear();
+        await prBox.clear();
+        await bodyBox.clear();
+        await favVerseBox.clear();
+        await gamificationBox.clear();
+        await hydrationBox.clear();
+        await recoveryBox.clear();
+        await habitTasksBox.clear();
 
-      await metaBox.putAll(snapshotMeta);
-      await exercisesBox.putAll(snapshotExercises);
-      await routinesBox.putAll(snapshotRoutines);
-      await historyBox.putAll(snapshotHistory);
-      await prBox.putAll(snapshotPRs);
-      await bodyBox.putAll(snapshotBody);
-      await favVerseBox.putAll(snapshotFavs);
-      await gamificationBox.putAll(snapshotGamification);
-      await hydrationBox.putAll(snapshotHydration);
-      await recoveryBox.putAll(snapshotRecovery);
-      await habitTasksBox.putAll(snapshotHabitTasks);
-
-      throw Exception(
-        'Fallo al restaurar, se ha revertido a la base de datos original. Error: $e',
+        await metaBox.putAll(snapshotMeta);
+        await exercisesBox.putAll(snapshotExercises);
+        await routinesBox.putAll(snapshotRoutines);
+        await historyBox.putAll(snapshotHistory);
+        await prBox.putAll(snapshotPRs);
+        await bodyBox.putAll(snapshotBody);
+        await favVerseBox.putAll(snapshotFavs);
+        await gamificationBox.putAll(snapshotGamification);
+        await hydrationBox.putAll(snapshotHydration);
+        await recoveryBox.putAll(snapshotRecovery);
+        await habitTasksBox.putAll(snapshotHabitTasks);
+      } catch (_) {
+        throw StateError(
+          'La restauración falló y no se pudo confirmar la reversión. '
+          'Conserva el archivo de respaldo y revisa los datos del dispositivo.',
+        );
+      }
+      throw StateError(
+        'No se pudo completar la restauración. '
+        'Se recuperaron los datos locales anteriores.',
       );
     }
   }
