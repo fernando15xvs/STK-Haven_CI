@@ -218,6 +218,8 @@ class _NutritionIntelligencePageState
     final dateFormat = DateFormat('dd/MM/yyyy');
     final sourceIds = body.fingerprint;
     final demographic = ref.watch(userExperienceProfileProvider).value;
+    final permittedDemographics=demographic?.optionalDemographicsConsented==true
+      ?demographic:null;
     final recordedSessions=ref.watch(workoutHistoryProvider);
     final activitySuggestion=AdultActivitySuggestionPolicy.suggest(
       recordedSteps:ref.read(wellnessRepositoryProvider)
@@ -270,7 +272,8 @@ class _NutritionIntelligencePageState
                     onChanged:(_)=>setState(_invalidateEnergyDraft),
                     decoration: InputDecoration(
                       labelText: 'Edad',
-                      hintText: demographic?.ageAt(DateTime.now())?.toString(),
+                      hintText: permittedDemographics?.ageAt(DateTime.now())
+                        ?.toString(),
                       helperText: 'De Perfil, o indícala para este cálculo.',
                     ),
                   ),
@@ -322,8 +325,9 @@ class _NutritionIntelligencePageState
               ),
             const SizedBox(height: 12),
             DropdownButtonFormField<EnergyEquationSex>(
-              key: ValueKey('energy_equation_${_equationSex?.name ?? demographic?.equationSexForEnergy?.name ?? 'none'}'),
-              initialValue: _equationSex ?? demographic?.equationSexForEnergy,
+              key: ValueKey('energy_equation_${_equationSex?.name ?? permittedDemographics?.equationSexForEnergy?.name ?? 'none'}'),
+              initialValue: _equationSex ??
+                permittedDemographics?.equationSexForEnergy,
               decoration: const InputDecoration(
                 labelText: 'Parámetro fisiológico de la ecuación',
                 helperText: 'Solo para estimar energía; no define tu identidad.',
@@ -1389,8 +1393,10 @@ class _NutritionIntelligencePageState
   void _calculateEnergy() {
     try {
       final ageText = _ageController.text.trim();
+      final savedDemographics=ref.read(userExperienceProfileProvider).value;
+      final consented=savedDemographics?.optionalDemographicsConsented==true;
       final age = ageText.isEmpty
-          ? ref.read(userExperienceProfileProvider).value?.ageAt(DateTime.now())
+          ? (consented?savedDemographics?.ageAt(DateTime.now()):null)
           : int.tryParse(ageText);
       if (age == null) {
         throw const FormatException('Indica tu edad o complétala en Perfil.');
@@ -1404,7 +1410,7 @@ class _NutritionIntelligencePageState
         throw const FormatException('Registra peso y altura en Medidas.');
       }
       final equationSex = _equationSex ??
-          ref.read(userExperienceProfileProvider).value?.equationSexForEnergy;
+          (consented?savedDemographics?.equationSexForEnergy:null);
       if (equationSex == null) {
         throw const FormatException('Selecciona el parámetro de la ecuación.');
       }

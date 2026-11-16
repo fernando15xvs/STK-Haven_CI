@@ -67,6 +67,11 @@ class UserExperienceProfile {
   final GenderIdentity? genderIdentity;
   /// A separate optional physiological input for an adult energy equation.
   final EnergyEquationSex? equationSexForEnergy;
+  /// Local opt-in. Legacy records remain readable, but are never silently
+  /// marked as consented. This does not grant server-verified adult access.
+  final bool optionalDemographicsConsented;
+  final DateTime? optionalDemographicsConsentedAt;
+  final DateTime? optionalDemographicsUpdatedAt;
   final int onboardingVersion;
   /// Optional legacy follow-up can be declined without changing or
   /// repeating the user's completed onboarding answers.
@@ -91,6 +96,9 @@ class UserExperienceProfile {
     this.dateOfBirth,
     this.genderIdentity,
     this.equationSexForEnergy,
+    this.optionalDemographicsConsented = false,
+    this.optionalDemographicsConsentedAt,
+    this.optionalDemographicsUpdatedAt,
     this.onboardingVersion = 0,
     this.legacyTrainingFollowupDismissed = false,
   });
@@ -157,6 +165,10 @@ class UserExperienceProfile {
     bool clearGenderIdentity = false,
     EnergyEquationSex? equationSexForEnergy,
     bool clearEquationSexForEnergy = false,
+    bool? optionalDemographicsConsented,
+    DateTime? optionalDemographicsConsentedAt,
+    bool clearOptionalDemographicsConsentAt = false,
+    DateTime? optionalDemographicsUpdatedAt,
     int? onboardingVersion,
     bool? legacyTrainingFollowupDismissed,
   }) {
@@ -190,6 +202,13 @@ class UserExperienceProfile {
       genderIdentity: clearGenderIdentity ? null : (genderIdentity ?? this.genderIdentity),
       equationSexForEnergy: clearEquationSexForEnergy
           ? null : (equationSexForEnergy ?? this.equationSexForEnergy),
+      optionalDemographicsConsented:
+          optionalDemographicsConsented ?? this.optionalDemographicsConsented,
+      optionalDemographicsConsentedAt: clearOptionalDemographicsConsentAt
+          ?null:(optionalDemographicsConsentedAt ??
+            this.optionalDemographicsConsentedAt),
+      optionalDemographicsUpdatedAt: optionalDemographicsUpdatedAt ??
+          this.optionalDemographicsUpdatedAt,
       onboardingVersion: onboardingVersion ?? this.onboardingVersion,
       legacyTrainingFollowupDismissed:
           legacyTrainingFollowupDismissed ??
@@ -223,6 +242,11 @@ class UserExperienceProfile {
               '${dateOfBirth!.day.toString().padLeft(2, '0')}',
       'genderIdentity': genderIdentity?.name,
       'equationSexForEnergy': equationSexForEnergy?.name,
+      'optionalDemographicsConsented': optionalDemographicsConsented,
+      'optionalDemographicsConsentedAt':
+          optionalDemographicsConsentedAt?.toIso8601String(),
+      'optionalDemographicsUpdatedAt':
+          optionalDemographicsUpdatedAt?.toIso8601String(),
       'onboardingVersion': onboardingVersion,
       'legacyTrainingFollowupDismissed': legacyTrainingFollowupDismissed,
     };
@@ -310,6 +334,17 @@ class UserExperienceProfile {
         GenderIdentity.values, json['genderIdentity']?.toString()),
       equationSexForEnergy: _enumByName(
         EnergyEquationSex.values, json['equationSexForEnergy']?.toString()),
+      // Never synthesize consent for old backups merely because they contain
+      // a birthday. Their prior values and other preferences are preserved.
+      optionalDemographicsConsented:
+          json['optionalDemographicsConsented'] == true,
+      optionalDemographicsConsentedAt:
+          json['optionalDemographicsConsented'] == true
+            ?DateTime.tryParse(
+                json['optionalDemographicsConsentedAt']?.toString()??'')
+            :null,
+      optionalDemographicsUpdatedAt:DateTime.tryParse(
+        json['optionalDemographicsUpdatedAt']?.toString()??''),
       onboardingVersion:
           rawOnboardingVersion < 0 ? 0 : rawOnboardingVersion,
       // Old backups without this key retain a voluntary, dismissible prompt.

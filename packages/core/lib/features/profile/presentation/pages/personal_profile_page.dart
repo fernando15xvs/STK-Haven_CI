@@ -86,6 +86,11 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
       'dateOfBirth':draft.dateOfBirth?.toIso8601String(),
       'genderIdentity':draft.genderIdentity?.name,
       'equationSexForEnergy':draft.equationSexForEnergy?.name,
+      'optionalDemographicsConsented':draft.optionalDemographicsConsented,
+      'optionalDemographicsConsentedAt':
+        draft.optionalDemographicsConsentedAt?.toIso8601String(),
+      'optionalDemographicsUpdatedAt':
+        draft.optionalDemographicsUpdatedAt?.toIso8601String(),
     });
     await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
       title:const Text('Mis datos opcionales'),
@@ -123,6 +128,8 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
       clearDateOfBirth:true,
       clearGenderIdentity:true,
       clearEquationSexForEnergy:true,
+      optionalDemographicsConsented:false,
+      clearOptionalDemographicsConsentAt:true,
     ));
   }
 
@@ -258,6 +265,37 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 10),
+                SwitchListTile.adaptive(
+                  key:const ValueKey('profile_optional_demographics_consent'),
+                  contentPadding:EdgeInsets.zero,
+                  title:const Text('Autorizar datos demográficos opcionales'),
+                  subtitle:const Text('Solo se guardan localmente para '
+                    'adaptar la experiencia y cálculos adultos opcionales. '
+                    'No verifica tu mayoría de edad ni comparte datos '
+                    'con un entrenador. Puedes verlos o borrarlos aquí.'),
+                  value:draft.optionalDemographicsConsented,
+                  onChanged:(enabled)=>setState((){
+                    _draft=enabled
+                      ?draft.copyWith(
+                        optionalDemographicsConsented:true,
+                        optionalDemographicsConsentedAt:DateTime.now())
+                      :draft.copyWith(
+                        optionalDemographicsConsented:false,
+                        clearOptionalDemographicsConsentAt:true,
+                        clearDateOfBirth:true,
+                        clearGenderIdentity:true,
+                        clearEquationSexForEnergy:true);
+                  }),
+                ),
+                if(!draft.optionalDemographicsConsented &&
+                   (draft.dateOfBirth!=null ||
+                    draft.genderIdentity!=null ||
+                    draft.equationSexForEnergy!=null))
+                  Text('Los datos anteriores se conservaron sin '
+                    'suponer tu autorización. Puedes revisarlos o '
+                    'quitarlos, o autorizarlos expresamente.',
+                    style:Theme.of(context).textTheme.bodySmall),
+                const SizedBox(height: 10),
                 OutlinedButton.icon(
                   key:const ValueKey('profile_birth_date'),
                   icon:const Icon(Icons.calendar_month_outlined),
@@ -266,7 +304,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     : '${draft.dateOfBirth!.day.toString().padLeft(2,'0')}/'
                       '${draft.dateOfBirth!.month.toString().padLeft(2,'0')}/'
                       '${draft.dateOfBirth!.year}'),
-                  onPressed:()async{
+                  onPressed:!draft.optionalDemographicsConsented?null:()async{
                     final now=DateTime.now();
                     final picked=await showDatePicker(
                       context:context,
@@ -297,9 +335,10 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     DropdownMenuItem(value:GenderIdentity.preferNotToSay,
                       child:Text('Prefiero no decirlo')),
                   ],
-                  onChanged:(value)=>setState(()=>_draft=value==null
-                    ?draft.copyWith(clearGenderIdentity:true)
-                    :draft.copyWith(genderIdentity:value)),
+                  onChanged:!draft.optionalDemographicsConsented?null:
+                    (value)=>setState(()=>_draft=value==null
+                      ?draft.copyWith(clearGenderIdentity:true)
+                      :draft.copyWith(genderIdentity:value)),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<EnergyEquationSex>(
@@ -316,9 +355,10 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     DropdownMenuItem(value:EnergyEquationSex.male,
                       child:Text('Referencia masculina')),
                   ],
-                  onChanged:(value)=>setState(()=>_draft=value==null
-                    ?draft.copyWith(clearEquationSexForEnergy:true)
-                    :draft.copyWith(equationSexForEnergy:value)),
+                  onChanged:!draft.optionalDemographicsConsented?null:
+                    (value)=>setState(()=>_draft=value==null
+                      ?draft.copyWith(clearEquationSexForEnergy:true)
+                      :draft.copyWith(equationSexForEnergy:value)),
                 ),
                 const SizedBox(height:12),
                 Wrap(spacing:8,runSpacing:8,children:[
@@ -358,8 +398,24 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     if (!_formKey.currentState!.validate()) return;
                     setState(() => _saving = true);
                     try {
-                      final updated = _draft!.copyWith(
+                      final draft=_draft!;
+                      final prior=_original!;
+                      final changedDemographics=
+                        draft.dateOfBirth!=prior.dateOfBirth ||
+                        draft.genderIdentity!=prior.genderIdentity ||
+                        draft.equationSexForEnergy!=prior.equationSexForEnergy;
+                      final hasOptionalData=draft.dateOfBirth!=null ||
+                        draft.genderIdentity!=null ||
+                        draft.equationSexForEnergy!=null;
+                      if(changedDemographics && hasOptionalData &&
+                         !draft.optionalDemographicsConsented){
+                        throw const FormatException(
+                          'Autoriza los datos opcionales antes de guardarlos.');
+                      }
+                      final updated = draft.copyWith(
                         displayName: _name.text.trim(),
+                        optionalDemographicsUpdatedAt:changedDemographics
+                          ?DateTime.now():null,
                       );
                       await ref.read(userExperienceProfileProvider.notifier)
                           .updateProfile(updated);
