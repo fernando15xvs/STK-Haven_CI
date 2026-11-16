@@ -16,6 +16,16 @@ void main() {
       'EnergyActivityLevel _activity = EnergyActivityLevel.moderate')));
   });
 
+  test('adult nutrition compares dated Medidas without its own weight storage', () {
+    final page=File(
+      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
+    ).readAsStringSync();
+    expect(page,contains('NutritionWeightTrend.fromRecords(measurementRecords)'));
+    expect(page,contains('if(trend!=null)'));
+    expect(page,contains('Ver historial completo en Medidas'));
+    expect(page,contains('No representa por sí sola éxito o fracaso.'));
+  });
+
   test('planner rejects non-finite weights and heights', () {
     final planner=File(
       'lib/features/nutrition/application/adult_energy_planner.dart',

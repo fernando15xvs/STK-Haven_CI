@@ -5,6 +5,7 @@ import 'package:core/domain/models/nutrition_goal_plan.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
 import 'package:core/features/nutrition/application/adult_macro_guide.dart';
 import 'package:core/features/nutrition/application/latest_body_measurements.dart';
+import 'package:core/features/nutrition/application/nutrition_weight_trend.dart';
 import 'package:core/features/nutrition/application/nutrition_plan_measurement_review.dart';
 import 'package:core/features/nutrition/application/nutrition_access_state.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
@@ -170,7 +171,9 @@ class _NutritionIntelligencePageState
   }
 
   Widget _buildEnergyPlanner(ColorScheme colors) {
-    final body = LatestBodyMeasurements.fromRecords(ref.watch(bodyMeasurementProvider));
+    final measurementRecords=ref.watch(bodyMeasurementProvider);
+    final body = LatestBodyMeasurements.fromRecords(measurementRecords);
+    final trend=NutritionWeightTrend.fromRecords(measurementRecords);
     final dateFormat = DateFormat('dd/MM/yyyy');
     final sourceIds = body.fingerprint;
     final demographic = ref.watch(userExperienceProfileProvider).value;
@@ -453,6 +456,29 @@ class _NutritionIntelligencePageState
                   label:const Text('Quitar plan'),
                 ),
               ]),
+            ],
+            if(trend!=null) ...[
+              const SizedBox(height:12),
+              const Divider(),
+              Text('Cambio entre registros de Medidas',
+                style:Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height:6),
+              Text(
+                '${dateFormat.format(trend.previousDate)}: '
+                '${trend.previousWeightKg.toStringAsFixed(1)} kg · '
+                '${dateFormat.format(trend.latestDate)}: '
+                '${trend.latestWeightKg.toStringAsFixed(1)} kg',
+                style:Theme.of(context).textTheme.bodyMedium),
+              Text('Diferencia: ${trend.differenceKg.toStringAsFixed(1)} kg. '
+                'No representa por sí sola éxito o fracaso.',
+                style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color:colors.onSurfaceVariant)),
+              if(widget.onOpenMeasurements!=null)
+                TextButton.icon(
+                  onPressed:widget.onOpenMeasurements,
+                  icon:const Icon(Icons.show_chart_rounded),
+                  label:const Text('Ver historial completo en Medidas'),
+                ),
             ],
           ],
         ),
