@@ -8,6 +8,10 @@ void main(){
       'lib/features/motivation/presentation/motivation_page.dart',
     ).readAsStringSync();
     expect(code,contains('didUpdateWidget(covariant _SilentVideoPreview oldWidget)'));
+    // A changing key would dispose the previous state instead of invoking
+    // didUpdateWidget; the cinema route would then hold a stale source.
+    expect(code,contains("key:const ValueKey('now_playing_video_shared')"));
+    expect(code,isNot(contains("key:ValueKey('now_playing_video_\${track.id}')")));
     expect(code,contains('oldWidget.path != widget.path'));
     expect(code,contains('oldWidget.playback.removeListener(_syncVideoLoop)'));
     expect(code,contains('widget.playback.addListener(_syncVideoLoop)'));
