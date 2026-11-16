@@ -46,8 +46,9 @@ class _MotivationPageState extends State<MotivationPage> {
     library.addListener(_refresh);
     player.addListener(_refresh);
     unawaited(player.loadAudioPreferences());
-    unawaited(library.load().catchError((Object e){
-      _message('No se pudo abrir la biblioteca: '+e.toString());
+    unawaited(library.load().catchError((Object _){
+      // Native exceptions may embed private device paths: never show them.
+      _message('No se pudo abrir la biblioteca. Inténtalo de nuevo.');
     }));
   }
   void _refresh(){if(mounted)setState((){});}
@@ -130,14 +131,16 @@ class _MotivationPageState extends State<MotivationPage> {
                       context,filePath),
                   );
                 }
-              }catch(e){
-                if(mounted)_message('No se guardó una personalización: $e');
+              }catch(_){
+                if(mounted)_message('No se guardó la personalización. '
+                  'El archivo importado se conserva.');
               }
             }
           }
         }
       }
-    }catch(e){_message('Error de importación: '+e.toString());}
+    }catch(_){_message('No se pudo importar el archivo. '
+      'Revisa el formato y vuelve a intentarlo.');}
     finally{if(mounted)setState(()=>busy=false);}
   }
   Future<_MotivationImportOptions?> _importOptions(
@@ -421,7 +424,8 @@ class _MotivationPageState extends State<MotivationPage> {
                       context,filePath),
                   );
         if(saved)_message('Portada guardada en este dispositivo.');
-      }catch(e){_message('No se pudo guardar la portada: $e');}
+      }catch(_){_message('No se pudo guardar la portada. '
+        'Revisa la imagen y vuelve a intentarlo.');}
     }else if(action=='clearCover'){
       await library.clearArtwork(track.id);
     }else if(action=='thumbnail'){
@@ -1274,8 +1278,30 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
           ),
           body:SafeArea(
             child:track==null
-              ?Center(child:Text('No hay archivos reproduciéndose.',
-                style:AppTypography.bodyMedium))
+              ?Center(child:Padding(
+                  padding:const EdgeInsets.all(AppSpacing.lg),
+                  child:Column(
+                    mainAxisSize:MainAxisSize.min,
+                    children:[
+                      const Icon(Icons.music_off_outlined,size:36),
+                      const SizedBox(height:AppSpacing.sm),
+                      Text('No hay archivos reproduciéndose.',
+                        textAlign:TextAlign.center,
+                        style:AppTypography.bodyMedium),
+                      // When a native codec fails the queue is cleared.
+                      // The player still explains the failure without
+                      // exposing a private file path to the UI.
+                      if(player.error!=null)...[
+                        const SizedBox(height:AppSpacing.sm),
+                        Text(player.error!,
+                          key:const ValueKey('motivation_safe_playback_error'),
+                          textAlign:TextAlign.center,
+                          style:AppTypography.bodySmall.copyWith(
+                            color:colors.error)),
+                      ],
+                    ],
+                  ),
+                ))
               :LayoutBuilder(builder:(context,constraints){
                 final artSize=(constraints.maxWidth-40).clamp(180.0,380.0);
                 return ListView(
