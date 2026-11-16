@@ -26,11 +26,11 @@ void main(){
     ).readAsStringSync();
     final start=source.indexOf('static Future<void> _restoreLocalBackup(');
     final restore=source.substring(start);
-    final first=restore.indexOf('ref.read(activeWorkoutProvider).session != null');
+    final first=restore.indexOf('final activeWorkout = ref.read(activeWorkoutProvider);');
     final dialog=restore.indexOf('final confirm = await showDialog<bool>(');
-    final confirm=restore.indexOf('if (confirm != true) return;');
+    final confirm=restore.indexOf('if (!context.mounted || confirm != true) return;');
     final second=restore.indexOf('ref.read(activeWorkoutProvider).session != null',
-      first+1);
+      confirm);
     final write=restore.indexOf('await _backupService.restoreBackup(');
     expect(first,greaterThanOrEqualTo(0));
     expect(dialog,greaterThan(first));
@@ -38,6 +38,32 @@ void main(){
     expect(second,greaterThan(confirm));
     expect(write,greaterThan(second));
     expect(restore,contains('Termina tu entrenamiento actual antes de restaurar una copia.'));
+  });
+
+  test('cloud backup cannot restore into a different signed-in account',(){
+    final source=File(
+      'lib/features/sync/application/cloud_sync_provider.dart',
+    ).readAsStringSync();
+    final start=source.indexOf('Future<bool> restoreFromCloud() async');
+    final end=source.indexOf('void _invalidateRestoredState()',start);
+    expect(start,greaterThanOrEqualTo(0));
+    expect(end,greaterThan(start));
+    final restore=source.substring(start,end);
+    final selection=restore.indexOf(".eq('user_id', identity.userId!)");
+    final freshIdentity=restore.indexOf(
+      'final currentIdentity = ref.read(appIdentityProvider);');
+    final guard=restore.indexOf('currentIdentity.userId != identity.userId');
+    final active=restore.indexOf(
+      'ref.read(activeWorkoutProvider).session != null',guard);
+    final write=restore.indexOf('await _backupService.restoreBackup(');
+    expect(selection,greaterThanOrEqualTo(0));
+    expect(freshIdentity,greaterThan(selection));
+    expect(guard,greaterThan(freshIdentity));
+    expect(active,greaterThan(guard));
+    expect(write,greaterThan(active));
+    expect(restore,contains('!currentIdentity.signedIn'));
+    expect(restore,contains(
+      'La cuenta cambió durante la descarga. No se restauró la copia.'));
   });
 
   test('backup data is preflighted before replacing metadata, history or routines',(){

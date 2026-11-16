@@ -263,7 +263,14 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
         return false;
       }
 
-      // Network downloads can take time; check again before replacing data.
+      // Network downloads can take time. A sign-out or account switch must
+      // never restore the previous account's backup into a new session.
+      final currentIdentity = ref.read(appIdentityProvider);
+      if (!currentIdentity.signedIn ||
+          currentIdentity.userId != identity.userId) {
+        _fail('La cuenta cambió durante la descarga. No se restauró la copia.');
+        return false;
+      }
       if (ref.read(activeWorkoutProvider).session != null) {
         _fail('Hay un entrenamiento en curso. No se restauró la copia.');
         return false;

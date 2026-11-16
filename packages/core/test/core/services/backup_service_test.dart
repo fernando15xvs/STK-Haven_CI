@@ -350,7 +350,7 @@ void main() {
           'data': {'settings': {}, ...corruptedData},
         }));
         expect(result.isValid, isFalse);
-        expect(result.errorMessage, contains('inválido'));
+        expect(result.errorMessage, contains('inválid'));
       }
     });
 

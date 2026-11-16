@@ -371,7 +371,7 @@ class BackupStatusPage extends ConsumerWidget {
       ),
     );
 
-    if (confirm != true) return;
+    if (!context.mounted || confirm != true) return;
 
     // A session could have started while the picker or confirmation dialog
     // was visible. Re-check before changing any Hive box.
