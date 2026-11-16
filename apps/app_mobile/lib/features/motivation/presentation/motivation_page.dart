@@ -10,6 +10,7 @@ import '../application/motivation_playlist_presets.dart';
 import '../data/motivation_library.dart';
 import 'widgets/motivation_audio_settings_sheet.dart';
 import 'widgets/motivation_cover_crop_sheet.dart';
+import 'widgets/motivation_responsive_action_row.dart';
 
 class _MotivationImportOptions {
   const _MotivationImportOptions({
@@ -691,22 +692,22 @@ class _MotivationPageState extends State<MotivationPage> {
               style:AppTypography.bodyMedium.copyWith(
                 color:colors.textSecondary)),
             const SizedBox(height:16),
-            Row(children:[
-              Expanded(child:DropdownButtonFormField<MotivationMode>(
+            MotivationResponsiveActionRow(
+              key:const ValueKey('motivation_responsive_import'),
+              leading:DropdownButtonFormField<MotivationMode>(
                 initialValue:importMode,
                 decoration:const InputDecoration(
                   labelText:'Modo',border:OutlineInputBorder()),
                 items:[for(final m in MotivationMode.values)
                   DropdownMenuItem(value:m,child:Text(m.label))],
                 onChanged:(v){if(v!=null)setState(()=>importMode=v);},
-              )),
-              const SizedBox(width:8),
-              FilledButton.icon(
+              ),
+              action:FilledButton.icon(
                 key:const ValueKey('motivation_import'),
                 onPressed:busy?null:()=>unawaited(_import()),
                 icon:const Icon(Icons.add),
                 label:const Text('Importar')),
-            ]),
+            ),
             const SizedBox(height:16),
             if(player.currentTrack!=null)...[
               _player(),
@@ -733,16 +734,17 @@ class _MotivationPageState extends State<MotivationPage> {
               ),
               const SizedBox(height:16),
             ],
-            Row(children:[
-              Expanded(child:Text('Colecciones',
-                style:AppTypography.headlineMedium)),
-              TextButton.icon(
+            MotivationResponsiveActionRow(
+              key:const ValueKey('motivation_responsive_collections'),
+              leading:Text('Colecciones',
+                style:AppTypography.headlineMedium),
+              action:TextButton.icon(
                 key:const ValueKey('motivation_playlist_ideas'),
                 onPressed:()=>unawaited(_choosePlaylistIdeas()),
                 icon:const Icon(Icons.auto_awesome_outlined),
                 label:const Text('Ideas de listas'),
               ),
-            ]),
+            ),
             if(library.tracks.isNotEmpty)
               Align(
                 alignment:Alignment.centerLeft,
@@ -764,15 +766,21 @@ class _MotivationPageState extends State<MotivationPage> {
                   _filter('playlist:'+p.id,p.title),
               ])),
             if(selection.startsWith('playlist:'))
-              Row(mainAxisAlignment:MainAxisAlignment.end,children:[
-                TextButton.icon(
-                  onPressed:()=>unawaited(_reorderCurrentPlaylist()),
-                  icon:const Icon(Icons.drag_handle),
-                  label:const Text('Ordenar')),
-                TextButton.icon(onPressed:()=>unawaited(_deleteList()),
-                  icon:const Icon(Icons.delete_outline),
-                  label:const Text('Eliminar lista')),
-              ]),
+              Wrap(
+                key:const ValueKey('motivation_playlist_wrap_actions'),
+                alignment:WrapAlignment.end,
+                spacing:AppSpacing.sm,
+                runSpacing:AppSpacing.xs,
+                children:[
+                  TextButton.icon(
+                    onPressed:()=>unawaited(_reorderCurrentPlaylist()),
+                    icon:const Icon(Icons.drag_handle),
+                    label:const Text('Ordenar')),
+                  TextButton.icon(onPressed:()=>unawaited(_deleteList()),
+                    icon:const Icon(Icons.delete_outline),
+                    label:const Text('Eliminar lista')),
+                ],
+              ),
             const SizedBox(height:12),
             TextField(
               key:const ValueKey('motivation_local_search'),
@@ -810,12 +818,14 @@ class _MotivationPageState extends State<MotivationPage> {
               ]),
             ),
             const SizedBox(height:12),
-            Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
-              Text('Archivos ('+tracks.length.toString()+')',
+            MotivationResponsiveActionRow(
+              key:const ValueKey('motivation_responsive_files'),
+              leading:Text('Archivos ('+tracks.length.toString()+')',
                 style:AppTypography.headlineMedium),
-              TextButton.icon(onPressed:()=>unawaited(_createPlaylist()),
+              action:TextButton.icon(
+                onPressed:()=>unawaited(_createPlaylist()),
                 icon:const Icon(Icons.add),label:const Text('Crear lista')),
-            ]),
+            ),
             if(tracks.isEmpty)
               Padding(padding:const EdgeInsets.symmetric(vertical:40),
                 child:Column(children:[
