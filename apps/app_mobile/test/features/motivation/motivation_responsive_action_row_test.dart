@@ -34,6 +34,7 @@ void main() {
                     child:Column(children:[
                       MotivationResponsiveActionRow(
                         leading:DropdownButtonFormField<String>(
+                          isExpanded:true,
                           initialValue:'discipline',
                           decoration:const InputDecoration(labelText:'Modo'),
                           items:const [
@@ -93,9 +94,11 @@ void main() {
               compact?findsOneWidget:findsNothing);
             expect(find.byKey(const ValueKey('motivation_import_inline')),
               compact?findsNothing:findsOneWidget);
-            expect(tester.takeException(),isNull,
+            final layoutError=tester.takeException();
+            expect(layoutError,isNull,
               reason:'width=$width scale=$scale '
-                'brightness=${variant.$1} oled=${variant.$2} accent=$accent');
+                'brightness=${variant.$1} oled=${variant.$2} accent=$accent'
+                '\n${layoutError?.toString()}');
           }
         }
       }
@@ -111,6 +114,7 @@ void main() {
     expect(page,contains("ValueKey('motivation_responsive_files')"));
     expect(page,contains("ValueKey('motivation_playlist_wrap_actions')"));
     expect(page,contains('MotivationResponsiveActionRow('));
+    expect(page,contains('isExpanded:true,'));
     expect(page.split('compactAction:').length-1,greaterThanOrEqualTo(3));
     expect(page,contains('runSpacing:AppSpacing.xs'));
   });
