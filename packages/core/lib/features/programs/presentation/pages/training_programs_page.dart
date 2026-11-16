@@ -71,7 +71,6 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
     final routines = ref.watch(routineListProvider);
     final profile=ref.watch(userExperienceProfileProvider).value;
     final isMinor=(profile?.ageAt(DateTime.now()) ?? 99)<18;
-    final ageUnknown=profile!=null && profile.ageAt(DateTime.now())==null;
     final youthGuidance=YouthTrainingGuidance.forProfile(
       profile,DateTime.now());
     final routineById = <String, Routine>{

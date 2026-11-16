@@ -15,6 +15,7 @@ import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart';
 import '../../../progress/presentation/pages/progress_page.dart';
 import '../../../motivation/presentation/motivation_page.dart';
+import '../../../motivation/presentation/widgets/motivation_home_mini_player.dart';
 import '../../../routines/presentation/pages/routines_page.dart';
 import '../../../tools/presentation/training_tools_page.dart';
 import 'program_dashboard_page.dart';
@@ -117,7 +118,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
       ),
       bottomNavigationBar: SafeArea(
-        child: Padding(
+        child: Column(
+          mainAxisSize:MainAxisSize.min,
+          children:[
+            // Real layout space, not an OverlayEntry over workouts or tables.
+            // Playback survives tab changes because the engine is shared.
+            const MotivationHomeMiniPlayer(),
+            Padding(
           // Lower the dock 8 logical pixels while retaining the iPhone home-indicator safe area.
           padding: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
           child: _BottomBarSurface(
@@ -160,6 +167,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
+        ),
+          ],
         ),
       ),
     );
