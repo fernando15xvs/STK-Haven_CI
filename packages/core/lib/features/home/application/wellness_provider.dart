@@ -2,6 +2,7 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/daily_steps_state.dart';
 import 'package:core/domain/models/hydration_preferences.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
+import 'package:core/domain/models/wellness_goal_change.dart';
 import 'package:core/features/home/data/wellness_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -16,9 +17,20 @@ class HydrationPreferencesNotifier extends Notifier<HydrationPreferences> {
   @override
   HydrationPreferences build() => _repository.getHydrationPreferences();
 
-  Future<void> setTargetMl(int value) async {
-    // Do not present an unpersisted goal as saved when Hive write fails.
-    final updated=state.copyWith(targetMl:value.clamp(1000,5000).toInt());
+  Future<void> setTargetMl(int value, {
+    WellnessGoalChangeSource source=WellnessGoalChangeSource.preferences,
+  }) async {
+    final target=value.clamp(1000,5000).toInt();
+    if(target==state.targetMl)return;
+    // The target and its audit share one preference JSON write. Failed
+    // persistence cannot leave a false on-screen change or a phantom event.
+    final updated=state.copyWith(
+      targetMl:target,
+      goalChanges:WellnessGoalChange.append(state.goalChanges,
+        WellnessGoalChange(
+          previousTarget:state.targetMl,newTarget:target,
+          changedAt:DateTime.now().toUtc(),source:source)),
+    );
     await _repository.saveHydrationPreferences(updated);
     state=updated;
   }
@@ -52,9 +64,17 @@ class StepGoalPreferencesNotifier extends Notifier<StepGoalPreferences> {
   @override
   StepGoalPreferences build() => _repository.getStepGoalPreferences();
 
-  Future<void> setTargetSteps(int value) async {
+  Future<void> setTargetSteps(int value, {
+    WellnessGoalChangeSource source=WellnessGoalChangeSource.preferences,
+  }) async {
+    final target=value.clamp(1000,50000).toInt();
+    if(target==state.targetSteps)return;
     final updated=state.copyWith(
-      targetSteps: value.clamp(1000,50000).toInt(),
+      targetSteps:target,
+      goalChanges:WellnessGoalChange.append(state.goalChanges,
+        WellnessGoalChange(
+          previousTarget:state.targetSteps,newTarget:target,
+          changedAt:DateTime.now().toUtc(),source:source)),
     );
     await _repository.saveStepGoalPreferences(updated);
     state=updated;

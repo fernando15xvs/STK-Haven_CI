@@ -1,3 +1,5 @@
+import 'wellness_goal_change.dart';
+
 enum StepReminderCadence {
   gentle,
   balanced,
@@ -7,22 +9,26 @@ class StepGoalPreferences {
   final int targetSteps;
   final bool reminderEnabled;
   final StepReminderCadence reminderCadence;
+  final List<WellnessGoalChange> goalChanges;
 
   const StepGoalPreferences({
     this.targetSteps = 10000,
     this.reminderEnabled = false,
     this.reminderCadence = StepReminderCadence.balanced,
+    this.goalChanges = const <WellnessGoalChange>[],
   });
 
   StepGoalPreferences copyWith({
     int? targetSteps,
     bool? reminderEnabled,
     StepReminderCadence? reminderCadence,
+    List<WellnessGoalChange>? goalChanges,
   }) {
     return StepGoalPreferences(
       targetSteps: targetSteps ?? this.targetSteps,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       reminderCadence: reminderCadence ?? this.reminderCadence,
+      goalChanges: goalChanges ?? this.goalChanges,
     );
   }
 
@@ -30,6 +36,7 @@ class StepGoalPreferences {
         'targetSteps': targetSteps,
         'reminderEnabled': reminderEnabled,
         'reminderCadence': reminderCadence.name,
+        'goalChanges': goalChanges.map((e)=>e.toJson()).toList(),
       };
 
   factory StepGoalPreferences.fromJson(Map<String, dynamic> json) {
@@ -44,6 +51,7 @@ class StepGoalPreferences {
       targetSteps: rawTarget.clamp(1000, 50000).toInt(),
       reminderEnabled: json['reminderEnabled'] as bool? ?? false,
       reminderCadence: cadence,
+      goalChanges: WellnessGoalChange.restore(json['goalChanges']),
     );
   }
 }

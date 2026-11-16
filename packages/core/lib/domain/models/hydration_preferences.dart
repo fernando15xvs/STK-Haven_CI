@@ -1,14 +1,19 @@
+import 'wellness_goal_change.dart';
+
 class HydrationPreferences {
   final int targetMl;
   final bool reminderEnabled;
   final int reminderHour;
   final String? lastReminderDate;
+  /// Bounded record of explicitly applied target edits (not intake data).
+  final List<WellnessGoalChange> goalChanges;
 
   const HydrationPreferences({
     this.targetMl = 3000,
     this.reminderEnabled = false,
     this.reminderHour = 18,
     this.lastReminderDate,
+    this.goalChanges = const <WellnessGoalChange>[],
   });
 
   HydrationPreferences copyWith({
@@ -17,6 +22,7 @@ class HydrationPreferences {
     int? reminderHour,
     String? lastReminderDate,
     bool clearLastReminderDate = false,
+    List<WellnessGoalChange>? goalChanges,
   }) {
     return HydrationPreferences(
       targetMl: targetMl ?? this.targetMl,
@@ -25,6 +31,7 @@ class HydrationPreferences {
       lastReminderDate: clearLastReminderDate
           ? null
           : (lastReminderDate ?? this.lastReminderDate),
+      goalChanges: goalChanges ?? this.goalChanges,
     );
   }
 
@@ -33,6 +40,7 @@ class HydrationPreferences {
         'reminderEnabled': reminderEnabled,
         'reminderHour': reminderHour,
         'lastReminderDate': lastReminderDate,
+        'goalChanges': goalChanges.map((e)=>e.toJson()).toList(),
       };
 
   factory HydrationPreferences.fromJson(Map<String, dynamic> json) {
@@ -43,6 +51,7 @@ class HydrationPreferences {
       reminderEnabled: json['reminderEnabled'] as bool? ?? false,
       reminderHour: rawHour.clamp(6, 22).toInt(),
       lastReminderDate: json['lastReminderDate']?.toString(),
+      goalChanges: WellnessGoalChange.restore(json['goalChanges']),
     );
   }
 }

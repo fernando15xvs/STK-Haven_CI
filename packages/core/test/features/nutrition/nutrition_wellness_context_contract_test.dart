@@ -18,7 +18,8 @@ void main(){
     expect(source,contains('Conservar mi meta'));
     expect(source,contains('Aplicar mi elección'));
     expect(source,contains('if(confirmed!=true || !mounted)return;'));
-    expect(source,contains('.setTargetMl(chosen)'));
+    expect(source,contains('.setTargetMl(chosen,'));
+    expect(source,contains('source:WellnessGoalChangeSource.nutritionReview'));
     expect(source,contains('Los pasos, el plan energético y los recordatorios'));
   });
 
@@ -31,7 +32,7 @@ void main(){
     expect(source,contains('Pasos registrados manualmente'));
     expect(source,contains('recentRecordedSteps(days:14)'));
     expect(source,contains('Conservar mi meta'));
-    expect(source,contains('.setTargetSteps(suggestion)'));
+    expect(source,contains('.setTargetSteps(suggestion,'));
     expect(source,contains('al menos 7 días registrados'));
   });
 
@@ -47,6 +48,18 @@ void main(){
     expect(source,contains("if(selected=='steps')await _reviewStepTarget();"));
     expect(source,contains("onPressed:stepSuggestion==null?null:"));
     expect(source,contains('Conservar mis metas'));
+  });
+
+  test('every confirmed change is inspectable with source and date',(){
+    final source=File(
+      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
+    ).readAsStringSync();
+    expect(source,contains("ValueKey('nutrition_wellness_goal_history')"));
+    expect(source,contains('Future<void> _showWellnessGoalHistory() async'));
+    expect(source,contains('water.goalChanges.reversed'));
+    expect(source,contains('steps.goalChanges.reversed'));
+    expect(source,contains('Revisión desde Nutrición'));
+    expect(source,contains('Ajuste manual'));
   });
 
   test('draft energy values are invalidated if age, goal or activity changes',(){

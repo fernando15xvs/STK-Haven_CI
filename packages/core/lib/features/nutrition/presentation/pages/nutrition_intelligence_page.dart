@@ -13,6 +13,7 @@ import 'package:core/features/profile/presentation/providers/user_experience_pro
 import 'package:core/features/home/application/wellness_provider.dart';
 import 'package:core/features/home/application/hydration_provider.dart';
 import 'package:core/features/nutrition/application/wellness_goal_suggestions.dart';
+import 'package:core/domain/models/wellness_goal_change.dart';
 import 'package:core/features/nutrition/application/food_vision_correction.dart';
 import 'package:core/features/nutrition/data/food_vision_service.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
@@ -542,6 +543,14 @@ class _NutritionIntelligencePageState
               'importan más que la fase nutricional. Tu meta manual se conserva.',
               style:Theme.of(context).textTheme.bodySmall?.copyWith(
                 color:colors.onSurfaceVariant)),
+            if(water.goalChanges.isNotEmpty ||
+               stepPrefs.goalChanges.isNotEmpty)
+              Align(alignment:Alignment.centerLeft,child:TextButton.icon(
+                key:const ValueKey('nutrition_wellness_goal_history'),
+                onPressed:_showWellnessGoalHistory,
+                icon:const Icon(Icons.history_rounded),
+                label:const Text('Ver cambios de mis metas'),
+              )),
             const SizedBox(height:8),
             Align(alignment:Alignment.centerLeft,child:TextButton.icon(
               key:const ValueKey('nutrition_review_water_target'),
@@ -570,6 +579,48 @@ class _NutritionIntelligencePageState
         ),
       ),
     );
+  }
+
+  /// A bounded audit is kept next to each local preference, never uploaded.
+  Future<void> _showWellnessGoalHistory() async {
+    final water=ref.read(hydrationPreferencesProvider);
+    final steps=ref.read(stepGoalPreferencesProvider);
+    final dateFormat=DateFormat('dd/MM/yyyy HH:mm');
+    String description(WellnessGoalChange change,String unit) {
+      final context=change.source==WellnessGoalChangeSource.nutritionReview
+        ?'Revisión desde Nutrición':'Ajuste manual';
+      return '${change.previousTarget} → ${change.newTarget} $unit · '
+        '${dateFormat.format(change.changedAt.toLocal())} · $context';
+    }
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Cambios guardados de mis metas'),
+      content:SingleChildScrollView(child:Column(
+        crossAxisAlignment:CrossAxisAlignment.start,
+        mainAxisSize:MainAxisSize.min,
+        children:[
+          const Text('Solo en este dispositivo. No registra ingestas, '
+            'calorías ni datos clínicos.'),
+          const SizedBox(height:12),
+          Text('Agua',style:Theme.of(ctx).textTheme.titleMedium),
+          if(water.goalChanges.isEmpty)
+            const Text('No hay cambios registrados.')
+          else
+            for(final change in water.goalChanges.reversed)
+              Padding(padding:const EdgeInsets.symmetric(vertical:4),
+                child:Text(description(change,'ml/día'))),
+          const SizedBox(height:12),
+          Text('Pasos',style:Theme.of(ctx).textTheme.titleMedium),
+          if(steps.goalChanges.isEmpty)
+            const Text('No hay cambios registrados.')
+          else
+            for(final change in steps.goalChanges.reversed)
+              Padding(padding:const EdgeInsets.symmetric(vertical:4),
+                child:Text(description(change,'pasos/día'))),
+        ],
+      )),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
+        child:const Text('Cerrar'))],
+    ));
   }
 
   /// Only the user's explicit choice can update a step target.
@@ -602,7 +653,8 @@ class _NutritionIntelligencePageState
     );
     if(apply==true && mounted){
       await ref.read(stepGoalPreferencesProvider.notifier)
-        .setTargetSteps(suggestion);
+        .setTargetSteps(suggestion,
+          source:WellnessGoalChangeSource.nutritionReview);
     }
   }
 
@@ -734,7 +786,8 @@ class _NutritionIntelligencePageState
     );
     if(confirmed!=true || !mounted)return;
     await ref.read(hydrationPreferencesProvider.notifier)
-      .setTargetMl(chosen);
+      .setTargetMl(chosen,
+        source:WellnessGoalChangeSource.nutritionReview);
   }
 
   Widget _buildFoodVision(ColorScheme colors) {
