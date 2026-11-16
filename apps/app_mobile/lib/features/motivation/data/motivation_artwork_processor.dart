@@ -4,10 +4,20 @@ import 'dart:ui' as ui;
 
 /// Offline artwork normalization. Never uploads photos or creates remote URLs.
 ///
-/// Large JPEG/PNG/WebP selections become an efficient 512×512 PNG center crop,
-/// not a full-resolution image decoded on every STK Motivation list row.
-/// This is a deterministic default crop; manual repositioning remains a
-/// separate, explicitly pending interface feature.
+/// JPEG/PNG/WebP selections become 512×512 private PNG artwork, not a
+/// full-resolution picture decoded on every STK Motivation list row.
+/// The focus comes from an optional user-controlled crop preview.
+/// -1 means left/top edge, 0 means centered, and 1 means right/bottom.
+/// The preview and renderer share this exact normalized focus.
+class MotivationCoverFocus {
+  const MotivationCoverFocus({this.x=0,this.y=0});
+  final double x;
+  final double y;
+
+  double get safeX => x.isFinite ? x.clamp(-1,1).toDouble() : 0;
+  double get safeY => y.isFinite ? y.clamp(-1,1).toDouble() : 0;
+}
+
 class MotivationArtworkProcessor {
   const MotivationArtworkProcessor._();
 
@@ -18,6 +28,7 @@ class MotivationArtworkProcessor {
   static Future<void> writeSquareCover({
     required File source,
     required File destination,
+    MotivationCoverFocus focus=const MotivationCoverFocus(),
   }) async {
     final bytes=await source.readAsBytes();
     if(bytes.isEmpty || bytes.length>maxInputBytes){
@@ -30,8 +41,8 @@ class MotivationArtworkProcessor {
       try{
         final shortest=math.min(original.width,original.height).toDouble();
         if(shortest<=0)throw const FormatException('Imagen no válida');
-        final left=(original.width-shortest)/2;
-        final top=(original.height-shortest)/2;
+        final left=(original.width-shortest)*(focus.safeX+1)/2;
+        final top=(original.height-shortest)*(focus.safeY+1)/2;
         final recorder=ui.PictureRecorder();
         final canvas=ui.Canvas(recorder);
         canvas.drawImageRect(
