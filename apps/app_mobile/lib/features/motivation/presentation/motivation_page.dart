@@ -1131,10 +1131,13 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                       mainAxisAlignment:MainAxisAlignment.spaceEvenly,
                       children:[
                         IconButton(
-                          tooltip:player.shuffle?'Desactivar aleatorio':'Activar aleatorio',
-                          onPressed:()=>unawaited(player.toggleShuffle()),
+                          tooltip:player.queue.length<2
+                            ?'El modo aleatorio requiere dos pistas'
+                            :(player.shuffleActive?'Desactivar aleatorio':'Activar aleatorio'),
+                          onPressed:player.queue.length<2?null:
+                            ()=>unawaited(player.toggleShuffle()),
                           icon:Icon(Icons.shuffle_rounded,
-                            color:player.shuffle?colors.primary:colors.textSecondary)),
+                            color:player.shuffleActive?colors.primary:colors.textSecondary)),
                         IconButton(
                           tooltip:'Anterior',
                           onPressed:()=>unawaited(player.previous()),

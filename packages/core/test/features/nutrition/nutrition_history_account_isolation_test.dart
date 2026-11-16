@@ -58,6 +58,22 @@ void main(){
     expect(ownerB.hasLegacyEntries,isFalse);
   });
 
+  test('retry after copied-but-not-deleted legacy entry is idempotent',()async{
+    final legacy=NutritionHistoryRepository(box);
+    final owner=NutritionHistoryRepository(box,ownerId:'user-A');
+    await legacy.save(entry('retry'));
+    // Simulate a process interruption after the owned copy was saved.
+    final snapshot=entry('retry').toJson()
+      ..['stkImportedLegacyKey']='nutrition_food_history::retry';
+    await box.put('stk_nutrition_food_history_v2::user-A::retry',snapshot);
+    expect(owner.hasLegacyEntries,isTrue);
+    expect(await owner.importLegacyEntries(),1);
+    expect(owner.getEntries().map((e)=>e.id),['retry']);
+    expect(legacy.getEntries(),isEmpty);
+    expect(await owner.importLegacyEntries(),0);
+    expect(owner.getEntries(),hasLength(1));
+  });
+
   test('legacy collisions cannot overwrite an existing account entry',()async{
     final legacy=NutritionHistoryRepository(box);
     final owner=NutritionHistoryRepository(box,ownerId:'existing');

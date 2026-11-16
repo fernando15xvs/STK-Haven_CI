@@ -56,6 +56,31 @@ void main() {
       expect(estimate.targetHigh, greaterThanOrEqualTo(estimate.targetLow));
     });
 
+    test('rejects non-finite adult measurements before doing arithmetic', () {
+      for(final weight in <double>[double.nan,double.infinity,double.negativeInfinity]) {
+        expect(
+          () => planner.calculate(AdultEnergyProfile(
+            ageYears:30,heightCm:170,weightKg:weight,
+            equationSex:EnergyEquationSex.female,
+            activityLevel:EnergyActivityLevel.light,
+            goal:EnergyGoal.maintenance,
+          )),
+          throwsA(isA<AdultEnergyPlanningException>()),
+        );
+      }
+      for(final height in <double>[double.nan,double.infinity,double.negativeInfinity]) {
+        expect(
+          () => planner.calculate(AdultEnergyProfile(
+            ageYears:30,heightCm:height,weightKg:70,
+            equationSex:EnergyEquationSex.female,
+            activityLevel:EnergyActivityLevel.light,
+            goal:EnergyGoal.maintenance,
+          )),
+          throwsA(isA<AdultEnergyPlanningException>()),
+        );
+      }
+    });
+
     test('rejects personalized calorie goals for minors', () {
       expect(
         () => planner.calculate(

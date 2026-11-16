@@ -22,8 +22,11 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
     _subscriptions.add(audio.playerStateStream.listen((_)=>notifyListeners()));
     _subscriptions.add(audio.durationStream.listen((_)=>notifyListeners()));
     _subscriptions.add(audio.errorStream.listen((e){
-      error=e.message;
-      notifyListeners();
+      // Decoder exceptions may contain a user's private local file path.
+      // Never show raw native error messages in the player or snackbar.
+      error='No se pudo reproducir el archivo. '
+        'Comprueba si su formato es compatible.';
+      unawaited(_clearFailedPlayback());
     }));
   }
   @override
@@ -76,6 +79,8 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   /// just_audio can keep playing=true after the final sample has completed.
   bool get completed => audio.processingState == ProcessingState.completed;
   bool get playing => audio.playing && !completed;
+  /// A one-track queue cannot be shuffled, regardless of saved preference.
+  bool get shuffleActive => shuffle && _queue.length > 1;
   Duration get position=>audio.position;
   Duration? get duration=>audio.duration;
   List<MotivationTrack> get queue=>List.unmodifiable(_queue);
@@ -218,6 +223,17 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// Clear a broken native source without exposing a private path or leaving
+  /// a stale track in Now Playing. A failure never triggers autoplay.
+  Future<void> _clearFailedPlayback() async {
+    try {
+      await audio.stop();
+    } catch (_) { /* Keep the UI safely stopped even if native stop fails. */ }
+    _queue=[];
+    _original=[];
+    notifyListeners();
+  }
+
   Future<void> setRepeat(MotivationRepeat value) async {
     if(repeat==value)return;
     final current=currentTrack;
@@ -246,6 +262,8 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> toggleShuffle() async {
+    // Do not advertise random playback when only one track is available.
+    if(_queue.length<2)return;
     shuffle=!shuffle;
     await audio.setShuffleModeEnabled(shuffle && _queue.length>1);
     final prefs=await SharedPreferences.getInstance();

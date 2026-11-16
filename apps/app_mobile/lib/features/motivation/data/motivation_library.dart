@@ -251,7 +251,14 @@ class MotivationLibrary extends ChangeNotifier {
     final old=previous.artworkFileName;
     if(old==null)return;
     _tracks[idx]=previous.copyWith(clearArtwork:true);
-    await _changed();
+    try{
+      await _changed();
+    }catch(_){
+      // Keep the old visible artwork when metadata persistence fails.
+      _tracks[idx]=previous;
+      notifyListeners();
+      rethrow;
+    }
     final file=File(p.join(_directory!.path,old));
     if(await file.exists())await file.delete();
   }
@@ -354,13 +361,23 @@ class MotivationLibrary extends ChangeNotifier {
   Future<void> removeTrack(String id) async {
     final i=_tracks.indexWhere((t)=>t.id==id);
     if(i<0)return;
+    final originalTracks=List<MotivationTrack>.of(_tracks);
+    final originalPlaylists=List<MotivationPlaylist>.of(_playlists);
     final t=_tracks.removeAt(i);
     for(var k=0;k<_playlists.length;k++){
       final list=_playlists[k];
       _playlists[k]=MotivationPlaylist(id:list.id,title:list.title,
         trackIds:list.trackIds.where((x)=>x!=id).toList());
     }
-    await _changed();
+    try{
+      await _changed();
+    }catch(_){
+      // Never delete the media while its removal failed to persist.
+      _tracks..clear()..addAll(originalTracks);
+      _playlists..clear()..addAll(originalPlaylists);
+      notifyListeners();
+      rethrow;
+    }
     final file=File(filePath(t));
     if(await file.exists())await file.delete();
     for(final name in [t.artworkFileName,t.thumbnailFileName]){

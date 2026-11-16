@@ -28,5 +28,11 @@ void main() {
     expect(playback, contains('MotivationRepeat.one=>LoopMode.one'));
     expect(playback, contains('MotivationRepeat.all=>LoopMode.all'));
     expect(playback, contains('await audio.setShuffleModeEnabled'));
+    expect(playback, contains('bool get shuffleActive => shuffle && _queue.length > 1'));
+    expect(playback, contains('if(_queue.length<2)return;'));
+    final page=File('lib/features/motivation/presentation/motivation_page.dart').readAsStringSync();
+    expect(page,contains('El modo aleatorio requiere dos pistas'));
+    expect(page,contains('player.shuffleActive'));
+    expect(page,contains('onPressed:player.queue.length<2?null:'));
   });
 }

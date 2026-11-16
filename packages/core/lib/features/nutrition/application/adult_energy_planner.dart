@@ -61,10 +61,12 @@ class AdultEnergyPlanner {
     if (profile.ageYears > 100) {
       throw const AdultEnergyPlanningException('Edad fuera de rango.');
     }
-    if (profile.heightCm < 120 || profile.heightCm > 230) {
+    if (!profile.heightCm.isFinite ||
+        profile.heightCm < 120 || profile.heightCm > 230) {
       throw const AdultEnergyPlanningException('Estatura fuera de rango.');
     }
-    if (profile.weightKg < 35 || profile.weightKg > 300) {
+    if (!profile.weightKg.isFinite ||
+        profile.weightKg < 35 || profile.weightKg > 300) {
       throw const AdultEnergyPlanningException('Peso fuera de rango.');
     }
   }

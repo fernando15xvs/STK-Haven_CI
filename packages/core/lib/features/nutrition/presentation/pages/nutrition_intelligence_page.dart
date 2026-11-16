@@ -58,7 +58,8 @@ class _NutritionIntelligencePageState
   final _dishHintController = TextEditingController();
 
   EnergyEquationSex? _equationSex;
-  EnergyActivityLevel _activity = EnergyActivityLevel.moderate;
+  // No fabricated activity level: the user must confirm everyday activity.
+  EnergyActivityLevel? _activity;
   EnergyGoal _goal = EnergyGoal.maintenance;
   EnergyEstimate? _energyEstimate;
   String? _calculationMeasurementIds;
@@ -296,7 +297,11 @@ class _NutritionIntelligencePageState
             const SizedBox(height: 12),
             DropdownButtonFormField<EnergyActivityLevel>(
               value: _activity,
-              decoration: const InputDecoration(labelText: 'Actividad habitual'),
+              hint: const Text('Selecciona tu actividad'),
+              decoration: const InputDecoration(
+                labelText: 'Actividad habitual',
+                helperText: 'Incluye también tu actividad fuera del entrenamiento.',
+              ),
               items: const [
                 DropdownMenuItem(
                   value: EnergyActivityLevel.sedentary,
@@ -326,6 +331,15 @@ class _NutritionIntelligencePageState
                 });
               },
             ),
+            if(demographic?.trainingDaysPerWeek case final days?)
+              Padding(
+                padding:const EdgeInsets.only(top:6),
+                child:Text('Tu perfil indica $days días de entrenamiento a la '
+                  'semana. Eso no determina por sí solo tu actividad diaria; '
+                  'selecciona el nivel que mejor te represente.',
+                  style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color:colors.onSurfaceVariant)),
+              ),
             const SizedBox(height: 12),
             DropdownButtonFormField<EnergyGoal>(
               value: _goal,
@@ -1076,12 +1090,17 @@ class _NutritionIntelligencePageState
       if (equationSex == null) {
         throw const FormatException('Selecciona el parámetro de la ecuación.');
       }
+      final activity=_activity;
+      if(activity==null){
+        throw const FormatException(
+          'Selecciona tu actividad habitual antes de calcular.');
+      }
       final profile=AdultEnergyProfile(
         ageYears: age,
         heightCm: height,
         weightKg: weight,
         equationSex: equationSex,
-        activityLevel: _activity,
+        activityLevel: activity,
         goal: _goal,
       );
       final estimate = const AdultEnergyPlanner().calculate(profile);

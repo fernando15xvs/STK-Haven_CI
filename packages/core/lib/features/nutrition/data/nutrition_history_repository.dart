@@ -5,6 +5,7 @@ class NutritionHistoryRepository {
   static const String entryPrefix = 'nutrition_food_history::';
   static const int maxEntries = 100;
   static const String scopedPrefix = 'stk_nutrition_food_history_v2::';
+  static const String _legacySourceKey = 'stkImportedLegacyKey';
 
   final Box<dynamic> _box;
   final String _prefix;
@@ -24,6 +25,18 @@ class NutritionHistoryRepository {
         .where((key)=>key.startsWith(entryPrefix)).toList();
     final moved=<String>[];
     for(final key in oldKeys){
+      // The previous import may have copied this record but crashed before
+      // removing its unowned origin. Reuse that copy, never clone it again.
+      final alreadyCopied=_box.keys.whereType<String>()
+        .where((candidate)=>candidate.startsWith(_prefix))
+        .any((candidate){
+          final value=_box.get(candidate);
+          return value is Map && value[_legacySourceKey]==key;
+        });
+      if(alreadyCopied){
+        moved.add(key);
+        continue;
+      }
       final raw=_box.get(key);
       if(raw is! Map)continue;
       try{
@@ -43,7 +56,8 @@ class NutritionHistoryRepository {
           dishHint:old.dishHint,estimate:old.estimate,
           isFavorite:old.isFavorite);
         // Write owned copy first; remove legacy only after every write.
-        await _box.put('$_prefix$nextId',movedEntry.toJson());
+        await _box.put('$_prefix$nextId',
+          movedEntry.toJson()..[_legacySourceKey]=key);
         moved.add(key);
       }catch(_){/* Unreadable legacy bytes are never deleted here. */}
     }
@@ -97,7 +111,13 @@ class NutritionHistoryRepository {
     if(data is! Map)return;
     final entry=NutritionHistoryEntry.fromJson(
       Map<String,dynamic>.from(data));
-    await _box.put(key,entry.copyWith(isFavorite:favorite).toJson());
+    // Preserve migration provenance if a user changes their favorite state
+    // while an interrupted legacy cleanup still needs a retry.
+    final next=entry.copyWith(isFavorite:favorite).toJson();
+    if(data[_legacySourceKey] is String){
+      next[_legacySourceKey]=data[_legacySourceKey];
+    }
+    await _box.put(key,next);
   }
 
   Future<void> delete(String id) => _box.delete('$_prefix$id');

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_tracker/features/motivation/data/motivation_library.dart';
 
@@ -21,6 +23,15 @@ void main() {
     expect(restored.artworkFileName,'art_safe.webp');
     expect(restored.copyWith(title:'Nuevo').artworkFileName,'art_safe.webp');
     expect(restored.copyWith(clearArtwork:true).artworkFileName,isNull);
+  });
+
+  test('failed metadata writes do not delete media or previous cover', () {
+    final source=File('lib/features/motivation/data/motivation_library.dart')
+        .readAsStringSync();
+    expect(source,contains('_tracks[idx]=previous;'));
+    expect(source,contains('_tracks..clear()..addAll(originalTracks);'));
+    expect(source,contains('_playlists..clear()..addAll(originalPlaylists);'));
+    expect(source,contains('Never delete the media while its removal failed'));
   });
 
   test('malicious artwork paths are rejected', () {

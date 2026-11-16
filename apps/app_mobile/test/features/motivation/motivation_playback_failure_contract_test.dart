@@ -14,6 +14,16 @@ void main(){
     expect(source,isNot(contains('Comprueba el códec:')));
   });
 
+  test('asynchronous decoder errors never expose local file paths',(){
+    final source=File(
+      'lib/features/motivation/application/motivation_playback.dart',
+    ).readAsStringSync();
+    expect(source,contains('audio.errorStream.listen'));
+    expect(source,isNot(contains('error=e.message')));
+    expect(source,contains('unawaited(_clearFailedPlayback())'));
+    expect(source,contains('Future<void> _clearFailedPlayback() async'));
+  });
+
   test('library shows a user error instead of opening an empty player',(){
     final source=File(
       'lib/features/motivation/presentation/motivation_page.dart',
