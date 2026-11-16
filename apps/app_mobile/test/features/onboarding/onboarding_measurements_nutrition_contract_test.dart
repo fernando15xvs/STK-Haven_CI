@@ -18,6 +18,27 @@ void main() {
     expect(source, isNot(contains('stk_has_adult_nutrition_access')));
   });
 
+  test('optional demographic consent is explicit and never grants adult access',(){
+    final page=File(
+      'lib/features/onboarding/presentation/pages/onboarding_page.dart',
+    ).readAsStringSync();
+    expect(page,contains('bool _demographicConsent=false;'));
+    expect(page,contains("ValueKey('onboarding_optional_demographic_consent')"));
+    expect(page,contains('Autorizo guardar estos datos opcionales'));
+    expect(page,contains('Pueden aparecer en una copia'));
+    expect(page,contains('Puedes continuar sin ellos.'));
+    expect(page,contains('dateOfBirth: _demographicConsent?_birthDate:null'));
+    expect(page,contains('genderIdentity: _demographicConsent?_genderIdentity:null'));
+    expect(page,contains('equationSexForEnergy: _demographicConsent?_equationSexForEnergy:null'));
+    expect(page,contains('optionalDemographicsConsented:_demographicConsent'));
+    expect(page,contains('optionalDemographicsConsentedAt:_demographicConsentedAt'));
+    expect(page,contains('onPressed: !_demographicConsent?null:'));
+    expect(page,contains('onChanged: !_demographicConsent?null:'));
+    expect(page,contains("_demographicConsent?'Autorizados':'Omitidos'"));
+    expect(page,isNot(contains('stk_set_adult_nutrition_verification(')));
+    expect(page,isNot(contains('service_role')));
+  });
+
   test('onboarding progress and welcome use shared Outfit tokens', () {
     final page=File(
       'lib/features/onboarding/presentation/pages/onboarding_page.dart',

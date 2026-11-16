@@ -40,6 +40,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   DateTime? _birthDate;
   GenderIdentity? _genderIdentity;
   EnergyEquationSex? _equationSexForEnergy;
+  bool _demographicConsent=false;
+  DateTime? _demographicConsentedAt;
   bool _saveFirstMeasurement = false;
   final _weightController = TextEditingController();
   final _heightController = TextEditingController();
@@ -75,9 +77,15 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       workoutRemindersWanted: _remindersWanted,
       faithPreference: _faith,
       habitsEnabled: false,
-      dateOfBirth: _birthDate,
-      genderIdentity: _genderIdentity,
-      equationSexForEnergy: _equationSexForEnergy,
+      dateOfBirth: _demographicConsent?_birthDate:null,
+      genderIdentity: _demographicConsent?_genderIdentity:null,
+      equationSexForEnergy: _demographicConsent?_equationSexForEnergy:null,
+      optionalDemographicsConsented:_demographicConsent,
+      optionalDemographicsConsentedAt:_demographicConsentedAt,
+      optionalDemographicsUpdatedAt:_demographicConsent &&
+        (_birthDate!=null || _genderIdentity!=null ||
+         _equationSexForEnergy!=null)
+        ?DateTime.now():null,
       onboardingVersion: UserExperienceProfile.currentOnboardingVersion,
     );
   }
@@ -527,6 +535,26 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           'La usamos para adaptar la experiencia, no como prueba de mayoría de edad.',
           style: AppTypography.bodySmall.copyWith(color: colors.textSecondary),
         ),
+        const SizedBox(height:8),
+        CheckboxListTile(
+          key:const ValueKey('onboarding_optional_demographic_consent'),
+          contentPadding:EdgeInsets.zero,
+          title:const Text('Autorizo guardar estos datos opcionales'),
+          subtitle:const Text('Se usan para adaptar la experiencia y '
+            'cálculos adultos opcionales. Pueden aparecer en una copia '
+            'de seguridad que exportes o subas voluntariamente. '
+            'No verifican la mayoría de edad. Puedes continuar sin ellos.'),
+          value:_demographicConsent,
+          onChanged:(value)=>setState((){
+            _demographicConsent=value??false;
+            _demographicConsentedAt=_demographicConsent?DateTime.now():null;
+            if(!_demographicConsent){
+              _birthDate=null;
+              _genderIdentity=null;
+              _equationSexForEnergy=null;
+            }
+          }),
+        ),
         const SizedBox(height: 8),
         OutlinedButton.icon(
           key: const ValueKey('onboarding_birth_date'),
@@ -536,7 +564,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               : '${dob.day.toString().padLeft(2, '0')}/'
                 '${dob.month.toString().padLeft(2, '0')}/${dob.year}'
                 ' · ${age ?? '?'} años'),
-          onPressed: () async {
+          onPressed: !_demographicConsent?null:() async {
             final now = DateTime.now();
             final picked = await showDatePicker(
               context: context,
@@ -578,7 +606,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             DropdownMenuItem(value: GenderIdentity.preferNotToSay,
               child: Text('Prefiero no decirlo')),
           ],
-          onChanged: (value) => setState(() => _genderIdentity = value),
+          onChanged: !_demographicConsent?null:
+            (value) => setState(() => _genderIdentity = value),
         ),
         const SizedBox(height: AppSpacing.md),
         DropdownButtonFormField<EnergyEquationSex>(
@@ -594,7 +623,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             DropdownMenuItem(value: EnergyEquationSex.male,
               child: Text('Referencia masculina')),
           ],
-          onChanged: (value) => setState(() => _equationSexForEnergy = value),
+          onChanged: !_demographicConsent?null:
+            (value) => setState(() => _equationSexForEnergy = value),
         ),
         const SizedBox(height: AppSpacing.lg),
         Text('Primer registro en Medidas (opcional)',
@@ -711,6 +741,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     _environmentLabel(_environment),
                   ),
                   _summaryRow(context, 'Unidad de peso', _weightUnit.label),
+                  _summaryRow(context,'Datos demográficos opcionales',
+                    _demographicConsent?'Autorizados':'Omitidos'),
                   if (_birthDate != null)
                     _summaryRow(context, 'Edad indicada',
                       '${_buildProfile().ageAt(DateTime.now()) ?? 'Sin dato'} años'),
