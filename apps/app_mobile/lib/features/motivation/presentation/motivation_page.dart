@@ -1099,8 +1099,8 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                         final duration=player.duration??Duration.zero;
                         final max=duration.inMilliseconds;
                         final current=position.inMilliseconds.clamp(0,max);
-                        final preview=_scrubMs?.clamp(0,max.toDouble()) ??
-                          current.toDouble();
+                        final preview=(_scrubMs?.clamp(0,max.toDouble()) ??
+                          current.toDouble()).toDouble();
                         return Column(children:[
                           Slider(
                             key:const ValueKey('motivation_scrubber'),
