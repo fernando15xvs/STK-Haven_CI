@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/motivation_library.dart';
 import 'motivation_sleep_timer.dart';
 import 'motivation_resume_snapshot.dart';
+import 'motivation_queue_navigation.dart';
 
 /// One shared native player survives navigation away from the library page.
 /// MP4 is used as a media source for its audio track while in background.
@@ -84,7 +85,11 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   /// A stop-after-one queue or the last non-looping track has no next item.
   /// The native player remains the source of truth for shuffled order.
   bool get canSkipNext =>
-      repeat != MotivationRepeat.stop && audio.hasNext;
+      MotivationQueueNavigation.nextIndex(
+        repeat:repeat,
+        currentIndex:audio.currentIndex,
+        effectiveIndices:audio.effectiveIndices,
+      )!=null;
   bool get canSkipPrevious => currentTrack != null;
   Duration get position=>audio.position;
   Duration? get duration=>audio.duration;
@@ -298,10 +303,23 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> next() async {
-    if(canSkipNext){
-      await audio.seekToNext();
+    final nextIndex=MotivationQueueNavigation.nextIndex(
+      repeat:repeat,
+      currentIndex:audio.currentIndex,
+      effectiveIndices:audio.effectiveIndices,
+    );
+    if(nextIndex==null)return;
+    try{
+      // seekToNext() follows automatic repeat-one and can seek back to the
+      // same track. Explicit skip must instead follow the actual queue order.
+      await audio.seek(Duration.zero,index:nextIndex);
+      if(_queue.isEmpty)return;
       await saveResume();
-      if(!audio.playing)unawaited(audio.play());
+      if(!playing)unawaited(audio.play());
+    }catch(_){
+      // An interrupted seek (e.g., deletion during playback) must not leak
+      // a native path or break the rest of the library's controls.
+      error='No se pudo avanzar a la siguiente pista.';
     }
     notifyListeners();
   }

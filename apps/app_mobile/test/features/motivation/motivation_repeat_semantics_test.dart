@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_tracker/features/motivation/data/motivation_library.dart';
+import 'package:gym_tracker/features/motivation/application/motivation_queue_navigation.dart';
 
 void main() {
   test('four repeat modes tell the user their actual playback behavior',(){
@@ -30,8 +31,9 @@ void main() {
       'lib/features/motivation/application/motivation_playback.dart',
     ).readAsStringSync();
     expect(playback,contains('bool get canSkipNext =>'));
-    expect(playback,contains('repeat != MotivationRepeat.stop && audio.hasNext'));
-    expect(playback,contains('if(canSkipNext){'));
+    expect(playback,contains('MotivationQueueNavigation.nextIndex('));
+    expect(playback,contains('effectiveIndices:audio.effectiveIndices'));
+    expect(playback,contains('await audio.seek(Duration.zero,index:nextIndex);'));
     final page=File(
       'lib/features/motivation/presentation/motivation_page.dart',
     ).readAsStringSync();
@@ -42,6 +44,22 @@ void main() {
     expect(page,contains(r"'Modo: ${player.repeat.label}'"));
     expect(page,contains('Semantics('));
     expect(page,contains('liveRegion:true'));
+  });
+
+  test('manual skip follows actual order under repeat one and shuffle',(){
+    int? next(MotivationRepeat mode,int? index,List<int> order)=>
+      MotivationQueueNavigation.nextIndex(
+        repeat:mode,currentIndex:index,effectiveIndices:order);
+    expect(next(MotivationRepeat.one,0,[0,1,2]),1);
+    expect(next(MotivationRepeat.one,2,[0,1,2]),isNull);
+    expect(next(MotivationRepeat.next,2,[0,1,2]),isNull);
+    expect(next(MotivationRepeat.all,2,[0,1,2]),0);
+    expect(next(MotivationRepeat.all,0,[2,0,1]),1);
+    expect(next(MotivationRepeat.all,1,[2,0,1]),2);
+    expect(next(MotivationRepeat.stop,0,[0,1,2]),isNull);
+    expect(next(MotivationRepeat.one,0,[0]),isNull);
+    expect(next(MotivationRepeat.all,null,[0,1]),isNull);
+    expect(next(MotivationRepeat.all,5,[0,1]),isNull);
   });
 
   test('single-item shuffle and completed UI never impersonate active playback',(){
