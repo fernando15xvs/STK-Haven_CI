@@ -1080,9 +1080,14 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
   Widget build(BuildContext context){
     final c=controller;
     if(!ready || c==null)return Container(
-      height:180,alignment:Alignment.center,
+      // Decoder errors must grow at 200% text, not clip a retry button
+      // inside a fixed 180dp region.
+      constraints:const BoxConstraints(minHeight:180),
+      padding:const EdgeInsets.all(AppSpacing.md),
+      alignment:Alignment.center,
       color:Theme.of(context).colorScheme.surfaceContainer,
-      child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+      child:Column(mainAxisSize:MainAxisSize.min,
+        mainAxisAlignment:MainAxisAlignment.center,children:[
         Icon(_videoFailed?Icons.broken_image_outlined:
           Icons.movie_outlined,size:36),
         if(_videoFailed)...[
