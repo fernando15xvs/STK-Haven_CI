@@ -203,8 +203,16 @@ class MotivationPlayback extends ChangeNotifier with WidgetsBindingObserver {
       // play() completes only when playback ends, so do not await it.
       if(autoPlay)unawaited(audio.play());
       await saveResume();
-    }catch(e){
-      error='No se pudo reproducir este archivo. Comprueba el códec: $e';
+    }catch(_){
+      // An unsupported video codec or a missing file must never leave the
+      // old sound playing under a new track title. Do not show file paths.
+      try{
+        await audio.stop();
+      }catch(_){/* Preserve the original decoding failure. */}
+      _queue=[];
+      _original=[];
+      error='No se pudo reproducir el archivo. '
+        'Comprueba si su formato es compatible.';
       notifyListeners();
     }
     notifyListeners();
