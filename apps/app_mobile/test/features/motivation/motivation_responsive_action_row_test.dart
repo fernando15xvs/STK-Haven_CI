@@ -45,9 +45,14 @@ void main() {
                           onChanged:(_){},
                         ),
                         action:FilledButton.icon(
+                          key:const ValueKey('motivation_import_inline'),
                           onPressed:(){},
                           icon:const Icon(Icons.add),
                           label:const Text('Importar')),
+                        compactAction:FilledButton(
+                          key:const ValueKey('motivation_import_compact'),
+                          onPressed:(){},
+                          child:const Text('Importar')),
                       ),
                       MotivationResponsiveActionRow(
                         leading:Text('Colecciones',
@@ -56,6 +61,9 @@ void main() {
                           onPressed:(){},
                           icon:const Icon(Icons.auto_awesome_outlined),
                           label:const Text('Ideas de listas')),
+                        compactAction:TextButton(
+                          onPressed:(){},
+                          child:const Text('Ideas de listas')),
                       ),
                       MotivationResponsiveActionRow(
                         leading:Text('Archivos (182)',
@@ -64,6 +72,9 @@ void main() {
                           onPressed:(){},
                           icon:const Icon(Icons.add),
                           label:const Text('Crear lista')),
+                        compactAction:TextButton(
+                          onPressed:(){},
+                          child:const Text('Crear lista')),
                       ),
                     ]),
                   ),
@@ -76,7 +87,12 @@ void main() {
               ?'motivation_action_row_stacked'
               :'motivation_action_row_inline')),findsNWidgets(3));
             expect(find.text('Importar'),findsOneWidget);
+            expect(find.text('Ideas de listas'),findsOneWidget);
             expect(find.text('Crear lista'),findsOneWidget);
+            expect(find.byKey(const ValueKey('motivation_import_compact')),
+              compact?findsOneWidget:findsNothing);
+            expect(find.byKey(const ValueKey('motivation_import_inline')),
+              compact?findsNothing:findsOneWidget);
             expect(tester.takeException(),isNull,
               reason:'width=$width scale=$scale '
                 'brightness=${variant.$1} oled=${variant.$2} accent=$accent');
@@ -95,6 +111,7 @@ void main() {
     expect(page,contains("ValueKey('motivation_responsive_files')"));
     expect(page,contains("ValueKey('motivation_playlist_wrap_actions')"));
     expect(page,contains('MotivationResponsiveActionRow('));
+    expect(page.split('compactAction:').length-1,greaterThanOrEqualTo(3));
     expect(page,contains('runSpacing:AppSpacing.xs'));
   });
 }
