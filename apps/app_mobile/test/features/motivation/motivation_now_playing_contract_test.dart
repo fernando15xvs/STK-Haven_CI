@@ -13,6 +13,19 @@ void main() {
     expect(find.text('STK Motivation'), findsOneWidget);
   });
 
+  test('audio cover transitions respect reduce motion without resetting MP4',(){
+    final source=File(
+      'lib/features/motivation/presentation/motivation_page.dart',
+    ).readAsStringSync();
+    expect(source,contains('AnimatedSwitcher('));
+    expect(source,contains('MediaQuery.of(context).disableAnimations'));
+    expect(source,contains("'now_playing_audio_art_"));
+    expect(source,contains("key:const ValueKey('now_playing_video_shared')"));
+    expect(source,contains('semanticFormatterCallback:(v)=>'));
+    expect(source,contains('Comprueba el formato e inténtalo de nuevo.'));
+    expect(source,isNot(contains('No se pudo actualizar la portada: ')));
+  });
+
   test('library tap navigates to dedicated view, not an extra inline video', () {
     final source = File('lib/features/motivation/presentation/motivation_page.dart')
         .readAsStringSync();

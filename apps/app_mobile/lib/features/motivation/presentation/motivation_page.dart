@@ -980,9 +980,10 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                       context,filePath),
                   );
       }
-    }catch(e){
+    }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content:Text('No se pudo actualizar la portada: $e')));
+        const SnackBar(content:Text('No se pudo actualizar la portada. '
+          'Comprueba el formato e inténtalo de nuevo.')));
     }
   }
 
@@ -1079,7 +1080,17 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                             playback:player,
                             maxHeight:artSize,
                           )
-                        :_MotivationArtwork(track:track,size:artSize),
+                        :AnimatedSwitcher(
+                            duration:MediaQuery.of(context).disableAnimations
+                              ?Duration.zero
+                              :const Duration(milliseconds:180),
+                            child:KeyedSubtree(
+                              key:ValueKey('now_playing_audio_art_${track.id}_'
+                                '${track.artworkFileName ?? 'fallback'}'),
+                              child:_MotivationArtwork(
+                                track:track,size:artSize),
+                            ),
+                          ),
                     ),
                     const SizedBox(height:22),
                     Text(track.title,maxLines:2,overflow:TextOverflow.ellipsis,
@@ -1104,6 +1115,9 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                         return Column(children:[
                           Slider(
                             key:const ValueKey('motivation_scrubber'),
+                            semanticFormatterCallback:(v)=>
+                              '${_clock(Duration(milliseconds:v.round()))} '
+                              'de ${_clock(duration)}',
                             value:preview,
                             max:max>0?max.toDouble():1,
                             onChangeStart:max==0?null:(v)=>
