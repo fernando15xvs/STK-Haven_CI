@@ -932,10 +932,15 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
       // A replacement/dispose already owns the old controller cleanup.
       if(!mounted || controller!=c)return;
       await c.setVolume(0);
+      // Native setup can yield while a different file becomes current.
+      // Do not attach subscriptions or publish the stale decoder to cinema.
+      if(!mounted || controller!=c)return;
       // Video has no audible track: just_audio is the only sound clock.
       // Its repeat-one policy must also be applied to the visual decoder.
       await c.setLooping(widget.playback.repeat==MotivationRepeat.one);
+      if(!mounted || controller!=c)return;
       await c.seekTo(widget.playback.position);
+      if(!mounted || controller!=c)return;
       if(widget.playback.playing && visible)unawaited(c.play());
       position=widget.playback.audio.positionStream.listen((pos){
         if(!mounted || controller!=c ||
@@ -952,8 +957,11 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
            (loopJustRestarted || elapsed>const Duration(milliseconds:900))){
           _lastPositionCorrection=now;
           seeking=true;
-          unawaited(c.seekTo(pos).whenComplete(()=>seeking=false)
-            .catchError((Object _){ /* Source was switched. */ }));
+          unawaited(c.seekTo(pos).whenComplete((){
+            // A seek from an obsolete controller must never clear the
+            // new track's in-flight seek flag.
+            if(controller==c)seeking=false;
+          }).catchError((Object _){ /* Source was switched. */ }));
         }
       });
       playing=widget.playback.audio.playerStateStream.listen((state){
