@@ -341,8 +341,10 @@ const authenticatedHandler = withSupabase(
         );
       }
 
-      // Server-side fail-closed guard: non-adult mode never returns numeric
-      // calorie or macro totals even if an upstream model violates the prompt.
+      // Server-side fail-closed guard: descriptive mode never returns
+      // numeric nutrient values or numeric serving weights, even if an
+      // upstream model violates the prompt. The app repeats this sanitizing
+      // step before displaying or saving the response.
       if (!adultNumericNutrition) {
         estimate.caloriesLow = null;
         estimate.caloriesHigh = null;
@@ -361,6 +363,8 @@ const authenticatedHandler = withSupabase(
             }
             return {
               ...(raw as Record<string, unknown>),
+              gramsLow: null,
+              gramsHigh: null,
               caloriesLow: null,
               caloriesHigh: null,
               proteinGramsLow: null,

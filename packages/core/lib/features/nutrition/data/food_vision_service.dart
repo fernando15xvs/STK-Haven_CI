@@ -76,9 +76,14 @@ class FoodVisionService {
       );
     }
 
-    return FoodVisionEstimate.fromJson(
+    final estimate=FoodVisionEstimate.fromJson(
       Map<String, dynamic>.from(rawEstimate),
     );
+    // The request flag is advisory to the backend; the client must also
+    // fail closed if the response accidentally includes adult-only data.
+    // Local birthday / guesswork never enables these values.
+    return adultNumericNutrition
+      ?estimate:estimate.withoutNumericNutrition();
   }
 
   String? _messageFromPayload(dynamic payload) {

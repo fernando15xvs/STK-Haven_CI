@@ -193,27 +193,53 @@ class FoodVisionEstimate {
     required this.disclaimer,
   });
 
-  Map<String, dynamic> toJson() => <String, dynamic>{
-        'dishName': dishName,
-        'items': items.map((item) => item.toJson()).toList(growable: false),
-        'caloriesLow': caloriesLow,
-        'caloriesHigh': caloriesHigh,
-        'proteinGramsLow': proteinGramsLow,
-        'proteinGramsHigh': proteinGramsHigh,
-        'carbsGramsLow': carbsGramsLow,
-        'carbsGramsHigh': carbsGramsHigh,
-        'fatGramsLow': fatGramsLow,
-        'fatGramsHigh': fatGramsHigh,
-        'confidence': confidence.name,
-        'numericNutritionAvailable': numericNutritionAvailable,
-        'assumptions': assumptions,
-        'questions': questions,
-        'disclaimer': disclaimer,
+  /// Retain useful descriptive ingredients, portions and uncertainty while
+  /// stripping every structured numeric nutrition field (including each
+  /// ingredient). Never persist numeric values under descriptive-only access.
+  FoodVisionEstimate withoutNumericNutrition() => FoodVisionEstimate(
+    dishName:dishName,
+    items:List<FoodVisionItem>.unmodifiable([
+      for(final item in items)
+        FoodVisionItem(
+          name:item.name,
+          portionDescription:item.portionDescription,
+          confidence:item.confidence,
+          uncertaintyNote:item.uncertaintyNote,
+        ),
+    ]),
+    confidence:confidence,
+    numericNutritionAvailable:false,
+    assumptions:List<String>.unmodifiable(assumptions),
+    questions:List<String>.unmodifiable(questions),
+    disclaimer:disclaimer,
+  );
+
+  Map<String, dynamic> toJson() {
+    // Persisting a legacy/inconsistent object must not silently preserve
+    // adult-only numbers under a descriptive-only flag.
+    final safe=numericNutritionAvailable?this:withoutNumericNutrition();
+    return <String, dynamic>{
+        'dishName': safe.dishName,
+        'items': safe.items.map((item) => item.toJson()).toList(growable: false),
+        'caloriesLow': safe.caloriesLow,
+        'caloriesHigh': safe.caloriesHigh,
+        'proteinGramsLow': safe.proteinGramsLow,
+        'proteinGramsHigh': safe.proteinGramsHigh,
+        'carbsGramsLow': safe.carbsGramsLow,
+        'carbsGramsHigh': safe.carbsGramsHigh,
+        'fatGramsLow': safe.fatGramsLow,
+        'fatGramsHigh': safe.fatGramsHigh,
+        'confidence': safe.confidence.name,
+        'numericNutritionAvailable': safe.numericNutritionAvailable,
+        'assumptions': safe.assumptions,
+        'questions': safe.questions,
+        'disclaimer': safe.disclaimer,
       };
+  }
 
   factory FoodVisionEstimate.fromJson(Map<String, dynamic> json) {
     final rawItems = json['items'];
-    return FoodVisionEstimate(
+    final parsed=FoodVisionEstimate(
       dishName: '${json['dishName'] ?? ''}',
       items: rawItems is List
           ? rawItems
@@ -244,6 +270,10 @@ class FoodVisionEstimate {
       questions: _stringList(json['questions']),
       disclaimer: '${json['disclaimer'] ?? ''}',
     );
+    // Bad or legacy payloads can still contain numeric fields when the grant
+    // flag is false. Strip them during deserialization, not only in widgets.
+    return parsed.numericNutritionAvailable
+      ?parsed:parsed.withoutNumericNutrition();
   }
 }
 
