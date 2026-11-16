@@ -85,6 +85,29 @@ class NutritionHistoryRepository {
     return entries;
   }
 
+  /// User-saved dish names only, with no automatic food diary or image
+  /// storage. Counts never cross account prefixes and are never uploaded.
+  List<String> frequentDishes({int minimum=2,int limit=6}) {
+    final counts=<String,int>{};
+    final names=<String,String>{};
+    for(final entry in getEntries()){
+      final raw=entry.estimate.dishName.trim();
+      if(raw.isEmpty || raw.length>100)continue;
+      final key=raw.toLowerCase().replaceAll(RegExp(r'\s+'),' ');
+      if(key.isEmpty)continue;
+      counts.update(key,(current)=>current+1,ifAbsent:()=>1);
+      names.putIfAbsent(key,()=>raw);
+    }
+    final ordered=counts.keys.where((name)=>counts[name]!>=minimum)
+      .toList()..sort((a,b){
+        final byCount=counts[b]!.compareTo(counts[a]!);
+        return byCount!=0?byCount:a.compareTo(b);
+      });
+    return List<String>.unmodifiable([
+      for(final key in ordered.take(limit.clamp(0,10).toInt()))names[key]!,
+    ]);
+  }
+
   Future<void> save(NutritionHistoryEntry entry) async {
     if (entry.id.trim().isEmpty) {
       throw ArgumentError.value(entry.id, 'entry.id', 'No puede estar vacío.');

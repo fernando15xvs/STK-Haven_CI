@@ -57,6 +57,7 @@ class _NutritionIntelligencePageState
   // No demographic or measurement values are ever fabricated as defaults.
   final _ageController = TextEditingController();
   final _energyFormKey=GlobalKey();
+  final _foodFormKey=GlobalKey();
   final _dishHintController = TextEditingController();
 
   EnergyEquationSex? _equationSex;
@@ -818,6 +819,7 @@ class _NutritionIntelligencePageState
 
   Widget _buildFoodVision(ColorScheme colors) {
     return Card(
+      key:_foodFormKey,
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
@@ -988,7 +990,27 @@ class _NutritionIntelligencePageState
     ));
   }
 
+  void _useFrequentDish(String name) {
+    if(_analyzing)return;
+    setState(() {
+      _dishHintController.text=name;
+      _dishHintController.selection=TextSelection.collapsed(offset:name.length);
+      // A dish-name shortcut never triggers a camera, upload or analysis.
+      _foodEstimate=null;
+      _photo=null;
+      _message='Nombre listo. Puedes elegir una foto si deseas analizarlo.';
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      if(!mounted)return;
+      final target=_foodFormKey.currentContext;
+      if(target!=null)Scrollable.ensureVisible(target,
+        duration:const Duration(milliseconds:250),
+        curve:Curves.easeOut,alignment:0.05);
+    });
+  }
+
   Widget _buildHistory(ColorScheme colors) {
+    final frequent=_historyRepository.frequentDishes();
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -1037,6 +1059,27 @@ class _NutritionIntelligencePageState
                   onSelected:(_)=>setState(()=>_showFavoriteMealsOnly=true),
                 ),
               ]),
+            if(frequent.isNotEmpty) ...[
+              const SizedBox(height:12),
+              Text('Comidas frecuentes de tu historial',
+                style:Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height:4),
+              Text('Son nombres de análisis que elegiste guardar. '
+                'Usar uno no inicia una foto ni un conteo de comidas.',
+                style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color:colors.onSurfaceVariant)),
+              const SizedBox(height:8),
+              Wrap(spacing:8,runSpacing:6,children:[
+                for(final dish in frequent)
+                  ActionChip(
+                    key:ValueKey('nutrition_frequent_${dish.toLowerCase()}'),
+                    label:Text(dish,maxLines:1,
+                      overflow:TextOverflow.ellipsis),
+                    tooltip:'Usar $dish como contexto opcional',
+                    onPressed:_analyzing?null:()=>_useFrequentDish(dish),
+                  ),
+              ]),
+            ],
             const SizedBox(height:8),
             if (_historyRepository.hasLegacyEntries)
               ListTile(

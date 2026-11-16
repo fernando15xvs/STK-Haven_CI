@@ -42,6 +42,24 @@ void main(){
     expect(await MotivationFileDedup.matchesAny(short,[missing]),isFalse);
   });
 
+  test('bulk import rollback never deletes a potentially referenced file',(){
+    final source=File(
+      'lib/features/motivation/data/motivation_library.dart',
+    ).readAsStringSync();
+    final begin=source.indexOf('Future<int> importFiles(');
+    final end=source.indexOf('Future<void> renameTrack(',begin);
+    final import=source.substring(begin,end);
+    expect(import,contains('final importedIds=<String>{};'));
+    expect(import,contains('final copiedFiles=<File>[];'));
+    expect(import,contains('_tracks.removeWhere((track)=>importedIds.contains(track.id));'));
+    expect(import,contains('attemptedMetadataSave=true;'));
+    expect(import,contains('if(safeToDiscard){'));
+    expect(import,contains('await _changed();'));
+    expect(import,contains('if(await copied.exists())await copied.delete();'));
+    expect(import,contains('Keep the copied files if metadata may still reference them.'));
+    expect(import,contains('for(final id in importedVideos){'));
+  });
+
   test('library checks before creating any new media ID',(){
     final source=File(
       'lib/features/motivation/data/motivation_library.dart',

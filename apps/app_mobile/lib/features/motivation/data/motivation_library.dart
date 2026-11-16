@@ -296,44 +296,79 @@ class MotivationLibrary extends ChangeNotifier {
     await load();
     var count=0;
     final importedVideos=<String>[];
-    for(final f in files){
-      final ext=p.extension(f.name).toLowerCase().replaceFirst('.','');
-      if(f.path==null || !supportedExtensions.contains(ext))continue;
-      final expected=await f.length();
-      if(expected<=0 || expected>maxFileBytes){
-        throw const FormatException('Archivo vacío o superior a 512 MB');
-      }
-      final incoming=File(f.path!);
-      // Equal content with a different filename is still one local copy.
-      // Compare chunks to avoid buffering long 512 MB videos in memory.
-      final existing=[
-        for(final old in _tracks)
-          if(p.extension(old.fileName).toLowerCase()=='.$ext')
-            File(filePath(old)),
-      ];
-      if(await MotivationFileDedup.matchesAny(incoming,existing))continue;
-      final id=const Uuid().v4();
-      final dest=File(p.join(_directory!.path,'$id.$ext'));
-      final temp=File(dest.path+'.part');
-      try{
-        await incoming.openRead().pipe(temp.openWrite());
-        if(await temp.length()!=expected){
-          throw const FileSystemException('Importación incompleta');
+    final importedIds=<String>{};
+    final copiedFiles=<File>[];
+    var attemptedMetadataSave=false;
+    try{
+      for(final f in files){
+        final ext=p.extension(f.name).toLowerCase().replaceFirst('.','');
+        if(f.path==null || !supportedExtensions.contains(ext))continue;
+        final expected=await f.length();
+        if(expected<=0 || expected>maxFileBytes){
+          throw const FormatException('Archivo vacío o superior a 512 MB');
         }
-        await temp.rename(dest.path);
-        _tracks.add(MotivationTrack(id:id,
-          title:p.basenameWithoutExtension(f.name),fileName:'$id.$ext',
-          mode:mode,importedAt:DateTime.now()));
-        if(ext=='mp4')importedVideos.add(id);
-        count++;
-      }catch(_){
-        if(await temp.exists())await temp.delete();
-        if(await dest.exists())await dest.delete();
-        rethrow;
+        final incoming=File(f.path!);
+        // Equal content with another filename is still one local copy.
+        // Compare chunks rather than buffering a large video in memory.
+        final existing=[
+          for(final old in _tracks)
+            if(p.extension(old.fileName).toLowerCase()=='.$ext')
+              File(filePath(old)),
+        ];
+        if(await MotivationFileDedup.matchesAny(incoming,existing))continue;
+        final id=const Uuid().v4();
+        final dest=File(p.join(_directory!.path,'$id.$ext'));
+        final temp=File(dest.path+'.part');
+        try{
+          await incoming.openRead().pipe(temp.openWrite());
+          if(await temp.length()!=expected){
+            throw const FileSystemException('Importación incompleta');
+          }
+          await temp.rename(dest.path);
+          copiedFiles.add(dest);
+          importedIds.add(id);
+          _tracks.add(MotivationTrack(id:id,
+            title:p.basenameWithoutExtension(f.name),fileName:'$id.$ext',
+            mode:mode,importedAt:DateTime.now()));
+          if(ext=='mp4')importedVideos.add(id);
+          count++;
+        }catch(_){
+          if(await temp.exists())await temp.delete();
+          if(await dest.exists())await dest.delete();
+          rethrow;
+        }
       }
+      if(count>0){
+        attemptedMetadataSave=true;
+        await _changed();
+      }
+    }catch(_){
+      // Roll back only this import batch, never unrelated library entries.
+      _tracks.removeWhere((track)=>importedIds.contains(track.id));
+      var safeToDiscard=!attemptedMetadataSave;
+      if(attemptedMetadataSave){
+        try{
+          // A failed preference write may have committed before reporting
+          // failure. Re-persist the previous library before removing copies.
+          await _changed();
+          safeToDiscard=true;
+        }catch(_){
+          // Keep the copied files if metadata may still reference them.
+          // Prefer recoverable orphans over permanent loss of user media.
+          notifyListeners();
+        }
+      }
+      if(safeToDiscard){
+        for(final copied in copiedFiles){
+          try{
+            if(await copied.exists())await copied.delete();
+          }catch(_){/* No data loss if cleanup fails. */}
+        }
+      }
+      notifyListeners();
+      rethrow;
     }
-    if(count>0)await _changed();
-    // Media import has already succeeded. Thumbnail errors are only visual.
+    // Imported content is already durable. Thumbnail errors are cosmetic.
     for(final id in importedVideos){
       await ensureVideoThumbnail(id);
     }

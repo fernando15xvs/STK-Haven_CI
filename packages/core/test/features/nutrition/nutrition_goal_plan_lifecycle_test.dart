@@ -36,7 +36,10 @@ void main(){
   });
 
   test('v1 saved adults migrate to v3 without changing past ranges',(){
-    final old=plan().toJson()..remove('isPaused')..remove('nextReviewAt');
+    final old=plan().toJson()
+      ..remove('isPaused')..remove('nextReviewAt')
+      ..remove('formulaVersion')..remove('units')
+      ..remove('accessCheckedAt')..remove('accessEvidence');
     old['version']=1;
     final restored=NutritionGoalPlan.fromJson(old);
     expect(restored.isPaused,isFalse);

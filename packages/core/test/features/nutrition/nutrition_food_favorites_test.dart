@@ -56,6 +56,46 @@ void main(){
       expect(own.getEntries().single.isFavorite,isFalse);
     });
 
+    test('frequent meals count only user-saved names in this account',()async{
+      final own=NutritionHistoryRepository(box,ownerId:'uid-a');
+      final other=NutritionHistoryRepository(box,ownerId:'uid-b');
+      Future<void> save(String id,int day,String dish) async {
+        await own.save(NutritionHistoryEntry(
+          id:id,analyzedAt:DateTime(2026,11,day),dishHint:'',
+          estimate:FoodVisionEstimate(
+            dishName:dish,items:const [],
+            confidence:FoodVisionConfidence.medium,
+            numericNutritionAvailable:false,disclaimer:'Descriptivo'),
+        ));
+      }
+      await save('a',11,'arroz con pollo');
+      await save('b',12,'Arroz con pollo');
+      await save('c',10,'ensalada');
+      await save('d',13,'Ensalada');
+      await save('e',14,'Sopa');
+      expect(own.frequentDishes(),['Arroz con pollo','Ensalada']);
+      expect(other.frequentDishes(),isEmpty);
+      expect(own.frequentDishes(minimum:3),isEmpty);
+      await own.delete('b');
+      expect(own.frequentDishes(),['Ensalada']);
+    });
+
+    test('frequent dish shortcuts remain optional and never auto-analyze',(){
+      final ui=File(
+        'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
+      );
+      // The core package owns the UI source: no camera is triggered from chips.
+      final source=ui.readAsStringSync();
+      expect(source,contains('_historyRepository.frequentDishes()'));
+      expect(source,contains('onPressed:_analyzing?null:()=>_useFrequentDish(dish)'));
+      final begin=source.indexOf('void _useFrequentDish(');
+      final end=source.indexOf('Widget _buildHistory(',begin);
+      final shortcut=source.substring(begin,end);
+      expect(shortcut,contains('_photo=null;'));
+      expect(shortcut,isNot(contains('_analyzePhoto(')));
+      expect(shortcut,isNot(contains('photoPicker(')));
+    });
+
     test('missing IDs cannot create a favorite meal',()async{
       final own=NutritionHistoryRepository(box,ownerId:'uid-a');
       await own.setFavorite('missing',true);
