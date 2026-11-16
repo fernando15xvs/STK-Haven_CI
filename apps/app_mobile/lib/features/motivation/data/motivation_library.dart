@@ -187,7 +187,10 @@ class MotivationLibrary extends ChangeNotifier {
     }
   }
 
-  Future<bool> chooseArtwork(String trackId) async {
+  Future<bool> chooseArtwork(
+    String trackId, {
+    Future<MotivationCoverFocus?> Function(String localFilePath)? requestFocus,
+  }) async {
     await load();
     final idx=_tracks.indexWhere((t)=>t.id==trackId);
     if(idx<0)return false;
@@ -202,23 +205,30 @@ class MotivationLibrary extends ChangeNotifier {
     }
     final ext=p.extension(item.name).toLowerCase().replaceFirst('.', '');
     if(!const {'jpg','jpeg','png','webp'}.contains(ext))return false;
+    // Cropping is optional; cancellation must preserve the old cover.
+    final focus=requestFocus==null
+      ?const MotivationCoverFocus()
+      :await requestFocus(item.path!);
+    if(focus==null)return false;
+    final currentIdx=_tracks.indexWhere((t)=>t.id==trackId);
+    if(currentIdx<0)return false;
     // Canonicalize all accepted photo formats to one small private PNG.
     final name='art_${const Uuid().v4()}.png';
     final destination=File(p.join(_directory!.path,name));
     final temp=File(destination.path+'.part');
-    final previous=_tracks[idx];
+    final previous=_tracks[currentIdx];
     try{
       await MotivationArtworkProcessor.writeSquareCover(
-        source:File(item.path!),destination:temp);
+        source:File(item.path!),destination:temp,focus:focus);
       if(!await temp.exists() || await temp.length()==0){
         throw const FileSystemException('Portada incompleta');
       }
       await temp.rename(destination.path);
-      _tracks[idx]=previous.copyWith(artworkFileName:name);
+      _tracks[currentIdx]=previous.copyWith(artworkFileName:name);
       try{
         await _changed();
       }catch(_){
-        _tracks[idx]=previous;
+        _tracks[currentIdx]=previous;
         rethrow;
       }
       final old=previous.artworkFileName;
