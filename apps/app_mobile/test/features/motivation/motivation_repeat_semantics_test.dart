@@ -39,7 +39,7 @@ void main() {
     expect(page,contains('onPressed:player.canSkipNext'));
     expect(page,contains("'No hay otra pista disponible'"));
     expect(page,contains("ValueKey('motivation_repeat_state')"));
-    expect(page,contains("'Modo: ${player.repeat.label}'"));
+    expect(page,contains(r"'Modo: ${player.repeat.label}'"));
     expect(page,contains('Semantics('));
     expect(page,contains('liveRegion:true'));
   });
