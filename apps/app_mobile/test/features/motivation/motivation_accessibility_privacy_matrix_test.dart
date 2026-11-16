@@ -74,6 +74,10 @@ void main() {
     expect(page,isNot(contains('Error de importación:')));
     expect(page,isNot(contains('No se pudo guardar la portada:')));
     expect(page,contains('El archivo importado se conserva.'));
+    expect(page,contains("motivation_library_safe_load_error"));
+    expect(page,contains("motivation_library_retry"));
+    expect(page,contains("unawaited(_loadLibrary())"));
+    expect(page,contains("labelStyle:AppTypography.labelMedium.copyWith("));
     // The retry button must remain reachable with large accessibility text.
     expect(page,contains('constraints:const BoxConstraints(minHeight:180)'));
     expect(page,contains('mainAxisSize:MainAxisSize.min'));
