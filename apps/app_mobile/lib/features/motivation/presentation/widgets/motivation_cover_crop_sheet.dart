@@ -85,28 +85,35 @@ class _CropBodyState extends State<_CropBody> {
             label:vertical.toStringAsFixed(1),
             onChanged:(v)=>setState(()=>vertical=v),
           ),
-          Row(children:[
-            TextButton.icon(
-              onPressed:()=>setState((){
-                horizontal=0;
-                vertical=0;
-              }),
-              icon:const Icon(Icons.center_focus_strong_outlined),
-              label:const Text('Centrar'),
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed:()=>Navigator.pop(context),
-              child:const Text('Cancelar'),
-            ),
-            const SizedBox(width:6),
-            FilledButton(
-              key:const ValueKey('motivation_crop_apply'),
-              onPressed:()=>Navigator.pop(context,
-                MotivationCoverFocus(x:horizontal,y:vertical)),
-              child:const Text('Guardar'),
-            ),
-          ]),
+          // Wrapping action targets avoids horizontal overflow at 320dp
+          // and with 200% accessibility text. Cancel remains reachable.
+          Wrap(
+            key:const ValueKey('motivation_crop_responsive_actions'),
+            alignment:WrapAlignment.end,
+            crossAxisAlignment:WrapCrossAlignment.center,
+            spacing:AppSpacing.xs,
+            runSpacing:AppSpacing.xs,
+            children:[
+              TextButton.icon(
+                onPressed:()=>setState((){
+                  horizontal=0;
+                  vertical=0;
+                }),
+                icon:const Icon(Icons.center_focus_strong_outlined),
+                label:const Text('Centrar'),
+              ),
+              TextButton(
+                onPressed:()=>Navigator.pop(context),
+                child:const Text('Cancelar'),
+              ),
+              FilledButton(
+                key:const ValueKey('motivation_crop_apply'),
+                onPressed:()=>Navigator.pop(context,
+                  MotivationCoverFocus(x:horizontal,y:vertical)),
+                child:const Text('Guardar'),
+              ),
+            ],
+          ),
         ]),
       ),
     );
