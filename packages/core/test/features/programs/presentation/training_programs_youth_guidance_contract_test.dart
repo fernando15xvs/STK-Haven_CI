@@ -23,10 +23,10 @@ void main() {
     expect(page,contains('final isMinor=(profile?.ageAt(DateTime.now()) ?? 99)<18;'));
     expect(page,contains("'training_youth_guidance'"));
     expect(page,contains("'training_age_unknown_guidance'"));
-    expect(page,contains('if(isMinor || ageUnknown)'));
-    expect(page,contains('No necesitas indicar tu edad para entrenar.'));
+    expect(page,contains('if(youthGuidance!=null)'));
+    expect(page,contains('YouthTrainingGuidance.forProfile('));
     expect(page,contains('no se instalará un programa automáticamente.'));
-    expect(page,contains('Prioriza técnica, progresión gradual y recuperación.'));
+    expect(page,contains("ValueKey('training_age_safety_guidance')"));
     expect(page,contains('no instalamos automáticamente un programa adulto.'));
     expect(page,contains('Expanded(child:programs.isEmpty'));
     expect(page,contains('onActivate: () => ref'));

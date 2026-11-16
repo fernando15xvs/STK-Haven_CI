@@ -8,6 +8,8 @@ void main() {
       for (final days in [4, 5]) {
         final result = OnboardingRecommendationService.recommend(
           UserExperienceProfile(
+            dateOfBirth:DateTime(DateTime.now().year-25,1,1),
+            optionalDemographicsConsented:true,
             trainingDaysPerWeek: days,
             trainingGoal: TrainingGoal.hypertrophy,
             trainingExperience: TrainingExperience.intermediate,
@@ -20,7 +22,9 @@ void main() {
 
     test('recommends full body for a beginner training three days', () {
       final result = OnboardingRecommendationService.recommend(
-        const UserExperienceProfile(
+        UserExperienceProfile(
+          dateOfBirth:DateTime(DateTime.now().year-25,1,1),
+          optionalDemographicsConsented:true,
           trainingDaysPerWeek: 3,
           trainingGoal: TrainingGoal.strength,
           trainingExperience: TrainingExperience.beginner,
@@ -34,12 +38,47 @@ void main() {
     test('a declared minor never receives an adult preset automatically', () {
       final minor=UserExperienceProfile(
         dateOfBirth:DateTime(DateTime.now().year-16,1,1),
+        optionalDemographicsConsented:true,
         trainingDaysPerWeek:6,
         trainingGoal:TrainingGoal.hypertrophy,
         trainingExperience:TrainingExperience.advanced,
         planningPreference:PlanningPreference.recommendation,
       );
       expect(OnboardingRecommendationService.recommend(minor),isNull);
+    });
+
+    test('unknown age never automatically receives a high-frequency adult preset', () {
+      for(final days in [3,4,5,6]){
+        final unknown=UserExperienceProfile(
+          trainingDaysPerWeek:days,
+          trainingGoal:TrainingGoal.hypertrophy,
+          trainingExperience:TrainingExperience.advanced,
+          planningPreference:PlanningPreference.recommendation,
+        );
+        expect(unknown.dateOfBirth,isNull);
+        expect(OnboardingRecommendationService.recommend(unknown),isNull);
+      }
+    });
+
+    test('consent to local demographics does not itself prove adulthood',(){
+      const noBirth=UserExperienceProfile(
+        optionalDemographicsConsented:true,
+        trainingDaysPerWeek:6,
+        trainingExperience:TrainingExperience.advanced,
+      );
+      expect(OnboardingRecommendationService.recommend(noBirth),isNull);
+    });
+
+    test('unconsented legacy birth date never auto-selects an adult program',(){
+      final legacy=UserExperienceProfile(
+        dateOfBirth:DateTime(DateTime.now().year-30,1,1),
+        trainingDaysPerWeek:6,
+        trainingGoal:TrainingGoal.hypertrophy,
+        trainingExperience:TrainingExperience.advanced,
+        planningPreference:PlanningPreference.recommendation,
+      );
+      expect(legacy.optionalDemographicsConsented,isFalse);
+      expect(OnboardingRecommendationService.recommend(legacy),isNull);
     });
 
     test('does not force a program when days are unknown', () {

@@ -143,9 +143,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             ),
           );
 
-      final age=profile.ageAt(DateTime.now());
-      final recommended = age!=null && age<18
-          ? null : OnboardingRecommendationService.recommend(profile);
+      // One source of truth for minors and users who omit their birth date.
+      // Neither group is auto-enrolled in a high-frequency adult preset.
+      final recommended = OnboardingRecommendationService.recommend(profile);
       if (installRecommended && recommended != null) {
         await ref
             .read(programServiceProvider)
@@ -695,8 +695,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   Widget _summaryStep(BuildContext context) {
     final profile = _buildProfile();
     final age=profile.ageAt(DateTime.now());
-    final recommended = age!=null && age<18
-        ? null : OnboardingRecommendationService.recommend(profile);
+    final recommended = OnboardingRecommendationService.recommend(profile);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -758,6 +757,15 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                     Text('Tus rutinas podrán configurarse de forma gradual. '
                       'No instalamos automáticamente un programa de alta exigencia '
                       'para menores.',
+                      style:AppTypography.bodySmall),
+                  ] else if(age==null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text('Puedes entrenar y crear tus propias rutinas sin '
+                      'indicar fecha de nacimiento. Para evitar asignarte un '
+                      'programa adulto sin conocer tu etapa de desarrollo, '
+                      'no instalaremos uno automáticamente. '
+                      'Puedes configurar rutinas después en Entrenar.',
+                      key:const ValueKey('onboarding_unknown_age_safe_training'),
                       style:AppTypography.bodySmall),
                   ],
                   if (recommended != null) ...[

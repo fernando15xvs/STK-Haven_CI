@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:core/domain/models/user_experience_profile.dart';
+import 'package:core/features/programs/application/youth_training_guidance.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -110,6 +111,13 @@ class _ExperiencePreferencesPageState
               ),
               const SizedBox(height: 12),
               _daysSelector(draft),
+              if(YouthTrainingGuidance.forProfile(draft,DateTime.now())
+                  case final guidance?) ...[
+                const SizedBox(height:8),
+                Text(guidance,
+                  key:const ValueKey('experience_youth_rest_guidance'),
+                  style:Theme.of(context).textTheme.bodySmall),
+              ],
               const SizedBox(height: 12),
               _dropdown<SessionDurationPreference>(
                 label: 'Duración habitual',

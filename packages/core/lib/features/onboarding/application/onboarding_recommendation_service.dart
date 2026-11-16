@@ -6,10 +6,13 @@ class OnboardingRecommendationService {
   const OnboardingRecommendationService._();
 
   static PresetProgram? recommend(UserExperienceProfile profile) {
-    // A known minor keeps access to training, but no adult-oriented preset
-    // is automatically installed. This policy applies to mobile and web.
-    final declaredAge=profile.ageAt(DateTime.now());
-    if(declaredAge!=null && declaredAge<18)return null;
+    // A declared minor or a person who chooses not to enter a birth date
+    // can still train and build their own routines, but cannot receive an
+    // automatically installed adult-oriented preset. Declared adulthood is
+    // not backend verification for numeric nutrition.
+    final declaredAge=profile.optionalDemographicsConsented
+      ?profile.ageAt(DateTime.now()):null;
+    if(declaredAge==null || declaredAge<18)return null;
     if (profile.planningPreference == PlanningPreference.selfDirected ||
         profile.trainingGoal == TrainingGoal.selfDirected) {
       return null;

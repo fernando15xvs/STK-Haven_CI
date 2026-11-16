@@ -2,10 +2,10 @@ import 'dart:async';
 
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
-import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/programs/application/program_plan_insights.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_duration_choices.dart';
+import 'package:core/features/programs/application/youth_training_guidance.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -72,7 +72,8 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
     final profile=ref.watch(userExperienceProfileProvider).value;
     final isMinor=(profile?.ageAt(DateTime.now()) ?? 99)<18;
     final ageUnknown=profile!=null && profile.ageAt(DateTime.now())==null;
-    final beginner=profile?.trainingExperience==TrainingExperience.beginner;
+    final youthGuidance=YouthTrainingGuidance.forProfile(
+      profile,DateTime.now());
     final routineById = <String, Routine>{
       for (final routine in routines) routine.id: routine,
     };
@@ -95,7 +96,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
         ],
       ),
       body: Column(children:[
-        if(isMinor || ageUnknown)
+        if(youthGuidance!=null)
           Padding(
             padding:const EdgeInsets.fromLTRB(16,12,16,0),
             child:Card(
@@ -115,18 +116,8 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                         style:Theme.of(context).textTheme.titleMedium)),
                     ]),
                     const SizedBox(height:6),
-                    Text(ageUnknown
-                      ?'No necesitas indicar tu edad para entrenar. '
-                        'Escoge ejercicios según tu experiencia, técnica '
-                        'y tiempo de recuperación; pide orientación '
-                        'cualificada si la necesitas.'
-                      :beginner
-                        ?'Empieza con movimientos que puedas controlar, '
-                          'descanso suficiente y ayuda de un entrenador '
-                          'cualificado cuando la necesites.'
-                        :'Prioriza técnica, progresión gradual y recuperación. '
-                          'Consulta a un entrenador cualificado ante dudas '
-                          'sobre cargas y supervisión.',
+                    Text(youthGuidance,
+                      key:const ValueKey('training_age_safety_guidance'),
                       style:Theme.of(context).textTheme.bodySmall),
                     const SizedBox(height:4),
                     Text(isMinor

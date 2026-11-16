@@ -39,6 +39,19 @@ void main() {
     expect(page,isNot(contains('service_role')));
   });
 
+  test('undeclared age keeps training useful without adult preset auto-install',(){
+    final page=File(
+      'lib/features/onboarding/presentation/pages/onboarding_page.dart',
+    ).readAsStringSync();
+    expect(page,contains('OnboardingRecommendationService.recommend(profile)'));
+    expect(page,contains("ValueKey('onboarding_unknown_age_safe_training')"));
+    expect(page,contains('no instalaremos uno automáticamente.'));
+    expect(page,contains('Puedes configurar rutinas después en Entrenar.'));
+    expect(page,contains('if (recommended != null)'));
+    expect(page,contains('_finish(installRecommended: false)'));
+    expect(page,contains('completeOnboardingFromScratch()'));
+  });
+
   test('onboarding progress and welcome use shared Outfit tokens', () {
     final page=File(
       'lib/features/onboarding/presentation/pages/onboarding_page.dart',
