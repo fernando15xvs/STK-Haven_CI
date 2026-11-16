@@ -1051,7 +1051,7 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                     Center(
                       child:track.isVideo
                         ?_SilentVideoPreview(
-                            key:ValueKey('now_playing_video_${track.id}'),
+                            key:const ValueKey('now_playing_video_shared'),
                             path:library.filePath(track),
                             playback:player,
                             maxHeight:artSize,
