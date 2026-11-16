@@ -37,6 +37,7 @@ class _MotivationPageState extends State<MotivationPage> {
   String selection='all';
   MotivationMode importMode=MotivationMode.discipline;
   bool busy=false;
+  String? _libraryLoadError;
   String searchQuery='';
   MotivationMediaFilter mediaFilter=MotivationMediaFilter.all;
   final searchController=TextEditingController();
@@ -46,11 +47,22 @@ class _MotivationPageState extends State<MotivationPage> {
     library.addListener(_refresh);
     player.addListener(_refresh);
     unawaited(player.loadAudioPreferences());
-    unawaited(library.load().catchError((Object _){
-      // Native exceptions may embed private device paths: never show them.
-      _message('No se pudo abrir la biblioteca. Inténtalo de nuevo.');
-    }));
+    unawaited(_loadLibrary());
   }
+
+  Future<void> _loadLibrary() async {
+    try {
+      await library.load();
+      if(mounted && _libraryLoadError!=null)
+        setState(()=>_libraryLoadError=null);
+    }catch(_){
+      // Native exceptions may contain user-private absolute file paths.
+      // A visible retry replaces the otherwise endless loading spinner.
+      if(mounted)setState(()=>
+        _libraryLoadError='No se pudo abrir la biblioteca. Inténtalo de nuevo.');
+    }
+  }
+
   void _refresh(){if(mounted)setState((){});}
   @override
   void dispose(){
@@ -578,8 +590,8 @@ class _MotivationPageState extends State<MotivationPage> {
       child:ChoiceChip(
         label:Text(title),selected:selection==key,
         selectedColor:colors.primaryFaded,
-        labelStyle:TextStyle(color:selection==key?colors.primary:
-          colors.textPrimary),
+        labelStyle:AppTypography.labelMedium.copyWith(
+          color:selection==key?colors.primary:colors.textPrimary),
         onSelected:(_)=>setState(()=>selection=key)));
   }
   void _openNowPlaying() {
@@ -646,7 +658,28 @@ class _MotivationPageState extends State<MotivationPage> {
             icon:const Icon(Icons.playlist_add)),
         ]),
       body:!library.loaded
-        ?const Center(child:CircularProgressIndicator())
+        ?(_libraryLoadError==null
+          ?const Center(child:CircularProgressIndicator())
+          :Center(child:Padding(
+            padding:const EdgeInsets.all(AppSpacing.lg),
+            child:Column(mainAxisSize:MainAxisSize.min,children:[
+              Text(_libraryLoadError!,
+                key:const ValueKey('motivation_library_safe_load_error'),
+                textAlign:TextAlign.center,
+                style:AppTypography.bodyMedium.copyWith(
+                  color:colors.textSecondary)),
+              const SizedBox(height:AppSpacing.md),
+              FilledButton.icon(
+                key:const ValueKey('motivation_library_retry'),
+                onPressed:(){
+                  setState(()=>_libraryLoadError=null);
+                  unawaited(_loadLibrary());
+                },
+                icon:const Icon(Icons.refresh_rounded),
+                label:const Text('Reintentar'),
+              ),
+            ]),
+          )))
         :ListView(key:const ValueKey('motivation_library'),
           padding:const EdgeInsets.fromLTRB(16,16,16,100),
           children:[
@@ -1000,7 +1033,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
                 builder:(ctx,active,_)=>Center(
                   child:active==null || !active.value.isInitialized
                     ?const Text('Video no disponible',
-                        style:TextStyle(color:Colors.white))
+                        style:AppTypography.bodyMedium.copyWith(color:Colors.white))
                     :AspectRatio(
                       aspectRatio:active.value.aspectRatio,
                       child:VideoPlayer(active),
