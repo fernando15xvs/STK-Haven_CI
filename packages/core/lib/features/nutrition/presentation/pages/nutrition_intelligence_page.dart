@@ -3,6 +3,9 @@ import 'package:core/domain/models/nutrition_history_entry.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/domain/models/nutrition_goal_plan.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
+import 'package:core/features/nutrition/application/adult_activity_suggestion.dart';
+import 'package:core/features/nutrition/application/wellness_rest_guidance.dart';
+import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/nutrition/application/adult_macro_guide.dart';
 import 'package:core/features/nutrition/application/latest_body_measurements.dart';
 import 'package:core/features/nutrition/application/nutrition_weight_trend.dart';
@@ -215,6 +218,13 @@ class _NutritionIntelligencePageState
     final dateFormat = DateFormat('dd/MM/yyyy');
     final sourceIds = body.fingerprint;
     final demographic = ref.watch(userExperienceProfileProvider).value;
+    final recordedSessions=ref.watch(workoutHistoryProvider);
+    final activitySuggestion=AdultActivitySuggestionPolicy.suggest(
+      recordedSteps:ref.read(wellnessRepositoryProvider)
+        .recentRecordedSteps(days:14),
+      sessions:recordedSessions,
+      now:DateTime.now(),
+    );
     final review=_activePlan==null?null:
       NutritionPlanMeasurementReview.compare(_activePlan!,body);
     return Card(
@@ -337,7 +347,8 @@ class _NutritionIntelligencePageState
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<EnergyActivityLevel>(
-              value: _activity,
+              key:ValueKey('nutrition_activity_${_activity?.name ?? 'none'}'),
+              initialValue: _activity,
               hint: const Text('Selecciona tu actividad'),
               decoration: const InputDecoration(
                 labelText: 'Actividad habitual',
@@ -372,6 +383,36 @@ class _NutritionIntelligencePageState
                 });
               },
             ),
+            if(activitySuggestion case final suggested?) ...[
+              const SizedBox(height:6),
+              Text('Sugerencia orientativa: ${suggested.label}. '
+                'Basada en ${suggested.recordedStepDays} días con sensor '
+                'y ${suggested.recordedTrainingDays} días con sesiones '
+                'completadas. No suma el entrenamiento a los pasos '
+                'ni conoce toda tu actividad diaria.',
+                key:const ValueKey('nutrition_activity_evidence'),
+                style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color:colors.onSurfaceVariant)),
+              Align(alignment:Alignment.centerLeft,
+                child:TextButton.icon(
+                  key:const ValueKey('nutrition_activity_suggest_apply'),
+                  onPressed:_activity==suggested.level?null:()=>setState((){
+                    _activity=suggested.level;
+                    _invalidateEnergyDraft();
+                  }),
+                  icon:const Icon(Icons.fact_check_outlined),
+                  label:const Text('Usar sugerencia y revisar'),
+                )),
+            ] else
+              Padding(
+                padding:const EdgeInsets.only(top:6),
+                child:Text('Sin 7 días de lecturas del sensor y 2 días '
+                  'de entrenamiento completado no sugerimos un nivel '
+                  'personalizado. Puedes elegirlo manualmente.',
+                  key:const ValueKey('nutrition_activity_no_evidence'),
+                  style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color:colors.onSurfaceVariant)),
+              ),
             if(demographic?.trainingDaysPerWeek case final days?)
               Padding(
                 padding:const EdgeInsets.only(top:6),
@@ -555,6 +596,13 @@ class _NutritionIntelligencePageState
     final water=ref.watch(hydrationPreferencesProvider);
     final steps=ref.watch(dailyStepsProvider);
     final stepPrefs=ref.watch(stepGoalPreferencesProvider);
+    final wellnessProfile=ref.watch(userExperienceProfileProvider).value;
+    final recentTraining=ref.watch(workoutHistoryProvider);
+    final restGuidance=WellnessRestGuidance.forToday(
+      profile:wellnessProfile,
+      sessions:recentTraining,
+      now:DateTime.now(),
+    );
     final history=ref.read(wellnessRepositoryProvider)
         .recentRecordedSteps(days:14);
     final stepSuggestion=WellnessGoalSuggestions.stepsFromBaseline(
@@ -604,6 +652,11 @@ class _NutritionIntelligencePageState
             const SizedBox(height:8),
             Text('Hidratación: actividad, calor y necesidades personales '
               'importan más que la fase nutricional. Tu meta manual se conserva.',
+              style:Theme.of(context).textTheme.bodySmall?.copyWith(
+                color:colors.onSurfaceVariant)),
+            const SizedBox(height:8),
+            Text(restGuidance,
+              key:const ValueKey('nutrition_wellness_rest_context'),
               style:Theme.of(context).textTheme.bodySmall?.copyWith(
                 color:colors.onSurfaceVariant)),
             if(water.goalChanges.isNotEmpty ||

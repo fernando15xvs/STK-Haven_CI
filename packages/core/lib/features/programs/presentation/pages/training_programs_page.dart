@@ -71,6 +71,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
     final routines = ref.watch(routineListProvider);
     final profile=ref.watch(userExperienceProfileProvider).value;
     final isMinor=(profile?.ageAt(DateTime.now()) ?? 99)<18;
+    final ageUnknown=profile!=null && profile.ageAt(DateTime.now())==null;
     final beginner=profile?.trainingExperience==TrainingExperience.beginner;
     final routineById = <String, Routine>{
       for (final routine in routines) routine.id: routine,
@@ -94,11 +95,12 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
         ],
       ),
       body: Column(children:[
-        if(isMinor)
+        if(isMinor || ageUnknown)
           Padding(
             padding:const EdgeInsets.fromLTRB(16,12,16,0),
             child:Card(
-              key:const ValueKey('training_youth_guidance'),
+              key:ValueKey(isMinor?'training_youth_guidance':
+                'training_age_unknown_guidance'),
               child:Padding(
                 padding:const EdgeInsets.all(14),
                 child:Column(
@@ -108,21 +110,30 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                       Icon(Icons.health_and_safety_outlined,
                         color:Theme.of(context).colorScheme.primary),
                       const SizedBox(width:8),
-                      Expanded(child:Text('Entrenar con buena técnica',
+                      Expanded(child:Text(isMinor?'Entrenar con buena técnica':
+                        'Entrena a tu ritmo',
                         style:Theme.of(context).textTheme.titleMedium)),
                     ]),
                     const SizedBox(height:6),
-                    Text(beginner
-                      ?'Empieza con movimientos que puedas controlar, '
-                        'descanso suficiente y ayuda de un entrenador '
-                        'cualificado cuando la necesites.'
-                      :'Prioriza técnica, progresión gradual y recuperación. '
-                        'Consulta a un entrenador cualificado ante dudas '
-                        'sobre cargas y supervisión.',
+                    Text(ageUnknown
+                      ?'No necesitas indicar tu edad para entrenar. '
+                        'Escoge ejercicios según tu experiencia, técnica '
+                        'y tiempo de recuperación; pide orientación '
+                        'cualificada si la necesitas.'
+                      :beginner
+                        ?'Empieza con movimientos que puedas controlar, '
+                          'descanso suficiente y ayuda de un entrenador '
+                          'cualificado cuando la necesites.'
+                        :'Prioriza técnica, progresión gradual y recuperación. '
+                          'Consulta a un entrenador cualificado ante dudas '
+                          'sobre cargas y supervisión.',
                       style:Theme.of(context).textTheme.bodySmall),
                     const SizedBox(height:4),
-                    Text('Tus rutinas anteriores se conservan; '
-                      'no instalamos automáticamente un programa adulto.',
+                    Text(isMinor
+                      ?'Tus rutinas anteriores se conservan; '
+                        'no instalamos automáticamente un programa adulto.'
+                      :'Tu historial y tus rutinas se conservan; '
+                        'no se instalará un programa automáticamente.',
                       style:Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
