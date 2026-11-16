@@ -292,10 +292,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           Text(
             'Haz que STK Haven\nse adapte a ti',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 30,
-              height: 1.15,
-              fontWeight: FontWeight.w800,
+            style: AppTypography.displaySmall.copyWith(
               color: AppColors.of(context).textPrimary,
             ),
           ),
@@ -303,8 +300,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           Text(
             'Son unas pocas preguntas. Podrás cambiar todo después desde tu perfil.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
+            style: AppTypography.bodyMedium.copyWith(
               color: AppColors.of(context).textSecondary,
             ),
           ),

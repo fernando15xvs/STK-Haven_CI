@@ -18,6 +18,16 @@ void main() {
     expect(source, isNot(contains('stk_has_adult_nutrition_access')));
   });
 
+  test('onboarding progress and welcome use shared Outfit tokens', () {
+    final page=File(
+      'lib/features/onboarding/presentation/pages/onboarding_page.dart',
+    ).readAsStringSync();
+    expect(page,contains('LinearProgressIndicator('));
+    expect(page,contains('value: _currentIndex / (_pageCount - 1)'));
+    expect(page,contains('style: AppTypography.displaySmall.copyWith('));
+    expect(page,contains('style: AppTypography.bodyMedium.copyWith('));
+  });
+
   test('nutrition uses Medidas rather than 70 kg and 170 cm fabricated values', () {
     final core = File(
       '../../packages/core/lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
