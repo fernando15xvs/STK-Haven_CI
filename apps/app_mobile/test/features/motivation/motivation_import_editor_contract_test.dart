@@ -12,7 +12,10 @@ void main(){
     expect(page,contains('library.changeMode(track.id,options.mode)'));
     expect(page,contains('library.toggleFavorite(track.id)'));
     expect(page,contains('library.togglePlaylistTrack(id,track.id)'));
-    expect(page,contains('library.chooseArtwork(track.id)'));
+    // The cover picker now passes the optional in-app crop callback.
+    expect(page,contains('if(options.chooseArtwork){'));
+    expect(page,contains('await library.chooseArtwork('));
+    expect(page,contains('requestFocus:(filePath)=>MotivationCoverCropSheet.show('));
     expect(page,contains('Importar directamente'));
     expect(page,contains('Omitir archivo'));
     expect(page,contains('Guardar cambios'));
