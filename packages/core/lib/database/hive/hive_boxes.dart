@@ -5,6 +5,10 @@ class HiveBoxes {
   static String get history => StorageNamespace.scope('historyBox_v2');
   static String get exercises => StorageNamespace.scope('exercisesBox_v2');
   static String get metadata => StorageNamespace.scope('metadataBox');
+  // Device-only durable pre-restore snapshot; never included in an exported
+  // backup or cloud payload. The same namespace prevents preview collisions.
+  static String get restoreJournal =>
+      StorageNamespace.scope('backupRestoreJournalBox_v1');
   // Private device-only motivational text: never exported by BackupService.
   static String get personalReminders =>
       StorageNamespace.scope('personalRemindersBox_v1');
