@@ -155,4 +155,26 @@ void main() {
     final untouched = await Hive.openBox<dynamic>('historyBox_v1');
     expect(untouched.containsKey('unknown'), isTrue);
   });
+  test('B1.7 merge locks snapshot and journalled restore as one operation', () {
+    final code = File('lib/core/services/backup_service.dart')
+        .readAsStringSync();
+    final start=code.indexOf(
+      'Future<BackupLegacyMergeResult> mergeLegacyRecords(');
+    final end=code.indexOf('BackupValidationResult validateBackup(',start);
+    expect(start,greaterThanOrEqualTo(0));
+    expect(end,greaterThan(start));
+    final merge=code.substring(start,end);
+    final guard=merge.indexOf('if (_restoreInProgress)');
+    final lock=merge.indexOf('_restoreInProgress = true;');
+    final snapshot=merge.indexOf('final existing = validateBackup(createBackup());');
+    final apply=merge.indexOf('await _restoreBackupWithJournal(');
+    expect(guard,greaterThanOrEqualTo(0));
+    expect(lock,greaterThan(guard));
+    expect(snapshot,greaterThan(lock));
+    expect(apply,greaterThan(snapshot));
+    expect(merge,contains('finally {'));
+    expect(merge,contains('_restoreInProgress = false;'));
+    expect(merge,isNot(contains('await restoreBackup(updated')));
+  });
+
 }
