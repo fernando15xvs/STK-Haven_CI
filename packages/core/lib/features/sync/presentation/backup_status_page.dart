@@ -3,6 +3,7 @@ import 'package:core/features/profile/presentation/widgets/profile_section_card.
 import 'package:core/core/services/backup_activity_service.dart';
 import 'package:core/core/services/backup_file_service.dart';
 import 'package:core/core/services/backup_service.dart';
+import 'package:core/core/services/legacy_hive_import_service.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/habits/application/habit_study_timer_provider.dart';
@@ -247,6 +248,20 @@ class BackupStatusPage extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _restoreLocalBackup(context, ref),
                   ),
+                  const Divider(height: 1),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.history_rounded),
+                    title: const Text('Recuperar datos de una versión antigua'),
+                    subtitle: const Text(
+                      'Buscar rutinas, ejercicios y entrenamientos anteriores '
+                      'sin borrar sus archivos originales.',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: cloud.busy
+                        ? null
+                        : () => _importLegacyArchives(context, ref),
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -307,6 +322,110 @@ class BackupStatusPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  static Future<void> _importLegacyArchives(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    if (ref.read(activeWorkoutProvider).session != null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Termina tu entrenamiento antes de importar datos.'),
+      ));
+      return;
+    }
+
+    const importer = LegacyHiveImportService();
+    try {
+      final scan = await importer.inspect();
+      if (!context.mounted) return;
+      if (!scan.safeToImport) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+            'Algunos datos antiguos tienen un formato no compatible. '
+            'No se importó nada y sus archivos permanecen intactos.',
+          ),
+        ));
+        return;
+      }
+      if (scan.recognized == 0) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No se encontraron registros antiguos compatibles.'),
+        ));
+        return;
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Importar archivos antiguos'),
+          content: Text(
+            'Encontrados en este dispositivo:\n\n'
+            '${scan.routines.length} rutinas\n'
+            '${scan.workouts.length} entrenamientos\n'
+            '${scan.exercises.length} ejercicios\n\n'
+            'Se añadirán solo registros con IDs nuevos. '
+            'Los datos actuales tienen prioridad y los archivos antiguos '
+            'nunca se borrarán. Pueden pertenecer a otra cuenta: confirma '
+            'que son tuyos antes de continuar. '
+            'No se subirán automáticamente a la nube.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Importar'),
+            ),
+          ],
+        ),
+      );
+      if (!context.mounted || confirmed != true) return;
+      // Never import over a workout started while the dialog was open.
+      if (ref.read(activeWorkoutProvider).session != null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Termina tu entrenamiento antes de importar datos.'),
+        ));
+        return;
+      }
+
+      final result = await importer.importRecognized();
+      if (result.imported > 0) {
+        await TrainingProgramRepository.fromHive().hydrateFromBackupMetadata();
+        await BackupActivityService.markRestored(source: 'archivo antiguo');
+        ref.invalidate(settingsProvider);
+        ref.invalidate(userExperienceProfileProvider);
+        ref.invalidate(habitTasksProvider);
+        ref.invalidate(habitStudyTimerProvider);
+        ref.invalidate(studyPlanEnrollmentsProvider);
+        ref.invalidate(trainingProgramListProvider);
+        ref.invalidate(routineListProvider);
+        ref.invalidate(exerciseListProvider);
+        ref.invalidate(workoutHistoryProvider);
+        ref.invalidate(personalRecordRepositoryProvider);
+        ref.invalidate(bodyMeasurementProvider);
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            'Importados: ${result.imported}. '
+            'IDs ya existentes conservados: ${result.duplicateIds}.',
+          ),
+        ));
+      }
+    } catch (_) {
+      // Never print raw Hive errors or filesystem paths in a public snackbar.
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+            'No se pudo importar el historial antiguo de forma segura. '
+            'Se conservaron los archivos originales.',
+          ),
+        ));
+      }
+    }
   }
 
   static Future<void> _restoreLocalBackup(
