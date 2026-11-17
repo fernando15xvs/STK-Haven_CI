@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../core/services/backup_service.dart';
 import 'hive_adapters.dart';
 import 'hive_boxes.dart';
 import '../migrations/database_version.dart';
@@ -44,6 +45,13 @@ class HiveDatabase {
       Hive.openBox(HiveBoxes.trainingPrograms),
       Hive.openBox(HiveBoxes.analyticsCache),
       Hive.openBox(HiveBoxes.personalReminders),
+      Hive.openBox(HiveBoxes.restoreJournal),
     ]);
+
+    // Recover a pre-restore device snapshot before any screen/provider can
+    // observe partially replaced history after a crash or force close.
+    // If recovery fails, do not silently discard the journal or boot into
+    // damaged data. The exception can be handled by startup recovery UX.
+    await BackupService.recoverInterruptedRestore();
   }
 }
