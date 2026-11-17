@@ -84,7 +84,9 @@ void main(){
     final start=code.indexOf('void _openCinema()');
     final end=code.indexOf('  @override\n  Widget build(BuildContext context){',start);
     final cinema=code.substring(start,end);
-    expect(cinema,contains('Flexible(fit:FlexFit.loose,'));
+    expect(cinema,contains('ConstrainedBox('));
+    expect(cinema,contains(
+      'maxHeight:MediaQuery.sizeOf(pageContext).height*.38'));
     expect(cinema,contains('child:AnimatedBuilder('));
     expect(cinema,contains('return SingleChildScrollView('));
     expect(cinema,contains("ValueKey('motivation_cinema_shared_controls')"));
