@@ -98,6 +98,26 @@ class BackupService {
     List<HiveRoutine> routines = const [],
     List<HiveWorkoutSession> workouts = const [],
   }) async {
+    if (_restoreInProgress) {
+      throw StateError('Ya hay una restauración de datos en curso.');
+    }
+    _restoreInProgress = true;
+    try {
+      return await _mergeLegacyRecordsLocked(
+        exercises: exercises,
+        routines: routines,
+        workouts: workouts,
+      );
+    } finally {
+      _restoreInProgress = false;
+    }
+  }
+
+  Future<BackupLegacyMergeResult> _mergeLegacyRecordsLocked({
+    required List<HiveExercise> exercises,
+    required List<HiveRoutine> routines,
+    required List<HiveWorkoutSession> workouts,
+  }) async {
     final existing = validateBackup(createBackup());
     if (!existing.isValid || existing.parsedData == null) {
       throw StateError('Los datos locales no permiten una migración segura.');
@@ -143,7 +163,8 @@ class BackupService {
       duplicateIds: duplicates,
     );
     if (result.imported > 0) {
-      await restoreBackup(updated, schemaVersion: currentBackupSchemaVersion);
+      await _restoreBackupWithJournal(
+        updated, schemaVersion: currentBackupSchemaVersion);
     }
     return result;
   }
@@ -224,55 +245,62 @@ class BackupService {
     }
     _restoreInProgress = true;
     try {
-      // Preflight must run before even opening a journal or touching a box.
-      // A malformed imported file cannot trigger a destructive write.
-      _mapDataToHiveObjects(data, schemaVersion);
-      final journal = await Hive.openBox<dynamic>(HiveBoxes.restoreJournal);
-      if (journal.containsKey(pendingRestoreJournalKey)) {
-        throw StateError(
-          'Existe una restauración anterior incompleta. '
-          'Reinicia STK Haven antes de restaurar otra copia.',
-        );
-      }
-
-      // Persist the previous device state BEFORE the first box.clear().
-      // A power loss then restores the previous snapshot on next app launch,
-      // rather than booting with a partially replaced training history.
-      final snapshot = createBackup();
-      final check = validateBackup(snapshot);
-      if (!check.isValid) {
-        throw StateError(
-          'No se puede crear una copia de seguridad de los datos actuales.',
-        );
-      }
-      await journal.put(pendingRestoreJournalKey, <String, dynamic>{
-        'format': _journalFormat,
-        'backup': snapshot,
-        'db_version': Hive.box(HiveBoxes.metadata).get('db_version'),
-      });
-      await journal.flush();
-
-      try {
-        await _restoreBackupLocked(data, schemaVersion: schemaVersion);
-        // Never report success before the successful restore is committed
-        // and the intent journal has been removed from local storage.
-        await journal.delete(pendingRestoreJournalKey);
-        await journal.flush();
-      } catch (_) {
-        // Revert immediately if possible. If this fails (disk full, OS
-        // termination), leave the original snapshot on disk for next boot.
-        try {
-          await _recoverInterruptedRestoreLocked(journal);
-        } catch (_) {
-          throw StateError(
-            'La restauración falló. Existe una copia de recuperación local '
-            'pendiente; conserva tus archivos y reinicia STK Haven.',
-          );
-        }
-        rethrow;
-      }
+      await _restoreBackupWithJournal(data, schemaVersion: schemaVersion);
     } finally {
       _restoreInProgress = false;
+    }
+  }
+
+  Future<void> _restoreBackupWithJournal(
+    Map<String, dynamic> data, {
+    required int schemaVersion,
+  }) async {
+    // Preflight must run before even opening a journal or touching a box.
+    // A malformed imported file cannot trigger a destructive write.
+    _mapDataToHiveObjects(data, schemaVersion);
+    final journal = await Hive.openBox<dynamic>(HiveBoxes.restoreJournal);
+    if (journal.containsKey(pendingRestoreJournalKey)) {
+      throw StateError(
+        'Existe una restauración anterior incompleta. '
+        'Reinicia STK Haven antes de restaurar otra copia.',
+      );
+    }
+
+    // Persist the previous device state BEFORE the first box.clear().
+    // A power loss then restores the previous snapshot on next app launch,
+    // rather than booting with a partially replaced training history.
+    final snapshot = createBackup();
+    final check = validateBackup(snapshot);
+    if (!check.isValid) {
+      throw StateError(
+        'No se puede crear una copia de seguridad de los datos actuales.',
+      );
+    }
+    await journal.put(pendingRestoreJournalKey, <String, dynamic>{
+      'format': _journalFormat,
+      'backup': snapshot,
+      'db_version': Hive.box(HiveBoxes.metadata).get('db_version'),
+    });
+    await journal.flush();
+
+    try {
+      await _restoreBackupLocked(data, schemaVersion: schemaVersion);
+      // Never report success before the successful restore is committed
+      // and the intent journal has been removed from local storage.
+      await journal.delete(pendingRestoreJournalKey);
+      await journal.flush();
+    } catch (_) {
+      // Revert immediately if possible. If this fails (disk full, OS
+      // termination), leave the original snapshot on disk for next boot.
+      try {
+        await _recoverInterruptedRestoreLocked(journal);
+      } catch (_) {
+        throw StateError(
+          'La restauración falló. Existe una copia de recuperación local '
+          'pendiente; conserva tus archivos y reinicia STK Haven.',
+        );
+      }
+      rethrow;
     }
   }
 
