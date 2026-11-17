@@ -336,6 +336,9 @@ jobs:
         working-directory: apps/app_web
         run: flutter build web --release --target lib/main.dart
       # Regression gate for STK Motivation integrated with workout navigation.
+      - name: Test onboarding 15+ legal acceptance and legacy measurement contracts
+        working-directory: apps/app_mobile
+        run: flutter test test/features/onboarding
       - name: Test STK Motivation import, playlists, playback and compact player
         working-directory: apps/app_mobile
         run: flutter test test/features/motivation
