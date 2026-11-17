@@ -11,6 +11,8 @@ import 'package:core/features/nutrition/application/latest_body_measurements.dar
 import 'package:core/features/nutrition/application/nutrition_weight_trend.dart';
 import 'package:core/features/nutrition/application/nutrition_plan_measurement_review.dart';
 import 'package:core/features/nutrition/application/nutrition_access_state.dart';
+import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
+import 'package:core/features/nutrition/presentation/widgets/stk_age_aware_nutrition_goals.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
@@ -42,6 +44,8 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
   final Future<bool> Function()? requestPhotoAnalysisConsent;
   final bool cameraAvailable;
   final bool verifiedAdultNutritionAccess;
+  /// Only the mobile route opts in. The frozen web route stays unchanged.
+  final bool showAgeAwareGoals;
   final VoidCallback? onOpenMeasurements;
   final VoidCallback? onRefreshAdultAccess;
 
@@ -51,6 +55,7 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
     this.requestPhotoAnalysisConsent,
     this.cameraAvailable = true,
     this.verifiedAdultNutritionAccess = false,
+    this.showAgeAwareGoals = false,
     this.onOpenMeasurements,
     this.onRefreshAdultAccess,
   });
@@ -72,6 +77,7 @@ class _NutritionIntelligencePageState
   // No fabricated activity level: the user must confirm everyday activity.
   EnergyActivityLevel? _activity;
   EnergyGoal _goal = EnergyGoal.maintenance;
+  StkNutritionIntent _stkGoal = StkNutritionIntent.maintenance;
   EnergyEstimate? _energyEstimate;
   String? _calculationMeasurementIds;
   AdultEnergyProfile? _calculatedProfile;
@@ -85,6 +91,12 @@ class _NutritionIntelligencePageState
   bool get _hasAdultNumericAccess => ref.read(
     nutritionAccessStateProvider(widget.verifiedAdultNutritionAccess),
   ).canViewNumericNutrition;
+
+  bool get _isDeclaredTeen {
+    final age = ref.read(userExperienceProfileProvider).value
+        ?.ageAt(DateTime.now());
+    return age != null && age >= 15 && age < 18;
+  }
 
   /// Draft values belong to the exact demographic/measurements used.
   /// Editing a field must not leave an apparently current estimate on screen.
@@ -203,6 +215,21 @@ class _NutritionIntelligencePageState
                 onRefreshAdultAccess: widget.onRefreshAdultAccess)
             else
               _buildEnergyPlanner(colors),
+            if (widget.showAgeAwareGoals) ...[
+              const SizedBox(height: 16),
+              StkAgeAwareNutritionGoals(
+                audience: StkAgeAwareNutritionPlans.audience(
+                  declaredAge: ref.watch(userExperienceProfileProvider).value
+                      ?.ageAt(DateTime.now()),
+                  backendVerifiedAdult: hasAdultAccess,
+                ),
+                selected: _stkGoal,
+                onSelected: _chooseStkGoal,
+                onOpenAdultPlanner: hasAdultAccess
+                    ? _openAdultPlanFromGoals
+                    : null,
+              ),
+            ],
             const SizedBox(height: 16),
             _buildWellnessSummary(colors),
             const SizedBox(height: 16),
@@ -213,6 +240,41 @@ class _NutritionIntelligencePageState
         ),
       ),
     );
+  }
+
+  void _chooseStkGoal(StkNutritionIntent selected) {
+    final age = ref.read(userExperienceProfileProvider).value
+        ?.ageAt(DateTime.now());
+    final audience = StkAgeAwareNutritionPlans.audience(
+      declaredAge: age,
+      backendVerifiedAdult: _hasAdultNumericAccess,
+    );
+    setState(() {
+      _stkGoal = selected;
+      // Only a server-confirmed adult may copy the navigation choice
+      // into the numerical planner; teens never receive an adult target.
+      if (audience.canUseAdultPlanner) {
+        _goal = switch (selected) {
+          StkNutritionIntent.maintenance => EnergyGoal.maintenance,
+          StkNutritionIntent.volume => EnergyGoal.gradualGain,
+          StkNutritionIntent.deficit => EnergyGoal.gradualLoss,
+        };
+        _invalidateEnergyDraft();
+      }
+    });
+  }
+
+  void _openAdultPlanFromGoals() {
+    if (!_hasAdultNumericAccess) return;
+    final target = _energyFormKey.currentContext;
+    if (target != null) {
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
+        alignment: 0.04,
+      );
+    }
   }
 
   Widget _buildEnergyPlanner(ColorScheme colors) {
@@ -452,6 +514,11 @@ class _NutritionIntelligencePageState
               onChanged: (value) {
                 if (value != null) setState(() {
                   _goal = value;
+                  _stkGoal = switch (value) {
+                    EnergyGoal.maintenance => StkNutritionIntent.maintenance,
+                    EnergyGoal.gradualGain => StkNutritionIntent.volume,
+                    EnergyGoal.gradualLoss => StkNutritionIntent.deficit,
+                  };
                   _invalidateEnergyDraft();
                 });
               },
@@ -961,9 +1028,14 @@ class _NutritionIntelligencePageState
               _hasAdultNumericAccess
                   ? 'Toma o sube una foto. La IA devuelve rangos, ingredientes, '
                       'porciones y nivel de confianza.'
-                  : 'Toma o sube una foto. Mientras la cuenta no tenga verificación '
-                      'adulta, la IA identifica alimentos y porciones sin mostrar '
-                      'calorías ni macros numéricos.',
+                  : _isDeclaredTeen
+                      ? 'Desde los 15 años puedes fotografiar tus comidas: '
+                          'la IA reconoce ingredientes y porciones. '
+                          'Las cifras por plato para adolescentes necesitan '
+                          'revisión adicional antes de habilitarse.'
+                      : 'Toma o sube una foto. La IA identifica alimentos '
+                          'y porciones sin cifras cuando el acceso numérico '
+                          'adulto no está confirmado.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: colors.onSurfaceVariant,
                   ),
@@ -1459,6 +1531,11 @@ class _NutritionIntelligencePageState
       _equationSex=plan.equationSex;
       _activity=plan.activityLevel;
       _goal=plan.goal;
+      _stkGoal = switch (plan.goal) {
+        EnergyGoal.maintenance => StkNutritionIntent.maintenance,
+        EnergyGoal.gradualGain => StkNutritionIntent.volume,
+        EnergyGoal.gradualLoss => StkNutritionIntent.deficit,
+      };
       _invalidateEnergyDraft();
     });
     final target=_energyFormKey.currentContext;
@@ -1729,6 +1806,17 @@ class _NutritionIntelligencePageState
   Future<void> _pickAndAnalyze(NutritionPhotoSource source) async {
     final photo = await widget.photoPicker(source);
     if (!mounted || photo == null) return;
+    // Reject unsupported oversized uploads before allocating a preview
+    // or sending photos to the external provider.
+    if (photo.bytes.isEmpty ||
+        photo.bytes.length > FoodVisionService.maxImageBytes) {
+      setState(() {
+        _photo = null;
+        _foodEstimate = null;
+        _message = 'Elige una fotografía de hasta 4 MB.';
+      });
+      return;
+    }
 
     setState(() {
       _photo = photo;

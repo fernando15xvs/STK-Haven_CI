@@ -73,6 +73,7 @@ class _NutritionIntelligencePageMobileState
         // private nutrition plan or Food Vision results from this widget.
         key: ValueKey('nutrition_account_${Supabase.instance.client.auth.currentUser?.id ?? 'guest'}'),
         photoPicker: _pickPhoto,
+        showAgeAwareGoals: true,
         // The 15+ release gate includes a fresh check BEFORE every image
         // request, including reanalysis after revoking a previous consent.
         requestPhotoAnalysisConsent: StkMobileLegalConfig.enabled
@@ -181,9 +182,10 @@ class _NutritionIntelligencePageMobileState
       source: source == NutritionPhotoSource.camera
           ? ImageSource.camera
           : ImageSource.gallery,
-      imageQuality: 88,
-      maxWidth: 1600,
-      maxHeight: 1600,
+      // Smaller uploads reduce mobile data use and remote image-token costs.
+      imageQuality: 78,
+      maxWidth: 1280,
+      maxHeight: 1280,
     );
     if (file == null) return null;
 
