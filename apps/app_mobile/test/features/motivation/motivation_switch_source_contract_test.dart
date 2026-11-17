@@ -52,6 +52,46 @@ void main(){
       lessThan(setup.indexOf('_cinemaSource.value=c;')));
   });
 
+  test('foreground MP4 resync seeks before play and rejects stale controllers',(){
+    final code=File(
+      'lib/features/motivation/presentation/motivation_page.dart',
+    ).readAsStringSync();
+    final start=code.indexOf(
+      'Future<void> _resumeVideoAfterForeground(VideoPlayerController c) async');
+    final end=code.indexOf('  @override\n  void dispose()',start);
+    expect(start,greaterThanOrEqualTo(0));
+    expect(end,greaterThan(start));
+    final resume=code.substring(start,end);
+    final seek=resume.indexOf('await c.seekTo(widget.playback.position);');
+    final guard=resume.indexOf('if(!mounted || controller!=c || !visible)return;');
+    final play=resume.indexOf('await c.play();');
+    expect(seek,greaterThanOrEqualTo(0));
+    expect(guard,greaterThan(seek));
+    expect(play,greaterThan(guard));
+    expect(resume,contains(
+      'if(widget.playback.playing && !widget.playback.completed)'));
+    expect(resume,contains('}catch(_){'));
+    // The silent video must never start, seek or stop the shared audio clock.
+    expect(resume,isNot(contains('audio.play(')));
+    expect(resume,isNot(contains('audio.seek(')));
+    expect(resume,isNot(contains('audio.stop(')));
+  });
+
+  test('cinema shared controls remain scrollable with 200% accessibility text',(){
+    final code=File(
+      'lib/features/motivation/presentation/motivation_page.dart',
+    ).readAsStringSync();
+    final start=code.indexOf('void _openCinema()');
+    final end=code.indexOf('  @override\n  Widget build(BuildContext context){',start);
+    final cinema=code.substring(start,end);
+    expect(cinema,contains('Flexible(fit:FlexFit.loose,'));
+    expect(cinema,contains('child:AnimatedBuilder('));
+    expect(cinema,contains('return SingleChildScrollView('));
+    expect(cinema,contains("ValueKey('motivation_cinema_shared_controls')"));
+    expect(cinema,contains("ValueKey('motivation_cinema_toggle')"));
+    expect(cinema,isNot(contains('VideoPlayerController.file(')));
+  });
+
   test('silent video errors do not silently restart the audio clock',(){
     final code=File(
       'lib/features/motivation/presentation/motivation_page.dart',
