@@ -193,7 +193,7 @@ class _NutritionIntelligencePageState
             _HeroCard(colors: colors),
             const SizedBox(height: 16),
             if (!hasAdultAccess)
-              _AdultGateCard(
+              NutritionAccessStatusPanel(
                 colors: colors,
                 access: access,
                 onRefreshAdultAccess: widget.onRefreshAdultAccess)
@@ -2002,8 +2002,8 @@ class _HeroCard extends StatelessWidget {
   }
 }
 
-class _AdultGateCard extends StatelessWidget {
-  const _AdultGateCard({
+class NutritionAccessStatusPanel extends StatelessWidget {
+  const NutritionAccessStatusPanel({
     required this.colors,
     required this.access,
     this.onRefreshAdultAccess,

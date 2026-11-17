@@ -339,6 +339,21 @@ jobs:
       - name: Test STK Motivation import, playlists, playback and compact player
         working-directory: apps/app_mobile
         run: flutter test test/features/motivation
+      - name: Test nutrition access visual matrix and adult privacy
+        working-directory: apps/app_mobile
+        run: flutter test test/features/nutrition
+      # Synthetic widget captures use Outfit and NO imported user media or
+      # identity documents. They are visual review aids, not device QA.
+      - name: Upload Nutrition and Motivation theme QA (24 + 24 captures)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-nutrition-motivation-visual-qa
+          path: |
+            apps/app_mobile/build/nutrition_access_visual_qa/*.png
+            apps/app_mobile/build/motivation_visual_qa/*.png
+          if-no-files-found: warn
+          retention-days: 14
       - name: Test 3 real catalog PNG carousels under QA flag
         working-directory: apps/app_mobile
         run: >-
