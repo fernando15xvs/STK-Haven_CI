@@ -134,4 +134,31 @@ void main(){
     expect(restore,contains('catch (_)'));
   });
 
+  test('B1.7 legacy recovery is an opt-in preview with confirmation',(){
+    final ui = File('lib/features/sync/presentation/backup_status_page.dart')
+        .readAsStringSync();
+    expect(ui, contains('Recuperar datos de una versión antigua'));
+    final start=ui.indexOf('static Future<void> _importLegacyArchives(');
+    final end=ui.indexOf('static Future<void> _restoreLocalBackup(',start);
+    expect(start,greaterThanOrEqualTo(0));
+    expect(end,greaterThan(start));
+    final flow=ui.substring(start,end);
+    final preview=flow.indexOf('await importer.inspect()');
+    final safe=flow.indexOf('if (!scan.safeToImport)');
+    final dialog=flow.indexOf('final confirmed = await showDialog<bool>(');
+    final confirmed=flow.indexOf('confirmed != true');
+    final guard=flow.lastIndexOf('ref.read(activeWorkoutProvider).session != null');
+    final write=flow.indexOf('await importer.importRecognized()');
+    expect(preview,greaterThanOrEqualTo(0));
+    expect(safe,greaterThan(preview));
+    expect(dialog,greaterThan(safe));
+    expect(confirmed,greaterThan(dialog));
+    expect(guard,greaterThan(confirmed));
+    expect(write,greaterThan(guard));
+    expect(flow,contains('pueden pertenecer a otra cuenta'));
+    expect(flow,contains('No se subirán automáticamente a la nube.'));
+    expect(flow,contains("markRestored(source: 'archivo antiguo')"));
+    expect(flow,isNot(contains('Hive.deleteBoxFromDisk(')));
+  });
+
 }
