@@ -46,11 +46,16 @@ HiveWorkoutSession originalWorkout(String id) => HiveWorkoutSession(
 
 void main() {
   late Directory tempDir;
+  var adaptersRegistered = false;
 
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('stk_haven_restore_journal_');
     Hive.init(tempDir.path);
-    registerHiveAdapters();
+    // Hive.close() closes boxes but preserves registered TypeAdapters.
+    if (!adaptersRegistered) {
+      registerHiveAdapters();
+      adaptersRegistered = true;
+    }
     await openRestoreBoxes();
   });
 
@@ -88,7 +93,6 @@ void main() {
     await Hive.close();
 
     Hive.init(tempDir.path);
-    registerHiveAdapters();
     await openRestoreBoxes();
     expect(Hive.box<HiveWorkoutSession>(HiveBoxes.history).isEmpty, isTrue);
 
