@@ -25,10 +25,11 @@ class BackupValidationResult {
 
 class BackupService {
   static const int currentBackupSchemaVersion = 11;
-  // One shared lock across BackupService instances (local and cloud).
-  // Concurrent destructive restores can otherwise interleave box.clear()
-  // calls and overwrite each other's records. This is an in-process guard,
-  // not a durable transaction against power loss.
+  static const String pendingRestoreJournalKey = 'pending_restore_v1';
+  static const String _journalFormat = 'stk_haven_restore_journal_v1';
+
+  // All BackupService instances (local + cloud) share one writer and one
+  // recovery lock. The on-disk journal below protects against process death.
   static bool _restoreInProgress = false;
 
   String createBackup() {
@@ -148,10 +149,108 @@ class BackupService {
     }
     _restoreInProgress = true;
     try {
-      await _restoreBackupLocked(data, schemaVersion: schemaVersion);
+      // Preflight must run before even opening a journal or touching a box.
+      // A malformed imported file cannot trigger a destructive write.
+      _mapDataToHiveObjects(data, schemaVersion);
+      final journal = await Hive.openBox<dynamic>(HiveBoxes.restoreJournal);
+      if (journal.containsKey(pendingRestoreJournalKey)) {
+        throw StateError(
+          'Existe una restauración anterior incompleta. '
+          'Reinicia STK Haven antes de restaurar otra copia.',
+        );
+      }
+
+      // Persist the previous device state BEFORE the first box.clear().
+      // A power loss then restores the previous snapshot on next app launch,
+      // rather than booting with a partially replaced training history.
+      final snapshot = createBackup();
+      final check = validateBackup(snapshot);
+      if (!check.isValid) {
+        throw StateError(
+          'No se puede crear una copia de seguridad de los datos actuales.',
+        );
+      }
+      await journal.put(pendingRestoreJournalKey, <String, dynamic>{
+        'format': _journalFormat,
+        'backup': snapshot,
+        'db_version': Hive.box(HiveBoxes.metadata).get('db_version'),
+      });
+      await journal.flush();
+
+      try {
+        await _restoreBackupLocked(data, schemaVersion: schemaVersion);
+        // Never report success before the successful restore is committed
+        // and the intent journal has been removed from local storage.
+        await journal.delete(pendingRestoreJournalKey);
+        await journal.flush();
+      } catch (_) {
+        // Revert immediately if possible. If this fails (disk full, OS
+        // termination), leave the original snapshot on disk for next boot.
+        try {
+          await _recoverInterruptedRestoreLocked(journal);
+        } catch (_) {
+          throw StateError(
+            'La restauración falló. Existe una copia de recuperación local '
+            'pendiente; conserva tus archivos y reinicia STK Haven.',
+          );
+        }
+        rethrow;
+      }
     } finally {
       _restoreInProgress = false;
     }
+  }
+
+  /// Called by HiveDatabase.init AFTER all typed boxes and their adapters
+  /// are available, but BEFORE providers can use partially restored records.
+  /// Returns false when the previous shutdown had no unfinished restore.
+  static Future<bool> recoverInterruptedRestore() async {
+    if (_restoreInProgress) {
+      throw StateError('Ya hay una restauración de datos en curso.');
+    }
+    _restoreInProgress = true;
+    try {
+      final journal = await Hive.openBox<dynamic>(HiveBoxes.restoreJournal);
+      if (!journal.containsKey(pendingRestoreJournalKey)) return false;
+      await BackupService()._recoverInterruptedRestoreLocked(journal);
+      return true;
+    } finally {
+      _restoreInProgress = false;
+    }
+  }
+
+  Future<void> _recoverInterruptedRestoreLocked(Box<dynamic> journal) async {
+    final raw = journal.get(pendingRestoreJournalKey);
+    if (raw is! Map ||
+        raw['format'] != _journalFormat ||
+        raw['backup'] is! String) {
+      throw StateError(
+        'La copia de recuperación local no es válida. '
+        'No se ha eliminado ni modificado automáticamente.',
+      );
+    }
+    final validation = validateBackup(raw['backup'] as String);
+    if (!validation.isValid ||
+        validation.parsedData == null ||
+        validation.schemaVersion == null) {
+      throw StateError(
+        'La copia de recuperación local está dañada. '
+        'No se ha eliminado ni modificado automáticamente.',
+      );
+    }
+
+    // Recovery is idempotent. A crash during recovery leaves the journal
+    // intact, so the next launch can safely retry the same old snapshot.
+    await _restoreBackupLocked(
+      validation.parsedData!,
+      schemaVersion: validation.schemaVersion!,
+    );
+    final savedVersion = raw['db_version'];
+    if (savedVersion is int) {
+      await Hive.box(HiveBoxes.metadata).put('db_version', savedVersion);
+    }
+    await journal.delete(pendingRestoreJournalKey);
+    await journal.flush();
   }
 
   Future<void> _restoreBackupLocked(
