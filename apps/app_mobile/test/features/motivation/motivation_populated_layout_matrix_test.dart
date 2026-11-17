@@ -131,7 +131,13 @@ void main() {
     final presetButton = find.byKey(
       const ValueKey('motivation_playlist_ideas'),
     );
-    await tester.ensureVisible(presetButton);
+    // The collections controls are below the fold at 320dp/200%.
+    // Lazy ListView children do not exist until they are scrolled into view.
+    await tester.scrollUntilVisible(
+      presetButton, 180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(presetButton);
     await tester.pumpAndSettle();
     expect(
