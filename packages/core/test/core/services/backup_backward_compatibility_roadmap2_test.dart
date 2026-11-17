@@ -242,4 +242,112 @@ void main() {
         ['skipped', 'failed', null, null]);
   });
 
+  test('A5 guest backup roundtrip retains history, wellness and metadata',
+      () async {
+    final metadata = Hive.box(HiveBoxes.metadata);
+    final history = Hive.box<HiveWorkoutSession>(HiveBoxes.history);
+    final hydration = Hive.box(HiveBoxes.hydration);
+    final recovery = Hive.box(HiveBoxes.recovery);
+    final habitTasks = Hive.box(HiveBoxes.habitTasks);
+
+    await metadata.clear();
+    await history.clear();
+    await hydration.clear();
+    await recovery.clear();
+    await habitTasks.clear();
+
+    await metadata.put('db_version', 16);
+    await metadata.put('user_experience_profile_v1', {
+      'onboardingVersion': 2,
+      'trainingDaysPerWeek': 3,
+      'faithPreference': 'undecided',
+      'hasCompletedOnboarding': true,
+    });
+    await history.put('guest-offline-session', HiveWorkoutSession(
+      id: 'guest-offline-session',
+      routineNameSnapshot: 'Full body',
+      startedAt: DateTime.utc(2026, 11, 16, 7),
+      finishedAt: DateTime.utc(2026, 11, 16, 8),
+      durationSeconds: 3600,
+      exercises: [
+        HiveWorkoutExercise(
+          exerciseId: 'squat',
+          sets: [
+            HiveWorkoutSet(weight: 42.5, reps: 8, completed: true),
+            HiveWorkoutSet(weight: 0, reps: 0,
+                completed: false, recordedOutcome: 'skipped'),
+          ],
+        ),
+      ],
+    ));
+    await hydration.put('2026-11-16', {
+      'dateString': '2026-11-16',
+      'waterMl': 1300,
+    });
+    await recovery.put('2026-11-16', {'sleepHours': 7.5});
+    await habitTasks.put('habit::reading', {'completed': true});
+    await habitTasks.put('runtime::session_flag', 'never export this');
+
+    final service = BackupService();
+    final json = service.createBackup();
+    final validated = service.validateBackup(json);
+    expect(validated.isValid, isTrue);
+    expect(validated.schemaVersion,
+        BackupService.currentBackupSchemaVersion);
+    final data = validated.parsedData!;
+    final settings = data['settings'] as Map<String, dynamic>;
+    expect(settings.containsKey('db_version'), isFalse);
+    final storedHabits = data['habitTasksStore'] as Map<String, dynamic>;
+    expect(storedHabits.containsKey('runtime::session_flag'), isFalse);
+    expect(storedHabits.containsKey('habit::reading'), isTrue);
+
+    // Simulate reinstall/restore: the installed DB version must survive.
+    await metadata.put('db_version', 17);
+    await metadata.delete('user_experience_profile_v1');
+    await history.clear();
+    await hydration.clear();
+    await recovery.clear();
+    await habitTasks.clear();
+    await service.restoreBackup(data,
+        schemaVersion: validated.schemaVersion!);
+
+    final restoredProfile =
+        metadata.get('user_experience_profile_v1') as Map;
+    expect(restoredProfile['trainingDaysPerWeek'], 3);
+    expect(restoredProfile['faithPreference'], 'undecided');
+    expect(metadata.get('db_version'), 17);
+    expect(history.keys, contains('guest-offline-session'));
+    final restored = history.get('guest-offline-session')!;
+    expect(restored.exercises.single.sets.first.weight, 42.5);
+    expect(restored.exercises.single.sets.first.reps, 8);
+    expect(restored.exercises.single.sets.first.completed, isTrue);
+    expect(restored.exercises.single.sets.first.recordedOutcome, isNull);
+    expect(restored.exercises.single.sets.last.recordedOutcome, 'skipped');
+    expect((hydration.get('2026-11-16') as Map)['waterMl'], 1300);
+    expect((recovery.get('2026-11-16') as Map)['sleepHours'], 7.5);
+    expect(habitTasks.containsKey('habit::reading'), isTrue);
+    expect(habitTasks.containsKey('runtime::session_flag'), isFalse);
+  });
+
+  test('A5 corrupt restore preflight leaves populated Hive boxes intact',
+      () async {
+    final metadata = Hive.box(HiveBoxes.metadata);
+    final history = Hive.box<HiveWorkoutSession>(HiveBoxes.history);
+    final beforeHistory = history.toMap();
+    final beforeSettings = metadata.toMap();
+    await expectLater(
+      BackupService().restoreBackup({
+        'settings': {'user_experience_profile_v1': {}},
+        'workouts': [
+          {'id': 'collision'},
+          {'id': 'collision'},
+        ],
+      }, schemaVersion: BackupService.currentBackupSchemaVersion),
+      throwsA(isA<FormatException>()),
+    );
+    expect(history.toMap(), beforeHistory);
+    expect(metadata.toMap(), beforeSettings);
+  });
+
+
 }
