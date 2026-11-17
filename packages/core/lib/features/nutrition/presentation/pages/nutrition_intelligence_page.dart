@@ -246,7 +246,7 @@ class _NutritionIntelligencePageState
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                        ?.copyWith(fontWeight: FontWeight.w800, fontVariations: const [FontVariation('wght', 800)]),
                   ),
                 ),
               ],
@@ -947,7 +947,7 @@ class _NutritionIntelligencePageState
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                        ?.copyWith(fontWeight: FontWeight.w800, fontVariations: const [FontVariation('wght', 800)]),
                   ),
                 ),
               ],
@@ -1142,7 +1142,7 @@ class _NutritionIntelligencePageState
                     style: Theme.of(context)
                         .textTheme
                         .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800),
+                        ?.copyWith(fontWeight: FontWeight.w800, fontVariations: const [FontVariation('wght', 800)]),
                   ),
                 ),
                 if (_history.isNotEmpty)
@@ -1989,7 +1989,7 @@ class _HeroCard extends StatelessWidget {
               children: [
                 Text('Mi plan STK',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800)),
+                    fontWeight: FontWeight.w800, fontVariations: const [FontVariation('wght', 800)])),
                 Text('Nutrición, actividad y hábitos en un solo lugar.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colors.onSurfaceVariant)),
@@ -2052,7 +2052,7 @@ class _AdultGateCard extends StatelessWidget {
           const SizedBox(width:10),
           Expanded(child:Text(title,
             style:Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight:FontWeight.w800))),
+              fontWeight:FontWeight.w800, fontVariations: const [FontVariation('wght', 800)]))),
         ]),
         const SizedBox(height:8),
         Text(message,style:Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -2075,7 +2075,7 @@ class _AdultGateCard extends StatelessWidget {
             childrenPadding:const EdgeInsets.only(bottom:8),
             title:Text('¿Cómo funciona?',
               style:Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight:FontWeight.w600)),
+                fontWeight:FontWeight.w600, fontVariations: const [FontVariation('wght', 600)])),
             children:[
               Text(
                 access==NutritionAccessState.minor
@@ -2123,7 +2123,7 @@ class _EnergyResultCard extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w900),
+                ?.copyWith(fontWeight: FontWeight.w900, fontVariations: const [FontVariation('wght', 900)]),
           ),
           const SizedBox(height: 4),
           Text(
@@ -2164,7 +2164,7 @@ class _FoodVisionResultCard extends StatelessWidget {
             style: Theme.of(context)
                 .textTheme
                 .titleLarge
-                ?.copyWith(fontWeight: FontWeight.w900),
+                ?.copyWith(fontWeight: FontWeight.w900, fontVariations: const [FontVariation('wght', 900)]),
           ),
           const SizedBox(height: 6),
           Text('Confianza: ${_confidenceLabel(estimate.confidence)}'),
@@ -2177,7 +2177,7 @@ class _FoodVisionResultCard extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w800),
+                  ?.copyWith(fontWeight: FontWeight.w800, fontVariations: const [FontVariation('wght', 800)]),
             ),
           ],
           if (estimate.items.isNotEmpty) ...[
@@ -2213,7 +2213,7 @@ class _FoodVisionResultCard extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
+                  ?.copyWith(fontWeight: FontWeight.w800, fontVariations: const [FontVariation('wght', 800)]),
             ),
             for (final value in estimate.assumptions) Text('• $value'),
           ],
@@ -2224,7 +2224,7 @@ class _FoodVisionResultCard extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
+                  ?.copyWith(fontWeight: FontWeight.w800, fontVariations: const [FontVariation('wght', 800)]),
             ),
             for (final value in estimate.questions) Text('• $value'),
           ],

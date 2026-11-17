@@ -37,7 +37,9 @@ void main(){
       'lib/features/motivation/presentation/motivation_page.dart',
     ).readAsStringSync();
     final start=code.indexOf('Future<void> _setup() async');
-    final end=code.indexOf('void _syncVideoLoop()',start);
+    // Decoder failure helpers are separate from setup; a guard *inside*
+    // the helper must not be mistaken for a publication guard in _setup.
+    final end=code.indexOf('void _onVideoDecoderChanged()',start);
     expect(start,greaterThanOrEqualTo(0));
     expect(end,greaterThan(start));
     final setup=code.substring(start,end);
