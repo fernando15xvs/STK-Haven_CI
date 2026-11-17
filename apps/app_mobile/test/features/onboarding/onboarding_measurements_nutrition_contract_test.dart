@@ -51,7 +51,11 @@ void main() {
     expect(page,contains('no instalaremos uno automáticamente.'));
     expect(page,contains('Puedes configurar rutinas después en Entrenar.'));
     expect(page,contains('if (recommended != null)'));
-    expect(page,contains('_finish(installRecommended: false)'));
+    // The legacy path still completes directly; the 15+ path first opens
+    // the final legal step. The consent receipt is checked by _finish.
+    expect(page,contains('_reviewOrFinish(installRecommended: false)'));
+    expect(page,contains('unawaited(_finish(installRecommended: installRecommended))'));
+    expect(page,contains('legalReceipt: receipt'));
     expect(page,contains('completeOnboardingFromScratch()'));
   });
 
