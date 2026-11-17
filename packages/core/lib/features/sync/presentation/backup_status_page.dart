@@ -218,12 +218,15 @@ class BackupStatusPage extends ConsumerWidget {
                       try {
                         final jsonString = _backupService.createBackup();
                         await _backupFileService.exportFile(jsonString);
-                      } catch (error) {
+                      } catch (_) {
+                        // Native share errors may contain private paths.
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content:
-                                  Text('Error al crear la copia: $error'),
+                            const SnackBar(
+                              content: Text(
+                                'No se pudo exportar la copia. '
+                                'Comprueba los permisos y el espacio disponible.',
+                              ),
                             ),
                           );
                         }
@@ -272,12 +275,13 @@ class BackupStatusPage extends ConsumerWidget {
                       try {
                         await DataExportService()
                             .exportWorkoutsToCSV(history);
-                      } catch (error) {
+                      } catch (_) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
+                            const SnackBar(
                               content: Text(
-                                'Error al exportar entrenamientos: $error',
+                                'No se pudieron exportar los entrenamientos. '
+                                'Comprueba los permisos y el espacio disponible.',
                               ),
                             ),
                           );
@@ -395,6 +399,8 @@ class BackupStatusPage extends ConsumerWidget {
             BackupService.currentBackupSchemaVersion,
       );
       await TrainingProgramRepository.fromHive().hydrateFromBackupMetadata();
+      // Record a restore only after Hive/program hydration succeeds.
+      await BackupActivityService.markRestored(source: 'local');
       ref.invalidate(settingsProvider);
       ref.invalidate(userExperienceProfileProvider);
       ref.invalidate(habitTasksProvider);
