@@ -23,6 +23,23 @@ class BackupValidationResult {
   });
 }
 
+/// Counts only records actually merged into current v2 stores.
+class BackupLegacyMergeResult {
+  final int exercises;
+  final int routines;
+  final int workouts;
+  final int duplicateIds;
+
+  const BackupLegacyMergeResult({
+    required this.exercises,
+    required this.routines,
+    required this.workouts,
+    required this.duplicateIds,
+  });
+
+  int get imported => exercises + routines + workouts;
+}
+
 class BackupService {
   static const int currentBackupSchemaVersion = 11;
   static const String pendingRestoreJournalKey = 'pending_restore_v1';
@@ -71,6 +88,64 @@ class BackupService {
     };
 
     return jsonEncode(backup);
+  }
+
+  /// User-confirmed, non-destructive migration of compatible old Hive
+  /// records. Merge into the CURRENT backup and use the same durable restore
+  /// journal; never clear or overwrite an old source box.
+  Future<BackupLegacyMergeResult> mergeLegacyRecords({
+    List<HiveExercise> exercises = const [],
+    List<HiveRoutine> routines = const [],
+    List<HiveWorkoutSession> workouts = const [],
+  }) async {
+    final existing = validateBackup(createBackup());
+    if (!existing.isValid || existing.parsedData == null) {
+      throw StateError('Los datos locales no permiten una migración segura.');
+    }
+    final updated = existing.parsedData!;
+    var duplicates = 0;
+    int append<T>(
+      String collection,
+      List<T> legacy,
+      Map<String, dynamic> Function(T) encode,
+    ) {
+      final target = updated[collection] as List<dynamic>;
+      final ids = <String>{
+        for (final entry in target)
+          (entry as Map)['id'] as String,
+      };
+      var added = 0;
+      for (final record in legacy) {
+        final payload = encode(record);
+        final id = payload['id'];
+        if (id is! String || id.trim().isEmpty) {
+          throw StateError('El archivo antiguo tiene identificadores inválidos.');
+        }
+        // Never overwrite current records with an archived ID, and never
+        // rename history records because personal records may reference IDs.
+        if (!ids.add(id)) {
+          duplicates++;
+          continue;
+        }
+        target.add(payload);
+        added++;
+      }
+      return added;
+    }
+
+    final nExercises = append('exercises', exercises, _exerciseToMap);
+    final nRoutines = append('routines', routines, _routineToMap);
+    final nWorkouts = append('workouts', workouts, _workoutToMap);
+    final result = BackupLegacyMergeResult(
+      exercises: nExercises,
+      routines: nRoutines,
+      workouts: nWorkouts,
+      duplicateIds: duplicates,
+    );
+    if (result.imported > 0) {
+      await restoreBackup(updated, schemaVersion: currentBackupSchemaVersion);
+    }
+    return result;
   }
 
   BackupValidationResult validateBackup(String jsonString) {
