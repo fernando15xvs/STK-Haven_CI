@@ -16,6 +16,7 @@ import 'package:core/features/profile/presentation/providers/user_experience_pro
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/primary_button.dart';
 import 'package:gym_tracker/features/onboarding/data/stk_mobile_legal_receipt_store.dart';
@@ -160,6 +161,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     // A checkbox or DOB alone never authorizes adult numeric nutrition.
     // Fail closed if a caller skips the final legal step.
     if (_legalFlowRequested) {
+      final activeUid = Supabase.instance.client.auth.currentUser?.id;
+      final actualType = activeUid == null
+          ? StkLegalSubjectType.guest
+          : StkLegalSubjectType.authenticated;
+      final actualSubjectId = activeUid ?? await _guestId;
       if (!_legalDocs.canCollectAcceptance ||
           !StkAgeEligibility.canBeginNewAccount(
             birthDate: _eligibilityBirthDate,
@@ -168,8 +174,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           legalReceipt == null ||
           !legalReceipt.isCurrentFor(
             documents: _legalDocs,
-            subjectType: StkLegalSubjectType.guest,
-            subjectId: await _guestId,
+            subjectType: actualType,
+            subjectId: actualSubjectId,
           )) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -201,9 +207,26 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         return;
       }
       if (_legalFlowRequested && legalReceipt != null) {
-        await StkMobileLegalReceiptStore(
+        final store = StkMobileLegalReceiptStore(
           Hive.box<dynamic>(HiveBoxes.metadata),
-        ).saveGuest(legalReceipt);
+        );
+        // Recheck after async validation: a sign-in/sign-out/account switch
+        // must never write a receipt or profile under a different identity.
+        final activeUid = Supabase.instance.client.auth.currentUser?.id;
+        if (legalReceipt.subjectType == StkLegalSubjectType.authenticated) {
+          await store.saveAuthenticated(
+            legalReceipt,
+            activeUserId: activeUid,
+          );
+        } else {
+          if (activeUid != null) {
+            throw StateError('La cuenta cambió durante la aceptación.');
+          }
+          await store.saveGuest(legalReceipt);
+        }
+        if (activeUid != Supabase.instance.client.auth.currentUser?.id) {
+          throw StateError('La cuenta cambió durante el registro.');
+        }
       }
       final profile = _buildProfile();
       await ref
@@ -555,8 +578,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   }
 
   Widget _legalStep() {
+    final activeUid = Supabase.instance.client.auth.currentUser?.id;
     return FutureBuilder<String>(
-      future: _guestId,
+      future: activeUid == null ? _guestId : Future<String>.value(activeUid),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           if (snapshot.hasError) {
@@ -570,7 +594,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           key: const ValueKey('stk_onboarding_legal_step'),
           birthDate: _eligibilityBirthDate,
           documents: _legalDocs,
-          subjectType: StkLegalSubjectType.guest,
+          subjectType: activeUid == null
+              ? StkLegalSubjectType.guest
+              : StkLegalSubjectType.authenticated,
           subjectId: snapshot.data!,
           locale: 'es-PE',
           onViewTerms: () => _openLegalDocument(

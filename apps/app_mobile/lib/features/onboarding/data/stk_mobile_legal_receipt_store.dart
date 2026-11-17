@@ -2,32 +2,31 @@ import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-/// Installation-scoped audit receipt, never a verified identity or a
-/// server-side authorization. Account-bound receipts belong to phase 3.
+/// Installation-scoped, non-authoritative legal receipt registry.
+/// This does not establish account ownership on the backend, nor adulthood.
+/// Restoring Hive data cannot grant nutrition privileges.
 class StkMobileLegalReceiptStore {
   StkMobileLegalReceiptStore(this._box);
 
   static const String _guestIdKey = 'stk_legal_guest_subject_v1';
   static const String _receiptKey = 'stk_legal_guest_receipt_v1';
+  static const String _accountPrefix = 'stk_legal_account_receipt_v1:';
   final Box<dynamic> _box;
 
   Future<String> getOrCreateGuestId() async {
     final existing = _box.get(_guestIdKey);
-    if (existing is String && existing.trim().isNotEmpty) {
-      return existing;
-    }
-    final newId = const Uuid().v4();
-    await _box.put(_guestIdKey, newId);
-    return newId;
+    if (existing is String && existing.trim().isNotEmpty) return existing;
+    final id = const Uuid().v4();
+    await _box.put(_guestIdKey, id);
+    return id;
   }
 
-  /// Saving acceptance is not proof that a signed-in user accepted anything.
-  /// A new account must accept for its own UID before server-bound use.
+  /// A guest receipt can NEVER be promoted to a signed-in UID.
   Future<void> saveGuest(StkLegalAcceptanceReceipt receipt) async {
     final id = await getOrCreateGuestId();
     if (receipt.subjectType != StkLegalSubjectType.guest ||
         receipt.subjectId != id) {
-      throw StateError('No se puede asociar otra identidad al recibo.');
+      throw StateError('La aceptación corresponde a otra identidad.');
     }
     await _box.put(_receiptKey, receipt.toJson());
   }
@@ -35,20 +34,83 @@ class StkMobileLegalReceiptStore {
   StkLegalAcceptanceReceipt? readGuest({
     required StkLegalDocumentSet documents,
     required String guestId,
+  }) => _read(
+    _receiptKey,
+    documents: documents,
+    subjectType: StkLegalSubjectType.guest,
+    subjectId: guestId,
+  );
+
+  /// Account receipts MUST be explicitly accepted by the current UID;
+  /// never derive currentUserId from editable JWT user_metadata or profiles.
+  Future<void> saveAuthenticated(
+    StkLegalAcceptanceReceipt receipt, {
+    required String? activeUserId,
+  }) async {
+    if (activeUserId == null || activeUserId.trim().isEmpty ||
+        receipt.subjectType != StkLegalSubjectType.authenticated ||
+        receipt.subjectId != activeUserId) {
+      throw StateError('La aceptación no corresponde a la cuenta activa.');
+    }
+    await _box.put(_accountKey(activeUserId), receipt.toJson());
+  }
+
+  StkLegalAcceptanceReceipt? readAuthenticated({
+    required StkLegalDocumentSet documents,
+    required String? activeUserId,
   }) {
-    final raw = _box.get(_receiptKey);
-    if (raw is! Map) return null;
-    final restored = StkLegalAcceptanceReceipt.fromJson(
-      Map<String, dynamic>.from(raw),
+    if (activeUserId == null || activeUserId.trim().isEmpty) return null;
+    return _read(
+      _accountKey(activeUserId),
+      documents: documents,
+      subjectType: StkLegalSubjectType.authenticated,
+      subjectId: activeUserId,
     );
-    if (restored == null ||
-        !restored.isCurrentFor(
-          documents: documents,
-          subjectType: StkLegalSubjectType.guest,
-          subjectId: guestId,
-        )) {
+  }
+
+  /// Local deletion for privacy requests. Deleting locally does not revoke
+  /// legal proof held elsewhere and does not delete a remote account.
+  Future<void> clearLocalReceipt({
+    required StkLegalSubjectType subjectType,
+    required String subjectId,
+    required String? activeUserId,
+  }) async {
+    if (subjectType == StkLegalSubjectType.authenticated) {
+      if (activeUserId == null || activeUserId != subjectId) {
+        throw StateError('No puedes modificar los datos de otra cuenta.');
+      }
+      await _box.delete(_accountKey(subjectId));
+      return;
+    }
+    final guestId = await getOrCreateGuestId();
+    if (guestId != subjectId || activeUserId != null) {
+      throw StateError('No se permite borrar datos de otra identidad.');
+    }
+    await _box.delete(_receiptKey);
+  }
+
+  StkLegalAcceptanceReceipt? _read(
+    String key, {
+    required StkLegalDocumentSet documents,
+    required StkLegalSubjectType subjectType,
+    required String subjectId,
+  }) {
+    final raw = _box.get(key);
+    if (raw is! Map) return null;
+    try {
+      final restored = StkLegalAcceptanceReceipt.fromJson(
+        Map<String, dynamic>.from(raw),
+      );
+      return restored?.isCurrentFor(
+        documents: documents,
+        subjectType: subjectType,
+        subjectId: subjectId,
+      ) == true ? restored : null;
+    } catch (_) {
+      // Damaged or foreign backup data never establishes acceptance.
       return null;
     }
-    return restored;
   }
+
+  String _accountKey(String id) => '$_accountPrefix${Uri.encodeComponent(id)}';
 }

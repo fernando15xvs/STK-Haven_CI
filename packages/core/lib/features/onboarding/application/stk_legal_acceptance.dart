@@ -79,6 +79,7 @@ class StkLegalAcceptanceReceipt {
     required StkLegalSubjectType subjectType,
     required String subjectId,
     required String locale,
+    String source = 'onboarding',
   }) {
     if (!documents.canCollectAcceptance ||
         !confirmedMinimumAge ||
@@ -89,7 +90,8 @@ class StkLegalAcceptanceReceipt {
           today: now,
         ) ||
         subjectId.trim().isEmpty ||
-        locale.trim().isEmpty) {
+        locale.trim().isEmpty ||
+        (source != 'onboarding' && source != 'legal_settings')) {
       return null;
     }
     return StkLegalAcceptanceReceipt._(
@@ -101,7 +103,7 @@ class StkLegalAcceptanceReceipt {
       privacySha256: documents.privacySha256.toLowerCase(),
       acceptedAtUtc: now.toUtc(),
       locale: locale.trim(),
-      source: 'onboarding',
+      source: source,
     );
   }
 
@@ -155,7 +157,7 @@ class StkLegalAcceptanceReceipt {
         privacyVersion is! String || privacyVersion.trim().isEmpty ||
         privacyHash is! String || !StkLegalDocumentSet._sha256.hasMatch(privacyHash) ||
         locale is! String || locale.trim().isEmpty ||
-        source != 'onboarding' ||
+        (source != 'onboarding' && source != 'legal_settings') ||
         date == null ||
         !date.isUtc) {
       return null;

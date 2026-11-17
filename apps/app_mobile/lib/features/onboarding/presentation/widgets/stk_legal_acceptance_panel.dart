@@ -21,10 +21,13 @@ class StkLegalAcceptancePanel extends StatefulWidget {
     required this.onAccepted,
     required this.onDecline,
     this.today,
+    this.acceptanceSource = 'onboarding',
   });
 
   final DateTime? birthDate;
   final DateTime? today;
+  /// 'legal_settings' is used for existing accounts reviewing updated terms.
+  final String acceptanceSource;
   final StkLegalDocumentSet documents;
   final StkLegalSubjectType subjectType;
   final String subjectId;
@@ -67,6 +70,7 @@ class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
       subjectType: widget.subjectType,
       subjectId: widget.subjectId,
       locale: widget.locale,
+      source: widget.acceptanceSource,
     );
     if (receipt != null) widget.onAccepted(receipt);
   }

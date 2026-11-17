@@ -37,6 +37,9 @@ typedef NutritionPhotoPicker = Future<NutritionPhoto?> Function(
 
 class NutritionIntelligencePage extends ConsumerStatefulWidget {
   final NutritionPhotoPicker photoPicker;
+  /// Optional mobile-only consent check invoked for EVERY remote photo
+  /// analysis (including reanalysis); null preserves legacy callers.
+  final Future<bool> Function()? requestPhotoAnalysisConsent;
   final bool cameraAvailable;
   final bool verifiedAdultNutritionAccess;
   final VoidCallback? onOpenMeasurements;
@@ -45,6 +48,7 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
   const NutritionIntelligencePage({
     super.key,
     required this.photoPicker,
+    this.requestPhotoAnalysisConsent,
     this.cameraAvailable = true,
     this.verifiedAdultNutritionAccess = false,
     this.onOpenMeasurements,
@@ -1744,6 +1748,17 @@ class _NutritionIntelligencePageState
     });
 
     try {
+      final checkConsent = widget.requestPhotoAnalysisConsent;
+      if (checkConsent != null) {
+        final allowed = await checkConsent();
+        if (!mounted || epoch != _analysisEpoch ||
+            !_sameNutritionOwner || owner != _nutritionOwnerId) return;
+        if (!allowed) {
+          setState(() => _message =
+              'No se envió la fotografía. Revisa el permiso de IA en Perfil.');
+          return;
+        }
+      }
       final estimate = await FoodVisionService(Supabase.instance.client).analyze(
         imageBytes: photo.bytes,
         mimeType: photo.mimeType,

@@ -16,6 +16,7 @@ import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/faith/presentation/pages/favorites_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/achievements_page.dart';
+import 'package:gym_tracker/features/profile/presentation/pages/stk_mobile_privacy_page.dart';
 
 /// Identity and app preferences. Routines/programs live in Entrenar,
 /// performance metrics in Progreso and Motivation in the global + menu.
@@ -144,6 +145,12 @@ class ProfilePage extends ConsumerWidget {
                 title: 'Datos y sincronización',
                 subtitle: 'Copias de seguridad, cuenta y exportación',
                 onTap: () => _open(context, const BackupStatusPage()),
+              ),
+              _ProfileLink(
+                icon: Icons.policy_outlined,
+                title: 'Legal y privacidad',
+                subtitle: 'Términos, uso de datos y permisos opcionales',
+                onTap: () => _open(context, const StkMobilePrivacyPage()),
               ),
             ],
           ),

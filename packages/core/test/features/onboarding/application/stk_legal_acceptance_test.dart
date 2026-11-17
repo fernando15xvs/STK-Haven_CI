@@ -130,6 +130,38 @@ void main() {
     ), isFalse);
   });
 
+  test('a legacy user may explicitly accept in legal settings', () {
+    final receipt = StkLegalAcceptanceReceipt.record(
+      documents: approvedDocuments,
+      birthDate: DateTime(2002, 3, 21),
+      now: DateTime.utc(2026, 11, 17),
+      confirmedMinimumAge: true,
+      acceptedTerms: true,
+      privacyNoticeShown: true,
+      subjectType: StkLegalSubjectType.authenticated,
+      subjectId: 'registered-account',
+      locale: 'es-PE',
+      source: 'legal_settings',
+    );
+    expect(receipt, isNotNull);
+    expect(receipt!.source, 'legal_settings');
+    expect(StkLegalAcceptanceReceipt.fromJson(
+      receipt.toJson(),
+    )?.source, 'legal_settings');
+    expect(StkLegalAcceptanceReceipt.record(
+      documents: approvedDocuments,
+      birthDate: DateTime(2002, 3, 21),
+      now: DateTime.utc(2026, 11, 17),
+      confirmedMinimumAge: true,
+      acceptedTerms: true,
+      privacyNoticeShown: true,
+      subjectType: StkLegalSubjectType.authenticated,
+      subjectId: 'registered-account',
+      locale: 'es-PE',
+      source: 'fake-admin-panel',
+    ), isNull);
+  });
+
   test('untrusted backup fields fail closed when malformed', () {
     final good = attempt()!.toJson();
     expect(StkLegalAcceptanceReceipt.fromJson(

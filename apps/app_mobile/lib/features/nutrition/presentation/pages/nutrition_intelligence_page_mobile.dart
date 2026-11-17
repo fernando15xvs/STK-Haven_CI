@@ -1,11 +1,17 @@
 import 'dart:async';
 
 import 'package:core/domain/models/nutrition_intelligence.dart';
+import 'package:core/database/hive/hive_boxes.dart';
+import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
 import 'package:core/features/nutrition/presentation/pages/nutrition_intelligence_page.dart';
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/body_measurement_page.dart';
+import 'package:gym_tracker/features/onboarding/data/stk_mobile_legal_receipt_store.dart';
+import 'package:gym_tracker/features/onboarding/data/stk_mobile_optional_consent_store.dart';
+import 'package:gym_tracker/features/onboarding/presentation/stk_mobile_legal_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NutritionIntelligencePageMobile extends StatefulWidget {
@@ -67,6 +73,10 @@ class _NutritionIntelligencePageMobileState
         // private nutrition plan or Food Vision results from this widget.
         key: ValueKey('nutrition_account_${Supabase.instance.client.auth.currentUser?.id ?? 'guest'}'),
         photoPicker: _pickPhoto,
+        // The 15+ release gate includes a fresh check BEFORE every image
+        // request, including reanalysis after revoking a previous consent.
+        requestPhotoAnalysisConsent: StkMobileLegalConfig.enabled
+            ? _requestPhotoConsent : null,
         cameraAvailable: true,
         // FutureBuilder can retain the prior result while a new RPC is
         // waiting; only a completed fresh check can unlock numeric nutrition.
@@ -79,6 +89,90 @@ class _NutritionIntelligencePageMobileState
         ),
       ),
     );
+  }
+
+  Future<bool> _requestPhotoConsent() async {
+    if (!mounted) return false;
+    final docs = StkMobileLegalConfig.documents;
+    if (!docs.canCollectAcceptance) return false;
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    final store = StkMobileLegalReceiptStore(
+      Hive.box<dynamic>(HiveBoxes.metadata),
+    );
+    final consentStore = StkMobileOptionalConsentStore(
+      Hive.box<dynamic>(HiveBoxes.metadata),
+    );
+    final type = uid == null
+        ? StkLegalSubjectType.guest
+        : StkLegalSubjectType.authenticated;
+    final id = uid ?? await store.getOrCreateGuestId();
+    if (!mounted || uid != Supabase.instance.client.auth.currentUser?.id) {
+      return false;
+    }
+    final receipt = uid == null
+        ? store.readGuest(documents: docs, guestId: id)
+        : store.readAuthenticated(documents: docs, activeUserId: uid);
+    if (receipt == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text(
+          'Revisa los Términos y la Privacidad en Perfil antes de enviar fotos.',
+        ),
+      ));
+      return false;
+    }
+    if (consentStore.isGranted(
+      purpose: StkOptionalConsentPurpose.foodVisionAi,
+      documents: docs,
+      subjectType: type,
+      subjectId: id,
+      activeUserId: uid,
+    )) return true;
+
+    final allowed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Analizar fotografía con IA'),
+        content: const Text(
+          'Para reconocer alimentos, enviaremos la fotografía que elijas '
+          'a nuestro proveedor de IA. La estimación puede contener errores. '
+          'Puedes retirar este permiso en Perfil > Legal y privacidad. '
+          'Evita incluir rostros, documentos o información privada.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('No enviar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Permitir análisis'),
+          ),
+        ],
+      ),
+    );
+    if (allowed != true || !mounted ||
+        uid != Supabase.instance.client.auth.currentUser?.id) return false;
+    try {
+      await consentStore.setGranted(
+        purpose: StkOptionalConsentPurpose.foodVisionAi,
+        documents: docs,
+        subjectType: type,
+        subjectId: id,
+        activeUserId: Supabase.instance.client.auth.currentUser?.id,
+        granted: true,
+        legalReceipt: receipt,
+        now: DateTime.now(),
+      );
+      return consentStore.isGranted(
+        purpose: StkOptionalConsentPurpose.foodVisionAi,
+        documents: docs,
+        subjectType: type,
+        subjectId: id,
+        activeUserId: Supabase.instance.client.auth.currentUser?.id,
+      );
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<NutritionPhoto?> _pickPhoto(NutritionPhotoSource source) async {
