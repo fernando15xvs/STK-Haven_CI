@@ -90,6 +90,14 @@ void main() {
           find.byKey(const ValueKey('motivation_library')),
           findsOneWidget,
         );
+        expect(find.byKey(const ValueKey('motivation_compact_library_title')),
+            findsOneWidget);
+        final firstTrack = find.byKey(const ValueKey('track_qa-track-0'));
+        expect(firstTrack, findsOneWidget);
+        // Real screenshot review found the first media completely below
+        // the fold: reserve meaningful first-screen room for the library.
+        expect(tester.getRect(firstTrack).top, lessThan(780),
+            reason:'A populated library must expose its first file without scrolling');
         expect(tester.takeException(), isNull,
             reason: 'Motivation artwork theme=${variant.$1} '
                 'oled=${variant.$2} accent=$accent');

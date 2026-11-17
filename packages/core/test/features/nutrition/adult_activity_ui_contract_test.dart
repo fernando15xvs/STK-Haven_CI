@@ -8,7 +8,7 @@ void main(){
       'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
     ).readAsStringSync();
     expect(ui,contains('if (!hasAdultAccess)'));
-    expect(ui,contains('_AdultGateCard('));
+    expect(ui,contains('NutritionAccessStatusPanel('));
     expect(ui,contains('_buildEnergyPlanner(colors)'));
     expect(ui,contains('AdultActivitySuggestionPolicy.suggest('));
     expect(ui,contains('recentRecordedSteps(days:14)'));

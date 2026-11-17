@@ -699,14 +699,25 @@ class _MotivationPageState extends State<MotivationPage> {
         :ListView(key:const ValueKey('motivation_library'),
           padding:const EdgeInsets.fromLTRB(16,16,16,100),
           children:[
-            Text('Tu contenido, tu energía',
-              style:AppTypography.headlineLarge),
-            const SizedBox(height:5),
-            Text('Importa tus MP3, M4A, WAV y MP4. Una copia privada '
-              'permite reproducirlos sin internet.',
-              style:AppTypography.bodyMedium.copyWith(
-                color:colors.textSecondary)),
-            const SizedBox(height:16),
+            if(library.tracks.isEmpty)...[
+              Text('Tu contenido, tu energía',
+                style:AppTypography.headlineLarge),
+              const SizedBox(height:5),
+              Text('Importa tus MP3, M4A, WAV y MP4. Una copia privada '
+                'permite reproducirlos sin internet.',
+                style:AppTypography.bodyMedium.copyWith(
+                  color:colors.textSecondary)),
+            ]else...[
+              // The media library should be visible on the first screen.
+              // Repeating a tall onboarding hero hides all tracks at 160%.
+              Text('Mi biblioteca',style:AppTypography.headlineMedium,
+                key:const ValueKey('motivation_compact_library_title')),
+              const SizedBox(height:4),
+              Text('Tus audios y vídeos privados, incluso sin conexión.',
+                style:AppTypography.bodySmall.copyWith(
+                  color:colors.textSecondary)),
+            ],
+            const SizedBox(height:AppSpacing.md),
             MotivationResponsiveActionRow(
               key:const ValueKey('motivation_responsive_import'),
               leading:DropdownButtonFormField<MotivationMode>(
@@ -758,28 +769,46 @@ class _MotivationPageState extends State<MotivationPage> {
               key:const ValueKey('motivation_responsive_collections'),
               leading:Text('Colecciones',
                 style:AppTypography.headlineMedium),
-              action:TextButton.icon(
-                key:const ValueKey('motivation_playlist_ideas'),
-                onPressed:()=>unawaited(_choosePlaylistIdeas()),
-                icon:const Icon(Icons.auto_awesome_outlined),
-                label:const Text('Ideas de listas'),
-              ),
-              compactAction:TextButton(
-                key:const ValueKey('motivation_playlist_ideas'),
-                onPressed:()=>unawaited(_choosePlaylistIdeas()),
-                child:const Text('Ideas de listas'),
-              ),
-            ),
-            if(library.tracks.isNotEmpty)
-              Align(
-                alignment:Alignment.centerLeft,
-                child:TextButton.icon(
-                  key:const ValueKey('motivation_context_playlist_suggestion'),
-                  onPressed:()=>unawaited(_suggestContextPlaylist()),
-                  icon:const Icon(Icons.playlist_add_check_circle_outlined),
-                  label:const Text('Sugerir según mi entrenamiento'),
+              action:Row(mainAxisSize:MainAxisSize.min,children:[
+                TextButton.icon(
+                  key:const ValueKey('motivation_playlist_ideas'),
+                  onPressed:()=>unawaited(_choosePlaylistIdeas()),
+                  icon:const Icon(Icons.auto_awesome_outlined),
+                  label:const Text('Ideas de listas'),
                 ),
-              ),
+                if(library.tracks.isNotEmpty)
+                  PopupMenuButton<String>(
+                    key:const ValueKey('motivation_context_playlist_suggestion'),
+                    tooltip:'Más opciones para colecciones',
+                    icon:const Icon(Icons.more_horiz_rounded),
+                    onSelected:(_)=>unawaited(_suggestContextPlaylist()),
+                    itemBuilder:(_)=>[
+                      const PopupMenuItem<String>(
+                        value:'context',
+                        child:Text('Sugerir según mi entrenamiento')),
+                    ],
+                  ),
+              ]),
+              compactAction:Row(children:[
+                Expanded(child:TextButton(
+                  key:const ValueKey('motivation_playlist_ideas'),
+                  onPressed:()=>unawaited(_choosePlaylistIdeas()),
+                  child:const Text('Ideas de listas'),
+                )),
+                if(library.tracks.isNotEmpty)
+                  PopupMenuButton<String>(
+                    key:const ValueKey('motivation_context_playlist_suggestion'),
+                    tooltip:'Más opciones para colecciones',
+                    icon:const Icon(Icons.more_horiz_rounded),
+                    onSelected:(_)=>unawaited(_suggestContextPlaylist()),
+                    itemBuilder:(_)=>[
+                      const PopupMenuItem<String>(
+                        value:'context',
+                        child:Text('Sugerir según mi entrenamiento')),
+                    ],
+                  ),
+              ]),
+            ),
             const SizedBox(height:9),
             SingleChildScrollView(scrollDirection:Axis.horizontal,
               child:Row(children:[
