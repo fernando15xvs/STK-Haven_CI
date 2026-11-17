@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
 import 'package:flutter/material.dart';
@@ -32,8 +34,10 @@ class StkLegalAcceptancePanel extends StatefulWidget {
   final StkLegalSubjectType subjectType;
   final String subjectId;
   final String locale;
-  final VoidCallback onViewTerms;
-  final VoidCallback onViewPrivacy;
+  /// Returns true only when the corresponding FULL published document has
+  /// been downloaded, hash-verified and explicitly acknowledged by the user.
+  final Future<bool> Function() onViewTerms;
+  final Future<bool> Function() onViewPrivacy;
   final ValueChanged<StkLegalAcceptanceReceipt> onAccepted;
   final VoidCallback onDecline;
 
@@ -45,6 +49,55 @@ class StkLegalAcceptancePanel extends StatefulWidget {
 class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
   bool _ageConfirmed = false;
   bool _termsAccepted = false;
+  bool _termsReviewed = false;
+  bool _privacyReviewed = false;
+  bool _openingDocument = false;
+
+  @override
+  void didUpdateWidget(covariant StkLegalAcceptancePanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.documents.termsVersion != widget.documents.termsVersion ||
+        oldWidget.documents.termsSha256 != widget.documents.termsSha256 ||
+        oldWidget.documents.privacyVersion != widget.documents.privacyVersion ||
+        oldWidget.documents.privacySha256 != widget.documents.privacySha256 ||
+        oldWidget.subjectId != widget.subjectId ||
+        oldWidget.subjectType != widget.subjectType) {
+      _termsReviewed = false;
+      _privacyReviewed = false;
+      _termsAccepted = false;
+      _ageConfirmed = false;
+    }
+  }
+
+  Future<void> _review({required bool terms}) async {
+    if (_openingDocument || !widget.documents.canCollectAcceptance) return;
+    final openingTermsHash = widget.documents.termsSha256;
+    final openingPrivacyHash = widget.documents.privacySha256;
+    final openingSubjectId = widget.subjectId;
+    setState(() => _openingDocument = true);
+    bool viewed = false;
+    try {
+      viewed = await (terms ? widget.onViewTerms() : widget.onViewPrivacy());
+    } catch (_) {
+      viewed = false;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _openingDocument = false;
+          if (viewed &&
+              widget.documents.termsSha256 == openingTermsHash &&
+              widget.documents.privacySha256 == openingPrivacyHash &&
+              widget.subjectId == openingSubjectId) {
+            if (terms) {
+              _termsReviewed = true;
+            } else {
+              _privacyReviewed = true;
+            }
+          }
+        });
+      }
+    }
+  }
 
   bool get _eligible => StkAgeEligibility.canBeginNewAccount(
     birthDate: widget.birthDate,
@@ -55,7 +108,9 @@ class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
       widget.documents.canCollectAcceptance &&
       _eligible &&
       _ageConfirmed &&
-      _termsAccepted;
+      _termsAccepted &&
+      _termsReviewed &&
+      _privacyReviewed;
 
   void _accept() {
     if (!_canContinue || widget.birthDate == null) return;
@@ -65,8 +120,8 @@ class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
       now: widget.today ?? DateTime.now(),
       confirmedMinimumAge: _ageConfirmed,
       acceptedTerms: _termsAccepted,
-      // Privacy policy is visibly presented in the same step.
-      privacyNoticeShown: true,
+      // The complete published policy was acknowledged after hash check.
+      privacyNoticeShown: _privacyReviewed,
       subjectType: widget.subjectType,
       subjectId: widget.subjectId,
       locale: widget.locale,
@@ -109,16 +164,33 @@ class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
           const SizedBox(height: AppSpacing.md),
           TextButton.icon(
             key: const ValueKey('stk_terms_link'),
-            onPressed: widget.onViewTerms,
+            onPressed: widget.documents.canCollectAcceptance && !_openingDocument
+                ? () => unawaited(_review(terms: true))
+                : null,
             icon: const Icon(Icons.description_outlined),
             label: const Text('Leer Términos y Condiciones completos'),
           ),
           TextButton.icon(
             key: const ValueKey('stk_privacy_link'),
-            onPressed: widget.onViewPrivacy,
+            onPressed: widget.documents.canCollectAcceptance && !_openingDocument
+                ? () => unawaited(_review(terms: false))
+                : null,
             icon: const Icon(Icons.privacy_tip_outlined),
             label: const Text('Leer Política de Privacidad completa'),
           ),
+          if (_termsReviewed || _privacyReviewed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: Text(
+                _termsReviewed && _privacyReviewed
+                    ? 'Documentos verificados y revisados.'
+                    : 'Revisa ambos documentos completos para continuar.',
+                key: const ValueKey('stk_legal_documents_reviewed'),
+                style: AppTypography.bodySmall.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
+            ),
           const SizedBox(height: AppSpacing.sm),
           CheckboxListTile(
             key: const ValueKey('stk_confirm_15_plus'),
@@ -141,7 +213,8 @@ class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
               'He leído y acepto los Términos y Condiciones de STK Haven.',
             ),
             value: _termsAccepted,
-            onChanged: widget.documents.canCollectAcceptance
+            onChanged: widget.documents.canCollectAcceptance &&
+                    _termsReviewed && _privacyReviewed
                 ? (value) => setState(() => _termsAccepted = value ?? false)
                 : null,
           ),

@@ -105,9 +105,11 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
           acceptanceSource: 'legal_settings',
           onViewTerms: () => _viewDocument(
             'Términos y Condiciones', _documents.termsUrl,
+            _documents.termsSha256,
           ),
           onViewPrivacy: () => _viewDocument(
             'Política de Privacidad', _documents.privacyUrl,
+            _documents.privacySha256,
           ),
           onAccepted: (receipt) => unawaited(_saveReview(
             reviewContext, receipt, birthDate, uid,
@@ -167,13 +169,18 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
     }
   }
 
-  void _viewDocument(String title, String url) {
-    if (!_documents.canCollectAcceptance) return;
-    Navigator.of(context).push<void>(MaterialPageRoute(
+  Future<bool> _viewDocument(
+    String title, String url, String expectedSha256,
+  ) async {
+    if (!_documents.canCollectAcceptance) return false;
+    final confirmed = await Navigator.of(context).push<bool>(MaterialPageRoute(
       builder: (_) => StkLegalDocumentPage(
-        title: title, httpsUrl: url,
+        title: title,
+        httpsUrl: url,
+        expectedSha256: expectedSha256,
       ),
     ));
+    return confirmed == true;
   }
 
   Future<void> _toggle(
@@ -297,6 +304,7 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
             subtitle: Text('Versión ${_documents.termsVersion}'),
             onTap: () => _viewDocument(
               'Términos y Condiciones', _documents.termsUrl,
+            _documents.termsSha256,
             ),
           ),
           ListTile(
@@ -305,6 +313,7 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
             subtitle: Text('Versión ${_documents.privacyVersion}'),
             onTap: () => _viewDocument(
               'Política de Privacidad', _documents.privacyUrl,
+            _documents.privacySha256,
             ),
           ),
           ListTile(

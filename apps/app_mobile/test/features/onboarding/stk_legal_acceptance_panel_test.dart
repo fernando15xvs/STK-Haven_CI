@@ -28,6 +28,8 @@ void main() {
     DateTime? birthday,
     void Function(StkLegalAcceptanceReceipt)? onAccepted,
     VoidCallback? onDecline,
+    Future<bool> Function()? onTermsViewed,
+    Future<bool> Function()? onPrivacyViewed,
   }) => MaterialApp(
     home: Scaffold(
       body: StkLegalAcceptancePanel(
@@ -37,8 +39,8 @@ void main() {
         subjectType: StkLegalSubjectType.guest,
         subjectId: 'guest-test-installation',
         locale: 'es-PE',
-        onViewTerms: () {},
-        onViewPrivacy: () {},
+        onViewTerms: onTermsViewed ?? () async => true,
+        onViewPrivacy: onPrivacyViewed ?? () async => true,
         onAccepted: onAccepted ?? (_) {},
         onDecline: onDecline ?? () {},
       ),
@@ -57,6 +59,14 @@ void main() {
     await tester.pump();
     expect(button().onPressed, isNull);
 
+    final terms = find.byKey(const ValueKey('stk_terms_link'));
+    final privacy = find.byKey(const ValueKey('stk_privacy_link'));
+    await tester.tap(terms);
+    await tester.pumpAndSettle();
+    expect(button().onPressed, isNull);
+    await tester.tap(privacy);
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const ValueKey('stk_accept_terms')));
     await tester.pump();
     expect(button().onPressed, isNotNull);
@@ -67,6 +77,29 @@ void main() {
     expect(recorded, isNotNull);
     expect(recorded?.termsVersion, 'test-v1');
     expect(recorded?.subjectId, 'guest-test-installation');
+  });
+
+  testWidgets('back or failed verification cannot produce legal acceptance',
+      (tester) async {
+    StkLegalAcceptanceReceipt? receipt;
+    await tester.pumpWidget(page(
+      onAccepted: (value) => receipt = value,
+      onTermsViewed: () async => false,
+      onPrivacyViewed: () async => true,
+    ));
+    await tester.tap(find.byKey(const ValueKey('stk_terms_link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stk_privacy_link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stk_confirm_15_plus')));
+    await tester.pump();
+    expect(tester.widget<CheckboxListTile>(
+      find.byKey(const ValueKey('stk_accept_terms')),
+    ).onChanged, isNull);
+    expect(tester.widget<FilledButton>(
+      find.byKey(const ValueKey('stk_legal_continue')),
+    ).onPressed, isNull);
+    expect(receipt, isNull);
   });
 
   testWidgets('a draft cannot be accepted or presented as published',
@@ -132,8 +165,8 @@ void main() {
           subjectType: StkLegalSubjectType.guest,
           subjectId: 'guest-test',
           locale: 'es-PE',
-          onViewTerms: () {},
-          onViewPrivacy: () {},
+          onViewTerms: () async => true,
+          onViewPrivacy: () async => true,
           onAccepted: (_) {},
           onDecline: () {},
         )),

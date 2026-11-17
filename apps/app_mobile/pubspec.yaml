@@ -40,6 +40,8 @@ dependencies:
   path: ^1.9.1
   workmanager: ^0.10.7
   http: ^1.6.0
+  # Hash-verify the exact published legal text before acceptance.
+  crypto: ^3.0.7
   flutter_local_notifications: ^22.3.0
   shared_preferences: ^2.5.5
   timezone: ^0.11.1

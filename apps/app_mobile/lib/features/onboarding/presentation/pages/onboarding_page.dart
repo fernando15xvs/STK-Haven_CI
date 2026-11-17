@@ -116,12 +116,19 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     unawaited(Navigator.of(context).maybePop());
   }
 
-  void _openLegalDocument(String title, String url) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => StkLegalDocumentPage(title: title, httpsUrl: url),
+  Future<bool> _openLegalDocument(
+    String title, String url, String expectedSha256,
+  ) async {
+    final verified = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => StkLegalDocumentPage(
+          title: title,
+          httpsUrl: url,
+          expectedSha256: expectedSha256,
+        ),
       ),
     );
+    return verified == true;
   }
 
   UserExperienceProfile _buildProfile() {
@@ -601,9 +608,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           locale: 'es-PE',
           onViewTerms: () => _openLegalDocument(
             'Términos y Condiciones', _legalDocs.termsUrl,
+            _legalDocs.termsSha256,
           ),
           onViewPrivacy: () => _openLegalDocument(
             'Política de Privacidad', _legalDocs.privacyUrl,
+            _legalDocs.privacySha256,
           ),
           onAccepted: (receipt) => unawaited(_finish(
             installRecommended: _installRecommendedAfterLegal,
