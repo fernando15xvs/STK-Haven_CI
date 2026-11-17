@@ -31,6 +31,28 @@ void main() {
     expect(restored.toJson()['dateOfBirth'], '2008-11-15');
   });
 
+  test('15+ eligibility date is retained independently of optional demographics', () {
+    final p = UserExperienceProfile(
+      eligibilityBirthDate: DateTime(2011, 11, 17),
+      optionalDemographicsConsented: false,
+    );
+    expect(p.dateOfBirth, isNull);
+    expect(p.ageAt(DateTime(2026, 11, 16)), 14);
+    expect(p.ageAt(DateTime(2026, 11, 17)), 15);
+    final restored = UserExperienceProfile.fromJson(p.toJson());
+    expect(restored.eligibilityBirthDate, DateTime(2011, 11, 17));
+    expect(restored.dateOfBirth, isNull);
+    expect(restored.optionalDemographicsConsented, isFalse);
+    final changedOptional = restored.copyWith(
+      genderIdentity: GenderIdentity.nonBinary,
+      optionalDemographicsConsented: false,
+    );
+    expect(changedOptional.eligibilityBirthDate, DateTime(2011, 11, 17));
+    expect(changedOptional.ageAt(DateTime(2026, 11, 17)), 15);
+    expect(changedOptional.copyWith(clearEligibilityBirthDate: true)
+        .eligibilityBirthDate, isNull);
+  });
+
   test('birthday 29 February does not prematurely age in a non-leap year', () {
     final p = UserExperienceProfile(dateOfBirth: DateTime(2008, 2, 29));
     expect(p.ageAt(DateTime(2026, 2, 28)), 17);

@@ -62,8 +62,11 @@ class UserExperienceProfile {
   final bool workoutRemindersWanted;
   final FaithContentPreference faithPreference;
   final bool habitsEnabled;
-  /// Locally stored, user-entered date; NOT proof of adult access.
+  /// Legacy optional DOB for demographic equations. Never proof of adulthood.
   final DateTime? dateOfBirth;
+  /// Separately declared DOB for the proposed 15+ eligibility flow.
+  /// Never authorizes a privileged nutrition RPC or verifies identity.
+  final DateTime? eligibilityBirthDate;
   final GenderIdentity? genderIdentity;
   /// A separate optional physiological input for an adult energy equation.
   final EnergyEquationSex? equationSexForEnergy;
@@ -94,6 +97,7 @@ class UserExperienceProfile {
     this.faithPreference = FaithContentPreference.undecided,
     this.habitsEnabled = false,
     this.dateOfBirth,
+    this.eligibilityBirthDate,
     this.genderIdentity,
     this.equationSexForEnergy,
     this.optionalDemographicsConsented = false,
@@ -111,7 +115,7 @@ class UserExperienceProfile {
       faithPreference != FaithContentPreference.undecided;
 
   int? ageAt(DateTime now) {
-    final dob = dateOfBirth;
+    final dob = eligibilityBirthDate ?? dateOfBirth;
     if (dob == null || dob.isAfter(now)) return null;
     var years = now.year - dob.year;
     if (now.month < dob.month ||
@@ -161,6 +165,8 @@ class UserExperienceProfile {
     bool? habitsEnabled,
     DateTime? dateOfBirth,
     bool clearDateOfBirth = false,
+    DateTime? eligibilityBirthDate,
+    bool clearEligibilityBirthDate = false,
     GenderIdentity? genderIdentity,
     bool clearGenderIdentity = false,
     EnergyEquationSex? equationSexForEnergy,
@@ -199,6 +205,8 @@ class UserExperienceProfile {
       faithPreference: faithPreference ?? this.faithPreference,
       habitsEnabled: habitsEnabled ?? this.habitsEnabled,
       dateOfBirth: clearDateOfBirth ? null : (dateOfBirth ?? this.dateOfBirth),
+      eligibilityBirthDate: clearEligibilityBirthDate
+          ? null : (eligibilityBirthDate ?? this.eligibilityBirthDate),
       genderIdentity: clearGenderIdentity ? null : (genderIdentity ?? this.genderIdentity),
       equationSexForEnergy: clearEquationSexForEnergy
           ? null : (equationSexForEnergy ?? this.equationSexForEnergy),
@@ -240,6 +248,10 @@ class UserExperienceProfile {
           ? null : '${dateOfBirth!.year.toString().padLeft(4, '0')}-'
               '${dateOfBirth!.month.toString().padLeft(2, '0')}-'
               '${dateOfBirth!.day.toString().padLeft(2, '0')}',
+      'eligibilityBirthDate': eligibilityBirthDate == null
+          ? null : '${eligibilityBirthDate!.year.toString().padLeft(4, '0')}-'
+              '${eligibilityBirthDate!.month.toString().padLeft(2, '0')}-'
+              '${eligibilityBirthDate!.day.toString().padLeft(2, '0')}',
       'genderIdentity': genderIdentity?.name,
       'equationSexForEnergy': equationSexForEnergy?.name,
       'optionalDemographicsConsented': optionalDemographicsConsented,
@@ -330,6 +342,7 @@ class UserExperienceProfile {
       faithPreference: faithPreference,
       habitsEnabled: json['habitsEnabled'] as bool? ?? false,
       dateOfBirth: _parseBirthDate(json['dateOfBirth']),
+      eligibilityBirthDate: _parseBirthDate(json['eligibilityBirthDate']),
       genderIdentity: _enumByName(
         GenderIdentity.values, json['genderIdentity']?.toString()),
       equationSexForEnergy: _enumByName(

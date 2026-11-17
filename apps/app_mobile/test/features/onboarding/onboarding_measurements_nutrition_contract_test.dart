@@ -6,7 +6,8 @@ void main() {
   test('onboarding v3 personal data is optional and saves in Medidas once', () {
     final source = File('lib/features/onboarding/presentation/pages/onboarding_page.dart')
         .readAsStringSync();
-    expect(source, contains('static const int _pageCount = 7'));
+    expect(source, contains('static const int _legacyPageCount = 7'));
+    expect(source, contains('int get _pageCount => _legalFlowRequested ? 9 : _legacyPageCount;'));
     expect(source, contains('_personalStep()'));
     expect(source, contains("key: const ValueKey('onboarding_birth_date')"));
     expect(source, contains("key: const ValueKey('onboarding_save_first_measurement')"));
@@ -27,7 +28,9 @@ void main() {
     expect(page,contains('Autorizo guardar estos datos opcionales'));
     expect(page,contains('Pueden aparecer en una copia'));
     expect(page,contains('Puedes continuar sin ellos.'));
-    expect(page,contains('dateOfBirth: _demographicConsent?_birthDate:null'));
+    expect(page,contains('dateOfBirth: _demographicConsent'));
+    expect(page,contains('eligibilityBirthDate:'));
+    expect(page,contains('(_legalFlowRequested ? _eligibilityBirthDate : _birthDate)'));
     expect(page,contains('genderIdentity: _demographicConsent?_genderIdentity:null'));
     expect(page,contains('equationSexForEnergy: _demographicConsent?_equationSexForEnergy:null'));
     expect(page,contains('optionalDemographicsConsented:_demographicConsent'));
@@ -50,6 +53,20 @@ void main() {
     expect(page,contains('if (recommended != null)'));
     expect(page,contains('_finish(installRecommended: false)'));
     expect(page,contains('completeOnboardingFromScratch()'));
+  });
+
+  test('15+ onboarding adds an age step and final legal gate only on mobile', () {
+    final page = File(
+      'lib/features/onboarding/presentation/pages/onboarding_page.dart',
+    ).readAsStringSync();
+    expect(page, contains('if (_legalFlowRequested) _ageStep()'));
+    expect(page, contains('if (_legalFlowRequested) _legalStep()'));
+    expect(page, contains('StkLegalAcceptancePanel('));
+    expect(page, contains('StkAgeEligibility.canBeginNewAccount('));
+    expect(page, contains('StkMobileLegalReceiptStore('));
+    expect(page, contains('onDecline: _declineLegal'));
+    expect(page, contains('if (_legalFlowRequested && !_legalDocs.canCollectAcceptance)'));
+    expect(page, isNot(contains('stk_set_adult_nutrition_verification(')));
   });
 
   test('onboarding progress and welcome use shared Outfit tokens', () {

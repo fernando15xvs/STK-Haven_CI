@@ -10,8 +10,14 @@ class OnboardingRecommendationService {
     // can still train and build their own routines, but cannot receive an
     // automatically installed adult-oriented preset. Declared adulthood is
     // not backend verification for numeric nutrition.
-    final declaredAge=profile.optionalDemographicsConsented
-      ?profile.ageAt(DateTime.now()):null;
+    // Newly declared 15+ eligibility is distinct from optional demographics.
+    // Legacy optional DOBs only count if consented; a stale unconsented
+    // legacy backup must never auto-install an adult training preset.
+    final declaredAge =
+        profile.eligibilityBirthDate != null ||
+            profile.optionalDemographicsConsented
+        ? profile.ageAt(DateTime.now())
+        : null;
     if(declaredAge==null || declaredAge<18)return null;
     if (profile.planningPreference == PlanningPreference.selfDirected ||
         profile.trainingGoal == TrainingGoal.selfDirected) {

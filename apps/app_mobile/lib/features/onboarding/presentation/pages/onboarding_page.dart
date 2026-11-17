@@ -4,25 +4,59 @@ import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
+import 'dart:async';
+
+import 'package:core/database/hive/hive_boxes.dart';
+import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
+import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
 import 'package:core/features/onboarding/application/onboarding_recommendation_service.dart';
 import 'package:core/features/onboarding/application/program_service.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/primary_button.dart';
+import 'package:gym_tracker/features/onboarding/data/stk_mobile_legal_receipt_store.dart';
+import 'package:gym_tracker/features/onboarding/presentation/stk_mobile_legal_config.dart';
+import 'package:gym_tracker/features/onboarding/presentation/widgets/stk_legal_document_page.dart';
+import 'package:gym_tracker/features/onboarding/presentation/widgets/stk_legal_acceptance_panel.dart';
 import 'package:gym_tracker/features/onboarding/presentation/widgets/program_preview_modal.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
-  const OnboardingPage({super.key});
+  const OnboardingPage({
+    super.key,
+    this.enable15Plus,
+    this.legalDocuments,
+  });
+
+  /// Tests may inject an approved fixture; production defaults to OFF until
+  /// published HTTPS documents and their hashes have been configured.
+  final bool? enable15Plus;
+  final StkLegalDocumentSet? legalDocuments;
 
   @override
   ConsumerState<OnboardingPage> createState() => _OnboardingPageState();
 }
 
 class _OnboardingPageState extends ConsumerState<OnboardingPage> {
-  static const int _pageCount = 7;
+  // Existing users keep the 7-step legacy onboarding until the 15+ legal
+  // release gate is explicitly enabled. No web app onboarding is changed.
+  static const int _legacyPageCount = 7;
+  bool get _legalFlowRequested =>
+      widget.enable15Plus ?? StkMobileLegalConfig.enabled;
+  StkLegalDocumentSet get _legalDocs =>
+      widget.legalDocuments ?? StkMobileLegalConfig.documents;
+  int get _pageCount => _legalFlowRequested ? 9 : _legacyPageCount;
+
+  Future<String>? _guestIdFuture;
+  Future<String> get _guestId => _guestIdFuture ??=
+      StkMobileLegalReceiptStore(Hive.box<dynamic>(HiveBoxes.metadata))
+          .getOrCreateGuestId();
+
+  bool _installRecommendedAfterLegal = false;
+  bool _legalDeclined = false;
 
   final PageController _pageController = PageController();
   int _currentIndex = 0;
@@ -38,6 +72,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   FaithContentPreference _faith = FaithContentPreference.undecided;
   bool _saving = false;
   DateTime? _birthDate;
+  DateTime? _eligibilityBirthDate;
   GenderIdentity? _genderIdentity;
   EnergyEquationSex? _equationSexForEnergy;
   bool _demographicConsent=false;
@@ -65,6 +100,29 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   void _next() => _goTo(_currentIndex + 1);
 
+  void _reviewOrFinish({required bool installRecommended}) {
+    if (!_legalFlowRequested) {
+      unawaited(_finish(installRecommended: installRecommended));
+      return;
+    }
+    // The summary precedes a dedicated final legal step in the 15+ flow.
+    _installRecommendedAfterLegal = installRecommended;
+    _next();
+  }
+
+  void _declineLegal() {
+    setState(() => _legalDeclined = true);
+    unawaited(Navigator.of(context).maybePop());
+  }
+
+  void _openLegalDocument(String title, String url) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => StkLegalDocumentPage(title: title, httpsUrl: url),
+      ),
+    );
+  }
+
   UserExperienceProfile _buildProfile() {
     return UserExperienceProfile(
       trainingGoal: _goal,
@@ -77,7 +135,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       workoutRemindersWanted: _remindersWanted,
       faithPreference: _faith,
       habitsEnabled: false,
-      dateOfBirth: _demographicConsent?_birthDate:null,
+      dateOfBirth: _demographicConsent
+          ? (_legalFlowRequested ? _eligibilityBirthDate : _birthDate)
+          : null,
+      eligibilityBirthDate:
+          _legalFlowRequested ? _eligibilityBirthDate : null,
       genderIdentity: _demographicConsent?_genderIdentity:null,
       equationSexForEnergy: _demographicConsent?_equationSexForEnergy:null,
       optionalDemographicsConsented:_demographicConsent,
@@ -90,8 +152,34 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     );
   }
 
-  Future<void> _finish({required bool installRecommended}) async {
+  Future<void> _finish({
+    required bool installRecommended,
+    StkLegalAcceptanceReceipt? legalReceipt,
+  }) async {
     if (_saving) return;
+    // A checkbox or DOB alone never authorizes adult numeric nutrition.
+    // Fail closed if a caller skips the final legal step.
+    if (_legalFlowRequested) {
+      if (!_legalDocs.canCollectAcceptance ||
+          !StkAgeEligibility.canBeginNewAccount(
+            birthDate: _eligibilityBirthDate,
+            today: DateTime.now(),
+          ) ||
+          legalReceipt == null ||
+          !legalReceipt.isCurrentFor(
+            documents: _legalDocs,
+            subjectType: StkLegalSubjectType.guest,
+            subjectId: await _guestId,
+          )) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Revisa tu edad y acepta los documentos vigentes.'),
+          ));
+        }
+        return;
+      }
+    }
+    if (!mounted) return;
     setState(() => _saving = true);
 
     try {
@@ -111,6 +199,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           content: Text('Revisa peso y altura antes de guardarlos en Medidas.'),
         ));
         return;
+      }
+      if (_legalFlowRequested && legalReceipt != null) {
+        await StkMobileLegalReceiptStore(
+          Hive.box<dynamic>(HiveBoxes.metadata),
+        ).saveGuest(legalReceipt);
       }
       final profile = _buildProfile();
       await ref
@@ -169,6 +262,64 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_legalFlowRequested && !_legalDocs.canCollectAcceptance) {
+      return Scaffold(
+        backgroundColor: AppColors.of(context).background,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.shield_outlined, size: 40),
+                  const SizedBox(height: AppSpacing.lg),
+                  Text('Documentos pendientes', style: AppTypography.headlineLarge),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text(
+                    'La versión 15+ estará disponible cuando los Términos '
+                    'y la Política de Privacidad hayan sido aprobados y publicados.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    child: const Text('Salir'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    if (_legalDeclined) {
+      return Scaffold(
+        backgroundColor: AppColors.of(context).background,
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('No completaste el registro',
+                      style: AppTypography.headlineLarge),
+                  const SizedBox(height: AppSpacing.md),
+                  const Text('Puedes cerrar la app o revisar los documentos '
+                    'y decidir después. No se ha guardado una aceptación.'),
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton(
+                    onPressed: () => setState(() => _legalDeclined = false),
+                    child: const Text('Volver a revisar'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.of(context).background,
       body: SafeArea(
@@ -213,12 +364,14 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 onPageChanged: (index) => setState(() => _currentIndex = index),
                 children: [
                   _welcomeStep(context),
+                  if (_legalFlowRequested) _ageStep(),
                   _goalStep(),
                   _scheduleStep(),
                   _preferencesStep(),
                   _personalStep(),
                   _faithStep(),
                   _summaryStep(context),
+                  if (_legalFlowRequested) _legalStep(),
                 ],
               ),
             ),
@@ -319,6 +472,120 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _ageStep() {
+    final colors = AppColors.of(context);
+    final age = StkAgeEligibility.ageOn(
+      _eligibilityBirthDate,
+      DateTime.now(),
+    );
+    final eligible = StkAgeEligibility.canBeginNewAccount(
+      birthDate: _eligibilityBirthDate,
+      today: DateTime.now(),
+    );
+    final dob = _eligibilityBirthDate;
+    return _stepShell(
+      context,
+      title: 'Tu edad, tu experiencia',
+      subtitle: 'STK Haven está diseñado para personas de 15 años o más.',
+      actionLabel: 'Continuar',
+      onAction: eligible ? _next : null,
+      children: [
+        Text('Fecha de nacimiento', style: AppTypography.headlineMedium),
+        const SizedBox(height: AppSpacing.sm),
+        Text(
+          'Indica tu fecha real. Adaptaremos el entrenamiento y la '
+          'orientación nutricional a tu etapa; esta declaración no '
+          'verifica tu identidad.',
+          style: AppTypography.bodySmall.copyWith(
+            color: colors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        OutlinedButton.icon(
+          key: const ValueKey('stk_15plus_birth_date'),
+          icon: const Icon(Icons.cake_outlined),
+          onPressed: () async {
+            final today = DateTime.now();
+            final picked = await showDatePicker(
+              context: context,
+              helpText: 'Selecciona tu fecha de nacimiento real',
+              initialDate: dob ?? DateTime(
+                today.year - 15, today.month, today.day,
+              ),
+              firstDate: DateTime(1900),
+              lastDate: today,
+            );
+            if (picked != null && mounted) {
+              setState(() => _eligibilityBirthDate = picked);
+            }
+          },
+          label: Text(
+            dob == null
+                ? 'Seleccionar fecha de nacimiento'
+                : '${dob.day.toString().padLeft(2, '0')}/'
+                    '${dob.month.toString().padLeft(2, '0')}/'
+                    '${dob.year} · ${age ?? '?'} años',
+          ),
+        ),
+        if (age != null && age < 15) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Debes tener al menos 15 años cumplidos para continuar.',
+            key: const ValueKey('stk_15plus_underage_message'),
+            style: AppTypography.bodySmall.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+        if (age != null && age >= 15 && age < 18) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Las herramientas nutricionales estarán adaptadas a tu '
+            'etapa de crecimiento, sin déficits automáticos.',
+            style: AppTypography.bodySmall.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _legalStep() {
+    return FutureBuilder<String>(
+      future: _guestId,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text('No se pudo preparar tu registro.'),
+            );
+          }
+          return const Center(child: CircularProgressIndicator());
+        }
+        return StkLegalAcceptancePanel(
+          key: const ValueKey('stk_onboarding_legal_step'),
+          birthDate: _eligibilityBirthDate,
+          documents: _legalDocs,
+          subjectType: StkLegalSubjectType.guest,
+          subjectId: snapshot.data!,
+          locale: 'es-PE',
+          onViewTerms: () => _openLegalDocument(
+            'Términos y Condiciones', _legalDocs.termsUrl,
+          ),
+          onViewPrivacy: () => _openLegalDocument(
+            'Política de Privacidad', _legalDocs.privacyUrl,
+          ),
+          onAccepted: (receipt) => unawaited(_finish(
+            installRecommended: _installRecommendedAfterLegal,
+            legalReceipt: receipt,
+          )),
+          onDecline: _declineLegal,
+        );
+      },
     );
   }
 
@@ -520,7 +787,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   Widget _personalStep() {
     final dob = _birthDate;
-    final age = dob == null ? null : _buildProfile().ageAt(DateTime.now());
+    final age = _buildProfile().ageAt(DateTime.now());
     final colors = AppColors.of(context);
     return _stepShell(
       context,
@@ -529,6 +796,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
       actionLabel: 'Continuar',
       onAction: _next,
       children: [
+        if (!_legalFlowRequested) ...[
         Text('Fecha de nacimiento (opcional)', style: AppTypography.labelLarge),
         const SizedBox(height: 6),
         Text(
@@ -536,6 +804,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           style: AppTypography.bodySmall.copyWith(color: colors.textSecondary),
         ),
         const SizedBox(height:8),
+        ],
         CheckboxListTile(
           key:const ValueKey('onboarding_optional_demographic_consent'),
           contentPadding:EdgeInsets.zero,
@@ -556,6 +825,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           }),
         ),
         const SizedBox(height: 8),
+        if (!_legalFlowRequested) ...[
         OutlinedButton.icon(
           key: const ValueKey('onboarding_birth_date'),
           icon: const Icon(Icons.cake_outlined),
@@ -583,6 +853,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               child: const Text('No indicar'),
             ),
           ),
+        ],
         if (age != null && age < 18)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -742,7 +1013,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                   _summaryRow(context, 'Unidad de peso', _weightUnit.label),
                   _summaryRow(context,'Datos demográficos opcionales',
                     _demographicConsent?'Autorizados':'Omitidos'),
-                  if (_birthDate != null)
+                  if (_birthDate != null ||
+                      (_legalFlowRequested && _eligibilityBirthDate != null))
                     _summaryRow(context, 'Edad indicada',
                       '${_buildProfile().ageAt(DateTime.now()) ?? 'Sin dato'} años'),
                   _summaryRow(context, 'Primeras medidas',
@@ -828,7 +1100,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 label: _saving ? 'Guardando…' : 'Usar programa recomendado',
                 onPressed: _saving
                     ? null
-                    : () => _finish(installRecommended: true),
+                    : () => _reviewOrFinish(installRecommended: true),
               ),
             ),
           if (recommended != null) const SizedBox(height: 8),
@@ -837,11 +1109,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             child: TextButton(
               onPressed: _saving
                   ? null
-                  : () => _finish(installRecommended: false),
+                  : () => _reviewOrFinish(installRecommended: false),
               child: Text(
-                recommended == null
-                    ? 'Entrar a STK Haven'
-                    : 'Continuar sin instalar programa',
+                _legalFlowRequested
+                    ? 'Revisar Términos y Privacidad'
+                    : recommended == null
+                        ? 'Entrar a STK Haven'
+                        : 'Continuar sin instalar programa',
               ),
             ),
           ),

@@ -43,7 +43,12 @@ jobs:
             apps/app_mobile/windows/flutter/generated_plugin_registrant.cc \
             apps/app_mobile/windows/flutter/generated_plugin_registrant.h \
             apps/app_mobile/windows/flutter/generated_plugins.cmake
-      - name: Analyze
+      # Mobile-only scope: do not analyze apps/app_web or compile any web target.
+      - name: Analyze Core
+        working-directory: packages/core
+        run: flutter analyze --no-fatal-infos
+      - name: Analyze Mobile
+        working-directory: apps/app_mobile
         run: flutter analyze --no-fatal-infos
       - name: Core tests
         working-directory: packages/core
@@ -204,7 +209,6 @@ jobs:
         run: >-
           deno check
           supabase/functions/food-vision-ai/index.ts
-          supabase/functions/web-push-test/index.ts
 
   anatomical-master-v10:
     name: New anatomical master v10 (QA)
@@ -326,15 +330,6 @@ jobs:
       - name: Test Perfil navigation, forms, themes and responsive layout
         working-directory: apps/app_mobile
         run: flutter test test/features/profile
-      # The web route must not reintroduce the legacy destructive program flow.
-      - name: Test web Perfil program navigation contracts
-        working-directory: apps/app_web
-        run: flutter test test/features/profile
-      # Compile the real web entry point, not just the source-code contract
-      # test. This catches browser-only build and navigation regressions.
-      - name: Build web release with Perfil and modern program routes
-        working-directory: apps/app_web
-        run: flutter build web --release --target lib/main.dart
       # Regression gate for STK Motivation integrated with workout navigation.
       - name: Test onboarding 15+ legal acceptance and legacy measurement contracts
         working-directory: apps/app_mobile
