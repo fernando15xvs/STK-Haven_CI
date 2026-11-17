@@ -25,6 +25,11 @@ class BackupValidationResult {
 
 class BackupService {
   static const int currentBackupSchemaVersion = 11;
+  // One shared lock across BackupService instances (local and cloud).
+  // Concurrent destructive restores can otherwise interleave box.clear()
+  // calls and overwrite each other's records. This is an in-process guard,
+  // not a durable transaction against power loss.
+  static bool _restoreInProgress = false;
 
   String createBackup() {
     final metaBox = Hive.box(HiveBoxes.metadata);
@@ -137,6 +142,21 @@ class BackupService {
   Future<void> restoreBackup(
     Map<String, dynamic> data, {
     int schemaVersion = currentBackupSchemaVersion,
+  }) async {
+    if (_restoreInProgress) {
+      throw StateError('Ya hay una restauración de datos en curso.');
+    }
+    _restoreInProgress = true;
+    try {
+      await _restoreBackupLocked(data, schemaVersion: schemaVersion);
+    } finally {
+      _restoreInProgress = false;
+    }
+  }
+
+  Future<void> _restoreBackupLocked(
+    Map<String, dynamic> data, {
+    required int schemaVersion,
   }) async {
     final parsed = _mapDataToHiveObjects(data, schemaVersion);
 
