@@ -83,6 +83,20 @@ class MotivationPlaylist {
 /// Local-only files: never uploaded to Supabase or shared with other users.
 class MotivationLibrary extends ChangeNotifier {
   MotivationLibrary._();
+
+  /// Isolated in-memory snapshot for widget layout tests. Does not touch
+  /// SharedPreferences, the system picker, or private device media.
+  /// Production always uses [instance], which loads its real local library.
+  @visibleForTesting
+  MotivationLibrary.testSnapshot({
+    required List<MotivationTrack> tracks,
+    List<MotivationPlaylist> playlists=const [],
+  }) {
+    _tracks.addAll(tracks);
+    _playlists.addAll(playlists);
+    _loaded=true;
+  }
+
   static final instance=MotivationLibrary._();
   static const supportedExtensions=<String>{'mp3','m4a','aac','wav','mp4'};
   static const maxFileBytes=512*1024*1024;

@@ -28,12 +28,18 @@ class _MotivationImportOptions {
 }
 
 class MotivationPage extends StatefulWidget {
-  const MotivationPage({super.key});
+  const MotivationPage({super.key,this.libraryOverride});
+
+  /// Test-only in-memory library for real-content responsive widget tests.
+  /// The app uses the local-only singleton when no override is supplied.
+  @visibleForTesting
+  final MotivationLibrary? libraryOverride;
+
   @override
   State<MotivationPage> createState()=>_MotivationPageState();
 }
 class _MotivationPageState extends State<MotivationPage> {
-  final library=MotivationLibrary.instance;
+  late final library=widget.libraryOverride??MotivationLibrary.instance;
   final player=MotivationPlayback.instance;
   String selection='all';
   MotivationMode importMode=MotivationMode.discipline;
