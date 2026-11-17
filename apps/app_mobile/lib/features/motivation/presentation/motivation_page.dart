@@ -964,10 +964,12 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
       if(!mounted || controller!=c)return;
       await c.seekTo(widget.playback.position);
       if(!mounted || controller!=c)return;
-      if(widget.playback.playing && visible)unawaited(c.play());
+      if(widget.playback.playing && !widget.playback.completed && visible)
+        unawaited(c.play());
       position=widget.playback.audio.positionStream.listen((pos){
         if(!mounted || controller!=c ||
-           !c.value.isInitialized || !visible)return;
+           !c.value.isInitialized || !visible ||
+           widget.playback.completed)return;
         final drift=(c.value.position-pos).inMilliseconds.abs();
         final now=DateTime.now();
         final loopJustRestarted=pos< const Duration(milliseconds:500) &&
@@ -1024,10 +1026,30 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     visible=state==AppLifecycleState.resumed;
     final c=controller;
     if(c==null || !c.value.isInitialized)return;
-    if(!visible){unawaited(c.pause());}
-    else{
-      unawaited(c.seekTo(widget.playback.position));
-      if(widget.playback.playing)unawaited(c.play());
+    if(!visible){
+      // This decoder is visual-only; just_audio owns background sound.
+      unawaited(c.pause().catchError((Object _){
+        // Pause can race with deletion or a platform decoder teardown.
+      }));
+    }else{
+      unawaited(_resumeVideoAfterForeground(c));
+    }
+  }
+
+  Future<void> _resumeVideoAfterForeground(VideoPlayerController c) async {
+    try {
+      // Complete the native seek BEFORE playing. A concurrent play/seek
+      // occasionally flashes the old frame at the start of an MP4.
+      await c.seekTo(widget.playback.position);
+      // A new track or disposal may have replaced the decoder while seeking.
+      if(!mounted || controller!=c || !visible)return;
+      // Returning to foreground must never start audio or a paused visual.
+      if(widget.playback.playing && !widget.playback.completed){
+        await c.play();
+      }
+    }catch(_){
+      // Codec teardown, removed files and background interruptions are
+      // recoverable. They must not propagate a native path to the UI.
     }
   }
   @override
@@ -1072,11 +1094,13 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
                 ),
               ),
             ),
-            AnimatedBuilder(
+            Flexible(fit:FlexFit.loose,
+              child:AnimatedBuilder(
               animation:widget.playback,
               builder:(ctx,_) {
                 final player=widget.playback;
-                return Padding(
+                return SingleChildScrollView(
+                  child:Padding(
                   key:const ValueKey('motivation_cinema_shared_controls'),
                   padding:const EdgeInsets.fromLTRB(16,8,16,16),
                   child:Column(
@@ -1131,8 +1155,10 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
                       ),
                     ],
                   ),
+                  ),
                 );
               },
+              ),
             ),
           ]),
         ),
