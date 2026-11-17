@@ -162,12 +162,16 @@ void main() {
       find.byKey(const ValueKey('stk_terms_link')),
       130, scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.byKey(const ValueKey('stk_terms_link')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('stk_terms_link')));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('stk_privacy_link')),
       130, scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.byKey(const ValueKey('stk_privacy_link')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('stk_privacy_link')));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -175,17 +179,23 @@ void main() {
       130,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.byKey(const ValueKey('stk_confirm_15_plus')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('stk_confirm_15_plus')));
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('stk_accept_terms')),
       130,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.byKey(const ValueKey('stk_accept_terms')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('stk_accept_terms')));
     final cta = find.byKey(const ValueKey('stk_legal_continue'));
     await tester.scrollUntilVisible(
       cta, 130, scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(cta);
+    await tester.pumpAndSettle();
     expect(tester.widget<FilledButton>(cta).onPressed, isNotNull);
     await tester.tap(cta);
     expect(accepted, isTrue);
@@ -193,6 +203,8 @@ void main() {
     await tester.scrollUntilVisible(
       exit, 130, scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(exit);
+    await tester.pumpAndSettle();
     await tester.tap(exit);
     expect(declined, isTrue);
     expect(tester.takeException(), isNull);
