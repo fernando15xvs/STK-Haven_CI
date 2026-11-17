@@ -102,7 +102,12 @@ void main() {
       find.byKey(const ValueKey('stk_legal_continue')),
     ).onPressed, isNull);
     final decline = find.byKey(const ValueKey('stk_legal_decline'));
-    await tester.ensureVisible(decline);
+    // ListView builds children lazily. ensureVisible requires an element
+    // already mounted, but this footer can begin outside the viewport.
+    await tester.scrollUntilVisible(
+      decline, 160, scrollable: find.byType(Scrollable).first,
+    );
+    expect(decline, findsOneWidget);
     await tester.tap(decline);
     await tester.pump();
     expect(declined, 1);
@@ -134,11 +139,22 @@ void main() {
         )),
       ),
     ));
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('stk_legal_continue')),
+    final continueButton = find.byKey(
+      const ValueKey('stk_legal_continue'),
     );
+    // At 320dp / 200% the CTA is initially unbuilt because of lazy
+    // scrolling. Scroll until it is actually in the element tree.
+    await tester.scrollUntilVisible(
+      continueButton, 160, scrollable: find.byType(Scrollable).first,
+    );
+    expect(continueButton, findsOneWidget);
     await tester.pump();
     expect(tester.takeException(), isNull);
-    expect(find.byKey(const ValueKey('stk_legal_decline')), findsOneWidget);
+    final decline = find.byKey(const ValueKey('stk_legal_decline'));
+    await tester.scrollUntilVisible(
+      decline, 160, scrollable: find.byType(Scrollable).first,
+    );
+    expect(decline, findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }
