@@ -350,4 +350,53 @@ void main() {
   });
 
 
+
+  test('A5 concurrent local/cloud restores are serialized without data loss',
+      () async {
+    final metadata = Hive.box(HiveBoxes.metadata);
+    final history = Hive.box<HiveWorkoutSession>(HiveBoxes.history);
+    final payload = <String, dynamic>{
+      'settings': {'backup_owner_hint': 'guest-device'},
+      'workouts': [
+        {
+          'id': 'only-approved-restore',
+          'routineNameSnapshot': 'Rutina original',
+          'startedAt': '2026-11-16T07:00:00.000Z',
+          'finishedAt': '2026-11-16T08:00:00.000Z',
+          'durationSeconds': 3600,
+          'exercises': <dynamic>[],
+        },
+      ],
+    };
+    // First call acquires the shared lock synchronously before clearing Hive.
+    final first = BackupService().restoreBackup(payload);
+    await expectLater(
+      BackupService().restoreBackup({
+        'settings': {'backup_owner_hint': 'other-account'},
+      }),
+      throwsA(isA<StateError>()),
+    );
+    await first;
+    expect(metadata.get('backup_owner_hint'), 'guest-device');
+    expect(history.containsKey('only-approved-restore'), isTrue);
+
+    // The lock is released after successful restore and can be used again.
+    await BackupService().restoreBackup(payload);
+    expect(history.containsKey('only-approved-restore'), isTrue);
+
+    // A rejected malformed import must also release the lock.
+    await expectLater(
+      BackupService().restoreBackup({
+        'settings': {},
+        'workouts': [
+          {'id': 'duplicate-id'},
+          {'id': 'duplicate-id'},
+        ],
+      }),
+      throwsA(isA<FormatException>()),
+    );
+    await BackupService().restoreBackup(payload);
+    expect(metadata.get('backup_owner_hint'), 'guest-device');
+  });
+
 }
