@@ -699,9 +699,32 @@ jobs:
         run: |
           python3 -m pip install --quiet Pillow==11.3.0
           python3 tool/exercise_png_pilots/verify_realistic_pilots.py
-      - name: Build debug APK
+      - name: Build debug APK (retry only Maven HTTP 429)
         working-directory: apps/app_mobile
-        run: flutter build apk --debug --target lib/main_android.dart
+        shell: bash
+        run: |
+          # GitHub hosted Maven traffic can be rate-limited (429). Do not
+          # retry real Dart/Gradle errors or hide a failed build.
+          set +e
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            log="$(mktemp)"
+            flutter build apk --debug --target lib/main_android.dart 2>&1 | tee "$log"
+            status=${PIPESTATUS[0]}
+            if [ "$status" -eq 0 ]; then
+              rm -f "$log"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ] && grep -Eq 'Received status code 429|Too Many Requests|HTTP 429' "$log"; then
+              echo "Maven HTTP 429; retrying build after backoff (attempt $attempt)."
+              rm -f "$log"
+              sleep $((attempt * 45))
+            else
+              rm -f "$log"
+              exit "$status"
+            fi
+          done
+          exit 1
       - name: Build profile APK
         working-directory: apps/app_mobile
         run: flutter build apk --profile --target lib/main_android.dart
