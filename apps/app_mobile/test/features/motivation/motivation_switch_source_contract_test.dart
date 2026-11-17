@@ -25,7 +25,8 @@ void main(){
     expect(code,contains('playing=null;'));
     expect(code,contains('if(oldPosition!=null)unawaited(oldPosition.cancel())'));
     expect(code,contains('if(oldPlaying!=null)unawaited(oldPlaying.cancel())'));
-    expect(code,contains('if(previous!=null)unawaited(previous.dispose())'));
+    expect(code,contains('previous.removeListener(_onVideoDecoderChanged);'));
+    expect(code,contains('previous.dispose().catchError((Object _)'));
     expect(code,contains('if(!mounted || controller!=c)return;'));
     expect(code,contains('if(!mounted || controller!=c ||'));
     expect(code.split('VideoPlayerController.file(').length-1,1);

@@ -20,8 +20,13 @@ void main(){
     expect(video,contains("ValueKey('motivation_video_decoder_error')"));
     expect(video,contains("ValueKey('motivation_video_retry')"));
     expect(video,contains('onPressed:()=>unawaited(_setup())'));
-    expect(video,contains('if(controller==c){'));
-    expect(video,contains('unawaited(c.dispose());'));
+    expect(video,contains('void _markVideoDecoderFailed(VideoPlayerController c)'));
+    expect(video,contains('if(!mounted || controller!=c)return;'));
+    expect(video,contains('unawaited(c.dispose().catchError((Object _)'));
+    expect(video,contains('c.addListener(_onVideoDecoderChanged);'));
+    expect(video,contains('c.value.hasError'));
+    expect(video,contains('_markVideoDecoderFailed(c);'));
+    expect(video,contains('c.removeListener(_onVideoDecoderChanged);'));
     expect(video,contains('if(!visible){'));
     expect(video,contains('c.pause().catchError((Object _)'));
     expect(video,contains('_resumeVideoAfterForeground(c)'));
@@ -41,7 +46,8 @@ void main(){
     expect(reset,contains('_videoFailed=false;'));
     expect(reset,contains('controller=null;'));
     expect(reset,contains('_cinemaSource.value=null;'));
-    expect(reset,contains('unawaited(previous.dispose());'));
+    expect(reset,contains('previous.removeListener(_onVideoDecoderChanged);'));
+    expect(reset,contains('previous.dispose().catchError((Object _)'));
     expect(reset,contains('unawaited(_setup());'));
   });
 }

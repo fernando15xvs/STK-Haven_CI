@@ -68,8 +68,11 @@ class _MotivationAudioSettingsSheetState
               children: [
                 const Icon(Icons.volume_up_outlined),
                 const SizedBox(width: 8),
-                const Expanded(child: Text('Volumen')),
-                Text('${(volume * 100).round()} %'),
+                Expanded(child: Text('Volumen',
+                    style: AppTypography.bodyMedium)),
+                Text('${(volume * 100).round()} %',
+                    style: AppTypography.monoMedium.copyWith(
+                      color: colors.textPrimary)),
               ],
             ),
             Slider(
@@ -77,6 +80,8 @@ class _MotivationAudioSettingsSheetState
               min: 0,
               max: 1,
               value: volume,
+              semanticFormatterCallback: (value) =>
+                  '${(value * 100).round()} por ciento',
               onChanged: (v) => setState(() => volume = v),
               onChangeEnd: (v) => unawaited(playback.setVolume(v)),
             ),
@@ -84,8 +89,11 @@ class _MotivationAudioSettingsSheetState
               children: [
                 const Icon(Icons.speed),
                 const SizedBox(width: 8),
-                const Expanded(child: Text('Velocidad')),
-                Text('${speed.toStringAsFixed(2)}×'),
+                Expanded(child: Text('Velocidad',
+                    style: AppTypography.bodyMedium)),
+                Text('${speed.toStringAsFixed(2)}×',
+                    style: AppTypography.monoMedium.copyWith(
+                      color: colors.textPrimary)),
               ],
             ),
             Slider(
@@ -94,6 +102,8 @@ class _MotivationAudioSettingsSheetState
               max: 1.5,
               divisions: 15,
               value: speed,
+              semanticFormatterCallback: (value) =>
+                  '${value.toStringAsFixed(2)} veces',
               onChanged: (v) => setState(() => speed = v),
               onChangeEnd: (v) => unawaited(playback.setSpeed(v)),
             ),
@@ -117,8 +127,8 @@ class _MotivationAudioSettingsSheetState
               children: [
                 Icon(Icons.bedtime_outlined, color: colors.primary),
                 const SizedBox(width: 8),
-                Text('Temporizador de apagado',
-                    style: AppTypography.headlineMedium),
+                Expanded(child: Text('Temporizador de apagado',
+                    style: AppTypography.headlineMedium)),
               ],
             ),
             const SizedBox(height: 6),
@@ -139,7 +149,8 @@ class _MotivationAudioSettingsSheetState
                     if (timer.active)
                       Text('Se detendrá en ${_remaining(timer.remaining)}',
                           key: const ValueKey('motivation_sleep_remaining'),
-                          style: TextStyle(color: colors.primary)),
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: colors.primary)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,

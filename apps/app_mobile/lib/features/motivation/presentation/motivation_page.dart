@@ -92,7 +92,7 @@ class _MotivationPageState extends State<MotivationPage> {
         if(imported.isNotEmpty && mounted){
           final edit=await showModalBottomSheet<bool>(
             context:context,useSafeArea:true,showDragHandle:true,
-            builder:(ctx)=>SafeArea(child:Column(
+            builder:(ctx)=>SafeArea(child:SingleChildScrollView(child:Column(
               mainAxisSize:MainAxisSize.min,children:[
                 ListTile(
                   title:Text(imported.length==1
@@ -113,7 +113,7 @@ class _MotivationPageState extends State<MotivationPage> {
                   onTap:()=>Navigator.pop(ctx,false),
                 ),
               ],
-            )),
+            ))),
           );
           if(edit==true && mounted){
             for(final track in imported){
@@ -228,11 +228,17 @@ class _MotivationPageState extends State<MotivationPage> {
                     ],
                   ],
                 )),
-                Padding(padding:const EdgeInsets.all(16),child:Row(children:[
+                Padding(
+                  padding:const EdgeInsets.all(AppSpacing.md),
+                  child:Wrap(
+                    key:const ValueKey('motivation_import_responsive_actions'),
+                    alignment:WrapAlignment.end,
+                    spacing:AppSpacing.xs,
+                    runSpacing:AppSpacing.sm,
+                    children:[
                   TextButton(
                     onPressed:()=>Navigator.pop(ctx),
                     child:const Text('Omitir archivo')),
-                  const Spacer(),
                   FilledButton.icon(
                     onPressed:(){
                       final title=controller.text.trim();
@@ -291,7 +297,9 @@ class _MotivationPageState extends State<MotivationPage> {
         child:Padding(
           padding:EdgeInsets.fromLTRB(
             16,8,16,16+MediaQuery.viewInsetsOf(ctx).bottom),
-          child:Column(mainAxisSize:MainAxisSize.min,children:[
+          child:SingleChildScrollView(
+            key:const ValueKey('motivation_playlist_presets_scroll'),
+            child:Column(mainAxisSize:MainAxisSize.min,children:[
             ListTile(
               title:Text('Ideas para tus playlists',
                 style:AppTypography.headlineMedium),
@@ -313,7 +321,7 @@ class _MotivationPageState extends State<MotivationPage> {
                 ()=>Navigator.pop(ctx,selected.toList()),
               child:Text('Crear ${selected.length} playlist(s)'),
             )),
-          ]),
+          ])),
         ),
       )),
     );
@@ -647,6 +655,7 @@ class _MotivationPageState extends State<MotivationPage> {
     final tracks=MotivationLibrarySearch.filter(
       library.forSelection(selection),query:searchQuery,media:mediaFilter);
     return Scaffold(
+      backgroundColor:colors.background,
       appBar:AppBar(title:const Text('STK Motivation'),
         actions:[
           IconButton(
@@ -854,12 +863,24 @@ class _MotivationPageState extends State<MotivationPage> {
                     const Text('Importa contenido o añádelo a una playlist.'),
                 ])),
             for(final t in tracks)
-              Card(color:colors.surface,child:ListTile(
+              Card(
+                color:colors.surface,
+                elevation:colors.elevatedCards?2:0,
+                shape:RoundedRectangleBorder(
+                  borderRadius:AppRadius.lg_,
+                  side:BorderSide(color:colors.surfaceBorder)),
+                clipBehavior:Clip.antiAlias,
+                child:ListTile(
                 key:ValueKey('track_'+t.id),
                 leading:_MotivationArtwork(track:t,size:52),
                 title:Text(t.title,maxLines:2,
-                  overflow:TextOverflow.ellipsis),
-                subtitle:Text(t.mode.label+' · '+(t.isVideo?'MP4':'Audio')),
+                  overflow:TextOverflow.ellipsis,
+                  style:AppTypography.headlineSmall.copyWith(
+                    color:colors.textPrimary)),
+                subtitle:Text(t.mode.label+' · '+(t.isVideo?'MP4':'Audio'),
+                  maxLines:1,overflow:TextOverflow.ellipsis,
+                  style:AppTypography.bodySmall.copyWith(
+                    color:colors.textSecondary)),
                 onTap:()=>unawaited(_playTrack(t,tracks)),
                 trailing:PopupMenuButton<String>(
                   tooltip:'Opciones de archivo',
@@ -938,7 +959,12 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     if(mounted)setState((){});
     if(oldPosition!=null)unawaited(oldPosition.cancel());
     if(oldPlaying!=null)unawaited(oldPlaying.cancel());
-    if(previous!=null)unawaited(previous.dispose());
+    if(previous!=null){
+      previous.removeListener(_onVideoDecoderChanged);
+      unawaited(previous.dispose().catchError((Object _){
+        // Native teardown after a track switch must not block the UI.
+      }));
+    }
     unawaited(_setup());
   }
 
@@ -950,6 +976,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     final c=VideoPlayerController.file(File(widget.path),
       videoPlayerOptions:VideoPlayerOptions(mixWithOthers:true));
     controller=c;
+    c.addListener(_onVideoDecoderChanged);
     try{
       await c.initialize();
       // A replacement/dispose already owns the old controller cleanup.
@@ -964,8 +991,11 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
       if(!mounted || controller!=c)return;
       await c.seekTo(widget.playback.position);
       if(!mounted || controller!=c)return;
-      if(widget.playback.playing && !widget.playback.completed && visible)
-        unawaited(c.play());
+      if(widget.playback.playing && !widget.playback.completed && visible){
+        unawaited(c.play().catchError((Object _){
+          _markVideoDecoderFailed(c);
+        }));
+      }
       position=widget.playback.audio.positionStream.listen((pos){
         if(!mounted || controller!=c ||
            !c.value.isInitialized || !visible ||
@@ -993,9 +1023,13 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
         if(!mounted || controller!=c || !c.value.isInitialized)return;
         if(state.playing &&
            state.processingState!=ProcessingState.completed && visible){
-          unawaited(c.play());
+          unawaited(c.play().catchError((Object _){
+            _markVideoDecoderFailed(c);
+          }));
         }else{
-          unawaited(c.pause());
+          unawaited(c.pause().catchError((Object _){
+            _markVideoDecoderFailed(c);
+          }));
         }
       });
       _cinemaSource.value=c;
@@ -1004,22 +1038,47 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
         _videoFailed=false;
       });
     }catch(_){
-      if(controller==c){
-        controller=null;
-        _cinemaSource.value=null;
-        if(mounted)setState((){
-          ready=false;
-          _videoFailed=true;
-        });
-        unawaited(c.dispose());
-      }
+      _markVideoDecoderFailed(c);
     }
   }
+
+  void _onVideoDecoderChanged(){
+    final c=controller;
+    if(c!=null && c.value.hasError)_markVideoDecoderFailed(c);
+  }
+
+  void _markVideoDecoderFailed(VideoPlayerController c){
+    if(!mounted || controller!=c)return;
+    // A codec can fail AFTER initialize(), e.g. on a later seek or loop.
+    // Keep the existing audio clock independent; never autoplay a retry.
+    controller=null;
+    c.removeListener(_onVideoDecoderChanged);
+    _cinemaSource.value=null;
+    final oldPosition=position;
+    final oldPlaying=playing;
+    position=null;
+    playing=null;
+    seeking=false;
+    if(oldPosition!=null)unawaited(oldPosition.cancel());
+    if(oldPlaying!=null)unawaited(oldPlaying.cancel());
+    unawaited(c.dispose().catchError((Object _){
+      // Codec teardown may already have invalidated the native controller.
+    }));
+    setState((){
+      ready=false;
+      _videoFailed=true;
+    });
+  }
+
   void _syncVideoLoop(){
     final c=controller;
     if(!mounted || c==null || !c.value.isInitialized)return;
     final loop=widget.playback.repeat==MotivationRepeat.one;
-    if(c.value.isLooping!=loop)unawaited(c.setLooping(loop));
+    if(c.value.isLooping!=loop){
+      unawaited(c.setLooping(loop).catchError((Object _){
+        _markVideoDecoderFailed(c);
+      }));
+    }
   }
   @override
   void didChangeAppLifecycleState(AppLifecycleState state){
@@ -1062,7 +1121,12 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
     controller=null;
     _cinemaSource.value=null;
     _cinemaSource.dispose();
-    if(old!=null)unawaited(old.dispose());
+    if(old!=null){
+      old.removeListener(_onVideoDecoderChanged);
+      unawaited(old.dispose().catchError((Object _){
+        // Never surface a native codec teardown during route disposal.
+      }));
+    }
     super.dispose();
   }
   void _openCinema() {
@@ -1177,7 +1241,7 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
       constraints:const BoxConstraints(minHeight:180),
       padding:const EdgeInsets.all(AppSpacing.md),
       alignment:Alignment.center,
-      color:Theme.of(context).colorScheme.surfaceContainer,
+      color:AppColors.of(context).surfaceHigh,
       child:Column(mainAxisSize:MainAxisSize.min,
         mainAxisAlignment:MainAxisAlignment.center,children:[
         Icon(_videoFailed?Icons.broken_image_outlined:
@@ -1230,8 +1294,15 @@ class _MotivationArtwork extends StatelessWidget {
         child:path==null
           ?ColoredBox(color:colors.primaryFaded,
               child:Icon(track.isVideo?Icons.movie_outlined:
-                Icons.music_note_rounded,color:colors.primary,size:size*.35))
+                Icons.music_note_rounded,color:colors.primary,size:size*.35,
+                semanticLabel:track.isVideo?'Miniatura del vídeo':'Portada de audio'))
           :Image.file(File(path),fit:BoxFit.cover,
+              semanticLabel:track.isVideo?'Miniatura del vídeo':'Portada de audio',
+              // Bound image decoding to visible artwork size to preserve
+              // memory when an MP4 decoder is active alongside the cover.
+              cacheWidth:(size*MediaQuery.devicePixelRatioOf(context))
+                .ceil().clamp(64,1024).toInt(),
+              // Keep source aspect ratio; BoxFit.cover handles the crop.
               errorBuilder:(_,__,___)=>ColoredBox(
                 color:colors.primaryFaded,
                 child:Icon(Icons.image_not_supported_outlined,
@@ -1426,8 +1497,11 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                           ),
                     ),
                     const SizedBox(height:22),
-                    Text(track.title,maxLines:2,overflow:TextOverflow.ellipsis,
-                      style:AppTypography.headlineLarge),
+                    Text(track.title,maxLines:3,overflow:TextOverflow.ellipsis,
+                      key:const ValueKey('motivation_full_track_title'),
+                      semanticsLabel:track.title,
+                      style:AppTypography.headlineLarge.copyWith(
+                        color:colors.textPrimary)),
                     Text('STK Motivation · ${track.mode.label}',
                       style:AppTypography.bodyMedium.copyWith(
                         color:colors.textSecondary)),
