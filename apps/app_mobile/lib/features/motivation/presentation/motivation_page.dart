@@ -1094,7 +1094,9 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
                 ),
               ),
             ),
-            Flexible(fit:FlexFit.loose,
+            ConstrainedBox(
+              constraints:BoxConstraints(
+                maxHeight:MediaQuery.sizeOf(pageContext).height*.38),
               child:AnimatedBuilder(
               animation:widget.playback,
               builder:(ctx,_) {
