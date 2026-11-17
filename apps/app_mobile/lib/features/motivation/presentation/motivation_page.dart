@@ -1051,7 +1051,11 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
             // A seek from an obsolete controller must never clear the
             // new track's in-flight seek flag.
             if(controller==c)seeking=false;
-          }).catchError((Object _){ /* Source was switched. */ }));
+          }).catchError((Object _){
+            // Surface native seek failures on the active decoder. A stale
+            // source cannot change the next track's player state.
+            _markVideoDecoderFailed(c);
+          }));
         }
       });
       playing=widget.playback.audio.playerStateStream.listen((state){
@@ -1142,8 +1146,10 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
         await c.play();
       }
     }catch(_){
-      // Codec teardown, removed files and background interruptions are
-      // recoverable. They must not propagate a native path to the UI.
+      // A failed seek/play after returning to the foreground is not a
+      // successful recovery. Offer retry without exposing native paths.
+      // The identity/mounted guard discards errors from a replaced decoder.
+      _markVideoDecoderFailed(c);
     }
   }
   @override

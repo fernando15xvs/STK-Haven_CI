@@ -105,4 +105,37 @@ void main(){
     expect(code,contains('state.processingState!=ProcessingState.completed'));
     expect(code,contains('.catchError((Object _)'));
   });
+  test('active MP4 seek failures show retry; stale controller failures are ignored',(){
+    final code=File(
+      'lib/features/motivation/presentation/motivation_page.dart',
+    ).readAsStringSync();
+    final setupStart=code.indexOf('Future<void> _setup() async');
+    final setupEnd=code.indexOf('void _onVideoDecoderChanged()',setupStart);
+    final setup=code.substring(setupStart,setupEnd);
+    final seekStart=setup.indexOf('unawaited(c.seekTo(pos).whenComplete');
+    final playingStart=setup.indexOf('playing=widget.playback.audio.playerStateStream.listen');
+    expect(seekStart,greaterThanOrEqualTo(0));
+    expect(playingStart,greaterThan(seekStart));
+    final driftSeek=setup.substring(seekStart,playingStart);
+    expect(driftSeek,contains('_markVideoDecoderFailed(c);'));
+    expect(driftSeek,contains('if(controller==c)seeking=false;'));
+
+    final resumeStart=code.indexOf(
+      'Future<void> _resumeVideoAfterForeground(VideoPlayerController c) async');
+    final disposeStart=code.indexOf('void dispose(){',resumeStart);
+    final resume=code.substring(resumeStart,disposeStart);
+    expect(resume,contains('await c.seekTo(widget.playback.position);'));
+    expect(resume,contains('if(!mounted || controller!=c || !visible)return;'));
+    expect(resume,contains('_markVideoDecoderFailed(c);'));
+    expect(resume,isNot(contains('audio.play(')));
+
+    final failure=code.substring(
+      code.indexOf('void _markVideoDecoderFailed(VideoPlayerController c)'),
+      code.indexOf('void _syncVideoLoop()'));
+    expect(failure,contains('if(!mounted || controller!=c)return;'));
+    expect(failure,contains('controller=null;'));
+    expect(failure,contains('_cinemaSource.value=null;'));
+    expect(failure,contains('_videoFailed=true;'));
+    expect(code,contains("ValueKey('motivation_video_retry')"));
+  });
 }
