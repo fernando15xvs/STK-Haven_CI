@@ -114,7 +114,67 @@ jobs:
             >> supabase/config.toml
           echo "CI-only Supabase ports: db=$base, api=$((base+2)), inbucket=$((base+3))"
       - name: Start isolated Supabase at Roadmap 2 baseline
-        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector
+        run: |
+          set -euo pipefail
+          # A port may be taken between the availability probe and Docker
+          # binding it (especially while CLI images are being downloaded).
+          # Retry ONLY that infrastructure race; SQL/RLS errors stay fatal.
+          for attempt in $(seq 1 4); do
+            if supabase start -x studio,imgproxy,edge-runtime,logflare,vector \
+                2>&1 | tee /tmp/stk-supabase-start.log; then
+              exit 0
+            fi
+            if ! grep -q 'address already in use' /tmp/stk-supabase-start.log; then
+              exit 1
+            fi
+            supabase stop --no-backup || true
+            if [[ "$attempt" -eq 4 ]]; then
+              echo "::error::Supabase ports still occupied after 4 attempts"
+              exit 1
+            fi
+            python3 - <<'PY'
+          from pathlib import Path
+          import random
+          import socket
+
+          config = Path('supabase/config.toml')
+          original = config.read_text()
+          marker = '\n[db]\nport = '
+          cut = original.rfind(marker)
+          if cut < 0:
+              raise SystemExit('No CI-specific Supabase port override found')
+          # The port overrides are appended by the immediately preceding step.
+          # Replace only that final CI override, preserving the base config.
+          prefix = original[:cut]
+          start = random.randrange(2300)
+          base = None
+          for offset in range(2300):
+              candidate = 20000 + ((start + offset * 67) % 2300) * 10
+              probes = []
+              try:
+                  for port in range(candidate, candidate + 6):
+                      sock = socket.socket()
+                      probes.append(sock)
+                      sock.bind(('0.0.0.0', port))
+                  base = candidate
+                  break
+              except OSError:
+                  pass
+              finally:
+                  for sock in probes:
+                      sock.close()
+          if base is None:
+              raise SystemExit('No free port range for Supabase retry')
+          override = (
+              f'\n[db]\nport = {base}\nshadow_port = {base + 1}\n'
+              f'\n[api]\nport = {base + 2}\n'
+              f'\n[inbucket]\nport = {base + 3}\n'
+              f'smtp_port = {base + 4}\npop3_port = {base + 5}\n'
+          )
+          config.write_text(prefix + override)
+          print(f'Retrying local Supabase on isolated ports {base}-{base + 5}')
+          PY
+          done
       - name: Rebuild Roadmap 2 baseline
         run: supabase db reset
       - name: Restore Roadmap 3/4 migrations
