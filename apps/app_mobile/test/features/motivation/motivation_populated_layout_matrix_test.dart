@@ -148,7 +148,10 @@ void main() {
     expect(tester.takeException(), isNull);
 
     // Dismiss a non-destructive suggestion: library metadata is unchanged.
-    await tester.pageBack();
+    // A modal bottom sheet has no visible BackButton. Send the system
+    // back navigation event instead of WidgetTester.pageBack(), which
+    // specifically looks for a Material/Cupertino toolbar back button.
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(library.playlists, hasLength(1));
     expect(library.tracks, hasLength(16));
