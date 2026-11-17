@@ -155,7 +155,7 @@ void main(){
     expect(confirmed,greaterThan(dialog));
     expect(guard,greaterThan(confirmed));
     expect(write,greaterThan(guard));
-    expect(flow,contains('pueden pertenecer a otra cuenta'));
+    expect(flow,contains('Pueden pertenecer a otra cuenta'));
     expect(flow,contains('No se subirán automáticamente a la nube.'));
     expect(flow,contains("markRestored(source: 'archivo antiguo')"));
     expect(flow,isNot(contains('Hive.deleteBoxFromDisk(')));
