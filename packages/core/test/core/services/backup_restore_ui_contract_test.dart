@@ -101,4 +101,37 @@ void main(){
     expect(restore,contains('await routinesBox.putAll(snapshotRoutines);'));
     expect(source,contains('_rejectDuplicateRecordIds(data);'));
   });
+  test('A5: exports never reveal file paths from native share errors',(){
+    final source=File(
+      'lib/features/sync/presentation/backup_status_page.dart',
+    ).readAsStringSync();
+    expect(source,contains(
+      'No se pudo exportar la copia. '));
+    expect(source,contains(
+      'No se pudieron exportar los entrenamientos. '));
+    expect(source,isNot(contains(r'Error al crear la copia: $error')));
+    expect(source,isNot(contains(r'Error al exportar entrenamientos: $error')));
+  });
+
+  test('A5: local restore status is written after Hive and program hydration',(){
+    final source=File(
+      'lib/features/sync/presentation/backup_status_page.dart',
+    ).readAsStringSync();
+    final start=source.indexOf('static Future<void> _restoreLocalBackup(');
+    final restore=source.substring(start);
+    final persisted=restore.indexOf('await _backupService.restoreBackup(');
+    final hydrated=restore.indexOf(
+      'await TrainingProgramRepository.fromHive().hydrateFromBackupMetadata();');
+    final status=restore.indexOf(
+      "await BackupActivityService.markRestored(source: 'local');");
+    final invalidate=restore.indexOf('ref.invalidate(settingsProvider);');
+    expect(persisted,greaterThanOrEqualTo(0));
+    expect(hydrated,greaterThan(persisted));
+    expect(status,greaterThan(hydrated));
+    expect(invalidate,greaterThan(status));
+    // An unsuccessful restore must stay in the catch block and never claim
+    // the backup was committed.
+    expect(restore,contains('catch (_)'));
+  });
+
 }
