@@ -1,4 +1,3 @@
-import 'package:hive_flutter/hive_flutter.dart';
 import 'migration_v1_to_v2.dart';
 
 abstract class Migration {
@@ -62,10 +61,11 @@ class MigrationV0ToV1 extends Migration {
 
   @override
   Future<void> execute() async {
-    await Hive.deleteBoxFromDisk('routinesBox');
-    await Hive.deleteBoxFromDisk('historyBox');
-    await Hive.deleteBoxFromDisk('routinesBox_v1');
-    await Hive.deleteBoxFromDisk('historyBox_v1');
-    await Hive.deleteBoxFromDisk('exercisesBox_v1');
+    // Legacy Hive boxes can contain workouts/routines that were never copied
+    // into the modern v2 stores. Deleting them during startup permanently
+    // discards a user's history. Preserve the original on-disk data: the app
+    // opens separate v2 stores, and an explicit legacy import can be offered
+    // after adapters/record formats have been validated. This step MUST NOT
+    // delete or overwrite legacy boxes, even for installs upgraded from v0.
   }
 }
