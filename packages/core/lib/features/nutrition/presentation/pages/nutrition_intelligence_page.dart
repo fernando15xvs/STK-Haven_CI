@@ -54,6 +54,9 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
   /// Opt in to the simplified food-first MOBILE route. The frozen web
   /// experience retains its original page when this flag is false.
   final bool mobileCompactLayout;
+  /// A local descriptive preference, never a calorie entitlement.
+  final StkNutritionIntent? initialStkNutritionIntent;
+  final Future<void> Function(StkNutritionIntent)? onSaveStkNutritionIntent;
   final VoidCallback? onOpenMeasurements;
   final VoidCallback? onRefreshAdultAccess;
 
@@ -66,6 +69,8 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
     this.mobileAdultCheck,
     this.showAgeAwareGoals = false,
     this.mobileCompactLayout = false,
+    this.initialStkNutritionIntent,
+    this.onSaveStkNutritionIntent,
     this.onOpenMeasurements,
     this.onRefreshAdultAccess,
   });
@@ -135,6 +140,12 @@ class _NutritionIntelligencePageState
   @override
   void initState() {
     super.initState();
+    _stkGoal = widget.initialStkNutritionIntent ?? StkNutritionIntent.maintenance;
+    _goal = switch (_stkGoal) {
+      StkNutritionIntent.maintenance => EnergyGoal.maintenance,
+      StkNutritionIntent.volume => EnergyGoal.gradualGain,
+      StkNutritionIntent.deficit => EnergyGoal.gradualLoss,
+    };
     var ownerId='guest';
     try{
       ownerId=Supabase.instance.client.auth.currentUser?.id ?? 'guest';
@@ -401,7 +412,10 @@ class _NutritionIntelligencePageState
     );
   }
 
-  void _chooseStkGoal(StkNutritionIntent selected) {
+  Future<void> _chooseStkGoal(StkNutritionIntent selected) async {
+    if (!_sameNutritionOwner) return;
+    final previousIntent = _stkGoal;
+    final previousEnergyGoal = _goal;
     final age = ref.read(userExperienceProfileProvider).value
         ?.ageAt(DateTime.now());
     final audience = StkAgeAwareNutritionPlans.audience(
@@ -421,6 +435,21 @@ class _NutritionIntelligencePageState
         _invalidateEnergyDraft();
       }
     });
+    final save = widget.onSaveStkNutritionIntent;
+    if (save == null) return; // Legacy non-mobile routes remain unchanged.
+    try {
+      await save(selected);
+    } catch (_) {
+      if (!mounted || _stkGoal != selected) return;
+      setState(() {
+        _stkGoal = previousIntent;
+        _goal = previousEnergyGoal;
+        _invalidateEnergyDraft();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('No se pudo recordar el objetivo. Inténtalo de nuevo.'),
+      ));
+    }
   }
 
   void _openAdultPlanFromGoals() {
@@ -687,14 +716,11 @@ class _NutritionIntelligencePageState
                 ),
               ],
               onChanged: (value) {
-                if (value != null) setState(() {
-                  _goal = value;
-                  _stkGoal = switch (value) {
-                    EnergyGoal.maintenance => StkNutritionIntent.maintenance,
-                    EnergyGoal.gradualGain => StkNutritionIntent.volume,
-                    EnergyGoal.gradualLoss => StkNutritionIntent.deficit,
-                  };
-                  _invalidateEnergyDraft();
+                if (value == null) return;
+                _chooseStkGoal(switch (value) {
+                  EnergyGoal.maintenance => StkNutritionIntent.maintenance,
+                  EnergyGoal.gradualGain => StkNutritionIntent.volume,
+                  EnergyGoal.gradualLoss => StkNutritionIntent.deficit,
                 });
               },
             ),

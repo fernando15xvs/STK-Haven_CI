@@ -46,7 +46,7 @@ class ProfilePage extends ConsumerWidget {
         children: [
           const SizedBox(height: AppSpacing.md),
           PersonalProfileSummary(
-            onEdit: () => _open(context, const PersonalProfilePage()),
+            onEdit: () => _open(context, const PersonalProfilePage(mobileCompactLayout: true)),
           ),
           if(savedProfile?.needsOptionalTrainingFollowup == true) ...[
             const SizedBox(height: AppSpacing.md),

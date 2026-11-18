@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:core/domain/models/nutrition_intelligence.dart';
+import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
+import 'package:core/features/nutrition/data/stk_nutrition_intent_repository.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
 import 'package:core/features/nutrition/presentation/pages/nutrition_intelligence_page.dart';
@@ -30,6 +32,23 @@ class _NutritionIntelligencePageMobileState
   // check even for one frame before the auth stream emits its next event.
   String? _accessOwnerId;
   StreamSubscription<AuthState>? _authSubscription;
+  Future<void> _intentWriteTail = Future<void>.value();
+
+  /// Serialize rapid taps. A late write is always scoped to the original UID.
+  Future<void> _saveNutritionIntent(StkNutritionIntent intent, String? ownerId) {
+    final operation = _intentWriteTail.then((_) async {
+      if (!mounted || Supabase.instance.client.auth.currentUser?.id != ownerId) {
+        throw StateError('La cuenta cambió durante la selección.');
+      }
+      await StkNutritionIntentRepository(
+        Hive.box<dynamic>(HiveBoxes.metadata), ownerId: ownerId,
+      ).save(intent);
+    });
+    // Keep the queue usable after a failed storage write; return the original
+    // operation so the chooser can display an error rather than fake success.
+    _intentWriteTail = operation.then((_) {}, onError: (Object _, StackTrace __) {});
+    return operation;
+  }
 
   Future<NutritionAdultCheck> _checkAccess() {
     final client = Supabase.instance.client;
@@ -94,6 +113,11 @@ class _NutritionIntelligencePageMobileState
         photoPicker: _pickPhoto,
         showAgeAwareGoals: true,
         mobileCompactLayout: true,
+        initialStkNutritionIntent: StkNutritionIntentRepository(
+          Hive.box<dynamic>(HiveBoxes.metadata), ownerId: currentUid,
+        ).read(),
+        onSaveStkNutritionIntent: (intent) =>
+            _saveNutritionIntent(intent, currentUid),
         // The 15+ release gate includes a fresh check BEFORE every image
         // request, including reanalysis after revoking a previous consent.
         // Even legacy users must opt in per photo before anything leaves

@@ -11,7 +11,10 @@ import 'package:image_picker/image_picker.dart';
 /// Personal identity stays local. Coach access is managed separately through
 /// explicit relationship permissions; editing this page does not share data.
 class PersonalProfilePage extends ConsumerStatefulWidget {
-  const PersonalProfilePage({super.key});
+  const PersonalProfilePage({super.key, this.mobileCompactLayout = false});
+
+  /// Keeps the shared web page unchanged; only mobile enables disclosure UX.
+  final bool mobileCompactLayout;
 
   @override
   ConsumerState<PersonalProfilePage> createState() => _PersonalProfilePageState();
@@ -162,165 +165,8 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
     });
   }
 
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final profile = ref.watch(userExperienceProfileProvider);
-    return PopScope(
-      canPop: !_hasUnsavedChanges && !_saving && !_pickingPhoto,
-      onPopInvokedWithResult: (didPop, _) => _requestDiscard(didPop),
-      child: Scaffold(
-      appBar: AppBar(title: const Text('Editar perfil')),
-      body: profile.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('No se pudo cargar el perfil: $error')),
-        data: (saved) {
-          if (_draft == null) {
-            _draft = saved;
-            _original = saved;
-            _name.text = saved.displayName;
-          }
-          final draft = _draft!;
-          return Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                Text('Cómo quieres aparecer', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _name,
-                  onChanged: (_) => setState(() {}),
-                  maxLength: 40,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre o apodo',
-                    hintText: '¿Cómo quieres que te llamemos?',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (text) {
-                    if ((text ?? '').trim().length > 40) return 'Máximo 40 caracteres.';
-                    if ((text ?? '').contains(RegExp(r'[\x00-\x1F]'))) {
-                      return 'El nombre contiene caracteres no permitidos.';
-                    }
-                    return null; // El nombre es opcional.
-                  },
-                ),
-                const SizedBox(height: 14),
-                Text('Foto de perfil (opcional)', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    ProfileAvatar(profile: draft, radius: 27),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickingPhoto ? null : _selectPhoto,
-                        icon: const Icon(Icons.photo_library_outlined),
-                        label: Text(_pickingPhoto ? 'Abriendo fotos...' : 'Elegir foto'),
-                      ),
-                    ),
-                    if (draft.avatarPhotoBase64 != null)
-                      IconButton(
-                        tooltip: 'Quitar foto',
-                        onPressed: () => setState(
-                          () => _draft = draft.copyWith(clearAvatarPhoto: true),
-                        ),
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text('O elige un avatar', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Sin avatar'),
-                      selected: draft.avatarEmoji == null && draft.avatarPhotoBase64 == null,
-                      onSelected: (_) => setState(() => _draft = draft.copyWith(clearAvatar: true, clearAvatarPhoto: true)),
-                    ),
-                    for (final avatar in _avatars)
-                      ChoiceChip(
-                        label: Text(avatar, style: const TextStyle(fontSize: 24)),
-                        selected: draft.avatarEmoji == avatar,
-                        onSelected: (_) => setState(() => _draft = draft.copyWith(avatarEmoji: avatar, clearAvatarPhoto: true)),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text('Datos personales opcionales',
-                  style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text(
-                  'Sirven para adaptar la experiencia y la calculadora adulta. '
-                  'Una fecha declarada no sustituye la verificación de edad.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 10),
-                SwitchListTile.adaptive(
-                  key:const ValueKey('profile_optional_demographics_consent'),
-                  contentPadding:EdgeInsets.zero,
-                  title:const Text('Autorizar datos demográficos opcionales'),
-                  subtitle:const Text('Se guardan en tu dispositivo '
-                    'para adaptar la experiencia y cálculos adultos '
-                    'opcionales. Si exportas o subes una copia de seguridad, '
-                    'estos datos pueden incluirse en ella. '
-                    'No verifican tu edad ni se comparten automáticamente '
-                    'con un entrenador. Puedes verlos o borrarlos aquí.'),
-                  value:draft.optionalDemographicsConsented,
-                  onChanged:(enabled)async{
-                    if(!enabled &&
-                       (draft.dateOfBirth!=null ||
-                        draft.genderIdentity!=null ||
-                        draft.equationSexForEnergy!=null)){
-                      final confirmed=await showDialog<bool>(
-                        context:context,builder:(ctx)=>AlertDialog(
-                          title:const Text('Desactivar datos opcionales'),
-                          content:const Text('Se quitarán fecha de nacimiento, '
-                            'género y parámetro energético de tu borrador. '
-                            'Se aplicará al guardar. Tus rutinas, '
-                            'historial y preferencias no cambiarán.'),
-                          actions:[
-                            TextButton(onPressed:()=>Navigator.pop(ctx,false),
-                              child:const Text('Cancelar')),
-                            FilledButton(onPressed:()=>Navigator.pop(ctx,true),
-                              child:const Text('Quitar del borrador')),
-                          ],
-                        ),
-                      );
-                      if(confirmed!=true || !mounted)return;
-                    }
-                    if(!mounted)return;
-                    setState((){
-                      _draft=enabled
-                        ?draft.copyWith(
-                          optionalDemographicsConsented:true,
-                          optionalDemographicsConsentedAt:DateTime.now())
-                        :draft.copyWith(
-                          optionalDemographicsConsented:false,
-                          clearOptionalDemographicsConsentAt:true,
-                          clearDateOfBirth:true,
-                          clearGenderIdentity:true,
-                          clearEquationSexForEnergy:true);
-                    });
-                  },
-                ),
-                if(!draft.optionalDemographicsConsented &&
-                   (draft.dateOfBirth!=null ||
-                    draft.genderIdentity!=null ||
-                    draft.equationSexForEnergy!=null))
-                  Text('Los datos anteriores se conservaron sin '
-                    'suponer tu autorización. Puedes revisarlos o '
-                    'quitarlos, o autorizarlos expresamente.',
-                    style:Theme.of(context).textTheme.bodySmall),
+  List<Widget> _buildDemographicFields(UserExperienceProfile draft) {
+    return [
                 const SizedBox(height: 10),
                 OutlinedButton.icon(
                   key:const ValueKey('profile_birth_date'),
@@ -386,6 +232,207 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                       ?draft.copyWith(clearEquationSexForEnergy:true)
                       :draft.copyWith(equationSexForEnergy:value)),
                 ),
+    ];
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = ref.watch(userExperienceProfileProvider);
+    return PopScope(
+      canPop: !_hasUnsavedChanges && !_saving && !_pickingPhoto,
+      onPopInvokedWithResult: (didPop, _) => _requestDiscard(didPop),
+      child: Scaffold(
+      appBar: AppBar(title: const Text('Editar perfil')),
+      body: profile.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(child: Text('No se pudo cargar el perfil: $error')),
+        data: (saved) {
+          if (_draft == null) {
+            _draft = saved;
+            _original = saved;
+            _name.text = saved.displayName;
+          }
+          final draft = _draft!;
+          return Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                Text(widget.mobileCompactLayout ? 'Datos personales' : 'Cómo quieres aparecer',
+                  style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _name,
+                  onChanged: (_) => setState(() {}),
+                  maxLength: 40,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre o apodo',
+                    hintText: '¿Cómo quieres que te llamemos?',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (text) {
+                    if ((text ?? '').trim().length > 40) return 'Máximo 40 caracteres.';
+                    if ((text ?? '').contains(RegExp(r'[\x00-\x1F]'))) {
+                      return 'El nombre contiene caracteres no permitidos.';
+                    }
+                    return null; // El nombre es opcional.
+                  },
+                ),
+                const SizedBox(height: 14),
+                Text('Foto de perfil (opcional)', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    ProfileAvatar(profile: draft, radius: 27),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _pickingPhoto ? null : _selectPhoto,
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: Text(_pickingPhoto ? 'Abriendo fotos...' : 'Elegir foto'),
+                      ),
+                    ),
+                    if (draft.avatarPhotoBase64 != null)
+                      IconButton(
+                        tooltip: 'Quitar foto',
+                        onPressed: () => setState(
+                          () => _draft = draft.copyWith(clearAvatarPhoto: true),
+                        ),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text('O elige un avatar', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('Sin avatar'),
+                      selected: draft.avatarEmoji == null && draft.avatarPhotoBase64 == null,
+                      onSelected: (_) => setState(() => _draft = draft.copyWith(clearAvatar: true, clearAvatarPhoto: true)),
+                    ),
+                    for (final avatar in _avatars)
+                      ChoiceChip(
+                        label: Text(avatar, style: const TextStyle(fontSize: 24)),
+                        selected: draft.avatarEmoji == avatar,
+                        onSelected: (_) => setState(() => _draft = draft.copyWith(avatarEmoji: avatar, clearAvatarPhoto: true)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text(widget.mobileCompactLayout
+                    ? 'Información opcional para cálculos'
+                    : 'Datos personales opcionales',
+                  style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text(
+                  widget.mobileCompactLayout
+                      ? 'Tu fecha y preferencias son opcionales. No verifican la edad.'
+                      : 'Sirven para adaptar la experiencia y la calculadora adulta. '
+                        'Una fecha declarada no sustituye la verificación de edad.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 10),
+                SwitchListTile.adaptive(
+                  key:const ValueKey('profile_optional_demographics_consent'),
+                  contentPadding:EdgeInsets.zero,
+                  title:const Text('Autorizar datos demográficos opcionales'),
+                  subtitle:widget.mobileCompactLayout
+                    ? const Text('Solo con tu permiso. Puedes retirarlo.')
+                    : const Text('Se guardan en tu dispositivo '
+                        'para adaptar la experiencia y cálculos adultos '
+                        'opcionales. Si exportas o subes una copia de seguridad, '
+                        'estos datos pueden incluirse en ella. '
+                        'No verifican tu edad ni se comparten automáticamente '
+                        'con un entrenador. Puedes verlos o borrarlos aquí.'),
+                  value:draft.optionalDemographicsConsented,
+                  onChanged:(enabled)async{
+                    if(!enabled &&
+                       (draft.dateOfBirth!=null ||
+                        draft.genderIdentity!=null ||
+                        draft.equationSexForEnergy!=null)){
+                      final confirmed=await showDialog<bool>(
+                        context:context,builder:(ctx)=>AlertDialog(
+                          title:const Text('Desactivar datos opcionales'),
+                          content:const Text('Se quitarán fecha de nacimiento, '
+                            'género y parámetro energético de tu borrador. '
+                            'Se aplicará al guardar. Tus rutinas, '
+                            'historial y preferencias no cambiarán.'),
+                          actions:[
+                            TextButton(onPressed:()=>Navigator.pop(ctx,false),
+                              child:const Text('Cancelar')),
+                            FilledButton(onPressed:()=>Navigator.pop(ctx,true),
+                              child:const Text('Quitar del borrador')),
+                          ],
+                        ),
+                      );
+                      if(confirmed!=true || !mounted)return;
+                    }
+                    if(!mounted)return;
+                    setState((){
+                      _draft=enabled
+                        ?draft.copyWith(
+                          optionalDemographicsConsented:true,
+                          optionalDemographicsConsentedAt:DateTime.now())
+                        :draft.copyWith(
+                          optionalDemographicsConsented:false,
+                          clearOptionalDemographicsConsentAt:true,
+                          clearDateOfBirth:true,
+                          clearGenderIdentity:true,
+                          clearEquationSexForEnergy:true);
+                    });
+                  },
+                ),
+                if(widget.mobileCompactLayout)
+                  const ExpansionTile(
+                    key:ValueKey('profile_optional_consent_information'),
+                    title:Text('Más información sobre tus datos'),
+                    tilePadding:EdgeInsets.zero,
+                    childrenPadding:EdgeInsets.only(bottom:12),
+                    children:[Text('Se guardan en el dispositivo; una copia de '
+                      'seguridad puede incluirlos. Nunca verifican tu edad '
+                      'ni se comparten automáticamente con entrenadores. '
+                      'Puedes consultar, retirar o borrar estos datos aquí.')],
+                  ),
+                if(!draft.optionalDemographicsConsented &&
+                   (draft.dateOfBirth!=null ||
+                    draft.genderIdentity!=null ||
+                    draft.equationSexForEnergy!=null))
+                  Text('Los datos anteriores se conservaron sin '
+                    'suponer tu autorización. Puedes revisarlos o '
+                    'quitarlos, o autorizarlos expresamente.',
+                    style:Theme.of(context).textTheme.bodySmall),
+                if(widget.mobileCompactLayout)
+                  ExpansionTile(
+                    key:const ValueKey('profile_mobile_demographic_editor'),
+                    tilePadding:EdgeInsets.zero,
+                    title:const Text('Editar fecha, género y cálculo'),
+                    subtitle:Text(draft.dateOfBirth == null
+                      ? 'Fecha de nacimiento no indicada'
+                      : 'Fecha: ${draft.dateOfBirth!.day.toString().padLeft(2,'0')}/'
+                        '${draft.dateOfBirth!.month.toString().padLeft(2,'0')}/'
+                        '${draft.dateOfBirth!.year}'),
+                    children:_buildDemographicFields(draft),
+                  )
+                else ..._buildDemographicFields(draft),
+                if(widget.mobileCompactLayout) ...[
+                  const SizedBox(height:18),
+                  Text('Privacidad y mis datos',
+                    style:Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height:4),
+                  Text('Consulta o quita tus datos opcionales en cualquier momento.',
+                    style:Theme.of(context).textTheme.bodySmall),
+                ],
                 const SizedBox(height:12),
                 Wrap(spacing:8,runSpacing:8,children:[
                   OutlinedButton.icon(
@@ -410,9 +457,12 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                   onChanged: (value) => setState(() => _draft = draft.copyWith(showWorkoutReflections: value)),
                 ),
                 const SizedBox(height: 14),
-                const Text(
-                  'Privacidad: el nombre y avatar son personales y no se comparten automáticamente con el entrenador. '
-                  'Los permisos de entrenamientos, progreso y medidas se eligen en Mis entrenadores.',
+                Text(
+                  widget.mobileCompactLayout
+                    ? 'Tu nombre y avatar permanecen personales. Los permisos '
+                      'para entrenadores se administran en Mis entrenadores.'
+                    : 'Privacidad: el nombre y avatar son personales y no se comparten automáticamente con el entrenador. '
+                      'Los permisos de entrenamientos, progreso y medidas se eligen en Mis entrenadores.',
                 ),
                 const SizedBox(height: 24),
                 FilledButton.icon(
