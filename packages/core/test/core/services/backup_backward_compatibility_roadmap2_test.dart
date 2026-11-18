@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:core/core/services/backup_service.dart';
+import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
+import 'package:core/features/nutrition/data/stk_nutrition_intent_repository.dart';
 import 'package:core/database/hive/hive_adapters.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/database/hive/models/hive_body_measurement.dart';
@@ -327,6 +329,41 @@ void main() {
     expect((recovery.get('2026-11-16') as Map)['sleepHours'], 7.5);
     expect(habitTasks.containsKey('habit::reading'), isTrue);
     expect(habitTasks.containsKey('runtime::session_flag'), isFalse);
+  });
+
+  test('C07 nutrition preference remains owner-scoped across full restore',
+      () async {
+    final metadata = Hive.box(HiveBoxes.metadata);
+    final alice = StkNutritionIntentRepository(metadata, ownerId: 'alice');
+    final bob = StkNutritionIntentRepository(metadata, ownerId: 'bob');
+    final guest = StkNutritionIntentRepository(metadata, ownerId: null);
+    await alice.save(StkNutritionIntent.volume);
+    await bob.save(StkNutritionIntent.maintenance);
+    await guest.save(StkNutritionIntent.deficit);
+
+    final service = BackupService();
+    final validated = service.validateBackup(service.createBackup());
+    expect(validated.isValid, isTrue);
+    final settings = validated.parsedData!['settings'] as Map<String, dynamic>;
+    expect(settings[alice.storageKey]['intent'], 'volume');
+    expect(settings[bob.storageKey]['intent'], 'maintenance');
+    expect(settings[guest.storageKey]['intent'], 'deficit');
+
+    await alice.clear();
+    await bob.clear();
+    await guest.clear();
+    expect(alice.read(), isNull);
+    expect(bob.read(), isNull);
+    expect(guest.read(), isNull);
+    await service.restoreBackup(validated.parsedData!,
+        schemaVersion: validated.schemaVersion!);
+
+    expect(alice.read(), StkNutritionIntent.volume);
+    expect(bob.read(), StkNutritionIntent.maintenance);
+    expect(guest.read(), StkNutritionIntent.deficit);
+    await guest.clear();
+    expect(alice.read(), StkNutritionIntent.volume);
+    expect(bob.read(), StkNutritionIntent.maintenance);
   });
 
   test('A5 corrupt restore preflight leaves populated Hive boxes intact',
