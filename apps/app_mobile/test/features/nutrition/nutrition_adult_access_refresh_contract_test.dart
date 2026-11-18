@@ -15,6 +15,9 @@ void main(){
     expect(mobile,contains('NutritionAdultCheck.unavailable'));
     expect(mobile,contains('status.allowsNumeric'));
     expect(mobile,contains('mobileAdultCheck: status'));
+    expect(mobile,contains('_accessOwnerId = client.auth.currentUser?.id'));
+    expect(mobile,contains('currentUid != _accessOwnerId'));
+    expect(mobile,contains('NutritionAdultCheck.signedOut'));
     expect(mobile,isNot(contains('snapshot.data == true')));
     expect(mobile,contains('unawaited(_authSubscription?.cancel())'));
     expect(mobile,contains('onRefreshAdultAccess: _refreshAdultAccess'));

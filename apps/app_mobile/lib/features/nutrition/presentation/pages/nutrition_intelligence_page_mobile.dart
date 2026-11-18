@@ -26,11 +26,16 @@ class _NutritionIntelligencePageMobileState
     extends State<NutritionIntelligencePageMobile>
     with WidgetsBindingObserver {
   late Future<NutritionAdultCheck> _adultAccess;
+  // Owner of the RPC result. A previous account cannot donate a successful
+  // check even for one frame before the auth stream emits its next event.
+  String? _accessOwnerId;
   StreamSubscription<AuthState>? _authSubscription;
 
-  Future<NutritionAdultCheck> _checkAccess() => NutritionAdultAccessService(
-    Supabase.instance.client,
-  ).checkStatus();
+  Future<NutritionAdultCheck> _checkAccess() {
+    final client = Supabase.instance.client;
+    _accessOwnerId = client.auth.currentUser?.id;
+    return NutritionAdultAccessService(client).checkStatus();
+  }
 
   void _refreshAdultAccess() {
     if(!mounted)return;
@@ -74,9 +79,14 @@ class _NutritionIntelligencePageMobileState
       builder: (context, snapshot) {
         // FutureBuilder may retain an old successful result while a new
         // account/session RPC is pending. Never reuse that grant.
-        final status = snapshot.connectionState == ConnectionState.done
-            ? (snapshot.data ?? NutritionAdultCheck.unavailable)
-            : NutritionAdultCheck.checking;
+        final currentUid = Supabase.instance.client.auth.currentUser?.id;
+        final status = currentUid != _accessOwnerId
+            ? (currentUid == null
+                ? NutritionAdultCheck.signedOut
+                : NutritionAdultCheck.checking)
+            : snapshot.connectionState == ConnectionState.done
+                ? (snapshot.data ?? NutritionAdultCheck.unavailable)
+                : NutritionAdultCheck.checking;
         return NutritionIntelligencePage(
         // A different account must never inherit the previous account's
         // private nutrition plan or Food Vision results from this widget.
