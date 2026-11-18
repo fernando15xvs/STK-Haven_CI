@@ -76,8 +76,10 @@ class _NutritionIntelligencePageMobileState
         showAgeAwareGoals: true,
         // The 15+ release gate includes a fresh check BEFORE every image
         // request, including reanalysis after revoking a previous consent.
-        requestPhotoAnalysisConsent: StkMobileLegalConfig.enabled
-            ? _requestPhotoConsent : null,
+        // Even legacy users must opt in per photo before anything leaves
+        // their phone. Permanent preference storage is only available with
+        // approved/published policies; no consent is silently assumed.
+        requestPhotoAnalysisConsent: _requestPhotoConsent,
         cameraAvailable: true,
         // FutureBuilder can retain the prior result while a new RPC is
         // waiting; only a completed fresh check can unlock numeric nutrition.
@@ -95,6 +97,9 @@ class _NutritionIntelligencePageMobileState
   Future<bool> _requestPhotoConsent() async {
     if (!mounted) return false;
     final docs = StkMobileLegalConfig.documents;
+    if (!StkMobileLegalConfig.enabled) {
+      return _requestOneTimePhotoConsent();
+    }
     if (!docs.canCollectAcceptance) return false;
     final uid = Supabase.instance.client.auth.currentUser?.id;
     final store = StkMobileLegalReceiptStore(
@@ -174,6 +179,41 @@ class _NutritionIntelligencePageMobileState
     } catch (_) {
       return false;
     }
+  }
+
+  /// Legacy users may continue educational Food Vision scans without
+  /// accepting legal DRAFTS. Every upload needs a fresh, explicit opt-in.
+  /// This per-request choice never creates a durable permission or
+  /// authorizes adult numeric nutrition.
+  Future<bool> _requestOneTimePhotoConsent() async {
+    if (!mounted) return false;
+    final openingUser = Supabase.instance.client.auth.currentUser?.id;
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Enviar fotografía para análisis con IA'),
+        content: const Text(
+          'STK Haven enviará esta fotografía al servicio de IA para '
+          'identificar alimentos y ofrecer una estimación aproximada. '
+          'Evita fotografiar rostros, documentos o datos privados. '
+          'Este permiso vale sólo para esta fotografía y puedes '
+          'elegir no enviarla.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('No enviar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Enviar esta foto'),
+          ),
+        ],
+      ),
+    );
+    return approved == true &&
+        mounted &&
+        openingUser == Supabase.instance.client.auth.currentUser?.id;
   }
 
   Future<NutritionPhoto?> _pickPhoto(NutritionPhotoSource source) async {

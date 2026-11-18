@@ -1,4 +1,4 @@
-import AVFoundation
+import AudioToolbox
 import CoreMotion
 import Flutter
 import PDFKit
@@ -9,7 +9,13 @@ import WidgetKit
 @main
 @objc class AppDelegate: FlutterAppDelegate {
   private let pedometer = CMPedometer()
-  private var restTonePlayer: AVAudioPlayer?
+  private var restToneSoundId: SystemSoundID = 0
+
+  deinit {
+    if restToneSoundId != 0 {
+      AudioServicesDisposeSystemSoundID(restToneSoundId)
+    }
+  }
 
   override func application(
     _ application: UIApplication,
@@ -49,19 +55,29 @@ import WidgetKit
           result(FlutterMethodNotImplemented)
           return
         }
-        guard let url = Bundle.main.url(
-          forResource: "stk_rest_complete", withExtension: "wav"
-        ) else {
+        guard let self,
+              let url = Bundle.main.url(
+                forResource: "stk_rest_complete", withExtension: "wav"
+              ) else {
           result(false)
           return
         }
-        do {
-          let player = try AVAudioPlayer(contentsOf: url)
-          self?.restTonePlayer = player
-          result(player.play())
-        } catch {
-          result(false)
+        // This is a brief system cue, not a second music player. AVAudioPlayer
+        // with the app's nonmixable playback category can interrupt another
+        // app (e.g. YouTube Music) when the rest ends. System Sound Services
+        // does not activate/reconfigure the app's AVAudioSession or claim
+        // music focus; it respects the device's system sound behavior.
+        if self.restToneSoundId == 0 {
+          var soundId: SystemSoundID = 0
+          let status = AudioServicesCreateSystemSoundID(url as CFURL, &soundId)
+          guard status == noErr else {
+            result(false)
+            return
+          }
+          self.restToneSoundId = soundId
         }
+        AudioServicesPlaySystemSound(self.restToneSoundId)
+        result(true)
       }
 
       let restActivityChannel = FlutterMethodChannel(

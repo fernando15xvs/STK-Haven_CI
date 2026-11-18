@@ -22,6 +22,31 @@ void main() {
     ), now.add(const Duration(seconds: 40)));
   });
 
+  test('extension and old-deadline expiry are independent', () {
+    // Models the OS countdown: an old 60s alarm must not represent a
+    // newly extended rest that now ends at 90s.
+    final initial = now.add(const Duration(seconds: 60));
+    final extended = RestTimerAdjustment.extend(
+      endsAt: initial,
+      now: now.add(const Duration(seconds: 45)),
+      additionalSeconds: 30,
+    );
+    expect(extended, now.add(const Duration(seconds: 90)));
+    expect(extended!.isAfter(initial), isTrue);
+    expect(extended.isAfter(now.add(const Duration(seconds: 60))), isTrue);
+    expect(RestTimerAdjustment.extend(
+      endsAt: initial,
+      now: initial,
+      additionalSeconds: 15,
+    ), isNull,
+        reason: 'An already expired notification must not resurrect.');
+    expect(RestTimerAdjustment.extend(
+      endsAt: initial,
+      now: now.add(const Duration(seconds: 61)),
+      additionalSeconds: 15,
+    ), isNull);
+  });
+
   test('rejects expired, missing, zero or excessive countdowns', () {
     expect(RestTimerAdjustment.extend(
       endsAt: null, now: now, additionalSeconds: 15,

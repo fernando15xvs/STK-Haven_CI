@@ -132,7 +132,10 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
             () => _startRestTimer(remainingRest, draft.currentRestEndsAt!),
           );
         } else {
+          // Timer may have finished while the process was asleep or dead.
+          // Remove stale OS/UI state immediately at session restoration.
           _clearRestInDraft(draft);
+          unawaited(WorkoutNotificationService.cancelRestTimerNotification());
         }
       }
 
@@ -147,6 +150,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         isResting: resting,
       );
     }
+    // A workout no longer exists but an old native countdown may survive
+    // an OS/plugin restart. Do not leave a permanently pinned "0:00".
+    unawaited(WorkoutNotificationService.cancelRestTimerNotification());
     return const ActiveWorkoutState();
   }
 
@@ -1076,7 +1082,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     } catch (_) {
       // Channel absent (web/older build): use the platform's single alert.
     }
-    await SystemSound.play(SystemSoundType.alert);
+    // Deliberately do not fall back to SystemSound.alert: on some devices
+    // a generic alert takes audio focus and pauses the user's music.
+    // A failed native cue is silent; optional haptics still run.
   }
 
   void _cancelTimers() {

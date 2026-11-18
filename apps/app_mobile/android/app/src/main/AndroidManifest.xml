@@ -44,6 +44,11 @@
                 <action android:name="android.intent.action.MEDIA_BUTTON"/>
             </intent-filter>
         </receiver>
+        <!-- Exact/degraded wakeup only clears STK's transient rest
+             chronometer, not the final alert or audio playback. -->
+        <receiver
+            android:name=".StkRestCountdownExpiryReceiver"
+            android:exported="false" />
         <receiver
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
             android:exported="false" />

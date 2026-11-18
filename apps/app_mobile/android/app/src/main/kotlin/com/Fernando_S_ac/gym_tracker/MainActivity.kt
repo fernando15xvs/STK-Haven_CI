@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.Sensor
+import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -103,6 +104,29 @@ class MainActivity : AudioServiceActivity(), SensorEventListener {
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
+            "stk_haven/rest_expiry",
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "schedule" -> {
+                    val deadline = call.argument<Number>("endEpochMillis")?.toLong()
+                    if (deadline == null) {
+                        result.success(false)
+                    } else {
+                        result.success(
+                            StkRestCountdownExpiryReceiver.schedule(this, deadline)
+                        )
+                    }
+                }
+                "cancel" -> {
+                    StkRestCountdownExpiryReceiver.cancel(this)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
             "stk_haven/rest_tone",
         ).setMethodCallHandler { call, result ->
             if (call.method != "play") {
@@ -110,17 +134,48 @@ class MainActivity : AudioServiceActivity(), SensorEventListener {
             } else {
                 try {
                     restTonePlayer?.release()
-                    val player = MediaPlayer.create(this, R.raw.stk_rest_complete)
-                    if (player == null) {
-                        result.success(false)
-                    } else {
-                        restTonePlayer = player
+                    restTonePlayer = null
+
+                    // A one-second training chime is SONIFICATION, not
+                    // media playback. Never request or steal audio focus
+                    // from YouTube Music, Spotify or another media app.
+                    val player = MediaPlayer()
+                    try {
+                        player.setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .build(),
+                        )
+                        val descriptor = resources.openRawResourceFd(
+                            R.raw.stk_rest_complete,
+                        )
+                        try {
+                            player.setDataSource(
+                                descriptor.fileDescriptor,
+                                descriptor.startOffset,
+                                descriptor.length,
+                            )
+                        } finally {
+                            descriptor.close()
+                        }
+                        player.prepare()
                         player.setOnCompletionListener { completed ->
                             completed.release()
                             if (restTonePlayer === completed) restTonePlayer = null
                         }
+                        player.setOnErrorListener { failed, _, _ ->
+                            failed.release()
+                            if (restTonePlayer === failed) restTonePlayer = null
+                            true
+                        }
+                        restTonePlayer = player
                         player.start()
                         result.success(true)
+                    } catch (_: Exception) {
+                        player.release()
+                        restTonePlayer = null
+                        result.success(false)
                     }
                 } catch (_: Exception) {
                     restTonePlayer = null

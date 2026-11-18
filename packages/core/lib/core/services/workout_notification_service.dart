@@ -14,6 +14,25 @@ class WorkoutNotificationService {
   static const int _restTimerNotificationId = 999;
   static const int _restOngoingNotificationId = 998;
   static const _restActivityChannel = MethodChannel('stk_haven/rest_activity');
+  static const _restExpiryChannel = MethodChannel('stk_haven/rest_expiry');
+
+  /// The system owns the countdown's end even when Dart is suspended.
+  /// On Android a native AlarmManager receiver is an additional cleanup
+  /// backstop for vendors that leave chronometers stuck on 0:00.
+  static Future<void> _setAndroidRestExpiry(DateTime? deadline) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      if (deadline == null) {
+        await _restExpiryChannel.invokeMethod<bool>('cancel');
+      } else {
+        await _restExpiryChannel.invokeMethod<bool>('schedule', {
+          'endEpochMillis': deadline.millisecondsSinceEpoch,
+        });
+      }
+    } catch (_) {
+      // Notification timeoutAfter remains the OS-level fallback.
+    }
+  }
 
   static Future<void> _updateRestLiveActivity(
     DateTime endTime, String? workoutSessionId,
@@ -127,16 +146,21 @@ class WorkoutNotificationService {
         try {
           await initialize();
           if (generation != _restGeneration) return;
+          // Clear BOTH prior visual timers and native alarms first, even if
+          // notification permission was subsequently revoked.
+          await _setAndroidRestExpiry(null);
+          await _notificationsPlugin.cancel(id: _restOngoingNotificationId);
+          await _notificationsPlugin.cancel(id: _restTimerNotificationId);
+          if (generation != _restGeneration) return;
+          if (!endTime.isAfter(DateTime.now())) {
+            await _endRestLiveActivity();
+            return;
+          }
           // Live Activities use separate authorization from notifications.
           await _updateRestLiveActivity(endTime, workoutSessionId);
           if (generation != _restGeneration) return;
           if (!await requestNotificationPermission()) return;
           if (generation != _restGeneration) return;
-
-          // Previous countdown and previous end alert never survive a time change.
-          await _notificationsPlugin.cancel(id: _restOngoingNotificationId);
-          await _notificationsPlugin.cancel(id: _restTimerNotificationId);
-          if (generation != _restGeneration || !endTime.isAfter(DateTime.now())) return;
 
           final settings = SettingsRepository(
             Hive.box(HiveBoxes.metadata),
@@ -145,8 +169,11 @@ class WorkoutNotificationService {
           final vibration = settings.vibrationEnabled;
           // New versioned channel: Android cannot change sound on an
           // existing channel, and user overrides must remain respected.
+          // v2 creates a new Android channel: channel properties are
+          // immutable on installed phones. The new notification-event usage
+          // avoids classifying this brief cue as media playback or an alarm.
           final channelId = sound
-              ? 'workout_rest_stk_chime_v1_${vibration ? 'vibration' : 'steady'}'
+              ? 'workout_rest_stk_chime_v2_${vibration ? 'vibration' : 'steady'}'
               : 'workout_rest_silent_${vibration ? 'vibration' : 'steady'}';
 
           // Android's native chronometer updates on its own, even with the
@@ -168,18 +195,22 @@ class WorkoutNotificationService {
                     playSound: false,
                     enableVibration: false,
                     silent: true,
-                    ongoing: true,
-                    autoCancel: false,
+                    // ONGOING notifications may remain pinned at 0:00.
+                    // Allow Android to remove this transient countdown.
+                    ongoing: false,
+                    autoCancel: true,
                     onlyAlertOnce: true,
                     showWhen: true,
                     usesChronometer: true,
                     chronometerCountDown: true,
                     when: endTime.millisecondsSinceEpoch,
-                    timeoutAfter: remainingMs + 2000,
+                    timeoutAfter: remainingMs,
                     visibility: NotificationVisibility.public,
                   ),
                 ),
               );
+              if (generation != _restGeneration) return;
+              await _setAndroidRestExpiry(endTime);
             }
           }
           if (generation != _restGeneration) return;
@@ -189,8 +220,9 @@ class WorkoutNotificationService {
               channelId,
               'Temporizador de Descanso',
               channelDescription: 'Aviso único al terminar el descanso',
-              importance: Importance.max,
-              priority: Priority.high,
+              importance: Importance.defaultImportance,
+              priority: Priority.defaultPriority,
+              audioAttributesUsage: AudioAttributesUsage.notificationEvent,
               playSound: sound,
               sound: sound
                   ? const RawResourceAndroidNotificationSound('stk_rest_complete')
@@ -229,14 +261,17 @@ class WorkoutNotificationService {
   static Future<void> cancelRestTimerNotification() =>
       _queueRest((generation) async {
         if (kIsWeb) return;
+        // Cleanup native wakeups independently of the Flutter plugin:
+        // plugin initialization can fail or the permission can be revoked.
+        await _setAndroidRestExpiry(null);
         try {
           await initialize();
           await _notificationsPlugin.cancel(id: _restOngoingNotificationId);
           await _notificationsPlugin.cancel(id: _restTimerNotificationId);
-          await _endRestLiveActivity();
         } catch (_) {
           // Best-effort cleanup; serialized with any pending schedule.
         }
+        await _endRestLiveActivity();
       });
 
   static Future<bool> scheduleDailyWorkoutReminder({
