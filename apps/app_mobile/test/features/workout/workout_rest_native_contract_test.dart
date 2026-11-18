@@ -13,7 +13,12 @@ void main() {
     expect(notification, contains('silent: true'));
     expect(notification, contains('_queueRest('));
     expect(notification, contains('stk_rest_complete.wav'));
-    expect(notification, contains('workout_rest_stk_chime_v1_'));
+    // Android channels are immutable: v2 is required for the new
+    // notification-event audio attributes, so tests must not pin v1.
+    expect(notification, contains('workout_rest_stk_chime_v2_'));
+    expect(notification, contains('AudioAttributesUsage.notificationEvent'));
+    expect(notification, contains('ongoing: false'));
+    expect(notification, contains('timeoutAfter: remainingMs,'));
   });
 
   test('original rest tone is bundled for both native platforms', () {
