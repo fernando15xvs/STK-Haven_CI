@@ -29,6 +29,17 @@ enum StkRestLiveActivityBridge {
     }
   }
 
+  /// Reconcile an activity that expired while iOS suspended Flutter.
+  /// staleDate alone is NOT a dismissal request from ActivityKit.
+  static func endExpired() async {
+    let now = Date()
+    for activity in Activity<StkRestActivityAttributes>.activities {
+      if activity.content.state.endTime <= now {
+        await activity.end(dismissalPolicy: .immediate)
+      }
+    }
+  }
+
   static func end() async {
     for activity in Activity<StkRestActivityAttributes>.activities {
       await activity.end(dismissalPolicy: .immediate)

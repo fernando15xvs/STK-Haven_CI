@@ -119,12 +119,18 @@ private struct StkRestLiveActivityWidget: Widget {
         VStack(alignment: .leading, spacing: 3) {
           Text("STK Haven · Descanso")
             .font(.caption.weight(.semibold))
-          Text(
-            timerInterval: context.state.startedAt...context.state.endTime,
-            countsDown: true,
-            showsHours: false
-          )
-          .font(.title2.monospacedDigit().weight(.bold))
+          if context.isStale {
+            Text("Descanso finalizado")
+              .font(.headline.weight(.bold))
+              .accessibilityLabel("El descanso ha terminado")
+          } else {
+            Text(
+              timerInterval: context.state.startedAt...context.state.endTime,
+              countsDown: true,
+              showsHours: false
+            )
+            .font(.title2.monospacedDigit().weight(.bold))
+          }
         }
         Spacer(minLength: 0)
         Text("Siguiente serie")
@@ -141,12 +147,16 @@ private struct StkRestLiveActivityWidget: Widget {
             .font(.headline)
         }
         DynamicIslandExpandedRegion(.trailing) {
-          Text(
-            timerInterval: context.state.startedAt...context.state.endTime,
-            countsDown: true,
-            showsHours: false
-          )
-          .monospacedDigit()
+          if context.isStale {
+            Text("Listo").font(.headline)
+          } else {
+            Text(
+              timerInterval: context.state.startedAt...context.state.endTime,
+              countsDown: true,
+              showsHours: false
+            )
+            .monospacedDigit()
+          }
         }
         DynamicIslandExpandedRegion(.bottom) {
           Text("Siguiente serie al terminar el descanso")
@@ -155,9 +165,14 @@ private struct StkRestLiveActivityWidget: Widget {
       } compactLeading: {
         Image(systemName: "timer")
       } compactTrailing: {
-        Text(context.state.endTime, style: .timer)
-          .monospacedDigit()
-          .frame(width: 48)
+        if context.isStale {
+          Image(systemName: "checkmark.circle.fill")
+            .accessibilityLabel("Descanso finalizado")
+        } else {
+          Text(context.state.endTime, style: .timer)
+            .monospacedDigit()
+            .frame(width: 48)
+        }
       } minimal: {
         Image(systemName: "timer")
       }

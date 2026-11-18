@@ -11,6 +11,16 @@ import WidgetKit
   private let pedometer = CMPedometer()
   private var restToneSoundId: SystemSoundID = 0
 
+  // iOS may suspend the Flutter isolate before a rest finishes. Restore a
+  // consistent Live Activity state as soon as the person reopens STK Haven.
+  // This does not acquire audio focus or launch any background audio service.
+  override func applicationDidBecomeActive(_ application: UIApplication) {
+    super.applicationDidBecomeActive(application)
+    if #available(iOS 16.2, *) {
+      Task { await StkRestLiveActivityBridge.endExpired() }
+    }
+  }
+
   deinit {
     if restToneSoundId != 0 {
       AudioServicesDisposeSystemSoundID(restToneSoundId)

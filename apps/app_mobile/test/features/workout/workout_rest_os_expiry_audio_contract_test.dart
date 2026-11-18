@@ -100,6 +100,22 @@ void main() {
     expect(service, contains("body: 'Es hora de la siguiente serie. ¡Vamos!'"));
   });
 
+  test('iOS Live Activity does not show an endless 0:00 on resume', () {
+    final bridge = project('ios/Runner/StkRestLiveActivityBridge.swift');
+    final delegate = project('ios/Runner/AppDelegate.swift');
+    final widget = project('ios/StkVerseWidget/StkVerseWidget.swift');
+    expect(bridge, contains('static func endExpired() async'));
+    expect(bridge, contains('activity.content.state.endTime <= now'));
+    expect(bridge, contains('activity.end(dismissalPolicy: .immediate)'));
+    expect(delegate, contains('applicationDidBecomeActive'));
+    expect(delegate, contains('StkRestLiveActivityBridge.endExpired()'));
+    expect(widget, contains('if context.isStale'));
+    expect(widget, contains('Descanso finalizado'));
+    expect(widget, contains('Image(systemName: "checkmark.circle.fill")'));
+    // A stale date is a UI hint, not an OS-guaranteed background dismissal.
+    expect(bridge, contains('staleDate: endTime'));
+  });
+
   test('iOS foreground chime is System Sound, not AVAudioPlayer media', () {
     final delegate = project('ios/Runner/AppDelegate.swift');
     final provider = shared(
