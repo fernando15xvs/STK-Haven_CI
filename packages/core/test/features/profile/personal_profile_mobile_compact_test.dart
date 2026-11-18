@@ -55,8 +55,11 @@ void main() {
       expect(find.text('Editar fecha, género y cálculo'), findsOneWidget);
       // Demographic DOB is independent of the separate eligibility DOB.
       expect(find.text('Fecha: 03/02/2000'), findsOneWidget);
-      await tester.tap(
-        find.byKey(const ValueKey('profile_mobile_demographic_editor')));
+      // SliverChildListDelegate can build the tile before it is hittable.
+      // Place its TITLE inside the actual viewport before tapping it.
+      await tester.ensureVisible(find.text('Editar fecha, género y cálculo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Editar fecha, género y cálculo'));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('profile_birth_date')), findsOneWidget);
       expect(tester.takeException(), isNull);
