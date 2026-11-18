@@ -12,6 +12,7 @@ import 'package:core/features/nutrition/application/nutrition_weight_trend.dart'
 import 'package:core/features/nutrition/application/nutrition_plan_measurement_review.dart';
 import 'package:core/features/nutrition/application/nutrition_access_state.dart';
 import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
+import 'package:core/features/nutrition/application/food_vision_mobile_image_guard.dart';
 import 'package:core/features/nutrition/presentation/widgets/stk_age_aware_nutrition_goals.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
@@ -2073,16 +2074,28 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _pickAndAnalyze(NutritionPhotoSource source) async {
-    final photo = await widget.photoPicker(source);
+    NutritionPhoto? photo;
+    try {
+      photo = await widget.photoPicker(source);
+    } catch (_) {
+      if (!mounted || !_sameNutritionOwner) return;
+      setState(() => _message =
+          'No se pudo abrir esa foto. Revisa permisos o prueba otra imagen.');
+      return;
+    }
     if (!mounted || photo == null || !_sameNutritionOwner) return;
-    // Reject unsupported oversized uploads before allocating a preview
-    // or sending photos to the external provider.
-    if (photo.bytes.isEmpty ||
-        photo.bytes.length > FoodVisionService.maxImageBytes) {
+    // This stricter MIME/signature check is opt-in for MOBILE ONLY.
+    final invalidImage = widget.mobileCompactLayout
+        ? FoodVisionMobileImageGuard.errorFor(photo.bytes, photo.mimeType)
+        : photo.bytes.isEmpty ||
+            photo.bytes.length > FoodVisionService.maxImageBytes
+          ? 'Elige una fotografía de hasta 4 MB.'
+          : null;
+    if (invalidImage != null) {
       setState(() {
         _photo = null;
         _foodEstimate = null;
-        _message = 'Elige una fotografía de hasta 4 MB.';
+        _message = invalidImage;
       });
       return;
     }
@@ -2108,6 +2121,14 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _analyzePhoto(NutritionPhoto photo) async {
+    if (widget.mobileCompactLayout) {
+      final invalid = FoodVisionMobileImageGuard.errorFor(
+        photo.bytes, photo.mimeType);
+      if (invalid != null) {
+        if (mounted) setState(() => _message = invalid);
+        return;
+      }
+    }
     final epoch=++_analysisEpoch;
     final owner=_nutritionOwnerId;
     setState(() {

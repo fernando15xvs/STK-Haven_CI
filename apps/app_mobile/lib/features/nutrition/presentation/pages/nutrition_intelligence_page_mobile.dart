@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
+import 'package:core/features/nutrition/application/food_vision_mobile_image_guard.dart';
 import 'package:core/features/nutrition/data/stk_nutrition_intent_repository.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
@@ -274,18 +275,14 @@ class _NutritionIntelligencePageMobileState
     if (file == null) return null;
 
     final bytes = await file.readAsBytes();
-    final mimeType = _mimeType(file.name);
+    // Do not advertise a HEIC or renamed file as JPEG by extension.
+    // The core preflight rejects unknown magic bytes before preview/upload.
+    final mimeType = FoodVisionMobileImageGuard.detectMimeType(bytes) ??
+        'application/octet-stream';
     return NutritionPhoto(
       bytes: bytes,
       mimeType: mimeType,
       name: file.name,
     );
-  }
-
-  String _mimeType(String name) {
-    final lower = name.toLowerCase();
-    if (lower.endsWith('.png')) return 'image/png';
-    if (lower.endsWith('.webp')) return 'image/webp';
-    return 'image/jpeg';
   }
 }
