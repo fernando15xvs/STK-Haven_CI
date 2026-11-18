@@ -26,6 +26,7 @@ import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
 import 'package:core/features/nutrition/data/nutrition_goal_plan_repository.dart';
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
 import 'package:core/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart';
+import 'package:core/features/nutrition/presentation/widgets/stk_mobile_nutrition_goal_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -50,6 +51,9 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
   final NutritionAdultCheck? mobileAdultCheck;
   /// Only the mobile route opts in. The frozen web route stays unchanged.
   final bool showAgeAwareGoals;
+  /// Opt in to the simplified food-first MOBILE route. The frozen web
+  /// experience retains its original page when this flag is false.
+  final bool mobileCompactLayout;
   final VoidCallback? onOpenMeasurements;
   final VoidCallback? onRefreshAdultAccess;
 
@@ -61,6 +65,7 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
     this.verifiedAdultNutritionAccess = false,
     this.mobileAdultCheck,
     this.showAgeAwareGoals = false,
+    this.mobileCompactLayout = false,
     this.onOpenMeasurements,
     this.onRefreshAdultAccess,
   });
@@ -122,6 +127,10 @@ class _NutritionIntelligencePageState
   int _analysisEpoch=0;
   List<NutritionHistoryEntry> _history = const <NutritionHistoryEntry>[];
   bool _showFavoriteMealsOnly=false;
+  bool _showMobileHistory=false;
+  bool _showMobilePlanner=false;
+  bool _showPhotoDetails=false;
+  bool _dishHintFromHistory=false;
 
   @override
   void initState() {
@@ -205,6 +214,84 @@ class _NutritionIntelligencePageState
         }
       },
     );
+    if (widget.mobileCompactLayout) {
+      return PopScope(
+        canPop: !_showMobileHistory,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && _showMobileHistory && mounted) {
+            setState(() => _showMobileHistory = false);
+          }
+        },
+        child: Scaffold(
+        appBar: AppBar(
+          title: Text(_showMobileHistory ? 'Mis análisis' : 'Nutrición'),
+          leading: _showMobileHistory
+              ? IconButton(
+                  tooltip: 'Volver a Nutrición',
+                  onPressed: () => setState(() => _showMobileHistory = false),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                )
+              : null,
+          actions: _showMobileHistory
+              ? null
+              : [
+                  IconButton(
+                    key: const ValueKey('nutrition_mobile_history_appbar'),
+                    tooltip: 'Mis análisis guardados',
+                    onPressed: () => setState(() => _showMobileHistory = true),
+                    icon: const Icon(Icons.history_rounded),
+                  ),
+                ],
+        ),
+        body: SafeArea(
+          child: ListView(
+            key: ValueKey(_showMobileHistory
+                ? 'nutrition_mobile_history_view'
+                : 'nutrition_mobile_overview'),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            children: _showMobileHistory
+                ? [
+                    _buildHistory(colors),
+                  ]
+                : [
+                    _buildFoodVision(colors),
+                    const SizedBox(height: 20),
+                    StkMobileNutritionGoalSelector(
+                      audience: StkAgeAwareNutritionPlans.audience(
+                        declaredAge: ref.watch(
+                          userExperienceProfileProvider,
+                        ).value?.ageAt(DateTime.now()),
+                        backendVerifiedAdult: hasAdultAccess,
+                      ),
+                      selected: _stkGoal,
+                      onSelected: _chooseStkGoal,
+                      onOpenAdultPlanner: hasAdultAccess
+                          ? _openAdultPlanFromGoals
+                          : null,
+                    ),
+                    const SizedBox(height: 20),
+                    if (hasAdultAccess)
+                      _buildMobileAdultPlan(colors)
+                    else if (widget.mobileAdultCheck case final check?)
+                      StkMobileNutritionAccessPanel(
+                        access: access,
+                        check: check,
+                        onRetry: widget.onRefreshAdultAccess,
+                      )
+                    else
+                      NutritionAccessStatusPanel(
+                        colors: colors,
+                        access: access,
+                        onRefreshAdultAccess: widget.onRefreshAdultAccess,
+                      ),
+                    const SizedBox(height: 14),
+                    _buildMobileHistorySummary(colors),
+                  ],
+          ),
+        ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrición Inteligente')),
       body: SafeArea(
@@ -254,6 +341,66 @@ class _NutritionIntelligencePageState
     );
   }
 
+  Widget _buildMobileHistorySummary(ColorScheme colors) {
+    return ListTile(
+      key: const ValueKey('nutrition_mobile_history_summary'),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 6),
+      leading: Icon(Icons.history_rounded, color: colors.primary),
+      title: const Text('Mis análisis'),
+      subtitle: Text(_history.isEmpty
+          ? (_historyRepository.hasLegacyEntries
+              ? 'Hay análisis anteriores que puedes revisar'
+              : 'Todavía no tienes análisis guardados')
+          : '${_history.length} análisis guardados en este dispositivo'),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onTap: () => setState(() => _showMobileHistory = true),
+    );
+  }
+
+  Widget _buildMobileAdultPlan(ColorScheme colors) {
+    final plan = _activePlan;
+    return Column(
+      key: const ValueKey('nutrition_mobile_adult_plan'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Tu plan', style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+        )),
+        const SizedBox(height: 5),
+        Text(
+          plan == null
+              ? 'Todavía no tienes un plan guardado.'
+              : plan.isPaused
+                  ? 'Tu plan está en pausa.'
+                  : 'Plan guardado: ${plan.estimate.targetLow}–'
+                      '${plan.estimate.targetHigh} kcal/día',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: colors.onSurfaceVariant,
+          ),
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            key: const ValueKey('nutrition_mobile_review_adult_plan'),
+            onPressed: () => setState(
+              () => _showMobilePlanner = !_showMobilePlanner,
+            ),
+            icon: Icon(_showMobilePlanner
+                ? Icons.expand_less_rounded
+                : Icons.tune_rounded),
+            label: Text(_showMobilePlanner
+                ? 'Ocultar detalles'
+                : 'Revisar plan'),
+          ),
+        ),
+        if (_showMobilePlanner) ...[
+          const SizedBox(height: 6),
+          _buildEnergyPlanner(colors),
+        ],
+      ],
+    );
+  }
+
   void _chooseStkGoal(StkNutritionIntent selected) {
     final age = ref.read(userExperienceProfileProvider).value
         ?.ageAt(DateTime.now());
@@ -278,6 +425,22 @@ class _NutritionIntelligencePageState
 
   void _openAdultPlanFromGoals() {
     if (!_hasAdultNumericAccess) return;
+    if (widget.mobileCompactLayout && !_showMobilePlanner) {
+      setState(() => _showMobilePlanner = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final target = _energyFormKey.currentContext;
+        if (target != null) {
+          Scrollable.ensureVisible(
+            target,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            alignment: 0.04,
+          );
+        }
+      });
+      return;
+    }
     final target = _energyFormKey.currentContext;
     if (target != null) {
       Scrollable.ensureVisible(
@@ -1037,9 +1200,11 @@ class _NutritionIntelligencePageState
             ),
             const SizedBox(height: 6),
             Text(
-              _hasAdultNumericAccess
-                  ? 'Toma o sube una foto. La IA devuelve rangos, ingredientes, '
-                      'porciones y nivel de confianza.'
+              widget.mobileCompactLayout
+                  ? 'Analiza tu comida con una foto.'
+                  : _hasAdultNumericAccess
+                      ? 'Toma o sube una foto. La IA devuelve rangos, ingredientes, '
+                          'porciones y nivel de confianza.'
                   : _isDeclaredTeen
                       ? 'Desde los 15 años puedes fotografiar tus comidas: '
                           'la IA reconoce ingredientes y porciones. '
@@ -1052,36 +1217,51 @@ class _NutritionIntelligencePageState
                     color: colors.onSurfaceVariant,
                   ),
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _dishHintController,
-              maxLength: 160,
-              decoration: const InputDecoration(
-                labelText: 'Contexto opcional',
-                hintText: 'Ej.: arroz con pollo, usé una cucharada de aceite',
+            if (!widget.mobileCompactLayout) ...[
+              const SizedBox(height: 14),
+              TextField(
+                controller: _dishHintController,
+                maxLength: 160,
+                decoration: const InputDecoration(
+                  labelText: 'Contexto opcional',
+                  hintText: 'Ej.: arroz con pollo, usé una cucharada de aceite',
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
+              const SizedBox(height: 8),
+            ] else
+              const SizedBox(height: 12),
             Wrap(
               spacing: 10,
               runSpacing: 10,
               children: [
                 if (widget.cameraAvailable)
-                  OutlinedButton.icon(
-                    onPressed: _analyzing
-                        ? null
-                        : () => _pickAndAnalyze(NutritionPhotoSource.camera),
-                    icon: const Icon(Icons.photo_camera_outlined),
-                    label: const Text('Tomar foto'),
-                  ),
+                  widget.mobileCompactLayout
+                      ? FilledButton.icon(
+                          key: const ValueKey('nutrition_mobile_take_photo'),
+                          onPressed: _analyzing
+                              ? null
+                              : () => _pickAndAnalyze(NutritionPhotoSource.camera),
+                          icon: const Icon(Icons.photo_camera_outlined),
+                          label: const Text('Tomar foto'),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: _analyzing
+                              ? null
+                              : () => _pickAndAnalyze(NutritionPhotoSource.camera),
+                          icon: const Icon(Icons.photo_camera_outlined),
+                          label: const Text('Tomar foto'),
+                        ),
                 OutlinedButton.icon(
+                  key: widget.mobileCompactLayout
+                      ? const ValueKey('nutrition_mobile_choose_photo')
+                      : null,
                   onPressed: _analyzing
                       ? null
                       : () => _pickAndAnalyze(NutritionPhotoSource.gallery),
                   icon: const Icon(Icons.photo_library_outlined),
                   label: const Text('Elegir foto'),
                 ),
-                if (_photo != null)
+                if (_photo != null && !widget.mobileCompactLayout)
                   FilledButton.tonalIcon(
                     onPressed: _analyzing ? null : () => _analyzePhoto(_photo!),
                     icon: const Icon(Icons.refresh_rounded),
@@ -1109,6 +1289,54 @@ class _NutritionIntelligencePageState
                       color: colors.onSurfaceVariant,
                     ),
               ),
+              if (widget.mobileCompactLayout) ...[
+                ExpansionTile(
+                  key: const ValueKey('nutrition_mobile_photo_details'),
+                  tilePadding: EdgeInsets.zero,
+                  initiallyExpanded: _showPhotoDetails,
+                  onExpansionChanged: (value) => _showPhotoDetails = value,
+                  title: const Text('Añadir detalles (opcional)'),
+                  children: [
+                    TextField(
+                      controller: _dishHintController,
+                      maxLength: 160,
+                      decoration: const InputDecoration(
+                        hintText: 'Ej.: arroz, pollo y una cucharada de aceite',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      key: const ValueKey('nutrition_mobile_analyze_photo'),
+                      onPressed: _analyzing ? null : () => _analyzePhoto(photo),
+                      icon: Icon(_foodEstimate == null
+                          ? Icons.auto_awesome_outlined
+                          : Icons.refresh_rounded),
+                      label: Text(_foodEstimate == null
+                          ? 'Analizar foto'
+                          : 'Volver a analizar'),
+                    ),
+                    TextButton.icon(
+                      key: const ValueKey('nutrition_mobile_discard_photo'),
+                      onPressed: () => setState(() {
+                        _analysisEpoch++;
+                        _photo = null;
+                        _foodEstimate = null;
+                        _analyzing = false;
+                        _message = null;
+                        _showPhotoDetails = false;
+                      }),
+                      icon: const Icon(Icons.close_rounded),
+                      label: const Text('Descartar'),
+                    ),
+                  ],
+                ),
+              ],
             ],
             if (_analyzing) ...[
               const SizedBox(height: 16),
@@ -1198,9 +1426,11 @@ class _NutritionIntelligencePageState
     setState(() {
       _dishHintController.text=name;
       _dishHintController.selection=TextSelection.collapsed(offset:name.length);
+      _dishHintFromHistory = true;
       // A dish-name shortcut never triggers a camera, upload or analysis.
       _foodEstimate=null;
       _photo=null;
+      if (widget.mobileCompactLayout) _showMobileHistory = false;
       _message='Nombre listo. Puedes elegir una foto si deseas analizarlo.';
     });
     WidgetsBinding.instance.addPostFrameCallback((_){
@@ -1214,8 +1444,7 @@ class _NutritionIntelligencePageState
 
   Widget _buildHistory(ColorScheme colors) {
     final frequent=_historyRepository.frequentDishes();
-    return Card(
-      child: Padding(
+    final content = Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1312,6 +1541,7 @@ class _NutritionIntelligencePageState
                   ),
                   subtitle: Text(_historySubtitle(entry)),
                   onTap: () => setState(() {
+                    if (widget.mobileCompactLayout) _showMobileHistory = false;
                     if(entry.estimate.numericNutritionAvailable &&
                         !_hasAdultNumericAccess){
                       _foodEstimate=null;
@@ -1342,8 +1572,9 @@ class _NutritionIntelligencePageState
                 ),
           ],
         ),
-      ),
-    );
+      );
+    if (widget.mobileCompactLayout) return content;
+    return Card(child: content);
   }
 
   Future<void> _setHistoryFavorite(NutritionHistoryEntry entry) async {
@@ -1817,7 +2048,7 @@ class _NutritionIntelligencePageState
 
   Future<void> _pickAndAnalyze(NutritionPhotoSource source) async {
     final photo = await widget.photoPicker(source);
-    if (!mounted || photo == null) return;
+    if (!mounted || photo == null || !_sameNutritionOwner) return;
     // Reject unsupported oversized uploads before allocating a preview
     // or sending photos to the external provider.
     if (photo.bytes.isEmpty ||
@@ -1830,12 +2061,24 @@ class _NutritionIntelligencePageState
       return;
     }
 
+    if (widget.mobileCompactLayout) {
+      // Avoid silently reusing context from the PREVIOUS photographed dish.
+      // An intentional frequent-dish shortcut remains available and visible.
+      if (!_dishHintFromHistory) _dishHintController.clear();
+      _dishHintFromHistory = false;
+    }
     setState(() {
+      // A newer photo invalidates any previous result/consent request.
+      _analysisEpoch++;
       _photo = photo;
       _foodEstimate = null;
       _message = null;
+      _showPhotoDetails = widget.mobileCompactLayout &&
+          _dishHintController.text.trim().isNotEmpty;
     });
-    await _analyzePhoto(photo);
+    // Mobile lets the user review the preview and optionally add details
+    // BEFORE consenting to upload. The legacy non-mobile flow is unchanged.
+    if (!widget.mobileCompactLayout) await _analyzePhoto(photo);
   }
 
   Future<void> _analyzePhoto(NutritionPhoto photo) async {
@@ -1854,8 +2097,9 @@ class _NutritionIntelligencePageState
         if (!mounted || epoch != _analysisEpoch ||
             !_sameNutritionOwner || owner != _nutritionOwnerId) return;
         if (!allowed) {
-          setState(() => _message =
-              'No se envió la fotografía. Revisa el permiso de IA en Perfil.');
+          setState(() => _message = widget.mobileCompactLayout
+              ? 'No se envió la foto. Puedes continuar sin analizarla.'
+              : 'No se envió la fotografía. Revisa el permiso de IA en Perfil.');
           return;
         }
       }

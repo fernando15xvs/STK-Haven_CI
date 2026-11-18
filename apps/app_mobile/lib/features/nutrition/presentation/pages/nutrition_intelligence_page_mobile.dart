@@ -93,6 +93,7 @@ class _NutritionIntelligencePageMobileState
         key: ValueKey('nutrition_account_${Supabase.instance.client.auth.currentUser?.id ?? 'guest'}'),
         photoPicker: _pickPhoto,
         showAgeAwareGoals: true,
+        mobileCompactLayout: true,
         // The 15+ release gate includes a fresh check BEFORE every image
         // request, including reanalysis after revoking a previous consent.
         // Even legacy users must opt in per photo before anything leaves
