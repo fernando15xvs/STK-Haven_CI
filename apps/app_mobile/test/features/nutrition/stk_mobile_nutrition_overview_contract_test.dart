@@ -69,7 +69,11 @@ void main() {
     expect(page, contains("Text('Añadir detalles (opcional)')"));
     expect(page, contains('_dishHintFromHistory'));
     expect(page, contains('if (!_dishHintFromHistory) _dishHintController.clear()'));
-    expect(page, contains("if (!mounted || photo == null || !_sameNutritionOwner) return;"));
+    // The picker must reject stale completions after discarding, logging out
+    // or opening a newer image; keep account isolation in the same guard.
+    expect(picker, contains('if (!mounted || photo == null || !_sameNutritionOwner ||'));
+    expect(picker, contains('pickEpoch != _analysisEpoch'));
+    expect(picker, contains('FoodVisionMobileImageGuard.errorFor(photo.bytes, photo.mimeType)'));
     expect(page, contains("label: const Text('Descartar')"));
     // The consent gate must be triggered on the analysis action, before
     // sending any bytes to the external AI provider.
