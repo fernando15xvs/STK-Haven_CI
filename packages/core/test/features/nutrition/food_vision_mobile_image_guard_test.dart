@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:core/features/nutrition/application/food_vision_mobile_image_guard.dart';
 import 'package:core/features/nutrition/data/food_vision_service.dart';
@@ -48,4 +49,16 @@ void main() {
     expect(FoodVisionMobileImageGuard.errorFor(tooLarge, 'image/jpeg'),
         contains('4 MB'));
   });
+  test('mobile picker is epoch-scoped while web picker contract stays unchanged', () {
+    final source = File(
+      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
+    ).readAsStringSync();
+    expect(source, contains('if (widget.mobileCompactLayout && _pickingPhoto) return;'));
+    expect(source, contains('pickEpoch != _analysisEpoch'));
+    expect(source, contains('FoodVisionMobileImageGuard.errorFor('));
+    expect(source.indexOf('FoodVisionMobileImageGuard.errorFor(photo.bytes, photo.mimeType)'),
+        lessThan(source.indexOf('if (!widget.mobileCompactLayout) await _analyzePhoto(photo);')));
+    expect(source, contains('if (!widget.mobileCompactLayout) rethrow;'));
+  });
+
 }

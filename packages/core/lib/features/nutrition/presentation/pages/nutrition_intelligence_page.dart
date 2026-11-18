@@ -126,6 +126,7 @@ class _NutritionIntelligencePageState
   NutritionPhoto? _photo;
   FoodVisionEstimate? _foodEstimate;
   bool _analyzing = false;
+  bool _pickingPhoto = false;
   String? _message;
 
   late final NutritionHistoryRepository _historyRepository;
@@ -1265,7 +1266,7 @@ class _NutritionIntelligencePageState
                   widget.mobileCompactLayout
                       ? FilledButton.icon(
                           key: const ValueKey('nutrition_mobile_take_photo'),
-                          onPressed: _analyzing
+                          onPressed: _analyzing || _pickingPhoto
                               ? null
                               : () => _pickAndAnalyze(NutritionPhotoSource.camera),
                           icon: const Icon(Icons.photo_camera_outlined),
@@ -1282,7 +1283,7 @@ class _NutritionIntelligencePageState
                   key: widget.mobileCompactLayout
                       ? const ValueKey('nutrition_mobile_choose_photo')
                       : null,
-                  onPressed: _analyzing
+                  onPressed: _analyzing || (widget.mobileCompactLayout && _pickingPhoto)
                       ? null
                       : () => _pickAndAnalyze(NutritionPhotoSource.gallery),
                   icon: const Icon(Icons.photo_library_outlined),
@@ -2074,16 +2075,30 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _pickAndAnalyze(NutritionPhotoSource source) async {
+    if (widget.mobileCompactLayout && _pickingPhoto) return;
+    final pickEpoch = _analysisEpoch;
+    if (widget.mobileCompactLayout) {
+      setState(() => _pickingPhoto = true);
+    }
     NutritionPhoto? photo;
     try {
       photo = await widget.photoPicker(source);
     } catch (_) {
-      if (!mounted || !_sameNutritionOwner) return;
+      // Only mobile gets the new recoverable message. Other routes retain
+      // the original picker error behavior.
+      if (!widget.mobileCompactLayout) rethrow;
+      if (!mounted || !_sameNutritionOwner ||
+          pickEpoch != _analysisEpoch) return;
       setState(() => _message =
           'No se pudo abrir esa foto. Revisa permisos o prueba otra imagen.');
       return;
+    } finally {
+      if (mounted && widget.mobileCompactLayout) {
+        setState(() => _pickingPhoto = false);
+      }
     }
-    if (!mounted || photo == null || !_sameNutritionOwner) return;
+    if (!mounted || photo == null || !_sameNutritionOwner ||
+        (widget.mobileCompactLayout && pickEpoch != _analysisEpoch)) return;
     // This stricter MIME/signature check is opt-in for MOBILE ONLY.
     final invalidImage = widget.mobileCompactLayout
         ? FoodVisionMobileImageGuard.errorFor(photo.bytes, photo.mimeType)
