@@ -25,6 +25,7 @@ import 'package:core/features/nutrition/data/food_vision_service.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
 import 'package:core/features/nutrition/data/nutrition_goal_plan_repository.dart';
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
+import 'package:core/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -44,6 +45,9 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
   final Future<bool> Function()? requestPhotoAnalysisConsent;
   final bool cameraAvailable;
   final bool verifiedAdultNutritionAccess;
+  /// Mobile-only typed backend check. Null keeps the existing non-mobile
+  /// panel unchanged and does not grant numeric access.
+  final NutritionAdultCheck? mobileAdultCheck;
   /// Only the mobile route opts in. The frozen web route stays unchanged.
   final bool showAgeAwareGoals;
   final VoidCallback? onOpenMeasurements;
@@ -55,6 +59,7 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
     this.requestPhotoAnalysisConsent,
     this.cameraAvailable = true,
     this.verifiedAdultNutritionAccess = false,
+    this.mobileAdultCheck,
     this.showAgeAwareGoals = false,
     this.onOpenMeasurements,
     this.onRefreshAdultAccess,
@@ -209,10 +214,17 @@ class _NutritionIntelligencePageState
             _HeroCard(colors: colors),
             const SizedBox(height: 16),
             if (!hasAdultAccess)
-              NutritionAccessStatusPanel(
-                colors: colors,
-                access: access,
-                onRefreshAdultAccess: widget.onRefreshAdultAccess)
+              widget.mobileAdultCheck != null
+                  ? StkMobileNutritionAccessPanel(
+                      access: access,
+                      check: widget.mobileAdultCheck!,
+                      onRetry: widget.onRefreshAdultAccess,
+                    )
+                  : NutritionAccessStatusPanel(
+                      colors: colors,
+                      access: access,
+                      onRefreshAdultAccess: widget.onRefreshAdultAccess,
+                    )
             else
               _buildEnergyPlanner(colors),
             if (widget.showAgeAwareGoals) ...[

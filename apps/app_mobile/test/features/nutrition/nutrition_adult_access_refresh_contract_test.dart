@@ -10,7 +10,12 @@ void main(){
     expect(mobile,contains('onError:(Object error,StackTrace stackTrace)'));
     expect(mobile,contains('AppLifecycleState.resumed'));
     expect(mobile,contains('snapshot.connectionState == ConnectionState.done'));
-    expect(mobile,contains('snapshot.data == true'));
+    expect(mobile,contains('FutureBuilder<NutritionAdultCheck>'));
+    expect(mobile,contains('NutritionAdultCheck.checking'));
+    expect(mobile,contains('NutritionAdultCheck.unavailable'));
+    expect(mobile,contains('status.allowsNumeric'));
+    expect(mobile,contains('mobileAdultCheck: status'));
+    expect(mobile,isNot(contains('snapshot.data == true')));
     expect(mobile,contains('unawaited(_authSubscription?.cancel())'));
     expect(mobile,contains('onRefreshAdultAccess: _refreshAdultAccess'));
     expect(mobile,contains('nutrition_account_'));
@@ -26,7 +31,11 @@ void main(){
     expect(core,contains('_foodEstimate=null;'));
     expect(core,contains('_energyEstimate=null;'));
     expect(core,contains('onRefreshAdultAccess'));
+    // The old Core panel stays intact for non-mobile callers. Only Mobile
+    // opts into the smaller typed panel with error-only retry.
     expect(core,contains('Volver a comprobar acceso'));
+    expect(core,contains('mobileAdultCheck'));
+    expect(core,contains('StkMobileNutritionAccessPanel('));
     expect(core,contains('Acceso calórico pendiente de verificación'));
     expect(core,contains('proceso externo de verificación no está disponible'));
     expect(core,contains('no basta con cambiar tu fecha de nacimiento'));

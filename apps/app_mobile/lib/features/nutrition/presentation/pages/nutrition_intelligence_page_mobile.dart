@@ -25,12 +25,12 @@ class NutritionIntelligencePageMobile extends StatefulWidget {
 class _NutritionIntelligencePageMobileState
     extends State<NutritionIntelligencePageMobile>
     with WidgetsBindingObserver {
-  late Future<bool> _adultAccess;
+  late Future<NutritionAdultCheck> _adultAccess;
   StreamSubscription<AuthState>? _authSubscription;
 
-  Future<bool> _checkAccess() => NutritionAdultAccessService(
+  Future<NutritionAdultCheck> _checkAccess() => NutritionAdultAccessService(
     Supabase.instance.client,
-  ).hasVerifiedAccess();
+  ).checkStatus();
 
   void _refreshAdultAccess() {
     if(!mounted)return;
@@ -47,7 +47,10 @@ class _NutritionIntelligencePageMobileState
     _authSubscription=Supabase.instance.client.auth.onAuthStateChange.listen(
       (_) => _refreshAdultAccess(),
       onError:(Object error,StackTrace stackTrace){
-        if(mounted)setState(() => _adultAccess=Future<bool>.value(false));
+        if (mounted) {
+          setState(() => _adultAccess =
+              Future<NutritionAdultCheck>.value(NutritionAdultCheck.unavailable));
+        }
       },
     );
   }
@@ -66,9 +69,15 @@ class _NutritionIntelligencePageMobileState
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
+    return FutureBuilder<NutritionAdultCheck>(
       future: _adultAccess,
-      builder: (context, snapshot) => NutritionIntelligencePage(
+      builder: (context, snapshot) {
+        // FutureBuilder may retain an old successful result while a new
+        // account/session RPC is pending. Never reuse that grant.
+        final status = snapshot.connectionState == ConnectionState.done
+            ? (snapshot.data ?? NutritionAdultCheck.unavailable)
+            : NutritionAdultCheck.checking;
+        return NutritionIntelligencePage(
         // A different account must never inherit the previous account's
         // private nutrition plan or Food Vision results from this widget.
         key: ValueKey('nutrition_account_${Supabase.instance.client.auth.currentUser?.id ?? 'guest'}'),
@@ -83,14 +92,14 @@ class _NutritionIntelligencePageMobileState
         cameraAvailable: true,
         // FutureBuilder can retain the prior result while a new RPC is
         // waiting; only a completed fresh check can unlock numeric nutrition.
-        verifiedAdultNutritionAccess:
-            snapshot.connectionState == ConnectionState.done &&
-            snapshot.data == true,
+        verifiedAdultNutritionAccess: status.allowsNumeric,
+        mobileAdultCheck: status,
         onRefreshAdultAccess: _refreshAdultAccess,
         onOpenMeasurements: () => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const BodyMeasurementPage()),
         ),
-      ),
+      );
+      },
     );
   }
 
