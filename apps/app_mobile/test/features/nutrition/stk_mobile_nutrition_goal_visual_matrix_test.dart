@@ -63,14 +63,26 @@ void main() {
                 ),
                 child: Scaffold(
                   body: SingleChildScrollView(
-                    padding: const EdgeInsets.all(12),
-                    child: RepaintBoundary(
-                      key: const ValueKey('stk_mobile_nutrition_goal_capture'),
-                      child: StkMobileNutritionGoalSelector(
-                        audience: audience,
-                        selected: selected,
-                        onSelected: (_) {},
-                        onOpenAdultPlanner: () {},
+                    child: Builder(
+                      builder: (context) => RepaintBoundary(
+                        key: const ValueKey(
+                          'stk_mobile_nutrition_goal_capture',
+                        ),
+                        // RepaintBoundary alone is transparent. Capture
+                        // the ACTUAL themed surface, not a misleading black
+                        // background in external PNG viewers.
+                        child: ColoredBox(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: StkMobileNutritionGoalSelector(
+                              audience: audience,
+                              selected: selected,
+                              onSelected: (_) {},
+                              onOpenAdultPlanner: () {},
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
