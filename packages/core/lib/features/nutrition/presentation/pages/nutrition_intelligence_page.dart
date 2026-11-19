@@ -2238,8 +2238,9 @@ class _NutritionIntelligencePageState
       setState(() => _message='No se pudo analizar el plato. '
         'Comprueba la conexión e inténtalo de nuevo.');
     } finally {
-      if (mounted && epoch==_analysisEpoch &&
-          _sameMutationSession(sessionAtStart))
+      // Even when a token refresh invalidates the result, the spinner must
+      // stop so the user can retry with the current session.
+      if (mounted && epoch==_analysisEpoch)
         setState(() => _analyzing = false);
     }
   }
