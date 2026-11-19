@@ -67,6 +67,21 @@ void main() {
     expect(gateway, isNot(contains('stk_set_adult_nutrition_verification')));
   });
 
+  test('revoked remote legal receipts block restored photo consent', () {
+    final mobileNutrition = mobile(
+      'features/nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart',
+    );
+    final check = mobileNutrition.indexOf(
+      ".rpc('stk_get_nutrition_capabilities')",
+    );
+    final cachedConsent = mobileNutrition.indexOf('if (consentStore.isGranted(');
+    expect(check, greaterThanOrEqualTo(0));
+    expect(cachedConsent, greaterThan(check));
+    expect(mobileNutrition, contains('capabilities?.legalCurrent != true'));
+    expect(mobileNutrition, contains('!samePhotoConsentSession()'));
+    expect(mobileNutrition, contains('StkNutritionServerCapabilities.parse(response)'));
+  });
+
   test('release is disabled until approved and numerical grants stay remote',
       () {
     final config = mobile(

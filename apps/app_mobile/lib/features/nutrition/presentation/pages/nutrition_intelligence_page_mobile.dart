@@ -8,6 +8,7 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
 import 'package:core/features/nutrition/presentation/pages/nutrition_intelligence_page.dart';
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
+import 'package:core/features/nutrition/data/stk_nutrition_server_capabilities.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -187,6 +188,29 @@ class _NutritionIntelligencePageMobileState
         ),
       ));
       return false;
+    }
+    // A restored Hive receipt is not remotely authoritative. A withdrawal
+    // from another phone must block every new photo, even when a prior local
+    // optional-consent toggle was still true on this device.
+    if (uid != null) {
+      try {
+        final response = await Supabase.instance.client
+            .rpc('stk_get_nutrition_capabilities')
+            .timeout(const Duration(seconds: 12));
+        if (!mounted || !samePhotoConsentSession()) return false;
+        final capabilities = StkNutritionServerCapabilities.parse(response);
+        if (capabilities?.legalCurrent != true) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+              'Tu aceptación legal ya no está vigente. Revísala en Perfil.',
+            ),
+          ));
+          return false;
+        }
+      } catch (_) {
+        // Missing migration, offline, timeout or revoked session fail closed.
+        return false;
+      }
     }
     if (consentStore.isGranted(
       purpose: StkOptionalConsentPurpose.foodVisionAi,
