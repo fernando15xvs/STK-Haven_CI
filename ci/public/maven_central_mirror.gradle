@@ -1,0 +1,62 @@
+// CI-only Gradle init script. Not shipped with the application.
+// Google's published Maven Central mirror is preferred on shared GitHub
+// runners, where repo.maven.apache.org can respond with HTTP 429.
+// Keep Maven Central as a fallback for artifacts not yet mirrored.
+// Install in GRADLE_USER_HOME/init.d before Flutter invokes Gradle.
+//
+// This includes the Flutter SDK's composite/included Gradle build: it may
+// otherwise use the implicit Gradle Plugin Portal, which redirects ordinary
+// Kotlin dependencies straight to the rate-limited Maven Central endpoint.
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+
+def centralUrl = ~/^https:\/\/(repo\.maven\.apache\.org|repo1\.maven\.org)\/maven2\/?$/
+def googleMirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+def fallbackName = 'stkMavenCentralFallback'
+
+def preferMirror = { repositoryHandler ->
+    repositoryHandler.all { candidate ->
+        if (candidate.name == fallbackName) {
+            return
+        }
+        if (candidate instanceof MavenArtifactRepository
+                && (candidate.url.toString() ==~ centralUrl)) {
+            candidate.url = googleMirror
+            if (repositoryHandler.findByName(fallbackName) == null) {
+                repositoryHandler.maven {
+                    name = fallbackName
+                    url = 'https://repo.maven.apache.org/maven2/'
+                }
+            }
+        }
+        // Keep the fallback after Google and the plugin portal: a plugin
+        // marker absent from Maven Central must still reach the portal.
+        def fallback = repositoryHandler.findByName(fallbackName)
+        if (fallback != null && repositoryHandler.last() != fallback) {
+            repositoryHandler.remove(fallback)
+            repositoryHandler.add(fallback)
+        }
+    }
+}
+
+beforeSettings { settings ->
+    preferMirror(settings.buildscript.repositories)
+    preferMirror(settings.pluginManagement.repositories)
+    preferMirror(settings.dependencyResolutionManagement.repositories)
+}
+
+settingsEvaluated { settings ->
+    if (settings.pluginManagement.repositories.isEmpty()) {
+        // Included Flutter Gradle builds may have no explicit repositories.
+        // Do not replace the plugin portal: Gradle-specific markers live there.
+        settings.pluginManagement.repositories {
+            maven { url = googleMirror }
+            mavenCentral()
+            gradlePluginPortal()
+        }
+    }
+}
+
+allprojects { project ->
+    preferMirror(project.buildscript.repositories)
+    preferMirror(project.repositories)
+}
