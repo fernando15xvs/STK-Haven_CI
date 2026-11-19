@@ -25,6 +25,30 @@ void main() {
       }
     });
 
+    test('exactly two nutrition modes exist for eligible ages', () {
+      expect(StkNutritionAgeMode.values, hasLength(2));
+      for (final age in [15, 16, 17]) {
+        final audience = StkAgeAwareNutritionPlans.audience(
+          declaredAge: age, backendVerifiedAdult: true);
+        expect(audience.ageMode, StkNutritionAgeMode.adolescent15To17);
+        expect(audience.canUseAdultPlanner, isFalse);
+      }
+      for (final age in [18, 21, 65]) {
+        for (final grant in [true, false]) {
+          final audience = StkAgeAwareNutritionPlans.audience(
+            declaredAge: age, backendVerifiedAdult: grant);
+          expect(audience.ageMode, StkNutritionAgeMode.adult18Plus);
+          expect(audience.canUseAdultPlanner, grant);
+        }
+      }
+      for (final age in <int?>[null, -1, 0, 14, 121]) {
+        final audience = StkAgeAwareNutritionPlans.audience(
+          declaredAge: age, backendVerifiedAdult: true);
+        expect(audience.ageMode, isNull);
+        expect(audience.canUseAdultPlanner, isFalse);
+      }
+    });
+
     test('adult declaration is not a remote server authorization', () {
       expect(StkAgeAwareNutritionPlans.audience(
         declaredAge: 18, backendVerifiedAdult: false,

@@ -1,8 +1,21 @@
+import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
+
 /// Age-adapted intent labels and education for STK Haven nutrition.
 ///
 /// This does NOT calculate energy, weight-loss targets or clinical advice.
 /// Adult numerical nutrition remains authorized exclusively by the server.
 enum StkNutritionIntent { maintenance, volume, deficit }
+
+/// Exactly two age-specific nutrition experiences for eligible users.
+/// Neither mode represents age/identity verification or a server grant.
+enum StkNutritionAgeMode { adolescent15To17, adult18Plus }
+
+extension StkNutritionAgeModeLabels on StkNutritionAgeMode {
+  String get label => switch (this) {
+    StkNutritionAgeMode.adolescent15To17 => 'Nutrición 15–17 años',
+    StkNutritionAgeMode.adult18Plus => 'Nutrición 18+',
+  };
+}
 
 enum StkNutritionAudience {
   under15,
@@ -13,6 +26,16 @@ enum StkNutritionAudience {
 
   bool get canUseAdultPlanner => this == StkNutritionAudience.adultVerified;
   bool get isAdolescent => this == StkNutritionAudience.teen15To17;
+
+  /// Ineligible and legacy/unknown-age accounts have no age-specific mode.
+  StkNutritionAgeMode? get ageMode => switch (this) {
+    StkNutritionAudience.teen15To17 =>
+      StkNutritionAgeMode.adolescent15To17,
+    StkNutritionAudience.adultDeclared ||
+    StkNutritionAudience.adultVerified =>
+      StkNutritionAgeMode.adult18Plus,
+    _ => null,
+  };
 }
 
 class StkNutritionGoalExplanation {
@@ -39,11 +62,14 @@ class StkAgeAwareNutritionPlans {
     required int? declaredAge,
     required bool backendVerifiedAdult,
   }) {
-    if (declaredAge == null) return StkNutritionAudience.unknownAge;
-    if (declaredAge < 15) return StkNutritionAudience.under15;
-    if (declaredAge < 18) return StkNutritionAudience.teen15To17;
-    if (backendVerifiedAdult) return StkNutritionAudience.adultVerified;
-    return StkNutritionAudience.adultDeclared;
+    return switch (StkAgeEligibility.classifyYears(declaredAge)) {
+      StkDeclaredAgeBand.unknownLegacy => StkNutritionAudience.unknownAge,
+      StkDeclaredAgeBand.under15 => StkNutritionAudience.under15,
+      StkDeclaredAgeBand.teen15To17 => StkNutritionAudience.teen15To17,
+      StkDeclaredAgeBand.adult18PlusDeclared => backendVerifiedAdult
+          ? StkNutritionAudience.adultVerified
+          : StkNutritionAudience.adultDeclared,
+    };
   }
 
   static String label(StkNutritionIntent intent) => switch (intent) {

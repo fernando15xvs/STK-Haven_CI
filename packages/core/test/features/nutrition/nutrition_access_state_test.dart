@@ -31,7 +31,21 @@ void main(){
     expect(verified.canViewNumericNutrition,isTrue);
     final verifiedWithoutDob=NutritionAccessPolicy.resolve(
       declaredAge:null,backendVerifiedAdult:true);
-    expect(verifiedWithoutDob,NutritionAccessState.adultVerified);
+    // A stale grant with no known declared age must not bypass the 15+ gate.
+    expect(verifiedWithoutDob,NutritionAccessState.ageUnknown);
+    expect(verifiedWithoutDob.canViewNumericNutrition,isFalse);
+  });
+
+  test('age boundaries and impossible dates never grant adult numbers',(){
+    for (final age in <int?>[null, -1, 0, 14, 15, 16, 17, 121]) {
+      final state=NutritionAccessPolicy.resolve(
+        declaredAge:age,backendVerifiedAdult:true);
+      expect(state.canViewNumericNutrition,isFalse,
+          reason:'An unknown or nonadult age cannot inherit a grant: $age');
+    }
+    final state=NutritionAccessPolicy.resolve(
+      declaredAge:18,backendVerifiedAdult:true);
+    expect(state.canViewNumericNutrition,isTrue);
   });
 
   test('no local demographic input is ever proof of verification',(){

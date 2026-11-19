@@ -1,3 +1,4 @@
+import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,18 +22,16 @@ class NutritionAccessPolicy {
     required int? declaredAge,
     required bool backendVerifiedAdult,
   }) {
-    // A declared minor never sees adult-only ranges even if an old grant
-    // remains cached during the account transition.
-    if (declaredAge != null && declaredAge < 18) {
-      return NutritionAccessState.minor;
-    }
-    if (backendVerifiedAdult) {
-      return NutritionAccessState.adultVerified;
-    }
-    if (declaredAge == null) {
-      return NutritionAccessState.ageUnknown;
-    }
-    return NutritionAccessState.adultUnverified;
+    // Unknown age and implausible legacy dates never inherit an old grant.
+    // An adult grant is useful only for a declared 18+ account.
+    return switch (StkAgeEligibility.classifyYears(declaredAge)) {
+      StkDeclaredAgeBand.unknownLegacy => NutritionAccessState.ageUnknown,
+      StkDeclaredAgeBand.under15 ||
+      StkDeclaredAgeBand.teen15To17 => NutritionAccessState.minor,
+      StkDeclaredAgeBand.adult18PlusDeclared => backendVerifiedAdult
+          ? NutritionAccessState.adultVerified
+          : NutritionAccessState.adultUnverified,
+    };
   }
 }
 

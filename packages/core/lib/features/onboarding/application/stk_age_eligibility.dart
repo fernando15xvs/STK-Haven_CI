@@ -13,6 +13,20 @@ class StkAgeEligibility {
   const StkAgeEligibility._();
 
   static const int minimumAge = 15;
+  static const int adultAge = 18;
+  // Reject implausible dates without assuming that a legacy birthday is valid.
+  static const int maximumPlausibleAge = 120;
+
+  /// Single classification source for both onboarding and nutrition.
+  /// This is a declaration only, not proof of identity or adult permission.
+  static StkDeclaredAgeBand classifyYears(int? years) {
+    if (years == null || years < 0 || years > maximumPlausibleAge) {
+      return StkDeclaredAgeBand.unknownLegacy;
+    }
+    if (years < minimumAge) return StkDeclaredAgeBand.under15;
+    if (years < adultAge) return StkDeclaredAgeBand.teen15To17;
+    return StkDeclaredAgeBand.adult18PlusDeclared;
+  }
 
   /// Day-only calculations are independent of the current clock time.
   /// On 29 February, the birthday is reached on 1 March in non-leap years.
@@ -28,18 +42,14 @@ class StkAgeEligibility {
         (today.month == birthDate.month && today.day < birthDate.day)) {
       age--;
     }
-    return age >= 0 ? age : null;
+    return age >= 0 && age <= maximumPlausibleAge ? age : null;
   }
 
   static StkDeclaredAgeBand classify({
     required DateTime? birthDate,
     required DateTime today,
   }) {
-    final age = ageOn(birthDate, today);
-    if (age == null) return StkDeclaredAgeBand.unknownLegacy;
-    if (age < minimumAge) return StkDeclaredAgeBand.under15;
-    if (age < 18) return StkDeclaredAgeBand.teen15To17;
-    return StkDeclaredAgeBand.adult18PlusDeclared;
+    return classifyYears(ageOn(birthDate, today));
   }
 
   /// For NEW registrations only. Legacy/offline data must be migrated

@@ -44,6 +44,32 @@ void main() {
       }
     });
 
+    test('years classification is shared with nutrition and refuses impossible ages', () {
+      expect(StkAgeEligibility.classifyYears(null),
+          StkDeclaredAgeBand.unknownLegacy);
+      expect(StkAgeEligibility.classifyYears(-1),
+          StkDeclaredAgeBand.unknownLegacy);
+      expect(StkAgeEligibility.classifyYears(121),
+          StkDeclaredAgeBand.unknownLegacy);
+      expect(StkAgeEligibility.classifyYears(14),
+          StkDeclaredAgeBand.under15);
+      for (final age in [15, 16, 17]) {
+        expect(StkAgeEligibility.classifyYears(age),
+            StkDeclaredAgeBand.teen15To17);
+      }
+      for (final age in [18, 19, 120]) {
+        expect(StkAgeEligibility.classifyYears(age),
+            StkDeclaredAgeBand.adult18PlusDeclared);
+      }
+      final now = DateTime(2026, 11, 19);
+      expect(StkAgeEligibility.classify(
+        birthDate: DateTime(1905, 11, 18), today: now),
+        StkDeclaredAgeBand.unknownLegacy);
+      expect(StkAgeEligibility.canBeginNewAccount(
+        birthDate: DateTime(1905, 11, 18), today: now),
+        isFalse);
+    });
+
     test('day-only policy ignores clock time and supports leap days', () {
       final leapDob = DateTime(2012, 2, 29, 23, 50);
       expect(StkAgeEligibility.ageOn(
