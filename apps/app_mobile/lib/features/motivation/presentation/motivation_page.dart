@@ -1015,6 +1015,7 @@ class _MotivationPageState extends State<MotivationPage> {
                         ],
                       ),
                     ),
+                    ),
                   ],
                 ),
                 if (selection != 'all')
