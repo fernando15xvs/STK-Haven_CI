@@ -705,6 +705,9 @@ jobs:
           mkdir -p "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
           cp ci/public/maven_central_mirror.gradle "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/stk-maven-central-mirror.gradle"
           echo "CI Gradle mirror configured (includes Flutter composite builds)"
+      - name: Pre-install pinned Android NDK (retry corrupt downloads only)
+        shell: bash
+        run: bash ci/public/install_android_ndk_with_retry.sh
       - name: Verify 12 sha-pinned original realistic transparent anatomy PNGs
         working-directory: apps/app_mobile
         run: |
