@@ -28,6 +28,45 @@ class _MotivationImportOptions {
   final bool chooseArtwork;
 }
 
+class _MotivationNameDialog extends StatefulWidget {
+  const _MotivationNameDialog({required this.title,required this.initial});
+  final String title;
+  final String initial;
+
+  @override
+  State<_MotivationNameDialog> createState()=>_MotivationNameDialogState();
+}
+
+class _MotivationNameDialogState extends State<_MotivationNameDialog> {
+  late final TextEditingController controller;
+
+  @override
+  void initState(){
+    super.initState();
+    controller=TextEditingController(text:widget.initial);
+  }
+
+  @override
+  void dispose(){
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context)=>AlertDialog(
+    title:Text(widget.title),
+    content:TextField(
+      controller:controller,autofocus:true,maxLength:70,
+      decoration:const InputDecoration(labelText:'Nombre')),
+    actions:[
+      TextButton(onPressed:()=>Navigator.pop(context),
+        child:const Text('Cancelar')),
+      FilledButton(onPressed:()=>Navigator.pop(context,controller.text.trim()),
+        child:const Text('Guardar')),
+    ],
+  );
+}
+
 class MotivationPage extends StatefulWidget {
   const MotivationPage({super.key,this.libraryOverride});
 
@@ -354,20 +393,13 @@ class _MotivationPageState extends State<MotivationPage> {
   }
 
   Future<String?> _askName(String title,{String initial=''}) async {
-    final controller=TextEditingController(text:initial);
+    // The dialog owns its text controller until its exit animation finishes.
+    // Disposing immediately after Navigator.pop caused a real Flutter crash
+    // when renaming an existing playlist.
     final name=await showDialog<String>(
       context:context,
-      builder:(ctx)=>AlertDialog(
-        title:Text(title),
-        content:TextField(controller:controller,autofocus:true,maxLength:70,
-          decoration:const InputDecoration(labelText:'Nombre')),
-        actions:[
-          TextButton(onPressed:()=>Navigator.pop(ctx),
-            child:const Text('Cancelar')),
-          FilledButton(onPressed:()=>Navigator.pop(ctx,controller.text.trim()),
-            child:const Text('Guardar')),
-        ]));
-    controller.dispose();
+      builder:(_)=>_MotivationNameDialog(title:title,initial:initial),
+    );
     return name==null||name.isEmpty?null:name;
   }
   Future<void> _createPlaylist() async {
