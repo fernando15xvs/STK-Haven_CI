@@ -183,6 +183,80 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+
+  testWidgets('Q02 seven imported files compose search with media filters',
+      (tester) async {
+    final tracks = [
+      for (var i = 0; i < 6; i++)
+        example('audio-' + i.toString(),
+            'Audio número ' + i.toString(), 'audio-' + i.toString() + '.mp3'),
+      example('video', 'Clip de fuerza', 'clip.mp4',
+          mode: MotivationMode.hype),
+    ];
+    final library = MotivationLibrary.testSnapshot(tracks: tracks);
+    addTearDown(library.dispose);
+    await tester.pumpWidget(app(library));
+    await tester.pumpAndSettle();
+    expect(library.tracks, hasLength(7));
+    expect(find.byKey(const ValueKey('motivation_resume_last')), findsNothing);
+
+    final search = find.byKey(const ValueKey('motivation_local_search'));
+    await tester.enterText(search, 'clip');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('track_video')), findsOneWidget);
+    expect(find.byKey(const ValueKey('track_audio-0')), findsNothing);
+
+    await tester.tap(find.text('Audios'));
+    await tester.pumpAndSettle();
+    expect(find.text('No hay resultados para esta búsqueda.'), findsOneWidget);
+    await tester.tap(find.text('Videos'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('track_video')), findsOneWidget);
+    expect(library.tracks, hasLength(7));
+    expect(MotivationPlayback.instance.currentTrack, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Q03 selected playlist controls fit 320dp at 200% text',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 780);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final library = MotivationLibrary.testSnapshot(
+      tracks: [example('audio', 'Audio corto', 'track.mp3')],
+      playlists: const [
+        MotivationPlaylist(
+          id: 'planned', title: 'Lista de fuerza', trackIds: ['audio']),
+      ],
+    );
+    addTearDown(library.dispose);
+    await tester.pumpWidget(MaterialApp(
+      theme: AppearanceTheme.build(
+        const AppearanceSettings(), Brightness.dark),
+      home: MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        child: MotivationPage(libraryOverride: library),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final chip = find.text('Lista de fuerza');
+    await tester.ensureVisible(chip);
+    await tester.pumpAndSettle();
+    await tester.tap(chip);
+    await tester.pumpAndSettle();
+    final actions = find.byKey(
+      const ValueKey('motivation_playlist_wrap_actions'));
+    await tester.ensureVisible(actions);
+    await tester.pumpAndSettle();
+    expect(actions, findsOneWidget);
+    expect(find.byKey(const ValueKey('motivation_rename_playlist')),
+        findsOneWidget);
+    expect(tester.takeException(), isNull);
+    expect(library.playlists.single.trackIds, ['audio']);
+    expect(MotivationPlayback.instance.currentTrack, isNull);
+  });
+
   testWidgets('M1 readable at narrow width with 200 percent text',
       (tester) async {
     tester.view.physicalSize = const Size(320, 780);

@@ -28,6 +28,9 @@ void main() {
     required RecoveryCheckInTiming timing,
     required double scale,
     RecoveryCheckIn? checkIn,
+    AppAccent accent = AppAccent.blue,
+    Brightness brightness = Brightness.dark,
+    bool oledBlack = false,
   }) {
     return ProviderScope(
       overrides: [
@@ -37,8 +40,8 @@ void main() {
       ],
       child: MaterialApp(
         theme: AppearanceTheme.build(
-          const AppearanceSettings(),
-          Brightness.dark,
+          AppearanceSettings(accent: accent, oledBlack: oledBlack),
+          brightness,
         ),
         home: Scaffold(
           body: SafeArea(
@@ -79,6 +82,54 @@ void main() {
       });
     }
   }
+
+
+  testWidgets('Q03 compact Home recovery has no overflow in 216 configurations',
+      (tester) async {
+    final realDate = DateTime.now();
+    final recorded = RecoveryCheckIn(
+      date: DateTime(realDate.year, realDate.month, realDate.day),
+      energy: 4, sleep: 3, stress: 2, soreness: 3,
+      updatedAt: realDate,
+    );
+    expect(AppAccent.values.length, 8);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    for (final width in [320.0, 390.0, 430.0]) {
+      tester.view.physicalSize = Size(width, 780);
+      tester.view.devicePixelRatio = 1;
+      for (final scale in [1.0, 1.6, 2.0]) {
+        for (final scheme in const <(Brightness, bool)>[
+          (Brightness.light, false),
+          (Brightness.dark, false),
+          (Brightness.dark, true),
+        ]) {
+          for (final accent in AppAccent.values) {
+            await tester.pumpWidget(app(
+              timing: RecoveryCheckInTiming.completed,
+              scale: scale,
+              checkIn: recorded,
+              brightness: scheme.$1,
+              oledBlack: scheme.$2,
+              accent: accent,
+            ));
+            await tester.pump();
+            expect(find.text('Recuperación de hoy'), findsOneWidget);
+            expect(find.text(
+              recorded.status.label + ' · ' +
+              recorded.score.toString() + '/100'), findsOneWidget);
+            expect(tester.takeException(), isNull,
+                reason: 'Compact Home width=' + width.toString() +
+                    ' scale=' + scale.toString() +
+                    ' theme=' + scheme.$1.toString() +
+                    ' oled=' + scheme.$2.toString() +
+                    ' accent=' + accent.toString());
+          }
+        }
+      }
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('active and planned recovery hints reflect training state',
       (tester) async {
