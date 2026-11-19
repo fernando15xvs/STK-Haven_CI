@@ -8,10 +8,17 @@ import 'package:gym_tracker/core/theme/components/premium_card.dart';
 
 import 'recovery_history_sheet.dart';
 
+enum RecoveryCheckInTiming { planned, active, completed }
+
 class RecoveryCheckInCard extends ConsumerWidget {
-  const RecoveryCheckInCard({super.key, this.compact = false});
+  const RecoveryCheckInCard({
+    super.key,
+    this.compact = false,
+    this.trainingContext = RecoveryCheckInTiming.planned,
+  });
 
   final bool compact;
+  final RecoveryCheckInTiming trainingContext;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +36,11 @@ class RecoveryCheckInCard extends ConsumerWidget {
       onTap: () => _showCheckInSheet(context, ref, checkIn),
       borderColor: _statusColor(context, checkIn).withValues(alpha: 0.32),
       child: checkIn == null
-          ? _EmptyRecoveryState(onHistory: onHistory)
+          ? _EmptyRecoveryState(
+              onHistory: onHistory,
+              compact: compact,
+              trainingContext: trainingContext,
+            )
           : _RecoverySummary(
               checkIn: checkIn,
               history: snapshot,
@@ -169,11 +180,64 @@ class RecoveryCheckInCard extends ConsumerWidget {
 
 class _EmptyRecoveryState extends StatelessWidget {
   final VoidCallback? onHistory;
+  final bool compact;
+  final RecoveryCheckInTiming trainingContext;
 
-  const _EmptyRecoveryState({this.onHistory});
+  const _EmptyRecoveryState({
+    this.onHistory,
+    this.compact = false,
+    this.trainingContext = RecoveryCheckInTiming.planned,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      final hint = switch (trainingContext) {
+        RecoveryCheckInTiming.active => 'Revisa cómo te sientes durante tu sesión.',
+        RecoveryCheckInTiming.completed => 'Registra cómo te sientes después de entrenar.',
+        RecoveryCheckInTiming.planned => 'Check-in rápido · 20 segundos',
+      };
+      return Row(
+        children: [
+          Icon(Icons.favorite_border_rounded,
+              size: 24, color: AppColors.of(context).primary),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '¿Cómo está tu cuerpo hoy?',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  hint,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.of(context).textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (onHistory != null)
+            IconButton(
+              tooltip: 'Ver historial de recuperación',
+              onPressed: onHistory,
+              icon: Icon(Icons.insights_outlined,
+                  color: AppColors.of(context).primary),
+            )
+          else
+            Icon(Icons.chevron_right,
+                color: AppColors.of(context).textSecondary),
+        ],
+      );
+    }
     return Row(
       children: [
         Container(
@@ -250,6 +314,46 @@ class _RecoverySummary extends StatelessWidget {
       ('Molestia', history.sorenessTrend),
     ];
     final visibleTrends = trends.where((item) => item.$2 != null).toList();
+
+    // The Home overview is a single status row; full trend/recommendation
+    // detail remains available through recovery's original paths.
+    if (compact) {
+      return Row(
+        children: [
+          Icon(Icons.favorite_rounded, size: 24, color: color),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Recuperación de hoy',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                    )),
+                Text('${checkIn.status.label} · ${checkIn.score}/100',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.of(context).textSecondary,
+                    )),
+              ],
+            ),
+          ),
+          if (onHistory != null)
+            IconButton(
+              tooltip: 'Ver historial de recuperación',
+              onPressed: onHistory,
+              icon: Icon(Icons.insights_outlined,
+                  color: AppColors.of(context).primary),
+            )
+          else
+            Icon(Icons.chevron_right,
+                color: AppColors.of(context).textSecondary),
+        ],
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

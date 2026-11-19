@@ -19,25 +19,30 @@ void main() {
     expect(layout,contains('crossAxisAlignment: CrossAxisAlignment.stretch'));
   });
 
-  test('Inicio keeps daily message immediately after recovery and opt-in',
+  test('Inicio places an opt-in compact reflection before training and recovery',
       () {
     final source = File(
       'lib/features/home/presentation/pages/dashboard_page.dart',
     ).readAsStringSync();
-    final recovery = source.indexOf('const RecoveryCheckInCard(compact: true)');
+    final greeting = source.indexOf('_GreetingHeader(now: _observedAt)');
     final message = source.indexOf('const _DailyMessageCard(),');
+    final training = source.indexOf("'TU ENTRENAMIENTO'");
+    final recovery = source.indexOf('RecoveryCheckInCard(');
     final wellness = source.indexOf("'BIENESTAR'");
     final activity = source.indexOf("'ACTIVIDAD'");
-    expect(recovery, greaterThanOrEqualTo(0));
-    expect(message, greaterThan(recovery));
-    expect(wellness, greaterThan(message));
+    expect(greeting, greaterThanOrEqualTo(0));
+    expect(message, greaterThan(greeting));
+    expect(training, greaterThan(message));
+    expect(recovery, greaterThan(training));
+    expect(wellness, greaterThan(recovery));
     expect(activity, greaterThan(wellness));
     expect(source, contains('faithEnabled && settings.showDailyVerse'));
-    expect(source, isNot(contains('class _ActiveProgramCard')));
-    expect(source, contains('maxLines: 3,'));
-    expect(source, contains('TextOverflow.ellipsis'));
-    expect(source, contains("const Text('Leer completo')"));
     expect(source, contains('loadingCard(providerError: true)'));
+    expect(source, contains("ValueKey('home_daily_reflection')"));
+    expect(source, contains('maxLines: 2,'));
+    expect(source, isNot(contains("const Text('Leer completo')")));
+    expect(source, isNot(contains("'MENSAJE DE HOY'")));
+    expect(source, isNot(contains('Icon(Icons.bolt')));
     expect(source, isNot(contains('ContextualPassageDetails(')));
   });
 }

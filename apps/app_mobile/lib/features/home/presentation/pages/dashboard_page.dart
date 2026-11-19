@@ -187,7 +187,11 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
           ),
           children: [
             _GreetingHeader(now: _observedAt),
-            const SizedBox(height: AppSpacing.lg),
+            if (faithEnabled && settings.showDailyVerse) ...[
+              const SizedBox(height: AppSpacing.sm),
+              const _DailyMessageCard(),
+            ],
+            const SizedBox(height: AppSpacing.md),
             Text(
               'TU ENTRENAMIENTO',
               style: AppTypography.labelLarge.copyWith(
@@ -215,13 +219,16 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                 activeProgram: legacyProgram,
                 programSession: nextProgramSession,
               ),
-            const SizedBox(height: AppSpacing.md),
-            const RecoveryCheckInCard(compact: true),
-            if (faithEnabled && settings.showDailyVerse) ...[
-              const SizedBox(height: AppSpacing.md),
-              const _DailyMessageCard(),
-            ],
-            const SizedBox(height: AppSpacing.xxl),
+            const SizedBox(height: AppSpacing.sm),
+            RecoveryCheckInCard(
+              compact: true,
+              trainingContext: activeWorkout.isActive
+                  ? RecoveryCheckInTiming.active
+                  : completedToday != null
+                      ? RecoveryCheckInTiming.completed
+                      : RecoveryCheckInTiming.planned,
+            ),
+            const SizedBox(height: AppSpacing.lg),
             Row(
               children: [
                 Expanded(child:Text(
@@ -304,33 +311,16 @@ class _GreetingHeader extends StatelessWidget {
         ? 'Buenas tardes'
         : 'Buenas noches';
 
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(greeting, style: AppTypography.displaySmall),
-              const SizedBox(height: 4),
-              Text(
-                DateFormat('EEEE, d MMMM', 'es').format(now).toUpperCase(),
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.of(context).primary,
-                ),
-              ),
-            ],
+        Text(greeting, style: AppTypography.displaySmall),
+        const SizedBox(height: 4),
+        Text(
+          DateFormat('EEEE, d MMMM', 'es').format(now).toUpperCase(),
+          style: AppTypography.labelMedium.copyWith(
+            color: AppColors.of(context).primary,
           ),
-        ),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.of(context).surface,
-            borderRadius: AppRadius.md_,
-            border: Border.all(color: AppColors.of(context).surfaceBorder),
-          ),
-          child: Icon(Icons.bolt, color: AppColors.of(context).primary),
         ),
       ],
     );
@@ -345,33 +335,47 @@ class _DailyMessageCard extends ConsumerWidget {
     final stateAsync = ref.watch(dailyVerseProvider);
     final bibleInit = ref.watch(bibleInitProvider);
     final failed = bibleInit.status == BibleDbStatus.error;
+    final colors = AppColors.of(context);
 
-    Widget loadingCard({bool providerError = false}) => PremiumCard(
-      backgroundColor: AppColors.of(context).primaryFaded,
-      borderColor: AppColors.of(context).primary.withValues(alpha: 0.28),
-      onTap: failed || providerError
-          ? () {
-              if (failed) ref.read(bibleInitProvider.notifier).initialize();
-              ref.invalidate(dailyVerseProvider);
-            }
-          : null,
-      child: Row(
-        children: [
-          Icon(failed || providerError ? Icons.refresh_outlined : Icons.menu_book_outlined,
-               color: AppColors.of(context).primary),
-          const SizedBox(width: 12),
-          Expanded(child: Text(
-            failed || providerError
-                ? 'No se pudo cargar el pasaje. Toca para reintentar.'
-                : 'Preparando el pasaje de hoy…',
-            style: AppTypography.bodyMedium,
-          )),
-          if (!failed && !providerError)
-            const SizedBox(width: 16, height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2)),
-        ],
-      ),
-    );
+    Widget loadingCard({bool providerError = false}) {
+      final canRetry = failed || providerError;
+      return Semantics(
+        button: canRetry,
+        label: canRetry ? 'Reintentar la reflexión de hoy' : null,
+        child: PremiumCard(
+          key: const ValueKey('home_daily_reflection_status'),
+          padding: const EdgeInsets.all(AppSpacing.sm),
+          backgroundColor: colors.primaryFaded,
+          borderColor: colors.primary.withValues(alpha: 0.20),
+          onTap: canRetry ? () {
+            if (failed) ref.read(bibleInitProvider.notifier).initialize();
+            ref.invalidate(dailyVerseProvider);
+          } : null,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  canRetry
+                      ? 'No se pudo cargar la reflexión. Toca para reintentar.'
+                      : 'Preparando la reflexión de hoy…',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodySmall,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              if (canRetry)
+                Icon(Icons.refresh_rounded, color: colors.primary, size: 20)
+              else
+                const SizedBox(
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return stateAsync.when(
       loading: () => loadingCard(),
@@ -381,75 +385,50 @@ class _DailyMessageCard extends ConsumerWidget {
         if (state.isLoading) return loadingCard();
         if (verse == null) return loadingCard(providerError: true);
 
-        return PremiumCard(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const DailyVersePage()),
-          ),
-          backgroundColor: AppColors.of(context).primaryFaded,
-          borderColor: AppColors.of(context).primary.withValues(alpha: 0.28),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.of(context).primary.withValues(alpha: 0.14),
-                  borderRadius: AppRadius.sm_,
-                ),
-                child: Icon(
-                  Icons.wb_sunny_outlined,
-                  color: AppColors.of(context).primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'MENSAJE DE HOY',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.of(context).primary,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '“${verse.text}”',
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.bodyMedium.copyWith(
-                        fontStyle: FontStyle.italic,
-                        height: 1.35,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      verse.reference,
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.of(context).textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    TextButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const DailyVersePage(),
+        return Semantics(
+          button: true,
+          label: 'Leer reflexión completa: ${verse.reference}',
+          child: PremiumCard(
+            key: const ValueKey('home_daily_reflection'),
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DailyVersePage()),
+            ),
+            backgroundColor: colors.primaryFaded,
+            borderColor: colors.primary.withValues(alpha: 0.20),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '“${verse.text}”',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodyMedium.copyWith(
+                          fontStyle: FontStyle.italic,
+                          height: 1.3,
                         ),
                       ),
-                      child: const Text('Leer completo'),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        verse.reference,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: AppColors.of(context).textSecondary,
-              ),
-            ],
+                const SizedBox(width: AppSpacing.sm),
+                Icon(Icons.chevron_right, color: colors.textSecondary),
+              ],
+            ),
           ),
         );
       },
@@ -660,13 +639,13 @@ class _CompletedTodayCard extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.sm),
           Wrap(
             spacing: 8,
             children: [
               OutlinedButton.icon(
                 icon: const Icon(Icons.history),
-                label: const Text('Ver entrenamiento'),
+                label: const Text('Ver resumen'),
                 onPressed: () =>
                     RecentWorkoutDetails.show(context, session, weightUnit),
               ),
