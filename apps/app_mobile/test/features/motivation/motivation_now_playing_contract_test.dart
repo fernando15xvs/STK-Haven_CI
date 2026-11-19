@@ -33,7 +33,7 @@ void main() {
     expect(source, contains("key:const ValueKey('stk_now_playing_screen')"));
     expect(source, contains('onTap: () => unawaited(_playTrack(track, tracks))'));
     expect(source, contains("PopupMenuItem(value: 'cover'"));
-    expect(source, contains('_MotivationArtwork(track: track, size: 52)'));
+    expect(source, contains('_MotivationArtwork(\n                        track: track, size: 52, library: library)'));
     expect(source, contains("maxHeight:artSize"));
     expect(source, contains('onPressed:_showQueue'));
     expect(source, contains('player.setRepeat(repeat)'));

@@ -67,7 +67,8 @@ void main() {
     expect(page,contains('builder:(ctx)=>SafeArea(child:SingleChildScrollView'));
     expect(page,contains('maxHeight:MediaQuery.sizeOf(pageContext).height*.38'));
     expect(page,contains("ValueKey('motivation_full_track_title')"));
-    expect(page,contains('Text(track.title,maxLines:3,overflow:TextOverflow.ellipsis'));
+    expect(page,contains('Text(MotivationDisplayTitle.of(track),'));
+    expect(page,contains("semanticsLabel:track.title"));
   });
 
   test('B2 private artwork decoding is bounded and labelled for screen readers', () {

@@ -135,6 +135,54 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('M2 technical titles use safe visual fallback, retaining data',
+      (tester) async {
+    final library = MotivationLibrary.testSnapshot(tracks: [
+      example('technical', 'v14044g50000dadr', 'technical.mp3'),
+      example('human', 'Video de enfoque', 'human.mp4'),
+    ]);
+    addTearDown(library.dispose);
+    await tester.pumpWidget(app(library));
+    await tester.pumpAndSettle();
+    expect(find.text('Audio sin título'), findsOneWidget);
+    expect(find.text('Video de enfoque'), findsOneWidget);
+    expect(library.tracks.first.title, 'v14044g50000dadr');
+    expect(library.tracks.first.id, 'technical');
+    expect(MotivationPlayback.instance.currentTrack, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('M2 playlist rename reachable and does not change member order',
+      (tester) async {
+    final library = MotivationLibrary.testSnapshot(
+      tracks: [example('a', 'Mi audio', 'a.mp3')],
+      playlists: const [
+        MotivationPlaylist(id:'list-a',
+          title:'Plan de fuerza',trackIds:['a']),
+      ],
+    );
+    addTearDown(library.dispose);
+    await tester.pumpWidget(app(library));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Plan de fuerza'));
+    await tester.pumpAndSettle();
+
+    final rename = find.byKey(const ValueKey('motivation_rename_playlist'));
+    await tester.ensureVisible(rename);
+    await tester.pumpAndSettle();
+    await tester.tap(rename);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Nueva lista');
+    await tester.tap(find.text('Guardar'));
+    await tester.pumpAndSettle();
+    expect(library.playlists.single.title, 'Nueva lista');
+    expect(library.playlists.single.id, 'list-a');
+    expect(library.playlists.single.trackIds, ['a']);
+    expect(library.tracks.single.title, 'Mi audio');
+    expect(MotivationPlayback.instance.currentTrack, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('M1 readable at narrow width with 200 percent text',
       (tester) async {
     tester.view.physicalSize = const Size(320, 780);

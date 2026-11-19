@@ -90,7 +90,7 @@ void main(){
     expect(helper,contains('rethrow;'));
     for(final method in [
       'createSuggestedPlaylists','createPlaylist','createContextPlaylist',
-      'reorderPlaylist','deletePlaylist','togglePlaylistTrack'
+      'renamePlaylist','reorderPlaylist','deletePlaylist','togglePlaylistTrack'
     ]){
       final start=library.indexOf(' $method(');
       expect(start,greaterThan(0));

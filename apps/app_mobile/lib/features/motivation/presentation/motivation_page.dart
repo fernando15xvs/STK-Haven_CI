@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart' show PlayerState, ProcessingState;
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import '../application/motivation_playback.dart';
 import '../application/motivation_library_search.dart';
+import '../application/motivation_display_title.dart';
 import '../application/motivation_playlist_presets.dart';
 import '../data/motivation_library.dart';
 import 'widgets/motivation_audio_settings_sheet.dart';
@@ -44,6 +45,7 @@ class _MotivationPageState extends State<MotivationPage> {
   String selection='all';
   MotivationMode importMode=MotivationMode.discipline;
   bool busy=false;
+  bool _resuming=false;
   String? _libraryLoadError;
   String searchQuery='';
   MotivationMediaFilter mediaFilter=MotivationMediaFilter.all;
@@ -601,6 +603,25 @@ class _MotivationPageState extends State<MotivationPage> {
       }
     }
   }
+  Future<void> _renameCurrentPlaylist() async {
+    if (!selection.startsWith('playlist:')) return;
+    final id = selection.substring(9);
+    final matching = library.playlists.where((p) => p.id == id);
+    if (matching.isEmpty) return;
+    final current = matching.first;
+    final name = await _askName('Renombrar lista', initial: current.title);
+    if (!mounted || name == null) return;
+    try {
+      final changed = await library.renamePlaylist(id, name);
+      if (!mounted) return;
+      if (!changed) {
+        _message('Elige otro nombre. No puede estar vacío ni repetido.');
+      }
+    } catch (_) {
+      if (mounted) _message('No se pudo renombrar la lista. Inténtalo de nuevo.');
+    }
+  }
+
   Future<void> _reorderCurrentPlaylist() async {
     if(!selection.startsWith('playlist:'))return;
     final id=selection.substring(9);
@@ -722,8 +743,9 @@ class _MotivationPageState extends State<MotivationPage> {
         border:Border.all(color:colors.surfaceBorder)),
       child:ListTile(
         contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:4),
-        leading:_MotivationArtwork(track:track,size:52),
-        title:Text(track.title,maxLines:1,overflow:TextOverflow.ellipsis,
+        leading:_MotivationArtwork(track:track,size:52,library:library),
+        title:Text(MotivationDisplayTitle.of(track),maxLines:1,
+          semanticsLabel:track.title,overflow:TextOverflow.ellipsis,
           style:AppTypography.headlineSmall),
         subtitle:Text('Abrir reproductor · ${track.mode.label}',
           maxLines:1,overflow:TextOverflow.ellipsis,
@@ -746,6 +768,10 @@ class _MotivationPageState extends State<MotivationPage> {
       query: searchQuery,
       media: mediaFilter,
     );
+    final savedResumeId = player.resumeSnapshot?.trackId;
+    final matchingResume = library.tracks.where(
+      (track) => track.id == savedResumeId).toList();
+    final resumeTrack = matchingResume.isEmpty ? null : matchingResume.first;
     return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
@@ -800,7 +826,7 @@ class _MotivationPageState extends State<MotivationPage> {
                   const SizedBox(height: AppSpacing.xs),
                   _player(),
                   const SizedBox(height: AppSpacing.sm),
-                ] else if (player.resumeTitle case final title?) ...[
+                ] else if (resumeTrack != null) ...[
                   Text('Continuar', style: AppTypography.headlineMedium),
                   const SizedBox(height: AppSpacing.xs),
                   Card(
@@ -808,18 +834,46 @@ class _MotivationPageState extends State<MotivationPage> {
                     color: colors.surface,
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                      leading: const Icon(Icons.history_rounded),
-                      title: Text(title, maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                      subtitle: const Text('Solo se reproduce cuando tú lo eliges.'),
-                      trailing: const Icon(Icons.play_arrow_rounded),
+                      leading: _MotivationArtwork(
+                        track: resumeTrack, size: 52, library: library),
+                      title: Text(MotivationDisplayTitle.of(resumeTrack),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        semanticsLabel: resumeTrack.title),
+                      subtitle: Text(
+                        (resumeTrack.isVideo ? 'Video' : 'Audio') +
+                        ' · Solo se reproduce cuando tú lo eliges.',
+                        maxLines: 2, overflow: TextOverflow.ellipsis),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.play_arrow_rounded, color: colors.primary),
+                          PopupMenuButton<String>(
+                            key: const ValueKey('motivation_resume_options'),
+                            tooltip: 'Opciones de la última pista',
+                            onSelected: (action) =>
+                              unawaited(_edit(resumeTrack, action)),
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(
+                                value: 'rename', child: Text('Renombrar')),
+                            ],
+                          ),
+                        ],
+                      ),
                       onTap: () async {
-                        final resumed = await player.resumeLast();
-                        if (!mounted) return;
-                        if (resumed) {
-                          _openNowPlaying();
-                        } else {
-                          _message('Ese archivo ya no está disponible.');
+                        if (_resuming) return;
+                        setState(() => _resuming = true);
+                        try {
+                          final resumed = await player.resumeLast();
+                          if (!mounted) return;
+                          if (resumed) {
+                            _openNowPlaying();
+                          } else {
+                            _message('No se pudo continuar con este archivo. '
+                                'Puede que ya no esté disponible.');
+                          }
+                        } finally {
+                          if (mounted) setState(() => _resuming = false);
                         }
                       },
                     ),
@@ -915,6 +969,12 @@ class _MotivationPageState extends State<MotivationPage> {
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.xs,
                     children: [
+                      TextButton.icon(
+                        key: const ValueKey('motivation_rename_playlist'),
+                        onPressed: () => unawaited(_renameCurrentPlaylist()),
+                        icon: const Icon(Icons.edit_outlined),
+                        label: const Text('Renombrar lista'),
+                      ),
                       TextButton.icon(
                         onPressed: () => unawaited(_reorderCurrentPlaylist()),
                         icon: const Icon(Icons.drag_handle),
@@ -1040,7 +1100,15 @@ class _MotivationPageState extends State<MotivationPage> {
                     child: Text(
                       library.tracks.isEmpty
                         ? 'Todavía no hay archivos. Importa el primero.'
-                        : 'No hay resultados con estos filtros.',
+                        : searchQuery.trim().isNotEmpty
+                          ? 'No hay resultados para esta búsqueda.'
+                          : selection.startsWith('playlist:')
+                            ? 'Esta lista no tiene archivos con esos filtros.'
+                            : mediaFilter == MotivationMediaFilter.video
+                              ? 'No hay videos con estos filtros.'
+                              : mediaFilter == MotivationMediaFilter.audio
+                                ? 'No hay audios con estos filtros.'
+                                : 'No hay resultados con estos filtros.',
                       textAlign: TextAlign.center,
                       style: AppTypography.bodyMedium.copyWith(
                         color: colors.textSecondary),
@@ -1054,8 +1122,10 @@ class _MotivationPageState extends State<MotivationPage> {
                       key: ValueKey('track_'+track.id),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 2, vertical: 2),
-                      leading: _MotivationArtwork(track: track, size: 52),
-                      title: Text(track.title,
+                      leading: _MotivationArtwork(
+                        track: track, size: 52, library: library),
+                      title: Text(MotivationDisplayTitle.of(track),
+                        semanticsLabel: track.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.headlineSmall.copyWith(
@@ -1487,14 +1557,17 @@ class _SilentVideoPreviewState extends State<_SilentVideoPreview>
 }
 
 class _MotivationArtwork extends StatelessWidget {
-  const _MotivationArtwork({required this.track,required this.size});
+  const _MotivationArtwork({
+    required this.track, required this.size, this.library,
+  });
   final MotivationTrack track;
   final double size;
+  final MotivationLibrary? library;
 
   @override
   Widget build(BuildContext context) {
     final colors=AppColors.of(context);
-    final path=MotivationLibrary.instance.artworkPath(track);
+    final path=(library ?? MotivationLibrary.instance).artworkPath(track);
     return ClipRRect(
       borderRadius:BorderRadius.circular(size<80?11:20),
       child:SizedBox(width:size,height:size,
@@ -1704,7 +1777,8 @@ class _MotivationNowPlayingPageState extends State<MotivationNowPlayingPage> {
                           ),
                     ),
                     const SizedBox(height:22),
-                    Text(track.title,maxLines:3,overflow:TextOverflow.ellipsis,
+                    Text(MotivationDisplayTitle.of(track),
+                      maxLines:3,overflow:TextOverflow.ellipsis,
                       key:const ValueKey('motivation_full_track_title'),
                       semanticsLabel:track.title,
                       style:AppTypography.headlineLarge.copyWith(

@@ -534,6 +534,30 @@ class MotivationLibrary extends ChangeNotifier {
       title:name,trackIds:const []));
     await _savePlaylistsWithRollback(previous);
   }
+  /// Renames playlist metadata only, preserving its stable ID and track order.
+  /// A failed write restores the prior list; no media files are touched.
+  Future<bool> renamePlaylist(String id, String proposed) async {
+    await load();
+    final title = proposed.trim();
+    if (title.isEmpty || title.length > 70) return false;
+    final index = _playlists.indexWhere((item) => item.id == id);
+    if (index < 0) return false;
+    if (_playlists.any((item) =>
+        item.id != id &&
+        item.title.trim().toLowerCase() == title.toLowerCase())) {
+      return false;
+    }
+    final current = _playlists[index];
+    if (current.title == title) return true;
+    final previous = List<MotivationPlaylist>.of(_playlists);
+    _playlists[index] = MotivationPlaylist(
+      id: current.id, title: title,
+      trackIds: List<String>.of(current.trackIds),
+    );
+    await _savePlaylistsWithRollback(previous);
+    return true;
+  }
+
   /// Builds a new playlist only after the user reviews a local suggestion.
   /// This method never starts playback and never uploads media. Existing
   /// playlists and their order remain untouched if persistence fails.
