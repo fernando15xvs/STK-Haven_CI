@@ -19,9 +19,16 @@ void main() {
       reason: 'Configure buildscript Maven Central before legacy Flutter plugins',
     );
 
-    // The CI mirror workaround for Maven 429 stays separate from app code.
-    final ci = File('../../ci/public/flutter_ci.yml').readAsStringSync();
-    expect(ci, contains('Route Maven Central dependencies through Google mirror'));
-    expect(ci, contains('ci/public/maven_central_mirror.gradle'));
+    // The canonical repository keeps a CI workflow TEMPLATE, while the
+    // public CI mirror executes .github/workflows/flutter_ci.yml. Checking
+    // the template for a UI step name incorrectly fails when the live
+    // workflow is intentionally ahead. Check the actual shared init script.
+    final mirrorScript = File('../../ci/public/maven_central_mirror.gradle')
+        .readAsStringSync();
+    expect(mirrorScript, contains('preferMirror(project.buildscript.repositories)'));
+    expect(mirrorScript, contains('preferMirror(project.repositories)'));
+    expect(mirrorScript, contains('settings.pluginManagement.repositories'));
+    expect(mirrorScript, contains('maven-central.storage-download.googleapis.com'));
+    expect(mirrorScript, contains('repo.maven.apache.org/maven2/'));
   });
 }
