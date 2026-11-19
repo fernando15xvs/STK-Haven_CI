@@ -51,6 +51,6 @@ void main() {
     expect(source,contains('thumbnailFileName'));
     expect(page,contains('Generar miniatura del video'));
     expect(page,contains('library.ensureVideoThumbnail(track.id)'));
-    expect(page,contains('_MotivationArtwork(track:t,size:52)'));
+    expect(page,contains('_MotivationArtwork(track: track, size: 52)'));
   });
 }

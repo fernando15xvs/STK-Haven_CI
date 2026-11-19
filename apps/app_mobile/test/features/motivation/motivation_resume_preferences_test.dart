@@ -49,7 +49,7 @@ void main() {
     expect(playback,contains('prefs.setBool(_shuffleKey,shuffle)'));
     expect(playback,contains('AppLifecycleState.inactive'));
     expect(page,contains("ValueKey('motivation_resume_last')"));
-    expect(page,contains('onTap:()async{'));
+    expect(page,contains('onTap: () async {'));
     expect(page,contains('player.resumeLast()'));
     expect(page,contains('Solo se reproduce cuando tú lo eliges.'));
   });

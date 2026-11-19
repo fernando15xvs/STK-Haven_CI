@@ -31,9 +31,9 @@ void main() {
         .readAsStringSync();
     expect(source, contains('class MotivationNowPlayingPage'));
     expect(source, contains("key:const ValueKey('stk_now_playing_screen')"));
-    expect(source, contains('onTap:()=>unawaited(_playTrack(t,tracks))'));
-    expect(source, contains("PopupMenuItem(value:'cover'"));
-    expect(source, contains('_MotivationArtwork(track:t,size:52)'));
+    expect(source, contains('onTap: () => unawaited(_playTrack(track, tracks))'));
+    expect(source, contains("PopupMenuItem(value: 'cover'"));
+    expect(source, contains('_MotivationArtwork(track: track, size: 52)'));
     expect(source, contains("maxHeight:artSize"));
     expect(source, contains('onPressed:_showQueue'));
     expect(source, contains('player.setRepeat(repeat)'));

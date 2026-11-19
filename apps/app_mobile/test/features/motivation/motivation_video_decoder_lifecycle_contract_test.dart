@@ -56,9 +56,11 @@ void main() {
 
   test('B2 responsive library and cinema keep theme tokens and 200% controls', () {
     expect(page,contains('backgroundColor:colors.background,'));
-    expect(page,contains('borderRadius:AppRadius.lg_'));
-    expect(page,contains('side:BorderSide(color:colors.surfaceBorder)'));
-    expect(page,contains('elevation:colors.elevatedCards?2:0'));
+    // The redesigned library uses compact rows, not elevated nested cards;
+    // visual tokens, separators and readable media actions remain.
+    expect(page,contains('Divider(height: 1, color: colors.surfaceBorder)'));
+    expect(page,contains('contentPadding: const EdgeInsets.symmetric('));
+    expect(page,contains("ValueKey('motivation_secondary_filters')"));
     expect(page,contains("ValueKey('motivation_import_responsive_actions')"));
     expect(page,contains('alignment:WrapAlignment.end'));
     expect(page,contains("ValueKey('motivation_playlist_presets_scroll')"));

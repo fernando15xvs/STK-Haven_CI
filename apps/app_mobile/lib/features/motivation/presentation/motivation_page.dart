@@ -856,10 +856,13 @@ class _MotivationPageState extends State<MotivationPage> {
                   ),
                 ],
                 const SizedBox(height: AppSpacing.md),
-                Row(
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
                   children: [
-                    Expanded(child: Text('Tus listas',
-                      style: AppTypography.headlineMedium)),
+                    Text('Tus listas', style: AppTypography.headlineMedium),
                     if (library.playlists.isNotEmpty)
                       TextButton(
                         key: const ValueKey('motivation_view_all_lists'),
@@ -957,29 +960,23 @@ class _MotivationPageState extends State<MotivationPage> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Row(children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(children: [
-                        for (final choice in MotivationMediaFilter.values)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: ChoiceChip(
-                              label: Text(switch (choice) {
-                                MotivationMediaFilter.all => 'Todos',
-                                MotivationMediaFilter.audio => 'Audios',
-                                MotivationMediaFilter.video => 'Videos',
-                              }),
-                              selected: mediaFilter == choice,
-                              onSelected: (_) => setState(
-                                () => mediaFilter = choice),
-                            ),
-                          ),
-                      ]),
-                    ),
-                  ),
-                  PopupMenuButton<String>(
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    for (final choice in MotivationMediaFilter.values)
+                      ChoiceChip(
+                        label: Text(switch (choice) {
+                          MotivationMediaFilter.all => 'Todos',
+                          MotivationMediaFilter.audio => 'Audios',
+                          MotivationMediaFilter.video => 'Videos',
+                        }),
+                        selected: mediaFilter == choice,
+                        onSelected: (_) => setState(
+                          () => mediaFilter = choice),
+                      ),
+                    PopupMenuButton<String>(
                     key: const ValueKey('motivation_secondary_filters'),
                     tooltip: 'Filtrar por favoritos, modo o lista',
                     onSelected: (chosen) => setState(
@@ -1018,8 +1015,8 @@ class _MotivationPageState extends State<MotivationPage> {
                         ],
                       ),
                     ),
-                  ),
-                ]),
+                  ],
+                ),
                 if (selection != 'all')
                   Row(children: [
                     Expanded(
