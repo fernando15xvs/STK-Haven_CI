@@ -161,16 +161,36 @@ const authenticatedHandler = withSupabase(
       ? payload.imageBase64.trim()
       : '';
     const admin = ctx.supabaseAdmin as any;
-    const { data: verification, error: verificationError } = await admin
-      .from('stk_nutrition_adult_verifications')
-      .select('verified_at,revoked_at')
-      .eq('user_id', userId)
-      .maybeSingle();
-    const hasVerifiedAdultNutritionAccess =
-      verificationError == null &&
-      verification != null &&
-      verification.revoked_at == null &&
-      typeof verification.verified_at === 'string';
+    // Authorization is checked by the backend using the UID from an
+    // authenticated JWT. Never use any userId, age or grant from the request.
+    // New deployments use reviewed, expiring, revocable capabilities. Older
+    // deployments may still have the server-controlled legacy verification.
+    // Fallback is allowed ONLY if the new RPC is genuinely absent, never on
+    // a revocation, malformed result, permission error or network outage.
+    let hasVerifiedAdultNutritionAccess = false;
+    if (payload.adultNumericNutrition === true) {
+      const { data: permitted, error: capabilityError } = await admin.rpc(
+        'stk_service_can_use_nutrition_capability', {
+          p_user_id: userId,
+          p_capability: 'personalizedAdultEnergy',
+        },
+      );
+      if (!capabilityError) {
+        hasVerifiedAdultNutritionAccess = permitted === true;
+      } else if (capabilityError.code === 'PGRST202' ||
+                 capabilityError.code === '42883') {
+        const { data: verification, error: verificationError } = await admin
+          .from('stk_nutrition_adult_verifications')
+          .select('verified_at,revoked_at')
+          .eq('user_id', userId)
+          .maybeSingle();
+        hasVerifiedAdultNutritionAccess =
+          verificationError == null &&
+          verification != null &&
+          verification.revoked_at == null &&
+          typeof verification.verified_at === 'string';
+      }
+    }
     const adultNumericNutrition =
       payload.adultNumericNutrition === true &&
       hasVerifiedAdultNutritionAccess;

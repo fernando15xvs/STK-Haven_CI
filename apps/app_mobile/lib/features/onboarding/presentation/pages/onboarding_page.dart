@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
+import 'package:core/features/onboarding/data/stk_legal_server_receipt_service.dart';
 import 'package:core/features/onboarding/application/onboarding_recommendation_service.dart';
 import 'package:core/features/onboarding/application/program_service.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
@@ -220,6 +221,25 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         // Recheck after async validation: a sign-in/sign-out/account switch
         // must never write a receipt or profile under a different identity.
         final activeUid = Supabase.instance.client.auth.currentUser?.id;
+        // The live 15+ rollout requires a remotely stamped receipt.
+        // Local Hive acknowledgements and a self-declared DOB are NOT grants.
+        // Widget-only QA fixtures can opt into the flow without publishing
+        // documents; production builds stay disabled until approved.
+        if (StkMobileLegalConfig.enabled && activeUid != null) {
+          final recorded = await StkLegalServerReceiptService(
+            Supabase.instance.client,
+          ).recordAcceptance(
+            receipt: legalReceipt,
+            documents: _legalDocs,
+            declaredBirthDate: _eligibilityBirthDate!,
+          );
+          if (!recorded) {
+            throw StateError('No se pudo confirmar la versión legal con el servidor.');
+          }
+          if (activeUid != Supabase.instance.client.auth.currentUser?.id) {
+            throw StateError('La cuenta cambió durante la aceptación.');
+          }
+        }
         if (legalReceipt.subjectType == StkLegalSubjectType.authenticated) {
           await store.saveAuthenticated(
             legalReceipt,

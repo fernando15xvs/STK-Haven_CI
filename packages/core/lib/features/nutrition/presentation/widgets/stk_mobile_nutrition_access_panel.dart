@@ -41,7 +41,7 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
                     ? 'No se pudo comprobar el acceso'
                     : signedOut
                         ? 'Plan disponible con tu cuenta'
-                        : 'Plan calórico no disponible';
+                        : 'Plan calórico pendiente de acceso';
 
     final subtitle = isMinor
         ? 'Explora comidas y hábitos sin metas calóricas.'
@@ -53,7 +53,7 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
                     ? 'Comprueba tu conexión e inténtalo otra vez.'
                     : signedOut
                         ? 'Inicia sesión para consultar tu plan.'
-                        : 'Food Vision descriptivo sigue disponible.';
+                        : 'Food Vision sigue disponible sin cifras.';
 
     final detail = isMinor
         ? 'Durante la adolescencia ofrecemos información sobre alimentos, '
@@ -73,10 +73,10 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
                         ? 'Puedes usar la orientación descriptiva. Los '
                             'cálculos personalizados requieren una cuenta '
                             'con autorización vigente.'
-                        : 'Actualmente no hay un procedimiento de activación '
-                            'disponible dentro de la app. Cambiar tu fecha '
-                            'de nacimiento no activa los cálculos. Puedes '
-                            'seguir reconociendo comidas y porciones.';
+                        : 'Los cálculos requieren un permiso activo del servidor. '
+                            'Ni cambiar tu fecha de nacimiento ni aceptar '
+                            'condiciones concede ese permiso. Mientras tanto, '
+                            'puedes reconocer alimentos sin cifras.';
 
     return Container(
       key: const ValueKey('stk_mobile_nutrition_access'),

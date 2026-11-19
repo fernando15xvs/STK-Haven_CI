@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'stk_nutrition_server_capabilities.dart';
 
 /// A result of checking the trusted backend, not proof of age by itself.
 ///
@@ -31,8 +32,25 @@ class NutritionAdultAccessService {
       currentUserId: () => client.auth.currentUser?.id,
       sessionToken: client.auth.currentSession?.accessToken,
       currentSessionToken: () => client.auth.currentSession?.accessToken,
-      fetch: () => client.rpc('stk_has_adult_nutrition_access'),
+      fetch: _fetchServerAdultCapability,
     );
+  }
+
+  /// Prefer the new independently reviewed capability when that migration
+  /// exists. If a pre-migration backend has no such RPC, preserve the older
+  /// server-controlled grant. A denial, revoked grant, malformed response,
+  /// timeout or permission error must NEVER fall through to the legacy RPC.
+  Future<dynamic> _fetchServerAdultCapability() async {
+    try {
+      final result = await client.rpc('stk_get_nutrition_capabilities');
+      final parsed = StkNutritionServerCapabilities.parse(result);
+      return parsed?.personalizedAdultEnergy;
+    } on PostgrestException catch (error) {
+      if (error.code == 'PGRST202' || error.code == '42883') {
+        return client.rpc('stk_has_adult_nutrition_access');
+      }
+      rethrow;
+    }
   }
 
   /// Pure query boundary for unit tests and reconnect/session-race behavior.

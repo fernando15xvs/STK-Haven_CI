@@ -32,15 +32,15 @@ void main() {
       (tester) async {
     var retries = 0;
     await tester.pumpWidget(fixture(onRetry: () => retries++));
-    expect(find.text('Plan calórico no disponible'), findsOneWidget);
+    expect(find.text('Plan calórico pendiente de acceso'), findsOneWidget);
     expect(find.text('Volver a comprobar acceso'), findsNothing);
     expect(find.text('Reintentar'), findsNothing);
-    expect(find.textContaining('Food Vision descriptivo'), findsOneWidget);
+    expect(find.textContaining('Food Vision sigue disponible sin cifras'), findsOneWidget);
     await tester.tap(find.byKey(
       const ValueKey('stk_nutrition_access_info'),
     ));
     await tester.pumpAndSettle();
-    expect(find.textContaining('no hay un procedimiento de activación'),
+    expect(find.textContaining('Los cálculos requieren un permiso activo del servidor'),
         findsOneWidget);
     expect(retries, 0);
   });

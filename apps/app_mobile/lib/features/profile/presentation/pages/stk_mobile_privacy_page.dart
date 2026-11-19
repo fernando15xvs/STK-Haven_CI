@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
+import 'package:core/features/onboarding/data/stk_legal_server_receipt_service.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/sync/presentation/backup_status_page.dart';
 import 'package:flutter/material.dart';
@@ -165,6 +166,18 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
         throw StateError('La sesión cambió durante la actualización.');
       }
       if (uid != null) {
+        if (_documents.canCollectAcceptance) {
+          final remoteAccepted = await StkLegalServerReceiptService(
+            Supabase.instance.client,
+          ).recordAcceptance(
+            receipt: receipt,
+            documents: _documents,
+            declaredBirthDate: birthDate,
+          );
+          if (!remoteAccepted) {
+            throw StateError('No se obtuvo un recibo legal vigente del servidor.');
+          }
+        }
         await _receipts.saveAuthenticated(receipt, activeUserId: uid);
       } else {
         if (await _receipts.getOrCreateGuestId() != guestId ||
@@ -222,6 +235,69 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
       if (mounted) setState(() {});
     } catch (_) {
       _showError('No se pudo modificar el permiso para esta cuenta.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Explicitly withdraw the server legal receipt AND its dependent grants.
+  /// This never treats a Hive deletion as remote revocation.
+  Future<void> _revokePublishedLegalAcceptance(String uid) async {
+    if (_saving || !_documents.canCollectAcceptance) return;
+    final token = Supabase.instance.client.auth.currentSession?.accessToken;
+    if (Supabase.instance.client.auth.currentUser?.id != uid ||
+        token == null || token.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Retirar aceptación legal'),
+        content: const Text(
+          'Se retirará tu aceptación vigente del servidor y se revocarán '
+          'los permisos nutricionales que dependan de ella. Tus registros '
+          'locales de entrenamiento y Medidas no se borrarán.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Retirar aceptación'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted ||
+        Supabase.instance.client.auth.currentUser?.id != uid ||
+        Supabase.instance.client.auth.currentSession?.accessToken != token) {
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final remoteRevoked = await StkLegalServerReceiptService(
+        Supabase.instance.client,
+      ).revokeCurrentAcceptance();
+      if (!remoteRevoked ||
+          Supabase.instance.client.auth.currentUser?.id != uid ||
+          Supabase.instance.client.auth.currentSession?.accessToken != token) {
+        throw StateError('No se confirmó la revocación en el servidor.');
+      }
+      await _consents.revokeAll(
+        documents: _documents,
+        subjectType: StkLegalSubjectType.authenticated,
+        subjectId: uid,
+        activeUserId: uid,
+        now: DateTime.now(),
+      );
+      await _receipts.clearLocalReceipt(
+        subjectType: StkLegalSubjectType.authenticated,
+        subjectId: uid,
+        activeUserId: uid,
+      );
+      if (mounted) setState(() {});
+    } catch (_) {
+      _showError('No se pudo completar la retirada. Comprueba tu conexión.');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -346,6 +422,14 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
             child: Text(accepted
                 ? 'Revisar nuevamente' : 'Revisar y aceptar'),
           ),
+          if (accepted && uid != null && _documents.canCollectAcceptance)
+            TextButton.icon(
+              key: const ValueKey('stk_revoke_legal_acceptance'),
+              onPressed: _saving ? null : () =>
+                  unawaited(_revokePublishedLegalAcceptance(uid)),
+              icon: const Icon(Icons.shield_outlined),
+              label: const Text('Retirar aceptación vigente'),
+            ),
         ],
         const SizedBox(height: AppSpacing.lg),
         Text('Permisos opcionales', style: AppTypography.headlineMedium),

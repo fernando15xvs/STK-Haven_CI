@@ -2483,7 +2483,7 @@ class NutritionAccessStatusPanel extends StatelessWidget {
     final title=switch(access){
       NutritionAccessState.minor=>'Hábitos para crecer con salud',
       NutritionAccessState.ageUnknown=>'Tu bienestar, a tu ritmo',
-      NutritionAccessState.adultUnverified=>'Acceso calórico pendiente de verificación',
+      NutritionAccessState.adultUnverified=>'Plan calórico pendiente de acceso',
       NutritionAccessState.adultVerified=>'Tu plan nutricional',
     };
     final message=switch(access){
@@ -2495,10 +2495,9 @@ class NutritionAccessStatusPanel extends StatelessWidget {
         'Puedes usar Food Vision, registrar agua y pasos y entrenar '
         'sin indicar tu edad.',
       NutritionAccessState.adultUnverified=>
-        'Tu cuenta aún no tiene verificación adulta en el servidor. '
-        'El proceso externo de verificación no está disponible en esta '
-        'versión; no basta con cambiar tu fecha de nacimiento. '
-        'Puedes seguir usando agua, pasos y Food Vision descriptivo.',
+        'Los objetivos numéricos requieren autorización vigente del servidor. '
+        'Cambiar tu fecha de nacimiento o aceptar condiciones no la concede. '
+        'Puedes usar agua, pasos y Food Vision descriptivo.',
       NutritionAccessState.adultVerified=>
         'Acceso adulto confirmado.',
     };
