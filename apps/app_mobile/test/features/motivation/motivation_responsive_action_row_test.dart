@@ -105,17 +105,24 @@ void main() {
     }
   });
 
-  test('Motivation library uses the responsive layouts for its actions', () {
-    final page=File(
+  test('M1 library uses one accessible action row, not three duplicate actions', () {
+    final page = File(
       'lib/features/motivation/presentation/motivation_page.dart',
     ).readAsStringSync();
-    expect(page,contains("ValueKey('motivation_responsive_import')"));
-    expect(page,contains("ValueKey('motivation_responsive_collections')"));
-    expect(page,contains("ValueKey('motivation_responsive_files')"));
-    expect(page,contains("ValueKey('motivation_playlist_wrap_actions')"));
-    expect(page,contains('MotivationResponsiveActionRow('));
-    expect(page,contains('isExpanded:true,'));
-    expect(page.split('compactAction:').length-1,greaterThanOrEqualTo(3));
-    expect(page,contains('runSpacing:AppSpacing.xs'));
+    expect(page, contains("ValueKey('motivation_responsive_import')"));
+    expect(page, contains("ValueKey('motivation_create_playlist')"));
+    expect(page, contains("ValueKey('motivation_create_playlist_compact')"));
+    expect(page, contains("ValueKey('motivation_playlist_actions')"));
+    expect(page, contains("ValueKey('motivation_secondary_filters')"));
+    expect(page, contains("ValueKey('motivation_playlist_wrap_actions')"));
+    expect(page, contains('MotivationResponsiveActionRow('));
+    expect(page.split('MotivationResponsiveActionRow(').length-1, 1);
+    expect(page.split('compactAction:').length-1, 1);
+    expect(page, contains("label: const Text('Importar')"));
+    expect(page, contains("label: const Text('Crear lista')"));
+    expect(page, contains('Modo de importación'));
+    expect(page, isNot(contains('motivation_responsive_collections')));
+    expect(page, isNot(contains('motivation_responsive_files')));
   });
+
 }

@@ -128,16 +128,22 @@ void main() {
       find.byKey(const ValueKey('motivation_action_row_stacked')),
       findsWidgets,
     );
-    final presetButton = find.byKey(
-      const ValueKey('motivation_playlist_ideas'),
+    // Playlist ideas are now a secondary action, not a large competing
+    // control. The menu preserves the original voluntary suggestion flow.
+    final actions = find.byKey(
+      const ValueKey('motivation_playlist_actions'),
     );
-    // The collections controls are below the fold at 320dp/200%.
-    // Lazy ListView children do not exist until they are scrolled into view.
     await tester.scrollUntilVisible(
-      presetButton, 180,
+      actions, 180,
       scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
+    await tester.tap(actions);
+    await tester.pumpAndSettle();
+    final presetButton = find.byKey(
+      const ValueKey('motivation_playlist_ideas'),
+    );
+    expect(presetButton, findsOneWidget);
     await tester.tap(presetButton);
     await tester.pumpAndSettle();
     expect(

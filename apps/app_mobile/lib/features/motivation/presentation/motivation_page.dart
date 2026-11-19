@@ -162,6 +162,89 @@ class _MotivationPageState extends State<MotivationPage> {
       'Revisa el formato y vuelve a intentarlo.');}
     finally{if(mounted)setState(()=>busy=false);}
   }
+  // The mode describes a newly imported local file, not a global playback
+  // setting. Ask only when the user chooses Importar; cancelling does nothing.
+  Future<void> _chooseImportModeThenImport() async {
+    if (busy) return;
+    final selected = await showModalBottomSheet<MotivationMode>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Modo de importación'),
+              subtitle: Text('Organiza el archivo que vas a añadir. '
+                  'No modifica la música que está sonando.'),
+            ),
+            for (final mode in MotivationMode.values)
+              ListTile(
+                key: ValueKey('motivation_import_mode_'+mode.name),
+                leading: Icon(
+                  importMode == mode
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_unchecked_rounded),
+                title: Text(mode.label),
+                onTap: () => Navigator.pop(sheetContext, mode),
+              ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || selected == null) return;
+    setState(() => importMode = selected);
+    await _import();
+  }
+
+  void _showAllPlaylists() {
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.65),
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              ListTile(
+                title: Text('Tus listas', style: AppTypography.headlineMedium),
+                subtitle: const Text('Selecciona una lista para ver sus archivos.'),
+              ),
+              for (final list in library.playlists)
+                ListTile(
+                  title: Text(list.title, maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+                  subtitle: Text(list.trackIds.length.toString()+' archivos'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    if (mounted) setState(
+                      () => selection = 'playlist:'+list.id);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _activeFilterLabel() {
+    if (selection == 'favorites') return 'Favoritos';
+    for (final mode in MotivationMode.values) {
+      if (selection == 'mode:'+mode.name) return mode.label;
+    }
+    for (final list in library.playlists) {
+      if (selection == 'playlist:'+list.id) return list.title;
+    }
+    return 'Todos';
+  }
+
   Future<_MotivationImportOptions?> _importOptions(
     MotivationTrack track) async {
     final controller=TextEditingController(text:track.title);
@@ -656,286 +739,371 @@ class _MotivationPageState extends State<MotivationPage> {
     );
   }
   @override
-  Widget build(BuildContext context){
-    final colors=AppColors.of(context);
-    final tracks=MotivationLibrarySearch.filter(
-      library.forSelection(selection),query:searchQuery,media:mediaFilter);
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final tracks = MotivationLibrarySearch.filter(
+      library.forSelection(selection),
+      query: searchQuery,
+      media: mediaFilter,
+    );
     return Scaffold(
-      backgroundColor:colors.background,
-      appBar:AppBar(title:const Text('STK Motivation'),
-        actions:[
+      backgroundColor: colors.background,
+      appBar: AppBar(
+        title: const Text('STK Motivation'),
+        actions: [
           IconButton(
-            key:const ValueKey('motivation_settings'),
-            tooltip:'Volumen, velocidad y temporizador',
-            onPressed:_showAudioSettings,
-            icon:const Icon(Icons.tune)),
-          IconButton(tooltip:'Crear playlist',
-            onPressed:()=>unawaited(_createPlaylist()),
-            icon:const Icon(Icons.playlist_add)),
-        ]),
-      body:!library.loaded
-        ?(_libraryLoadError==null
-          ?const Center(child:CircularProgressIndicator())
-          :Center(child:Padding(
-            padding:const EdgeInsets.all(AppSpacing.lg),
-            child:Column(mainAxisSize:MainAxisSize.min,children:[
-              Text(_libraryLoadError!,
-                key:const ValueKey('motivation_library_safe_load_error'),
-                textAlign:TextAlign.center,
-                style:AppTypography.bodyMedium.copyWith(
-                  color:colors.textSecondary)),
-              const SizedBox(height:AppSpacing.md),
-              FilledButton.icon(
-                key:const ValueKey('motivation_library_retry'),
-                onPressed:(){
-                  setState(()=>_libraryLoadError=null);
-                  unawaited(_loadLibrary());
-                },
-                icon:const Icon(Icons.refresh_rounded),
-                label:const Text('Reintentar'),
-              ),
-            ]),
-          )))
-        :ListView(key:const ValueKey('motivation_library'),
-          padding:const EdgeInsets.fromLTRB(16,16,16,100),
-          children:[
-            if(library.tracks.isEmpty)...[
-              Text('Tu contenido, tu energía',
-                style:AppTypography.headlineLarge),
-              const SizedBox(height:5),
-              Text('Importa tus MP3, M4A, WAV y MP4. Una copia privada '
-                'permite reproducirlos sin internet.',
-                style:AppTypography.bodyMedium.copyWith(
-                  color:colors.textSecondary)),
-            ]else...[
-              // The media library should be visible on the first screen.
-              // Repeating a tall onboarding hero hides all tracks at 160%.
-              Text('Mi biblioteca',style:AppTypography.headlineMedium,
-                key:const ValueKey('motivation_compact_library_title')),
-              const SizedBox(height:4),
-              Text('Tus audios y vídeos privados, incluso sin conexión.',
-                style:AppTypography.bodySmall.copyWith(
-                  color:colors.textSecondary)),
-            ],
-            const SizedBox(height:AppSpacing.md),
-            MotivationResponsiveActionRow(
-              key:const ValueKey('motivation_responsive_import'),
-              leading:DropdownButtonFormField<MotivationMode>(
-                isExpanded:true,
-                initialValue:importMode,
-                decoration:const InputDecoration(
-                  labelText:'Modo',border:OutlineInputBorder()),
-                items:[for(final m in MotivationMode.values)
-                  DropdownMenuItem(value:m,child:Text(m.label))],
-                onChanged:(v){if(v!=null)setState(()=>importMode=v);},
-              ),
-              action:FilledButton.icon(
-                key:const ValueKey('motivation_import'),
-                onPressed:busy?null:()=>unawaited(_import()),
-                icon:const Icon(Icons.add),
-                label:const Text('Importar')),
-              compactAction:FilledButton(
-                key:const ValueKey('motivation_import'),
-                onPressed:busy?null:()=>unawaited(_import()),
-                child:const Text('Importar')),
-            ),
-            const SizedBox(height:16),
-            if(player.currentTrack!=null)...[
-              _player(),
-              const SizedBox(height:20),
-            ] else if(player.resumeTitle case final title?) ...[
-              Card(
-                key:const ValueKey('motivation_resume_last'),
-                child:ListTile(
-                  leading:const Icon(Icons.history_rounded),
-                  title:Text('Retomar: $title',
-                    maxLines:2,overflow:TextOverflow.ellipsis),
-                  subtitle:const Text('Solo se reproduce cuando tú lo eliges.'),
-                  trailing:const Icon(Icons.play_arrow_rounded),
-                  onTap:()async{
-                    final resumed=await player.resumeLast();
-                    if(!mounted)return;
-                    if(resumed){
-                      _openNowPlaying();
-                    }else{
-                      _message('Ese archivo ya no está disponible.');
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(height:16),
-            ],
-            MotivationResponsiveActionRow(
-              key:const ValueKey('motivation_responsive_collections'),
-              leading:Text('Colecciones',
-                style:AppTypography.headlineMedium),
-              action:Row(mainAxisSize:MainAxisSize.min,children:[
-                TextButton.icon(
-                  key:const ValueKey('motivation_playlist_ideas'),
-                  onPressed:()=>unawaited(_choosePlaylistIdeas()),
-                  icon:const Icon(Icons.auto_awesome_outlined),
-                  label:const Text('Ideas de listas'),
-                ),
-                if(library.tracks.isNotEmpty)
-                  PopupMenuButton<String>(
-                    key:const ValueKey('motivation_context_playlist_suggestion'),
-                    tooltip:'Más opciones para colecciones',
-                    icon:const Icon(Icons.more_horiz_rounded),
-                    onSelected:(_)=>unawaited(_suggestContextPlaylist()),
-                    itemBuilder:(_)=>[
-                      const PopupMenuItem<String>(
-                        value:'context',
-                        child:Text('Sugerir según mi entrenamiento')),
-                    ],
+            key: const ValueKey('motivation_settings'),
+            tooltip: 'Volumen, velocidad y temporizador',
+            onPressed: _showAudioSettings,
+            icon: const Icon(Icons.tune_rounded),
+          ),
+        ],
+      ),
+      body: !library.loaded
+          ? (_libraryLoadError == null
+              ? const Center(child: CircularProgressIndicator())
+              : Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _libraryLoadError!,
+                          key: const ValueKey('motivation_library_safe_load_error'),
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: colors.textSecondary),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        FilledButton.icon(
+                          key: const ValueKey('motivation_library_retry'),
+                          onPressed: () {
+                            setState(() => _libraryLoadError = null);
+                            unawaited(_loadLibrary());
+                          },
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Reintentar'),
+                        ),
+                      ],
+                    ),
                   ),
-              ]),
-              compactAction:Row(children:[
-                Expanded(child:TextButton(
-                  key:const ValueKey('motivation_playlist_ideas'),
-                  onPressed:()=>unawaited(_choosePlaylistIdeas()),
-                  child:const Text('Ideas de listas'),
-                )),
-                if(library.tracks.isNotEmpty)
-                  PopupMenuButton<String>(
-                    key:const ValueKey('motivation_context_playlist_suggestion'),
-                    tooltip:'Más opciones para colecciones',
-                    icon:const Icon(Icons.more_horiz_rounded),
-                    onSelected:(_)=>unawaited(_suggestContextPlaylist()),
-                    itemBuilder:(_)=>[
-                      const PopupMenuItem<String>(
-                        value:'context',
-                        child:Text('Sugerir según mi entrenamiento')),
-                    ],
+                ))
+          : ListView(
+              key: const ValueKey('motivation_library'),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
+              children: [
+                // The active player never duplicates a saved resume card.
+                if (player.currentTrack != null) ...[
+                  Text('En reproducción',
+                    style: AppTypography.headlineMedium),
+                  const SizedBox(height: AppSpacing.xs),
+                  _player(),
+                  const SizedBox(height: AppSpacing.sm),
+                ] else if (player.resumeTitle case final title?) ...[
+                  Text('Continuar', style: AppTypography.headlineMedium),
+                  const SizedBox(height: AppSpacing.xs),
+                  Card(
+                    key: const ValueKey('motivation_resume_last'),
+                    color: colors.surface,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      leading: const Icon(Icons.history_rounded),
+                      title: Text(title, maxLines: 2,
+                        overflow: TextOverflow.ellipsis),
+                      subtitle: const Text('Solo se reproduce cuando tú lo eliges.'),
+                      trailing: const Icon(Icons.play_arrow_rounded),
+                      onTap: () async {
+                        final resumed = await player.resumeLast();
+                        if (!mounted) return;
+                        if (resumed) {
+                          _openNowPlaying();
+                        } else {
+                          _message('Ese archivo ya no está disponible.');
+                        }
+                      },
+                    ),
                   ),
-              ]),
-            ),
-            const SizedBox(height:9),
-            SingleChildScrollView(scrollDirection:Axis.horizontal,
-              child:Row(children:[
-                _filter('all','Todos'),
-                _filter('favorites','Favoritos'),
-                for(final m in MotivationMode.values)
-                  _filter('mode:'+m.name,m.label),
-                for(final p in library.playlists)
-                  _filter('playlist:'+p.id,p.title),
-              ])),
-            if(selection.startsWith('playlist:'))
-              Wrap(
-                key:const ValueKey('motivation_playlist_wrap_actions'),
-                alignment:WrapAlignment.end,
-                spacing:AppSpacing.sm,
-                runSpacing:AppSpacing.xs,
-                children:[
-                  TextButton.icon(
-                    onPressed:()=>unawaited(_reorderCurrentPlaylist()),
-                    icon:const Icon(Icons.drag_handle),
-                    label:const Text('Ordenar')),
-                  TextButton.icon(onPressed:()=>unawaited(_deleteList()),
-                    icon:const Icon(Icons.delete_outline),
-                    label:const Text('Eliminar lista')),
+                  const SizedBox(height: AppSpacing.sm),
                 ],
-              ),
-            const SizedBox(height:12),
-            TextField(
-              key:const ValueKey('motivation_local_search'),
-              controller:searchController,
-              onChanged:(value)=>setState(()=>searchQuery=value),
-              textInputAction:TextInputAction.search,
-              decoration:InputDecoration(
-                prefixIcon:const Icon(Icons.search_rounded),
-                hintText:'Buscar en tus archivos',
-                border:const OutlineInputBorder(),
-                suffixIcon:searchQuery.isEmpty?null:IconButton(
-                  tooltip:'Borrar búsqueda',
-                  onPressed:(){
-                    searchController.clear();
-                    setState(()=>searchQuery='');
-                  },
-                  icon:const Icon(Icons.close_rounded)),
-              ),
-            ),
-            const SizedBox(height:8),
-            SingleChildScrollView(
-              scrollDirection:Axis.horizontal,
-              child:Row(children:[
-                for(final choice in MotivationMediaFilter.values)
-                  Padding(padding:const EdgeInsets.only(right:8),
-                    child:ChoiceChip(
-                      label:Text(switch(choice){
-                        MotivationMediaFilter.all=>'Todos los medios',
-                        MotivationMediaFilter.audio=>'Audios',
-                        MotivationMediaFilter.video=>'Videos',
-                      }),
-                      selected:mediaFilter==choice,
-                      onSelected:(_)=>setState(()=>mediaFilter=choice),
-                    )),
-              ]),
-            ),
-            const SizedBox(height:12),
-            MotivationResponsiveActionRow(
-              key:const ValueKey('motivation_responsive_files'),
-              leading:Text('Archivos ('+tracks.length.toString()+')',
-                style:AppTypography.headlineMedium),
-              action:TextButton.icon(
-                onPressed:()=>unawaited(_createPlaylist()),
-                icon:const Icon(Icons.add),label:const Text('Crear lista')),
-              compactAction:TextButton(
-                onPressed:()=>unawaited(_createPlaylist()),
-                child:const Text('Crear lista')),
-            ),
-            if(tracks.isEmpty)
-              Padding(padding:const EdgeInsets.symmetric(vertical:40),
-                child:Column(children:[
-                  Icon(Icons.library_music_outlined,size:54,
-                    color:colors.textSecondary),
-                  const SizedBox(height:12),
-                  Text(searchQuery.isNotEmpty ||
-                      mediaFilter!=MotivationMediaFilter.all
-                    ? 'No encontramos coincidencias.'
-                    : 'No hay archivos en esta colección.'),
-                  if(searchQuery.isEmpty &&
-                      mediaFilter==MotivationMediaFilter.all)
-                    const Text('Importa contenido o añádelo a una playlist.'),
-                ])),
-            for(final t in tracks)
-              Card(
-                color:colors.surface,
-                elevation:colors.elevatedCards?2:0,
-                shape:RoundedRectangleBorder(
-                  borderRadius:AppRadius.lg_,
-                  side:BorderSide(color:colors.surfaceBorder)),
-                clipBehavior:Clip.antiAlias,
-                child:ListTile(
-                key:ValueKey('track_'+t.id),
-                leading:_MotivationArtwork(track:t,size:52),
-                title:Text(t.title,maxLines:2,
-                  overflow:TextOverflow.ellipsis,
-                  style:AppTypography.headlineSmall.copyWith(
-                    color:colors.textPrimary)),
-                subtitle:Text(t.mode.label+' · '+(t.isVideo?'MP4':'Audio'),
-                  maxLines:1,overflow:TextOverflow.ellipsis,
-                  style:AppTypography.bodySmall.copyWith(
-                    color:colors.textSecondary)),
-                onTap:()=>unawaited(_playTrack(t,tracks)),
-                trailing:PopupMenuButton<String>(
-                  tooltip:'Opciones de archivo',
-                  onSelected:(a)=>unawaited(_edit(t,a)),
-                  itemBuilder:(_)=>[
-                    PopupMenuItem(value:'favorite',child:Text(
-                      t.favorite?'Quitar de favoritos':'Añadir a favoritos')),
-                    const PopupMenuItem(value:'rename',child:Text('Renombrar')),
-                    const PopupMenuItem(value:'cover',child:Text('Cambiar portada')),
-                    if(t.artworkFileName!=null)
-                      const PopupMenuItem(value:'clearCover',child:Text('Quitar portada')),
-                    if(t.isVideo && t.thumbnailFileName==null)
-                      const PopupMenuItem(value:'thumbnail',
-                        child:Text('Generar miniatura del video')),
-                    const PopupMenuItem(value:'mode',child:Text('Cambiar modo')),
-                    const PopupMenuItem(value:'list',child:Text('Playlists')),
-                    const PopupMenuItem(value:'delete',child:Text('Eliminar copia')),
+                MotivationResponsiveActionRow(
+                  key: const ValueKey('motivation_responsive_import'),
+                  leading: FilledButton.icon(
+                    key: const ValueKey('motivation_import'),
+                    onPressed: busy ? null
+                      : () => unawaited(_chooseImportModeThenImport()),
+                    icon: const Icon(Icons.file_upload_outlined),
+                    label: const Text('Importar'),
+                  ),
+                  action: OutlinedButton.icon(
+                    key: const ValueKey('motivation_create_playlist'),
+                    onPressed: () => unawaited(_createPlaylist()),
+                    icon: const Icon(Icons.playlist_add_rounded),
+                    label: const Text('Crear lista'),
+                  ),
+                  compactAction: OutlinedButton(
+                    key: const ValueKey('motivation_create_playlist_compact'),
+                    onPressed: () => unawaited(_createPlaylist()),
+                    child: const Text('Crear lista'),
+                  ),
+                ),
+                if (library.tracks.isEmpty) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Importa tus propios audios o videos para empezar.',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: colors.textSecondary),
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(child: Text('Tus listas',
+                      style: AppTypography.headlineMedium)),
+                    if (library.playlists.isNotEmpty)
+                      TextButton(
+                        key: const ValueKey('motivation_view_all_lists'),
+                        onPressed: _showAllPlaylists,
+                        child: const Text('Ver todas'),
+                      ),
+                    PopupMenuButton<String>(
+                      key: const ValueKey('motivation_playlist_actions'),
+                      tooltip: 'Opciones de listas',
+                      icon: const Icon(Icons.more_horiz_rounded),
+                      onSelected: (choice) {
+                        if (choice == 'ideas') {
+                          unawaited(_choosePlaylistIdeas());
+                        } else if (choice == 'context') {
+                          unawaited(_suggestContextPlaylist());
+                        }
+                      },
+                      itemBuilder: (_) => [
+                        const PopupMenuItem(
+                          value: 'ideas',
+                          child: Text('Ideas de listas',
+                            key: ValueKey('motivation_playlist_ideas')),
+                        ),
+                        if (library.tracks.isNotEmpty)
+                          const PopupMenuItem(
+                            value: 'context',
+                            child: Text('Sugerir según mi entrenamiento',
+                              key: ValueKey('motivation_context_playlist_suggestion')),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (library.playlists.isEmpty)
+                  Text('Aún no has creado listas.',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: colors.textSecondary))
+                else
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(children: [
+                      for (final list in library.playlists)
+                        _filter('playlist:'+list.id, list.title),
+                    ]),
+                  ),
+                if (selection.startsWith('playlist:'))
+                  Wrap(
+                    key: const ValueKey('motivation_playlist_wrap_actions'),
+                    alignment: WrapAlignment.end,
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => unawaited(_reorderCurrentPlaylist()),
+                        icon: const Icon(Icons.drag_handle),
+                        label: const Text('Ordenar'),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => unawaited(_deleteList()),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text('Eliminar lista'),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: AppSpacing.md),
+                Row(children: [
+                  Expanded(
+                    child: Text('Biblioteca',
+                      key: const ValueKey('motivation_compact_library_title'),
+                      style: AppTypography.headlineMedium),
+                  ),
+                  Text(tracks.length.toString()+' archivos',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: colors.textSecondary)),
+                ]),
+                const SizedBox(height: AppSpacing.xs),
+                TextField(
+                  key: const ValueKey('motivation_local_search'),
+                  controller: searchController,
+                  onChanged: (value) => setState(() => searchQuery = value),
+                  textInputAction: TextInputAction.search,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    hintText: 'Buscar audio o video',
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                    suffixIcon: searchQuery.isEmpty ? null : IconButton(
+                      tooltip: 'Borrar búsqueda',
+                      onPressed: () {
+                        searchController.clear();
+                        setState(() => searchQuery = '');
+                      },
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Row(children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(children: [
+                        for (final choice in MotivationMediaFilter.values)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ChoiceChip(
+                              label: Text(switch (choice) {
+                                MotivationMediaFilter.all => 'Todos',
+                                MotivationMediaFilter.audio => 'Audios',
+                                MotivationMediaFilter.video => 'Videos',
+                              }),
+                              selected: mediaFilter == choice,
+                              onSelected: (_) => setState(
+                                () => mediaFilter = choice),
+                            ),
+                          ),
+                      ]),
+                    ),
+                  ),
+                  PopupMenuButton<String>(
+                    key: const ValueKey('motivation_secondary_filters'),
+                    tooltip: 'Filtrar por favoritos, modo o lista',
+                    onSelected: (chosen) => setState(
+                      () => selection = chosen),
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: 'all',
+                        child: Text('Toda la biblioteca'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'favorites',
+                        child: Text('Favoritos'),
+                      ),
+                      for (final mode in MotivationMode.values)
+                        PopupMenuItem(
+                          value: 'mode:'+mode.name,
+                          child: Text(mode.label),
+                        ),
+                      for (final list in library.playlists)
+                        PopupMenuItem(
+                          value: 'playlist:'+list.id,
+                          child: Text(list.title,
+                            overflow: TextOverflow.ellipsis),
+                        ),
+                    ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 10),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.filter_list_rounded,
+                            size: 18, color: colors.primary),
+                          const SizedBox(width: 4),
+                          Text('Filtros', style: AppTypography.labelMedium),
+                        ],
+                      ),
+                    ),
+                  ),
+                ]),
+                if (selection != 'all')
+                  Row(children: [
+                    Expanded(
+                      child: Text('Filtro: '+_activeFilterLabel(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: colors.textSecondary)),
+                    ),
+                    TextButton(
+                      key: const ValueKey('motivation_clear_filter'),
+                      onPressed: () => setState(() => selection = 'all'),
+                      child: const Text('Quitar'),
+                    ),
                   ]),
-              )),
-          ]),
+                const SizedBox(height: AppSpacing.xs),
+                if (tracks.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    child: Text(
+                      library.tracks.isEmpty
+                        ? 'Todavía no hay archivos. Importa el primero.'
+                        : 'No hay resultados con estos filtros.',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: colors.textSecondary),
+                    ),
+                  ),
+                for (final track in tracks) ...[
+                  Semantics(
+                    button: true,
+                    label: 'Reproducir '+track.title,
+                    child: ListTile(
+                      key: ValueKey('track_'+track.id),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 2, vertical: 2),
+                      leading: _MotivationArtwork(track: track, size: 52),
+                      title: Text(track.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.headlineSmall.copyWith(
+                          color: colors.textPrimary)),
+                      subtitle: Text(
+                        (track.isVideo ? 'Video' : 'Audio')+
+                        ' · '+track.mode.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: colors.textSecondary)),
+                      onTap: () => unawaited(_playTrack(track, tracks)),
+                      trailing: PopupMenuButton<String>(
+                        tooltip: 'Opciones de archivo',
+                        onSelected: (action) => unawaited(
+                          _edit(track, action)),
+                        itemBuilder: (_) => [
+                          PopupMenuItem(value: 'favorite',
+                            child: Text(track.favorite
+                              ? 'Quitar de favoritos'
+                              : 'Añadir a favoritos')),
+                          const PopupMenuItem(value: 'rename',
+                            child: Text('Renombrar')),
+                          const PopupMenuItem(value: 'cover',
+                            child: Text('Cambiar portada')),
+                          if (track.artworkFileName != null)
+                            const PopupMenuItem(value: 'clearCover',
+                              child: Text('Quitar portada')),
+                          if (track.isVideo &&
+                              track.thumbnailFileName == null)
+                            const PopupMenuItem(value: 'thumbnail',
+                              child: Text('Generar miniatura del video')),
+                          const PopupMenuItem(value: 'mode',
+                            child: Text('Cambiar modo')),
+                          const PopupMenuItem(value: 'list',
+                            child: Text('Playlists')),
+                          const PopupMenuItem(value: 'delete',
+                            child: Text('Eliminar copia')),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Divider(height: 1, color: colors.surfaceBorder),
+                ],
+              ],
+            ),
     );
   }
 }
