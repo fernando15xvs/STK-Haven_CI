@@ -42,8 +42,8 @@ void main(){
     expect(core,contains('Volver a comprobar acceso'));
     expect(core,contains('mobileAdultCheck'));
     expect(core,contains('StkMobileNutritionAccessPanel('));
-    expect(core,contains('Acceso calórico pendiente de verificación'));
-    expect(core,contains('proceso externo de verificación no está disponible'));
+    expect(core,contains('Plan calórico pendiente de acceso'));
+    expect(core,contains('Los objetivos numéricos requieren autorización vigente del servidor.'));
     expect(core,contains('no basta con cambiar tu fecha de nacimiento'));
 
     expect(core,contains('estimate.numericNutritionAvailable && !_hasAdultNumericAccess'));
