@@ -1,4 +1,5 @@
 import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
+import 'package:core/features/nutrition/application/stk_nutrition_capability_policy.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -28,7 +29,11 @@ class NutritionAccessPolicy {
       StkDeclaredAgeBand.unknownLegacy => NutritionAccessState.ageUnknown,
       StkDeclaredAgeBand.under15 ||
       StkDeclaredAgeBand.teen15To17 => NutritionAccessState.minor,
-      StkDeclaredAgeBand.adult18PlusDeclared => backendVerifiedAdult
+      StkDeclaredAgeBand.adult18PlusDeclared =>
+        StkNutritionCapabilityPolicy.resolve(
+          declaredAge: declaredAge,
+          backendAdultGranted: backendVerifiedAdult,
+        ).personalizedAdultEnergy
           ? NutritionAccessState.adultVerified
           : NutritionAccessState.adultUnverified,
     };
