@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +28,7 @@ void main() {
   Widget page({
     StkLegalDocumentSet docs = approved,
     DateTime? birthday,
+    String subjectId = 'guest-test-installation',
     void Function(StkLegalAcceptanceReceipt)? onAccepted,
     VoidCallback? onDecline,
     Future<bool> Function()? onTermsViewed,
@@ -37,7 +40,7 @@ void main() {
         birthDate: birthday ?? DateTime(2006, 2, 20),
         documents: docs,
         subjectType: StkLegalSubjectType.guest,
-        subjectId: 'guest-test-installation',
+        subjectId: subjectId,
         locale: 'es-PE',
         onViewTerms: onTermsViewed ?? () async => true,
         onViewPrivacy: onPrivacyViewed ?? () async => true,
@@ -145,6 +148,114 @@ void main() {
     await tester.pump();
     expect(declined, 1);
     expect(accepted, isFalse);
+  });
+
+
+  testWidgets('editing birth date resets both confirmations, even within 15+',
+      (tester) async {
+    var accepted = 0;
+    await tester.pumpWidget(page(
+      birthday: DateTime(2006, 2, 20),
+      onAccepted: (_) => accepted++,
+    ));
+    await tester.tap(find.byKey(const ValueKey('stk_terms_link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stk_privacy_link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stk_confirm_15_plus')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('stk_accept_terms')));
+    await tester.pump();
+    final submit = find.byKey(const ValueKey('stk_legal_continue'));
+    expect(tester.widget<FilledButton>(submit).onPressed, isNotNull);
+
+    await tester.pumpWidget(page(
+      birthday: DateTime(2010, 7, 5),
+      onAccepted: (_) => accepted++,
+    ));
+    await tester.pump();
+    expect(tester.widget<CheckboxListTile>(
+      find.byKey(const ValueKey('stk_confirm_15_plus')),
+    ).value, isFalse);
+    expect(tester.widget<CheckboxListTile>(
+      find.byKey(const ValueKey('stk_accept_terms')),
+    ).value, isFalse);
+    expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+    expect(accepted, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('late old document callback cannot approve replaced document',
+      (tester) async {
+    final pending = Completer<bool>();
+    var accepted = false;
+    await tester.pumpWidget(page(
+      onTermsViewed: () => pending.future,
+      onAccepted: (_) => accepted = true,
+    ));
+    await tester.tap(find.byKey(const ValueKey('stk_terms_link')));
+    await tester.pump();
+
+    // Same version and SHA but a changed publication URL must invalidate
+    // both a prior review and any in-flight result.
+    const moved = StkLegalDocumentSet(
+      termsVersion: 'test-v1',
+      termsSha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      termsUrl: 'https://example.org/new-terms',
+      privacyVersion: 'test-v1',
+      privacySha256: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      privacyUrl: 'https://example.org/privacy',
+      approvedAndPublished: true,
+    );
+    await tester.pumpWidget(page(docs: moved,
+      onAccepted: (_) => accepted = true,
+    ));
+    pending.complete(true);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('stk_legal_documents_reviewed')),
+        findsNothing);
+    expect(tester.widget<FilledButton>(
+      find.byKey(const ValueKey('stk_legal_continue')),
+    ).onPressed, isNull);
+
+    await tester.tap(find.byKey(const ValueKey('stk_terms_link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stk_privacy_link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stk_confirm_15_plus')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('stk_accept_terms')));
+    await tester.pump();
+    expect(tester.widget<FilledButton>(
+      find.byKey(const ValueKey('stk_legal_continue')),
+    ).onPressed, isNotNull);
+    expect(accepted, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('changing guest identity invalidates the reviewed consent',
+      (tester) async {
+    await tester.pumpWidget(page());
+    await tester.tap(find.byKey(const ValueKey('stk_terms_link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stk_privacy_link')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('stk_confirm_15_plus')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('stk_accept_terms')));
+    await tester.pump();
+    expect(tester.widget<FilledButton>(
+      find.byKey(const ValueKey('stk_legal_continue')),
+    ).onPressed, isNotNull);
+
+    await tester.pumpWidget(page(subjectId: 'another-installation'));
+    await tester.pump();
+    expect(tester.widget<FilledButton>(
+      find.byKey(const ValueKey('stk_legal_continue')),
+    ).onPressed, isNull);
+    expect(tester.widget<CheckboxListTile>(
+      find.byKey(const ValueKey('stk_accept_terms')),
+    ).value, isFalse);
   });
 
   testWidgets('small screens and 200 percent accessibility text can scroll',

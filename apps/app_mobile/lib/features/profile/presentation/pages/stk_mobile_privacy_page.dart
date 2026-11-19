@@ -136,30 +136,42 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
     }
     setState(() => _saving = true);
     try {
-      // Recheck the live auth state after the user has read the documents.
+      // A reviewed document is not a receipt until profile and identity
+      // checks finish. Do not write a binding local receipt first and then
+      // discover that the profile or active account could not be updated.
       final uid = Supabase.instance.client.auth.currentUser?.id;
       if (uid != openingUid) {
         throw StateError('La cuenta cambió. Revisa las condiciones otra vez.');
       }
-      if (receipt.subjectType == StkLegalSubjectType.authenticated) {
-        await _receipts.saveAuthenticated(
-          receipt, activeUserId: uid,
-        );
-      } else {
-        if (uid != null || receipt.subjectId !=
-            await _receipts.getOrCreateGuestId()) {
-          throw StateError('El perfil cambió durante la aceptación.');
-        }
-        await _receipts.saveGuest(receipt);
-      }
-      if (uid != Supabase.instance.client.auth.currentUser?.id) {
-        throw StateError('La sesión cambió.');
+      final guestId = uid == null ? await _receipts.getOrCreateGuestId() : null;
+      final type = uid == null
+          ? StkLegalSubjectType.guest
+          : StkLegalSubjectType.authenticated;
+      if (!_documents.canCollectAcceptance || !receipt.isCurrentFor(
+        documents: _documents,
+        subjectType: type,
+        subjectId: uid ?? guestId!,
+      )) {
+        throw StateError('La versión o identidad del recibo ha cambiado.');
       }
       final current = ref.read(userExperienceProfileProvider).value;
-      if (current != null) {
-        await ref.read(userExperienceProfileProvider.notifier).updateProfile(
-          current.copyWith(eligibilityBirthDate: birthDate),
-        );
+      if (current == null) {
+        throw StateError('El perfil todavía no está disponible.');
+      }
+      await ref.read(userExperienceProfileProvider.notifier).updateProfile(
+        current.copyWith(eligibilityBirthDate: birthDate),
+      );
+      if (uid != Supabase.instance.client.auth.currentUser?.id) {
+        throw StateError('La sesión cambió durante la actualización.');
+      }
+      if (uid != null) {
+        await _receipts.saveAuthenticated(receipt, activeUserId: uid);
+      } else {
+        if (await _receipts.getOrCreateGuestId() != guestId ||
+            Supabase.instance.client.auth.currentUser != null) {
+          throw StateError('La identidad invitada cambió.');
+        }
+        await _receipts.saveGuest(receipt);
       }
       if (reviewContext.mounted) Navigator.of(reviewContext).pop();
     } catch (_) {

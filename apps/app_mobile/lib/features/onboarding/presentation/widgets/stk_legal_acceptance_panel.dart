@@ -52,6 +52,7 @@ class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
   bool _termsReviewed = false;
   bool _privacyReviewed = false;
   bool _openingDocument = false;
+  int _reviewGeneration = 0;
 
   @override
   void didUpdateWidget(covariant StkLegalAcceptancePanel oldWidget) {
@@ -60,8 +61,18 @@ class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
         oldWidget.documents.termsSha256 != widget.documents.termsSha256 ||
         oldWidget.documents.privacyVersion != widget.documents.privacyVersion ||
         oldWidget.documents.privacySha256 != widget.documents.privacySha256 ||
+        oldWidget.documents.termsUrl != widget.documents.termsUrl ||
+        oldWidget.documents.privacyUrl != widget.documents.privacyUrl ||
+        oldWidget.documents.approvedAndPublished !=
+            widget.documents.approvedAndPublished ||
+        oldWidget.birthDate != widget.birthDate ||
         oldWidget.subjectId != widget.subjectId ||
-        oldWidget.subjectType != widget.subjectType) {
+        oldWidget.subjectType != widget.subjectType ||
+        oldWidget.locale != widget.locale ||
+        oldWidget.acceptanceSource != widget.acceptanceSource) {
+      // Invalidate even an in-flight document read. Older callbacks must not
+      // acknowledge new versions, subjects or declared birth dates.
+      _reviewGeneration++;
       _termsReviewed = false;
       _privacyReviewed = false;
       _termsAccepted = false;
@@ -71,9 +82,7 @@ class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
 
   Future<void> _review({required bool terms}) async {
     if (_openingDocument || !widget.documents.canCollectAcceptance) return;
-    final openingTermsHash = widget.documents.termsSha256;
-    final openingPrivacyHash = widget.documents.privacySha256;
-    final openingSubjectId = widget.subjectId;
+    final generation = _reviewGeneration;
     setState(() => _openingDocument = true);
     bool viewed = false;
     try {
@@ -85,9 +94,8 @@ class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
         setState(() {
           _openingDocument = false;
           if (viewed &&
-              widget.documents.termsSha256 == openingTermsHash &&
-              widget.documents.privacySha256 == openingPrivacyHash &&
-              widget.subjectId == openingSubjectId) {
+              generation == _reviewGeneration &&
+              widget.documents.canCollectAcceptance) {
             if (terms) {
               _termsReviewed = true;
             } else {

@@ -22,6 +22,25 @@ void main() {
     expect(privacy, isNot(contains('apps/app_web')));
   });
 
+  test('existing profile is saved before legal receipt, with identity recheck',
+      () {
+    final privacy = File(
+      'lib/features/profile/presentation/pages/stk_mobile_privacy_page.dart',
+    ).readAsStringSync();
+    final profileWrite = privacy.indexOf(
+      'await ref.read(userExperienceProfileProvider.notifier).updateProfile(');
+    final receiptWrite = privacy.indexOf(
+      'await _receipts.saveAuthenticated(receipt, activeUserId: uid)');
+    expect(profileWrite, greaterThan(0));
+    expect(receiptWrite, greaterThan(profileWrite));
+    expect(privacy, contains('receipt.isCurrentFor('));
+    expect(privacy, contains('if (current == null)'));
+    expect(privacy, contains(
+      'uid != Supabase.instance.client.auth.currentUser?.id'));
+    expect(privacy, isNot(contains(
+      'stk_set_adult_nutrition_verification(')));
+  });
+
   test('new 15+ Food Vision checks consent before ALL image requests', () {
     final core = File(
       '../../packages/core/lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
