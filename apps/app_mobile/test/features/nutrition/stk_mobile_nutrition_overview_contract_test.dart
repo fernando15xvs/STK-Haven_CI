@@ -71,7 +71,8 @@ void main() {
     expect(page, contains('if (!_dishHintFromHistory) _dishHintController.clear()'));
     // The picker must reject stale completions after discarding, logging out
     // or opening a newer image; keep account isolation in the same guard.
-    expect(picker, contains('if (!mounted || photo == null || !_sameNutritionOwner ||'));
+    expect(picker, contains('if (!mounted || photo == null ||'));
+    expect(picker, contains('!_sameMutationSession(pickSessionAtStart)'));
     expect(picker, contains('pickEpoch != _analysisEpoch'));
     expect(picker, contains('FoodVisionMobileImageGuard.errorFor(photo.bytes, photo.mimeType)'));
     expect(page, contains("label: const Text('Descartar')"));
@@ -119,7 +120,8 @@ void main() {
     expect(page, contains('hasVerifiedAccess()'));
     expect(page, contains('if(!stillVerified || !_hasAdultNumericAccess)'));
     expect(page, contains('epoch!=_analysisEpoch'));
-    expect(page, contains('if(!_sameNutritionOwner)'));
+    expect(page, contains('_sameMutationSession(sessionAtStart)'));
+    expect(page, contains('NutritionMutationSessionPolicy.isCurrent('));
     expect(page, contains('Future<void> _reviewWaterTarget() async'));
     expect(page, contains('Future<void> _reviewStepTarget() async'));
     expect(page, contains('Future<void> _saveEnergyPlan() async'));

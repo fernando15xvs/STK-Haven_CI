@@ -57,7 +57,8 @@ void main(){
     expect(core,contains('epoch!=_analysisEpoch'));
     expect(core,contains('final stillVerified=await NutritionAdultAccessService('));
     expect(core,contains('!stillVerified || !_hasAdultNumericAccess'));
-    expect(core,contains('if(!_sameNutritionOwner)return;'));
+    expect(core,contains('if(!_sameMutationSession(sessionAtStart))return;'));
+    expect(core,contains('NutritionMutationSessionPolicy.isCurrent('));
     expect(core,contains('when !estimate.numericNutritionAvailable ||'));
     expect(core,contains('widget.onRefreshAdultAccess?.call()'));
   });

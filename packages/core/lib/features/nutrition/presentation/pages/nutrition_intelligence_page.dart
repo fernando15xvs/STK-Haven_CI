@@ -11,6 +11,7 @@ import 'package:core/features/nutrition/application/latest_body_measurements.dar
 import 'package:core/features/nutrition/application/nutrition_weight_trend.dart';
 import 'package:core/features/nutrition/application/nutrition_plan_measurement_review.dart';
 import 'package:core/features/nutrition/application/nutrition_access_state.dart';
+import 'package:core/features/nutrition/application/nutrition_mutation_session_policy.dart';
 import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
 import 'package:core/features/nutrition/application/food_vision_mobile_image_guard.dart';
 import 'package:core/features/nutrition/presentation/widgets/stk_age_aware_nutrition_goals.dart';
@@ -185,6 +186,21 @@ class _NutritionIntelligencePageState
         _nutritionOwnerId;
     }catch(_){return _nutritionOwnerId=='guest';}
   }
+
+  // A late confirmation must never edit a different account's local history.
+  // Compare only in memory: bearer tokens are not stored in Hive or logs.
+  String? get _currentNutritionToken {
+    try { return Supabase.instance.client.auth.currentSession?.accessToken; }
+    catch (_) { return null; }
+  }
+
+  bool _sameMutationSession(String? tokenAtStart) => _sameNutritionOwner &&
+    NutritionMutationSessionPolicy.isCurrent(
+      initialOwnerId: _nutritionOwnerId,
+      initialAccessToken: tokenAtStart,
+      currentOwnerId: _nutritionOwnerId,
+      currentAccessToken: _currentNutritionToken,
+    );
 
   @override
   void didUpdateWidget(covariant NutritionIntelligencePage oldWidget) {
@@ -1606,9 +1622,11 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _setHistoryFavorite(NutritionHistoryEntry entry) async {
+    final sessionAtStart = _currentNutritionToken;
+    if (!_sameMutationSession(sessionAtStart)) return;
     try{
       await _historyRepository.setFavorite(entry.id,!entry.isFavorite);
-      if(mounted){
+      if(mounted && _sameMutationSession(sessionAtStart)){
         setState(()=>_history=_historyRepository.getEntries());
       }
     }catch(_){
@@ -1636,11 +1654,12 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _saveCurrentEstimate(FoodVisionEstimate estimate) async {
-    if(!_sameNutritionOwner)return;
+    final sessionAtStart = _currentNutritionToken;
+    if(!_sameMutationSession(sessionAtStart))return;
     if(estimate.numericNutritionAvailable){
       final stillVerified=await NutritionAdultAccessService(
         Supabase.instance.client).hasVerifiedAccess();
-      if(!mounted || !_sameNutritionOwner)return;
+      if(!mounted || !_sameMutationSession(sessionAtStart))return;
       if(!stillVerified){
         setState(_clearSensitiveSessionState);
         widget.onRefreshAdultAccess?.call();
@@ -1657,7 +1676,7 @@ class _NutritionIntelligencePageState
     }
     final now = DateTime.now();
     final id = 'food_${now.microsecondsSinceEpoch}';
-    if(!_sameNutritionOwner)return;
+    if(!_sameMutationSession(sessionAtStart))return;
     await _historyRepository.save(
       NutritionHistoryEntry(
         id: id,
@@ -1666,7 +1685,7 @@ class _NutritionIntelligencePageState
         estimate: estimate,
       ),
     );
-    if (!mounted || !_sameNutritionOwner) return;
+    if (!mounted || !_sameMutationSession(sessionAtStart)) return;
     setState(() => _history = _historyRepository.getEntries());
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -1676,6 +1695,8 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _importLegacyHistory() async {
+    final sessionAtStart = _currentNutritionToken;
+    if (!_sameMutationSession(sessionAtStart)) return;
     final confirmed=await showDialog<bool>(
       context:context,builder:(ctx)=>AlertDialog(
         title:const Text('Trasladar historial anterior'),
@@ -1692,10 +1713,10 @@ class _NutritionIntelligencePageState
         ],
       ),
     );
-    if(confirmed!=true || !mounted)return;
+    if(confirmed!=true || !mounted || !_sameMutationSession(sessionAtStart))return;
     try{
       final count=await _historyRepository.importLegacyEntries();
-      if(!mounted)return;
+      if(!mounted || !_sameMutationSession(sessionAtStart))return;
       setState(()=>_history=_historyRepository.getEntries());
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content:Text('$count registros locales trasladados.')));
@@ -1707,12 +1728,16 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _deleteHistoryEntry(String id) async {
+    final sessionAtStart = _currentNutritionToken;
+    if (!_sameMutationSession(sessionAtStart)) return;
     await _historyRepository.delete(id);
-    if (!mounted) return;
+    if (!mounted || !_sameMutationSession(sessionAtStart)) return;
     setState(() => _history = _historyRepository.getEntries());
   }
 
   Future<void> _confirmClearHistory() async {
+    final sessionAtStart = _currentNutritionToken;
+    if (!_sameMutationSession(sessionAtStart)) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1733,9 +1758,9 @@ class _NutritionIntelligencePageState
         ],
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || !mounted || !_sameMutationSession(sessionAtStart)) return;
     await _historyRepository.clear();
-    if (!mounted) return;
+    if (!mounted || !_sameMutationSession(sessionAtStart)) return;
     setState(() => _history = const <NutritionHistoryEntry>[]);
   }
 
@@ -1819,6 +1844,8 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _togglePlanPaused(NutritionGoalPlan current) async {
+    final sessionAtStart = _currentNutritionToken;
+    if (!_sameMutationSession(sessionAtStart)) return;
     final repo=_planRepository;
     if(repo==null)return;
     if(current.isPaused){
@@ -1832,10 +1859,11 @@ class _NutritionIntelligencePageState
         return;
       }
     }
+    if (!_sameMutationSession(sessionAtStart)) return;
     try{
       final next=current.copyWith(isPaused:!current.isPaused);
       await repo.save(next);
-      if(mounted)setState(()=>_activePlan=next);
+      if(mounted && _sameMutationSession(sessionAtStart))setState(()=>_activePlan=next);
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content:Text('No se pudo actualizar el estado del plan.')));
@@ -1843,6 +1871,8 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _chooseReviewInterval(NutritionGoalPlan current) async {
+    final sessionAtStart = _currentNutritionToken;
+    if (!_sameMutationSession(sessionAtStart)) return;
     final weeks=await showModalBottomSheet<int>(
       context:context,
       showDragHandle:true,
@@ -1865,7 +1895,8 @@ class _NutritionIntelligencePageState
         ],
       )),
     );
-    if(weeks==null || !mounted || _planRepository==null)return;
+    if(weeks==null || !mounted || _planRepository==null ||
+        !_sameMutationSession(sessionAtStart))return;
     final next=current.copyWith(
       nextReviewAt:weeks==0?null:DateTime.now().add(
         Duration(days:7*weeks)),
@@ -1873,7 +1904,7 @@ class _NutritionIntelligencePageState
     );
     try{
       await _planRepository!.save(next);
-      if(mounted)setState(()=>_activePlan=next);
+      if(mounted && _sameMutationSession(sessionAtStart))setState(()=>_activePlan=next);
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content:Text('No se pudo guardar la revisión.')));
@@ -1881,6 +1912,8 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _confirmRemoveEnergyPlan() async {
+    final sessionAtStart = _currentNutritionToken;
+    if (!_sameMutationSession(sessionAtStart)) return;
     final confirmed=await showDialog<bool>(
       context:context,builder:(ctx)=>AlertDialog(
         title:const Text('Quitar objetivo nutricional'),
@@ -1893,10 +1926,10 @@ class _NutritionIntelligencePageState
             child:const Text('Quitar plan')),
         ],
       ));
-    if(confirmed!=true || !mounted)return;
+    if(confirmed!=true || !mounted || !_sameMutationSession(sessionAtStart))return;
     try{
       await _planRepository?.clear();
-      if(mounted)setState(()=>_activePlan=null);
+      if(mounted && _sameMutationSession(sessionAtStart))setState(()=>_activePlan=null);
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content:Text('No se pudo borrar el plan.')));
@@ -1962,6 +1995,8 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _saveEnergyPlan() async {
+    final sessionAtStart = _currentNutritionToken;
+    if (!_sameMutationSession(sessionAtStart)) return;
     final estimate=_energyEstimate;
     final profile=_calculatedProfile;
     final body=_calculatedBody;
@@ -1972,7 +2007,7 @@ class _NutritionIntelligencePageState
     // Never trust local age or a stale widget flag to grant access.
     final verified=await NutritionAdultAccessService(
       Supabase.instance.client).hasVerifiedAccess();
-    if(!mounted)return;
+    if(!mounted || !_sameMutationSession(sessionAtStart))return;
     final declaredAge=ref.read(userExperienceProfileProvider).value
       ?.ageAt(DateTime.now());
     if(!verified || (declaredAge!=null && declaredAge<18)){
@@ -2000,7 +2035,7 @@ class _NutritionIntelligencePageState
             child:const Text('Guardar plan')),
         ],
       ));
-    if(confirmed!=true || !mounted)return;
+    if(confirmed!=true || !mounted || !_sameMutationSession(sessionAtStart))return;
     // The permission checked before opening the dialog may have expired or
     // been revoked while the user was reading it. Recheck before persisting,
     // and never write an account-scoped plan into a different user's box.
@@ -2008,6 +2043,7 @@ class _NutritionIntelligencePageState
       Supabase.instance.client).hasVerifiedAccess();
     if(!mounted)return;
     if(!freshVerified || !_hasAdultNumericAccess ||
+       !_sameMutationSession(sessionAtStart) ||
        Supabase.instance.client.auth.currentUser?.id!=repo.ownerId){
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content:Text('El acceso adulto cambió. No se guardó el plan.')));
@@ -2030,7 +2066,7 @@ class _NutritionIntelligencePageState
     );
     try{
       await repo.save(plan);
-      if(mounted){
+      if(mounted && _sameMutationSession(sessionAtStart)){
         setState(()=>_activePlan=plan);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content:const Text('Plan guardado. Las metas de agua y pasos '
@@ -2076,6 +2112,8 @@ class _NutritionIntelligencePageState
 
   Future<void> _pickAndAnalyze(NutritionPhotoSource source) async {
     if (widget.mobileCompactLayout && _pickingPhoto) return;
+    final pickSessionAtStart = _currentNutritionToken;
+    if (!_sameMutationSession(pickSessionAtStart)) return;
     final pickEpoch = _analysisEpoch;
     if (widget.mobileCompactLayout) {
       setState(() => _pickingPhoto = true);
@@ -2087,7 +2125,7 @@ class _NutritionIntelligencePageState
       // Only mobile gets the new recoverable message. Other routes retain
       // the original picker error behavior.
       if (!widget.mobileCompactLayout) rethrow;
-      if (!mounted || !_sameNutritionOwner ||
+      if (!mounted || !_sameMutationSession(pickSessionAtStart) ||
           pickEpoch != _analysisEpoch) return;
       setState(() => _message =
           'No se pudo abrir esa foto. Revisa permisos o prueba otra imagen.');
@@ -2097,7 +2135,8 @@ class _NutritionIntelligencePageState
         setState(() => _pickingPhoto = false);
       }
     }
-    if (!mounted || photo == null || !_sameNutritionOwner ||
+    if (!mounted || photo == null ||
+        !_sameMutationSession(pickSessionAtStart) ||
         (widget.mobileCompactLayout && pickEpoch != _analysisEpoch)) return;
     // This stricter MIME/signature check is opt-in for MOBILE ONLY.
     final invalidImage = widget.mobileCompactLayout
@@ -2136,6 +2175,8 @@ class _NutritionIntelligencePageState
   }
 
   Future<void> _analyzePhoto(NutritionPhoto photo) async {
+    final sessionAtStart = _currentNutritionToken;
+    if (!_sameMutationSession(sessionAtStart)) return;
     if (widget.mobileCompactLayout) {
       final invalid = FoodVisionMobileImageGuard.errorFor(
         photo.bytes, photo.mimeType);
@@ -2157,7 +2198,7 @@ class _NutritionIntelligencePageState
       if (checkConsent != null) {
         final allowed = await checkConsent();
         if (!mounted || epoch != _analysisEpoch ||
-            !_sameNutritionOwner || owner != _nutritionOwnerId) return;
+            !_sameMutationSession(sessionAtStart) || owner != _nutritionOwnerId) return;
         if (!allowed) {
           setState(() => _message = widget.mobileCompactLayout
               ? 'No se envió la foto. Puedes continuar sin analizarla.'
@@ -2172,14 +2213,14 @@ class _NutritionIntelligencePageState
         dishHint: _dishHintController.text,
       );
       if (!mounted || epoch!=_analysisEpoch ||
-          !_sameNutritionOwner || owner!=_nutritionOwnerId)return;
+          !_sameMutationSession(sessionAtStart) || owner!=_nutritionOwnerId)return;
       // An authorization may expire during a slow image upload. Requery the
       // actual server before exposing ANY numeric result from that response.
       if(estimate.numericNutritionAvailable){
         final stillVerified=await NutritionAdultAccessService(
           Supabase.instance.client).hasVerifiedAccess();
         if(!mounted || epoch!=_analysisEpoch ||
-           !_sameNutritionOwner || owner!=_nutritionOwnerId)return;
+           !_sameMutationSession(sessionAtStart) || owner!=_nutritionOwnerId)return;
         if(!stillVerified || !_hasAdultNumericAccess){
           setState((){
             _clearSensitiveSessionState();
@@ -2192,11 +2233,13 @@ class _NutritionIntelligencePageState
       }
       setState(() => _foodEstimate = estimate);
     } catch (_) {
-      if (!mounted || epoch!=_analysisEpoch || !_sameNutritionOwner)return;
+      if (!mounted || epoch!=_analysisEpoch ||
+          !_sameMutationSession(sessionAtStart))return;
       setState(() => _message='No se pudo analizar el plato. '
         'Comprueba la conexión e inténtalo de nuevo.');
     } finally {
-      if (mounted && epoch==_analysisEpoch)
+      if (mounted && epoch==_analysisEpoch &&
+          _sameMutationSession(sessionAtStart))
         setState(() => _analyzing = false);
     }
   }
