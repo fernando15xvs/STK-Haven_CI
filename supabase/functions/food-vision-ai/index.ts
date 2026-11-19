@@ -153,6 +153,11 @@ const authenticatedHandler = withSupabase(
     if (!userId) {
       return jsonResponse({ error: 'Sesión inválida.' }, 401);
     }
+    // An anonymous Supabase Auth user also has an authenticated-role JWT.
+    // Never allow a lingering adult grant to be used from such a token,
+    // even if the same account UID was later upgraded.
+    const isAnonymousJwt =
+      (ctx.userClaims as { is_anonymous?: boolean } | null)?.is_anonymous === true;
 
     const mimeType = typeof payload.mimeType === 'string'
       ? payload.mimeType.trim().toLowerCase()
@@ -168,7 +173,7 @@ const authenticatedHandler = withSupabase(
     // Fallback is allowed ONLY if the new RPC is genuinely absent, never on
     // a revocation, malformed result, permission error or network outage.
     let hasVerifiedAdultNutritionAccess = false;
-    if (payload.adultNumericNutrition === true) {
+    if (payload.adultNumericNutrition === true && !isAnonymousJwt) {
       const { data: permitted, error: capabilityError } = await admin.rpc(
         'stk_service_can_use_nutrition_capability', {
           p_user_id: userId,

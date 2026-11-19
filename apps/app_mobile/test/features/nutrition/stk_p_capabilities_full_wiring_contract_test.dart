@@ -31,6 +31,10 @@ void main() {
     expect(edge, contains("'stk_service_can_use_nutrition_capability'"));
     expect(edge, contains("p_capability: 'personalizedAdultEnergy'"));
     expect(edge, contains('p_user_id: userId'));
+    expect(edge, contains('const isAnonymousJwt ='));
+    expect(edge, contains('payload.adultNumericNutrition === true && !isAnonymousJwt'));
+    expect(edge, contains('ctx.userClaims as { is_anonymous?: boolean }'));
+
     expect(edge, contains("capabilityError.code === 'PGRST202'"));
     expect(edge, contains("capabilityError.code === '42883'"));
     expect(edge, contains('permitted === true'));
