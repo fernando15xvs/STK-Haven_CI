@@ -697,6 +697,14 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Route Maven Central dependencies through Google mirror
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s ci/public/maven_central_mirror.gradle
+          mkdir -p "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
+          cp ci/public/maven_central_mirror.gradle "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/stk-maven-central-mirror.gradle"
+          echo "CI Gradle mirror configured (includes Flutter composite builds)"
       - name: Verify 12 sha-pinned original realistic transparent anatomy PNGs
         working-directory: apps/app_mobile
         run: |
