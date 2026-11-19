@@ -29,6 +29,8 @@ class NutritionAdultAccessService {
       userId: user?.id,
       isAnonymous: user?.isAnonymous ?? false,
       currentUserId: () => client.auth.currentUser?.id,
+      sessionToken: client.auth.currentSession?.accessToken,
+      currentSessionToken: () => client.auth.currentSession?.accessToken,
       fetch: () => client.rpc('stk_has_adult_nutrition_access'),
     );
   }
@@ -40,20 +42,31 @@ class NutritionAdultAccessService {
     required String? userId,
     required bool isAnonymous,
     required String? Function() currentUserId,
+    // An identical user ID can log out and back in under a different session.
+    // Keep this optional for pure callers; checkStatus always supplies both.
+    String? sessionToken,
+    String? Function()? currentSessionToken,
     required Future<dynamic> Function() fetch,
     Duration timeout = const Duration(seconds: 12),
   }) async {
-    if (userId == null || userId.isEmpty || isAnonymous) {
+    if (userId == null || userId.isEmpty || isAnonymous ||
+        (currentSessionToken != null &&
+            (sessionToken == null || sessionToken.isEmpty))) {
       return NutritionAdultCheck.signedOut;
     }
+    bool isOriginalSession() =>
+        currentUserId() == userId &&
+        (currentSessionToken == null ||
+            currentSessionToken() == sessionToken);
+    if (!isOriginalSession()) return NutritionAdultCheck.signedOut;
     try {
       final response = await fetch().timeout(timeout);
-      if (currentUserId() != userId) return NutritionAdultCheck.signedOut;
+      if (!isOriginalSession()) return NutritionAdultCheck.signedOut;
       if (response == true) return NutritionAdultCheck.verified;
       if (response == false) return NutritionAdultCheck.unverified;
       return NutritionAdultCheck.unavailable;
     } catch (_) {
-      if (currentUserId() != userId) return NutritionAdultCheck.signedOut;
+      if (!isOriginalSession()) return NutritionAdultCheck.signedOut;
       return NutritionAdultCheck.unavailable;
     }
   }

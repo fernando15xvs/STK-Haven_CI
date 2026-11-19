@@ -17,6 +17,9 @@ void main() {
     expect(mobile, contains('if (!StkMobileLegalConfig.enabled)'));
     expect(mobile, contains('if (!docs.canCollectAcceptance) return false;'));
     expect(mobile, contains('openingUser == Supabase.instance.client.auth.currentUser?.id'));
+    expect(mobile, contains('openingToken == Supabase.instance.client.auth.currentSession?.accessToken'));
+    expect(mobile, contains('!samePhotoConsentSession()'));
+    expect(mobile, contains('tokenAtStart == Supabase.instance.client.auth.currentSession?.accessToken'));
     expect(mobile, contains("'Enviar esta foto'"));
     expect(mobile, contains("'No enviar'"));
     expect(mobile, contains('approved == true'));

@@ -32,18 +32,28 @@ class _NutritionIntelligencePageMobileState
   // Owner of the RPC result. A previous account cannot donate a successful
   // check even for one frame before the auth stream emits its next event.
   String? _accessOwnerId;
+  // In-memory only: a relogin under the same UID is a new authorization scope.
+  String? _accessOwnerToken;
   StreamSubscription<AuthState>? _authSubscription;
   Future<void> _intentWriteTail = Future<void>.value();
 
   /// Serialize rapid taps. A late write is always scoped to the original UID.
-  Future<void> _saveNutritionIntent(StkNutritionIntent intent, String? ownerId) {
+  Future<void> _saveNutritionIntent(
+      StkNutritionIntent intent, String? ownerId, String? ownerToken) {
     final operation = _intentWriteTail.then((_) async {
-      if (!mounted || Supabase.instance.client.auth.currentUser?.id != ownerId) {
-        throw StateError('La cuenta cambió durante la selección.');
+      if (!mounted ||
+          Supabase.instance.client.auth.currentUser?.id != ownerId ||
+          Supabase.instance.client.auth.currentSession?.accessToken != ownerToken) {
+        throw StateError('La sesión cambió durante la selección.');
       }
       await StkNutritionIntentRepository(
         Hive.box<dynamic>(HiveBoxes.metadata), ownerId: ownerId,
       ).save(intent);
+      if (!mounted ||
+          Supabase.instance.client.auth.currentUser?.id != ownerId ||
+          Supabase.instance.client.auth.currentSession?.accessToken != ownerToken) {
+        throw StateError('La sesión cambió durante la selección.');
+      }
     });
     // Keep the queue usable after a failed storage write; return the original
     // operation so the chooser can display an error rather than fake success.
@@ -54,6 +64,7 @@ class _NutritionIntelligencePageMobileState
   Future<NutritionAdultCheck> _checkAccess() {
     final client = Supabase.instance.client;
     _accessOwnerId = client.auth.currentUser?.id;
+    _accessOwnerToken = client.auth.currentSession?.accessToken;
     return NutritionAdultAccessService(client).checkStatus();
   }
 
@@ -100,7 +111,9 @@ class _NutritionIntelligencePageMobileState
         // FutureBuilder may retain an old successful result while a new
         // account/session RPC is pending. Never reuse that grant.
         final currentUid = Supabase.instance.client.auth.currentUser?.id;
-        final status = currentUid != _accessOwnerId
+        final currentToken = Supabase.instance.client.auth.currentSession?.accessToken;
+        final status = currentUid != _accessOwnerId ||
+                currentToken != _accessOwnerToken
             ? (currentUid == null
                 ? NutritionAdultCheck.signedOut
                 : NutritionAdultCheck.checking)
@@ -118,7 +131,7 @@ class _NutritionIntelligencePageMobileState
           Hive.box<dynamic>(HiveBoxes.metadata), ownerId: currentUid,
         ).read(),
         onSaveStkNutritionIntent: (intent) =>
-            _saveNutritionIntent(intent, currentUid),
+            _saveNutritionIntent(intent, currentUid, currentToken),
         // The 15+ release gate includes a fresh check BEFORE every image
         // request, including reanalysis after revoking a previous consent.
         // Even legacy users must opt in per photo before anything leaves
@@ -147,6 +160,10 @@ class _NutritionIntelligencePageMobileState
     }
     if (!docs.canCollectAcceptance) return false;
     final uid = Supabase.instance.client.auth.currentUser?.id;
+    final tokenAtStart = Supabase.instance.client.auth.currentSession?.accessToken;
+    bool samePhotoConsentSession() =>
+        uid == Supabase.instance.client.auth.currentUser?.id &&
+        tokenAtStart == Supabase.instance.client.auth.currentSession?.accessToken;
     final store = StkMobileLegalReceiptStore(
       Hive.box<dynamic>(HiveBoxes.metadata),
     );
@@ -157,7 +174,7 @@ class _NutritionIntelligencePageMobileState
         ? StkLegalSubjectType.guest
         : StkLegalSubjectType.authenticated;
     final id = uid ?? await store.getOrCreateGuestId();
-    if (!mounted || uid != Supabase.instance.client.auth.currentUser?.id) {
+    if (!mounted || !samePhotoConsentSession()) {
       return false;
     }
     final receipt = uid == null
@@ -201,19 +218,21 @@ class _NutritionIntelligencePageMobileState
         ],
       ),
     );
-    if (allowed != true || !mounted ||
-        uid != Supabase.instance.client.auth.currentUser?.id) return false;
+    if (allowed != true || !mounted || !samePhotoConsentSession()) {
+      return false;
+    }
     try {
       await consentStore.setGranted(
         purpose: StkOptionalConsentPurpose.foodVisionAi,
         documents: docs,
         subjectType: type,
         subjectId: id,
-        activeUserId: Supabase.instance.client.auth.currentUser?.id,
+        activeUserId: uid,
         granted: true,
         legalReceipt: receipt,
         now: DateTime.now(),
       );
+      if (!samePhotoConsentSession()) return false;
       return consentStore.isGranted(
         purpose: StkOptionalConsentPurpose.foodVisionAi,
         documents: docs,
@@ -233,6 +252,7 @@ class _NutritionIntelligencePageMobileState
   Future<bool> _requestOneTimePhotoConsent() async {
     if (!mounted) return false;
     final openingUser = Supabase.instance.client.auth.currentUser?.id;
+    final openingToken = Supabase.instance.client.auth.currentSession?.accessToken;
     final approved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -258,7 +278,8 @@ class _NutritionIntelligencePageMobileState
     );
     return approved == true &&
         mounted &&
-        openingUser == Supabase.instance.client.auth.currentUser?.id;
+        openingUser == Supabase.instance.client.auth.currentUser?.id &&
+        openingToken == Supabase.instance.client.auth.currentSession?.accessToken;
   }
 
   Future<NutritionPhoto?> _pickPhoto(NutritionPhotoSource source) async {

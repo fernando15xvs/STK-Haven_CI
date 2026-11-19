@@ -8,12 +8,16 @@ void main() {
     String? initialUserId = 'account-a',
     bool anonymous = false,
     String? Function()? currentUserId,
+    String? sessionToken,
+    String? Function()? currentSessionToken,
     Future<dynamic> Function()? fetch,
     Duration timeout = const Duration(milliseconds: 80),
   }) => NutritionAdultAccessService.queryStatus(
     userId: initialUserId,
     isAnonymous: anonymous,
     currentUserId: currentUserId ?? () => initialUserId,
+    sessionToken: sessionToken,
+    currentSessionToken: currentSessionToken,
     fetch: fetch ?? () async => false,
     timeout: timeout,
   );
@@ -84,6 +88,59 @@ void main() {
     final status = await request;
     expect(status, NutritionAdultCheck.signedOut);
     expect(status.allowsNumeric, isFalse);
+  });
+
+  test('same user ID re-login cannot inherit old session grant', () async {
+    final pending = Completer<dynamic>();
+    var activeToken = 'login-A';
+    final request = inspect(
+      initialUserId: 'account-a',
+      currentUserId: () => 'account-a',
+      sessionToken: 'login-A',
+      currentSessionToken: () => activeToken,
+      fetch: () => pending.future,
+    );
+    activeToken = 'login-B'; // same UID, but a different auth session
+    pending.complete(true);
+    final status = await request;
+    expect(status, NutritionAdultCheck.signedOut);
+    expect(status.allowsNumeric, isFalse);
+  });
+
+  test('missing access token cannot even issue the grant RPC', () async {
+    var calls = 0;
+    final status = await inspect(
+      sessionToken: null,
+      currentSessionToken: () => 'active-token',
+      fetch: () async { calls++; return true; },
+    );
+    expect(status, NutritionAdultCheck.signedOut);
+    expect(calls, 0);
+  });
+
+  test('rotated session plus timeout cannot claim a network error as access',
+      () async {
+    final pending = Completer<dynamic>();
+    var activeToken = 'old';
+    final request = inspect(
+      sessionToken: 'old',
+      currentSessionToken: () => activeToken,
+      fetch: () => pending.future,
+      timeout: const Duration(milliseconds: 10),
+    );
+    activeToken = 'new';
+    expect(await request, NutritionAdultCheck.signedOut);
+    pending.complete(true);
+  });
+
+  test('stable authenticated session retains valid backend decision',
+      () async {
+    final status = await inspect(
+      sessionToken: 'stable',
+      currentSessionToken: () => 'stable',
+      fetch: () async => true,
+    );
+    expect(status, NutritionAdultCheck.verified);
   });
 
   test('signing out while an error arrives does not show old-account error',
