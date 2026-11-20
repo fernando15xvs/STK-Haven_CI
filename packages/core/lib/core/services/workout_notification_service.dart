@@ -89,7 +89,13 @@ class WorkoutNotificationService {
   /// ensures the plugin is ready without requiring startup to block.
   static Future<void> initialize() {
     if (kIsWeb) return Future<void>.value();
-    return _initialization ??= _initialize();
+    // Startup may race OS permission/plugin availability. A failed Future
+    // must not poison every future rest notification for this app session.
+    // Keep concurrent attempts coalesced, but allow retry after failure.
+    return _initialization ??= _initialize().onError((error, stack) {
+      _initialization = null;
+      Error.throwWithStackTrace(error, stack);
+    });
   }
 
   static Future<void> _initialize() async {

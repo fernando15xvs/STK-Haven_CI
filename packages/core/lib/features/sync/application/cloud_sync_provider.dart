@@ -75,6 +75,18 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
 
   SupabaseClient get _client => Supabase.instance.client;
 
+  // UID alone is insufficient: the same account can sign out and return
+  // under a different token while a download or Hive write is in flight.
+  bool _sameCloudSession(String userId, String? token) {
+    final identity = ref.read(appIdentityProvider);
+    return token != null &&
+        token.isNotEmpty &&
+        identity.signedIn &&
+        identity.userId == userId &&
+        _client.auth.currentUser?.id == userId &&
+        _client.auth.currentSession?.accessToken == token;
+  }
+
   @override
   CloudSyncState build() {
     final identity = ref.read(appIdentityProvider);
@@ -82,6 +94,7 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
     ref.listen(appIdentityProvider, (previous, next) {
       final sessionChanged =
           previous?.sessionKind != next.sessionKind ||
+          previous?.userId != next.userId ||
           previous?.email != next.email;
       if (!sessionChanged) return;
 
@@ -89,7 +102,8 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
         signedIn: next.signedIn,
         email: next.email,
         clearEmail: next.email == null,
-        clearRemoteUpdatedAt: !next.signedIn,
+        // Metadata fetched for the previous UID cannot remain visible.
+        clearRemoteUpdatedAt: true,
       );
     });
 
@@ -157,19 +171,30 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
   Future<void> signOut() async {
     if (state.busy) return;
     await ref.read(appIdentityProvider.notifier).signOut();
+    if (ref.read(appIdentityProvider).signedIn) {
+      _fail('No se pudo cerrar la sesión. Vuelve a intentarlo.');
+      return;
+    }
     ref.read(settingsProvider.notifier).setCloudSyncEnabled(false);
     state = const CloudSyncState(message: 'Sesión cerrada.');
   }
 
   Future<void> refreshRemoteMetadata() async {
+    // A background refresh must never unlock the upload/restore UI.
+    if (state.busy) return;
     final identity = ref.read(appIdentityProvider);
-    if (!identity.signedIn || identity.userId == null) return;
+    final token = _client.auth.currentSession?.accessToken;
+    if (identity.userId == null ||
+        !_sameCloudSession(identity.userId!, token)) return;
     try {
       final row = await _client
           .from(_table)
           .select('updated_at')
           .eq('user_id', identity.userId!)
           .maybeSingle();
+      // A sign-out, another UID, or a competing operation may have started
+      // while the query awaited the network. Drop the stale result entirely.
+      if (!_sameCloudSession(identity.userId!, token) || state.busy) return;
       final updatedRaw = row?['updated_at']?.toString();
       state = state.copyWith(
         signedIn: true,
@@ -177,7 +202,6 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
         remoteUpdatedAt:
             updatedRaw == null ? null : DateTime.tryParse(updatedRaw)?.toLocal(),
         clearRemoteUpdatedAt: updatedRaw == null,
-        operation: CloudSyncOperation.idle,
       );
     } catch (_) {
       // Metadata refresh is best-effort. Explicit upload/download surfaces errors.
@@ -191,6 +215,12 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       return false;
     }
     if (state.busy) return false;
+    final userId = identity.userId!;
+    final token = _client.auth.currentSession?.accessToken;
+    if (!_sameCloudSession(userId, token)) {
+      _fail('La sesión cambió. Inicia sesión de nuevo para subir la copia.');
+      return false;
+    }
 
     state = state.copyWith(
       operation: CloudSyncOperation.uploading,
@@ -204,13 +234,21 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
         throw const FormatException('Backup local inválido.');
       }
 
+      if (!_sameCloudSession(userId, token)) {
+        _fail('La cuenta cambió antes de subir la copia.');
+        return false;
+      }
       final now = DateTime.now().toUtc();
       await _client.from(_table).upsert({
-        'user_id': identity.userId!,
+        'user_id': userId,
         'backup_payload': decoded,
         'schema_version': BackupService.currentBackupSchemaVersion,
         'updated_at': now.toIso8601String(),
       });
+      if (!_sameCloudSession(userId, token)) {
+        _fail('La cuenta cambió durante la subida. Comprueba la copia antes de continuar.');
+        return false;
+      }
       ref.read(settingsProvider.notifier).setCloudSyncEnabled(true);
       state = state.copyWith(
         signedIn: true,
@@ -239,6 +277,12 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       return false;
     }
     if (state.busy) return false;
+    final userId = identity.userId!;
+    final token = _client.auth.currentSession?.accessToken;
+    if (!_sameCloudSession(userId, token)) {
+      _fail('La sesión cambió. Inicia sesión de nuevo para restaurar.');
+      return false;
+    }
 
     state = state.copyWith(
       operation: CloudSyncOperation.downloading,
@@ -249,8 +293,12 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       final row = await _client
           .from(_table)
           .select('backup_payload, updated_at')
-          .eq('user_id', identity.userId!)
+          .eq('user_id', userId)
           .maybeSingle();
+      if (!_sameCloudSession(userId, token)) {
+        _fail('La sesión cambió durante la descarga. No se restauró la copia.');
+        return false;
+      }
       if (row == null || row['backup_payload'] == null) {
         _fail('Todavía no existe una copia en la nube para esta cuenta.');
         return false;
@@ -267,7 +315,8 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
       // never restore the previous account's backup into a new session.
       final currentIdentity = ref.read(appIdentityProvider);
       if (!currentIdentity.signedIn ||
-          currentIdentity.userId != identity.userId) {
+          currentIdentity.userId != userId ||
+          !_sameCloudSession(userId, token)) {
         _fail('La cuenta cambió durante la descarga. No se restauró la copia.');
         return false;
       }
@@ -279,7 +328,14 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
         validation.parsedData!,
         schemaVersion:
             validation.schemaVersion ?? BackupService.currentBackupSchemaVersion,
+        allowCommit: () =>
+            _sameCloudSession(userId, token) &&
+            ref.read(activeWorkoutProvider).session == null,
       );
+      if (!_sameCloudSession(userId, token)) {
+        _fail('La cuenta cambió durante la restauración. Se protegieron los datos locales.');
+        return false;
+      }
       await TrainingProgramRepository.fromHive().hydrateFromBackupMetadata();
       await BackupActivityService.markRestored(source: 'nube');
       _invalidateRestoredState();

@@ -175,6 +175,42 @@ void main() {
     );
   });
 
+  test('cloud restoration refuses to start after the session changes', () async {
+    final history = Hive.box<HiveWorkoutSession>(HiveBoxes.history);
+    await history.put('original', originalWorkout('original'));
+    await expectLater(
+      BackupService().restoreBackup(
+        {'settings': {}},
+        allowCommit: () => false,
+      ),
+      throwsA(isA<StateError>()),
+    );
+    expect(history.containsKey('original'), isTrue);
+    expect(Hive.box<dynamic>(HiveBoxes.restoreJournal)
+        .containsKey(BackupService.pendingRestoreJournalKey), isFalse);
+  });
+
+  test('cloud restoration rolls back if account changes during disk writes',
+      () async {
+    final history = Hive.box<HiveWorkoutSession>(HiveBoxes.history);
+    await history.put('original', originalWorkout('original'));
+    var checks = 0;
+    await expectLater(
+      BackupService().restoreBackup(
+        {'settings': {}},
+        // The first two checks allow journaling and the destructive restore.
+        // The third denies committing it after the account switches.
+        allowCommit: () => ++checks < 3,
+      ),
+      throwsA(isA<StateError>()),
+    );
+    expect(checks, 3);
+    expect(history.get('original')?.exercises.single.sets.first.weight, 50);
+    expect(Hive.box<dynamic>(HiveBoxes.restoreJournal)
+        .containsKey(BackupService.pendingRestoreJournalKey), isFalse);
+    expect(await BackupService.recoverInterruptedRestore(), isFalse);
+  });
+
   test('B1.8: database startup recovery runs after opening typed boxes', () {
     final source = File('lib/database/hive/hive_database.dart')
         .readAsStringSync();

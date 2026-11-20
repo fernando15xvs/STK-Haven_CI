@@ -239,13 +239,21 @@ class BackupService {
   Future<void> restoreBackup(
     Map<String, dynamic> data, {
     int schemaVersion = currentBackupSchemaVersion,
+    // Cloud callers can withdraw authority during a long-running restore.
+    // If it changes, the durable journal rolls back ALL local box writes.
+    bool Function()? allowCommit,
   }) async {
+    if (allowCommit != null && !allowCommit()) {
+      throw StateError('La cuenta cambió antes de restaurar la copia.');
+    }
     if (_restoreInProgress) {
       throw StateError('Ya hay una restauración de datos en curso.');
     }
     _restoreInProgress = true;
     try {
-      await _restoreBackupWithJournal(data, schemaVersion: schemaVersion);
+      await _restoreBackupWithJournal(
+        data, schemaVersion: schemaVersion, allowCommit: allowCommit,
+      );
     } finally {
       _restoreInProgress = false;
     }
@@ -254,6 +262,7 @@ class BackupService {
   Future<void> _restoreBackupWithJournal(
     Map<String, dynamic> data, {
     required int schemaVersion,
+    bool Function()? allowCommit,
   }) async {
     // Preflight must run before even opening a journal or touching a box.
     // A malformed imported file cannot trigger a destructive write.
@@ -284,7 +293,15 @@ class BackupService {
     await journal.flush();
 
     try {
+      if (allowCommit != null && !allowCommit()) {
+        throw StateError('La cuenta cambió durante la restauración.');
+      }
       await _restoreBackupLocked(data, schemaVersion: schemaVersion);
+      // The network session may have expired while Hive awaited disk writes.
+      // Abort and replay the old snapshot BEFORE removing the recovery journal.
+      if (allowCommit != null && !allowCommit()) {
+        throw StateError('La cuenta cambió durante la restauración.');
+      }
       // Never report success before the successful restore is committed
       // and the intent journal has been removed from local storage.
       await journal.delete(pendingRestoreJournalKey);
