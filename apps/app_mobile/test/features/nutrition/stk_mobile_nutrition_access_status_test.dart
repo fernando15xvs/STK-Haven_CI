@@ -36,7 +36,7 @@ void main() {
       (tester) async {
     var retries = 0;
     await tester.pumpWidget(fixture(onRetry: () => retries++));
-    expect(find.text('Plan calórico pendiente de acceso'), findsOneWidget);
+    expect(find.text('Plan calórico aún no activado'), findsOneWidget);
     expect(find.text('Volver a comprobar acceso'), findsNothing);
     expect(find.text('Reintentar'), findsNothing);
     expect(find.textContaining('Food Vision sigue disponible sin cifras'), findsOneWidget);
@@ -60,6 +60,7 @@ void main() {
     ));
     await tester.tap(find.byKey(const ValueKey('stk_nutrition_access_info')));
     await tester.pumpAndSettle();
+    expect(find.text('Plan calórico pendiente de revisión'), findsOneWidget);
     expect(find.textContaining('sin volver al onboarding'), findsOneWidget);
     expect(find.textContaining('el servidor debe autorizarlo'), findsOneWidget);
     final action = find.byKey(const ValueKey('stk_nutrition_open_legal'));

@@ -47,7 +47,9 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
                     ? 'No se pudo comprobar el acceso'
                     : signedOut
                         ? 'Plan disponible con tu cuenta'
-                        : 'Plan calórico pendiente de acceso';
+                        : legalReviewAvailable
+                            ? 'Plan calórico pendiente de revisión'
+                            : 'Plan calórico aún no activado';
 
     final subtitle = isMinor
         ? 'Explora comidas y hábitos sin metas calóricas.'
