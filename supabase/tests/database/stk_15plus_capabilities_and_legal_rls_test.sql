@@ -1,7 +1,7 @@
 -- P0/P1: isolated pgTAP, never touches production. All fixture writes
 -- roll back; only source migrations can create new security structures.
 begin;
-select plan(33);
+select plan(39);
 
 select has_table('stk_secure','stk_legal_releases','Private reviewed release ledger exists');
 select has_table('stk_secure','stk_legal_receipts','Private UID-scoped legal receipt ledger exists');
@@ -95,6 +95,20 @@ select lives_ok(
   'Matching legal texts allow authoritative acceptance event');
 select is((public.stk_get_nutrition_capabilities()->>'legalCurrent')::boolean,
   true,'Authoritative legal receipt is scoped to this UID');
+-- A signed but no-longer-live session must not create or withdraw receipts.
+select set_config('request.jwt.claims',
+  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"session_id":"fb000000-0000-0000-0000-000000000099"}',
+  true);
+select throws_ok(
+  $$select public.stk_record_legal_acceptance(
+    'v1',repeat('a',64),'v1',repeat('b',64),'18_plus')$$,
+  'P0001','Permanent authenticated account required',
+  'Revoked or forged session ID cannot renew authoritative consent');
+select is(public.stk_revoke_legal_acceptance(),false,
+  'Revoked session ID cannot alter the legal receipt');
+select set_config('request.jwt.claims',
+  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"session_id":"fb000000-0000-0000-0000-000000000001"}',
+  true);
 
 reset role;
 set local role service_role;
@@ -127,6 +141,30 @@ select set_config('request.jwt.claims',
   true);
 select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
   false,'Owner has no adult grant from legal acceptance or bare service call');
+-- Synthetic privileged row simulates a prior legitimately reviewed grant.
+-- No direct grant API is used; it remains service-only and fails closed.
+reset role;
+set local role service_role;
+insert into stk_secure.stk_nutrition_capability_grants
+  (user_id,capability,release_id,reviewed_age_band,review_reference,expires_at)
+select 'fd000000-0000-0000-0000-000000000001',
+  'personalizedAdultEnergy',id,'18_plus',
+  'ci-only historical dual-reviewed grant',now()+interval '14 days'
+from stk_secure.stk_legal_releases where is_current;
+
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims',
+  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"session_id":"fb000000-0000-0000-0000-000000000001"}',
+  true);
+select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
+  true,'Valid historical grant fixture is visible before legal renewal');
+select lives_ok(
+  $$select public.stk_record_legal_acceptance(
+    'v1',repeat('a',64),'v1',repeat('b',64),'18_plus')$$,
+  'Reaccepting identical legal documents revokes the previous review');
+select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
+  false,'A renewed legal receipt never resurrects an old nutrition grant');
 select set_config('request.jwt.claims',
   '{"sub":"fd000000-0000-0000-0000-000000000002","role":"authenticated","is_anonymous":false,"session_id":"fb000000-0000-0000-0000-000000000002"}',
   true);
@@ -151,9 +189,14 @@ set local role service_role;
 select ok((select count(*) from stk_secure.stk_nutrition_capability_audit
   where user_id='fd000000-0000-0000-0000-000000000001'
     and decision='legal_withdrawn')=0,'Without a grant no artificial numeric withdrawal audit is emitted');
+select ok((select count(*) from stk_secure.stk_nutrition_capability_audit
+  where user_id='fd000000-0000-0000-0000-000000000001'
+    and decision='revoke'
+    and review_reference='legal acceptance renewed: prior grant invalidated')=1,
+  'Renewal records an audit event for every invalidated active grant');
 select ok((select count(*) from stk_secure.stk_legal_receipt_audit
   where user_id='fd000000-0000-0000-0000-000000000001'
-    and event='accepted') = 1
+    and event='accepted') = 2
   and (select count(*) from stk_secure.stk_legal_receipt_audit
     where user_id='fd000000-0000-0000-0000-000000000001'
       and event='revoked') = 1,

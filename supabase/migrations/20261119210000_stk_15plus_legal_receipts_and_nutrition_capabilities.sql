@@ -125,7 +125,13 @@ declare
   v_receipt_id uuid;
 begin
   if v_uid is null
-     or coalesce((auth.jwt()->>'is_anonymous')::boolean, false) then
+     or coalesce((auth.jwt()->>'is_anonymous')::boolean, false)
+     or not exists (
+       select 1 from auth.sessions s
+       where s.user_id = v_uid
+         and s.id::text = auth.jwt()->>'session_id'
+         and (s.not_after is null or s.not_after > now())
+     ) then
     raise exception 'Permanent authenticated account required';
   end if;
   if p_declared_age_band not in ('15_17', '18_plus') then
@@ -152,7 +158,14 @@ begin
     (user_id,release_id,event,declared_age_band)
   values (v_uid,v_release.id,'accepted',p_declared_age_band);
 
-  -- A changed declaration must never keep an older grant.
+  -- Renewing consent (even unchanged text/band) invalidates EVERY old
+  -- review. Log every invalidation rather than silently revoking a grant.
+  insert into stk_secure.stk_nutrition_capability_audit
+    (user_id, capability, decision, policy_release_id, review_reference)
+  select g.user_id, g.capability, 'revoke', g.release_id,
+         'legal acceptance renewed: prior grant invalidated'
+    from stk_secure.stk_nutrition_capability_grants g
+   where g.user_id = v_uid and g.revoked_at is null;
   update stk_secure.stk_nutrition_capability_grants
      set revoked_at = now()
    where user_id = v_uid and revoked_at is null;
@@ -169,7 +182,13 @@ declare
   v_capability text;
 begin
   if v_uid is null
-    or coalesce((auth.jwt()->>'is_anonymous')::boolean, false) then
+    or coalesce((auth.jwt()->>'is_anonymous')::boolean, false)
+    or not exists (
+      select 1 from auth.sessions s
+      where s.user_id = v_uid
+        and s.id::text = auth.jwt()->>'session_id'
+        and (s.not_after is null or s.not_after > now())
+    ) then
     return false;
   end if;
   insert into stk_secure.stk_legal_receipt_audit
