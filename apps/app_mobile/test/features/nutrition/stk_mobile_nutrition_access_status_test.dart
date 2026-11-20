@@ -9,6 +9,8 @@ void main() {
     NutritionAccessState access = NutritionAccessState.adultUnverified,
     NutritionAdultCheck check = NutritionAdultCheck.unverified,
     VoidCallback? onRetry,
+    bool legalReviewAvailable = false,
+    VoidCallback? onManageLegal,
     double scale = 1,
   }) => MaterialApp(
     home: MediaQuery(
@@ -21,6 +23,8 @@ void main() {
               access: access,
               check: check,
               onRetry: onRetry,
+              legalReviewAvailable: legalReviewAvailable,
+              onManageLegal: onManageLegal,
             ),
           ),
         ),
@@ -40,9 +44,66 @@ void main() {
       const ValueKey('stk_nutrition_access_info'),
     ));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Los cálculos requieren un permiso activo del servidor'),
+    expect(find.textContaining('El plan calórico todavía no está activado'),
         findsOneWidget);
+    expect(find.textContaining('No necesitas reinstalar la app'), findsOneWidget);
+    expect(find.byKey(const ValueKey('stk_nutrition_open_legal')), findsNothing);
     expect(retries, 0);
+  });
+
+  testWidgets('approved release offers existing-user legal review, not onboarding',
+      (tester) async {
+    var opened = 0;
+    await tester.pumpWidget(fixture(
+      legalReviewAvailable: true,
+      onManageLegal: () => opened++,
+    ));
+    await tester.tap(find.byKey(const ValueKey('stk_nutrition_access_info')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('sin volver al onboarding'), findsOneWidget);
+    expect(find.textContaining('el servidor debe autorizarlo'), findsOneWidget);
+    final action = find.byKey(const ValueKey('stk_nutrition_open_legal'));
+    expect(action, findsOneWidget);
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    expect(opened, 1);
+    expect(find.byType(BottomSheet), findsNothing);
+  });
+
+  testWidgets('no legal CTA for a minor even when approved', (tester) async {
+    await tester.pumpWidget(fixture(
+      access: NutritionAccessState.minor,
+      check: NutritionAdultCheck.unverified,
+      legalReviewAvailable: true,
+      onManageLegal: () {},
+    ));
+    await tester.tap(find.byKey(const ValueKey('stk_nutrition_access_info')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('stk_nutrition_open_legal')), findsNothing);
+    expect(find.textContaining('sin objetivos de restricción'), findsOneWidget);
+  });
+
+  testWidgets('existing-account legal action remains reachable at 320dp, 200%',
+      (tester) async {
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.view.physicalSize = const Size(320, 720);
+    tester.view.devicePixelRatio = 1;
+    var opened = false;
+    await tester.pumpWidget(fixture(
+      scale: 2,
+      legalReviewAvailable: true,
+      onManageLegal: () => opened = true,
+    ));
+    await tester.tap(find.byKey(const ValueKey('stk_nutrition_access_info')));
+    await tester.pumpAndSettle();
+    final button = find.byKey(const ValueKey('stk_nutrition_open_legal'));
+    expect(button, findsOneWidget);
+    await tester.ensureVisible(button);
+    expect(tester.takeException(), isNull);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+    expect(opened, isTrue);
   });
 
   testWidgets('network failure has honest status and a working retry',

@@ -12,11 +12,17 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
     required this.access,
     required this.check,
     this.onRetry,
+    this.legalReviewAvailable = false,
+    this.onManageLegal,
   });
 
   final NutritionAccessState access;
   final NutritionAdultCheck check;
   final VoidCallback? onRetry;
+  /// Enabled only with published, approved legal documents in the mobile build.
+  final bool legalReviewAvailable;
+  /// Opens existing-user legal settings; never grants numeric access itself.
+  final VoidCallback? onManageLegal;
 
   @override
   Widget build(BuildContext context) {
@@ -73,10 +79,17 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
                         ? 'Puedes usar la orientación descriptiva. Los '
                             'cálculos personalizados requieren una cuenta '
                             'con autorización vigente.'
-                        : 'Los cálculos requieren un permiso activo del servidor. '
-                            'Ni cambiar tu fecha de nacimiento ni aceptar '
-                            'condiciones concede ese permiso. Mientras tanto, '
-                            'puedes reconocer alimentos sin cifras.';
+                        : legalReviewAvailable
+                            ? 'Puedes revisar las condiciones vigentes desde '
+                                'Perfil, sin volver al onboarding ni perder '
+                                'tus registros. Aceptarlas no concede el '
+                                'plan calórico: el servidor debe autorizarlo '
+                                'tras una revisión de elegibilidad.'
+                            : 'El plan calórico todavía no está activado en '
+                                'el servidor. No necesitas reinstalar la app '
+                                'ni repetir el onboarding: tus entrenamientos '
+                                'y medidas se conservan. Food Vision continúa '
+                                'disponible sin cifras.';
 
     return Container(
       key: const ValueKey('stk_mobile_nutrition_access'),
@@ -126,8 +139,9 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
                 onPressed: () => showModalBottomSheet<void>(
                   context: context,
                   showDragHandle: true,
+                  isScrollControlled: true,
                   builder: (sheetContext) => SafeArea(
-                    child: Padding(
+                    child: SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(22, 10, 22, 26),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -137,6 +151,20 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
                               .textTheme.titleLarge),
                           const SizedBox(height: 10),
                           Text(detail),
+                          if (!isMinor && !checking && !showNetworkError &&
+                              !signedOut && !ageUnknown &&
+                              legalReviewAvailable && onManageLegal != null) ...[
+                            const SizedBox(height: 16),
+                            FilledButton.icon(
+                              key: const ValueKey('stk_nutrition_open_legal'),
+                              onPressed: () {
+                                Navigator.of(sheetContext).pop();
+                                onManageLegal!.call();
+                              },
+                              icon: const Icon(Icons.shield_outlined),
+                              label: const Text('Revisar en Perfil'),
+                            ),
+                          ],
                         ],
                       ),
                     ),

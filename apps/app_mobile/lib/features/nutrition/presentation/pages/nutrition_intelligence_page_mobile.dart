@@ -16,6 +16,7 @@ import 'package:gym_tracker/features/progress/presentation/pages/body_measuremen
 import 'package:gym_tracker/features/onboarding/data/stk_mobile_legal_receipt_store.dart';
 import 'package:gym_tracker/features/onboarding/data/stk_mobile_optional_consent_store.dart';
 import 'package:gym_tracker/features/onboarding/presentation/stk_mobile_legal_config.dart';
+import 'package:gym_tracker/features/profile/presentation/pages/stk_mobile_privacy_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NutritionIntelligencePageMobile extends StatefulWidget {
@@ -72,6 +73,20 @@ class _NutritionIntelligencePageMobileState
   void _refreshAdultAccess() {
     if(!mounted)return;
     setState(() => _adultAccess = _checkAccess());
+  }
+
+  /// A legacy account keeps its entire Hive/on-device history. The legal
+  /// screen requests a new server receipt only after approved publication;
+  /// opening the screen never grants adult nutrition by itself.
+  Future<void> _openExistingUserLegalReview() async {
+    if (!mounted || !StkMobileLegalConfig.enabled ||
+        !StkMobileLegalConfig.documents.canCollectAcceptance) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const StkMobilePrivacyPage(),
+      ),
+    );
+    if (mounted) _refreshAdultAccess();
   }
 
   @override
@@ -145,6 +160,9 @@ class _NutritionIntelligencePageMobileState
         verifiedAdultNutritionAccess: status.allowsNumeric,
         mobileAdultCheck: status,
         onRefreshAdultAccess: _refreshAdultAccess,
+        legalReviewAvailable: StkMobileLegalConfig.enabled &&
+            StkMobileLegalConfig.documents.canCollectAcceptance,
+        onOpenLegalAndPrivacy: () => unawaited(_openExistingUserLegalReview()),
         onOpenMeasurements: () => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const BodyMeasurementPage()),
         ),

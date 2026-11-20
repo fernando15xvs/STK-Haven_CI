@@ -61,6 +61,9 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
   final Future<void> Function(StkNutritionIntent)? onSaveStkNutritionIntent;
   final VoidCallback? onOpenMeasurements;
   final VoidCallback? onRefreshAdultAccess;
+  /// Existing mobile accounts can review approved terms without onboarding.
+  final VoidCallback? onOpenLegalAndPrivacy;
+  final bool legalReviewAvailable;
 
   const NutritionIntelligencePage({
     super.key,
@@ -75,6 +78,8 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
     this.onSaveStkNutritionIntent,
     this.onOpenMeasurements,
     this.onRefreshAdultAccess,
+    this.onOpenLegalAndPrivacy,
+    this.legalReviewAvailable = false,
   });
 
   @override
@@ -306,6 +311,8 @@ class _NutritionIntelligencePageState
                         access: access,
                         check: check,
                         onRetry: widget.onRefreshAdultAccess,
+                        legalReviewAvailable: widget.legalReviewAvailable,
+                        onManageLegal: widget.onOpenLegalAndPrivacy,
                       )
                     else
                       NutritionAccessStatusPanel(
@@ -335,6 +342,8 @@ class _NutritionIntelligencePageState
                       access: access,
                       check: widget.mobileAdultCheck!,
                       onRetry: widget.onRefreshAdultAccess,
+                        legalReviewAvailable: widget.legalReviewAvailable,
+                        onManageLegal: widget.onOpenLegalAndPrivacy,
                     )
                   : NutritionAccessStatusPanel(
                       colors: colors,

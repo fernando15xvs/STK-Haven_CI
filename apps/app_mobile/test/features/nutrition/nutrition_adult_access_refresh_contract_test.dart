@@ -28,6 +28,32 @@ void main(){
     expect(mobile,contains('Supabase.instance.client.auth.currentUser?.id'));
   });
 
+  test('existing accounts review legal documents without resetting onboarding',(){
+    final mobile = File(
+      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart',
+    ).readAsStringSync();
+    final legal = File(
+      'lib/features/profile/presentation/pages/stk_mobile_privacy_page.dart',
+    ).readAsStringSync();
+    final panel = File(
+      '../../packages/core/lib/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart',
+    ).readAsStringSync();
+
+    expect(mobile, contains('Future<void> _openExistingUserLegalReview() async'));
+    expect(mobile, contains('StkMobileLegalConfig.enabled'));
+    expect(mobile, contains('StkMobileLegalConfig.documents.canCollectAcceptance'));
+    expect(mobile, contains('const StkMobilePrivacyPage()'));
+    expect(mobile, contains('onOpenLegalAndPrivacy:'));
+    expect(mobile, contains('if (mounted) _refreshAdultAccess();'));
+    expect(mobile, isNot(contains('Navigator.pushReplacement')));
+    expect(mobile, isNot(contains('Hive.deleteFromDisk')));
+    expect(legal, contains("acceptanceSource: 'legal_settings'"));
+    expect(legal, contains('await _receipts.saveAuthenticated(receipt, activeUserId: uid)'));
+    expect(legal, contains('StkLegalServerReceiptService('));
+    expect(panel, contains('onManageLegal!.call()'));
+    expect(panel, contains('legalReviewAvailable && onManageLegal != null'));
+  });
+
   test('revoked grant hides formerly numeric cached results',(){
     final core=File(
       '../../packages/core/lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
