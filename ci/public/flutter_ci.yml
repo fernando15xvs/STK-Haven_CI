@@ -122,7 +122,8 @@ jobs:
 
   android:
     name: Android artifacts
-    runs-on: ubuntu-latest
+    # Match the tested Android runner image used by the public CI mirror.
+    runs-on: ubuntu-24.04
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
@@ -149,6 +150,17 @@ jobs:
           cache: true
       - name: Resolve workspace
         run: flutter pub get
+      - name: Route Maven Central dependencies through Google mirror
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s ci/public/maven_central_mirror.gradle
+          mkdir -p "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
+          cp ci/public/maven_central_mirror.gradle "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/stk-maven-central-mirror.gradle"
+          echo "CI Gradle mirror configured (includes Flutter composite builds)"
+      - name: Pre-install pinned Android NDK (retry corrupt downloads only)
+        shell: bash
+        run: bash ci/public/install_android_ndk_with_retry.sh
       - name: Build debug APK
         working-directory: apps/app_mobile
         run: flutter build apk --debug --target lib/main_android.dart
