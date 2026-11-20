@@ -19,6 +19,7 @@ create table stk_secure.stk_nutrition_review_requests (
     ('personalizedAdultEnergy','informationalFoodEstimate')),
   reviewed_age_band text not null check (reviewed_age_band in ('15_17','18_plus')),
   release_id uuid not null references stk_secure.stk_legal_releases(id),
+  receipt_accepted_at timestamptz not null,
   expires_at timestamptz not null,
   review_reference text not null check (length(btrim(review_reference)) between 12 and 300),
   requested_by uuid not null references auth.users(id),
@@ -77,7 +78,12 @@ as $$
     )
     and coalesce((auth.jwt()->>'is_anonymous')::boolean,false) = false
     and auth.jwt()->>'aal' = 'aal2'
-    and auth.uid() = p_uid;
+    and auth.uid() = p_uid
+    -- A signed JWT may survive sign-out briefly; check its live session.
+    and exists(select 1 from auth.sessions s
+      where s.user_id = p_uid
+        and s.id::text = auth.jwt()->>'session_id'
+        and (s.not_after is null or s.not_after > now()));
 $$;
 revoke all on function stk_secure.stk_operator_is_current(uuid)
   from public, anon, authenticated;
@@ -96,6 +102,7 @@ declare
   v_actor uuid := auth.uid();
   v_release stk_secure.stk_legal_releases%rowtype;
   v_band text;
+  v_receipt_accepted_at timestamptz;
   v_id uuid;
 begin
   if not stk_secure.stk_operator_is_current(v_actor) then
@@ -120,7 +127,8 @@ begin
     and not v_release.informational_estimates_clinically_approved then
     raise exception 'Clinical approval is not enabled';
   end if;
-  select r.declared_age_band into v_band
+  select r.declared_age_band, r.accepted_at
+    into v_band, v_receipt_accepted_at
     from stk_secure.stk_legal_receipts r
     where r.user_id = p_user_id and r.release_id = v_release.id
       and r.revoked_at is null;
@@ -134,11 +142,11 @@ begin
     raise exception 'Too many pending reviews';
   end if;
   insert into stk_secure.stk_nutrition_review_requests(
-    user_id,capability,reviewed_age_band,release_id,expires_at,
-    review_reference,requested_by
+    user_id,capability,reviewed_age_band,release_id,receipt_accepted_at,
+    expires_at,review_reference,requested_by
   ) values(
-    p_user_id,p_capability,p_reviewed_age_band,v_release.id,p_expires_at,
-    btrim(p_review_reference),v_actor
+    p_user_id,p_capability,p_reviewed_age_band,v_release.id,v_receipt_accepted_at,
+    p_expires_at,btrim(p_review_reference),v_actor
   ) returning id into v_id;
   insert into stk_secure.stk_nutrition_operator_audit(
     operator_user_id,subject_user_id,capability,review_id,event,reason
@@ -183,6 +191,7 @@ begin
       where r.user_id = v_review.user_id and r.release_id = v_review.release_id
         and r.revoked_at is null
         and r.declared_age_band = v_review.reviewed_age_band
+        and r.accepted_at = v_review.receipt_accepted_at
     ) or v_review.expires_at <= now() then
     raise exception 'Stale policy, consent or review';
   end if;

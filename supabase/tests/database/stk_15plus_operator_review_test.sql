@@ -1,7 +1,7 @@
 -- Independent operator approvals; isolated Supabase CI transactions only.
 -- No real users, document hashes, grants, or operator assignments are written.
 begin;
-select plan(28);
+select plan(29);
 
 select has_table('stk_secure','stk_nutrition_review_operators',
   'Privileged operator roster exists');
@@ -46,6 +46,14 @@ insert into auth.users (
 ('fe000000-0000-0000-0000-000000000004',
  'authenticated','authenticated','ci-stk-p-outsider@example.com','',
  now(),now(),now(),'{}'::jsonb,'{"is_stk_admin":true}'::jsonb);
+
+-- The MFA JWT must also reference a live, same-user Supabase Auth session.
+-- Session IDs here are isolated synthetic CI fixtures, not production tokens.
+insert into auth.sessions(id,user_id,created_at,updated_at,aal) values
+('fa000000-0000-0000-0000-000000000002',
+ 'fe000000-0000-0000-0000-000000000002',now(),now(),'aal2'),
+('fa000000-0000-0000-0000-000000000003',
+ 'fe000000-0000-0000-0000-000000000003',now(),now(),'aal2');
 
 reset role;
 set local role service_role;
@@ -97,6 +105,15 @@ select set_config('request.jwt.claims',
   true);
 select throws_ok(
   $$select public.stk_operator_request_nutrition_review(
+    'fe000000-0000-0000-0000-000000000001',
+    'personalizedAdultEnergy','18_plus','ci-only missing session denied',now()+interval '14 days')$$,
+  'P0001','Authorized MFA reviewer required',
+  'MFA JWT with no matching live session is rejected');
+select set_config('request.jwt.claims',
+  '{"sub":"fe000000-0000-0000-0000-000000000002","role":"authenticated","is_anonymous":false,"aal":"aal2","session_id":"fa000000-0000-0000-0000-000000000002"}',
+  true);
+select throws_ok(
+  $$select public.stk_operator_request_nutrition_review(
     'fe000000-0000-0000-0000-000000000002',
     'personalizedAdultEnergy','18_plus','ci-only self approval blocked',now()+interval '14 days')$$,
   'P0001','Invalid proposed nutrition review',
@@ -134,7 +151,7 @@ select throws_ok(
   'Second operator also requires MFA');
 
 select set_config('request.jwt.claims',
-  '{"sub":"fe000000-0000-0000-0000-000000000003","role":"authenticated","is_anonymous":false,"aal":"aal2"}',
+  '{"sub":"fe000000-0000-0000-0000-000000000003","role":"authenticated","is_anonymous":false,"aal":"aal2","session_id":"fa000000-0000-0000-0000-000000000003"}',
   true);
 select lives_ok(
   $$select public.stk_operator_approve_nutrition_review(
@@ -165,7 +182,7 @@ select throws_ok(
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claims',
-  '{"sub":"fe000000-0000-0000-0000-000000000003","role":"authenticated","is_anonymous":false,"aal":"aal2"}',
+  '{"sub":"fe000000-0000-0000-0000-000000000003","role":"authenticated","is_anonymous":false,"aal":"aal2","session_id":"fa000000-0000-0000-0000-000000000003"}',
   true);
 select lives_ok(
   $$select public.stk_operator_revoke_nutrition_capability(

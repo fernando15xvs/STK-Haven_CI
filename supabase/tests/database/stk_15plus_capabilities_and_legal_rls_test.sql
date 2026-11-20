@@ -107,10 +107,10 @@ select throws_ok(
   'P0001','Use independent MFA nutrition review workflow',
   'Service role cannot bypass independent clinical and reviewer gates');
 select throws_ok(
-  $select public.stk_service_set_nutrition_capability(
+  $$select public.stk_service_set_nutrition_capability(
     'fd000000-0000-0000-0000-000000000001',
     'personalizedAdultEnergy','18_plus',true,
-    'ci-only separate adult review decision',now()+interval '14 days')$,
+    'ci-only separate adult review decision',now()+interval '14 days')$$,
   'P0001','Use independent MFA nutrition review workflow',
   'Direct service grant is blocked without two independent MFA reviews');
 
