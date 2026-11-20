@@ -97,21 +97,22 @@ select throws_ok(
     'fd000000-0000-0000-0000-000000000001',
     'personalizedAdultEnergy','15_17',true,
     'ci review of separate nutrition eligibility',now()+interval '14 days')$$,
-  'P0001','Adult energy requires trusted adult review',
-  'Service may not grant adult energy to a reviewed 15-17 user');
+  'P0001','Use independent MFA nutrition review workflow',
+  'Service role cannot bypass the two-operator grant workflow');
 select throws_ok(
   $$select public.stk_service_set_nutrition_capability(
     'fd000000-0000-0000-0000-000000000001',
     'informationalFoodEstimate','18_plus',true,
     'ci review of educational meal estimates',now()+interval '14 days')$$,
-  'P0001','Clinical review has not approved informational estimates',
-  'Informational estimates are independently gated clinically');
-select lives_ok(
-  $$select public.stk_service_set_nutrition_capability(
+  'P0001','Use independent MFA nutrition review workflow',
+  'Service role cannot bypass independent clinical and reviewer gates');
+select throws_ok(
+  $select public.stk_service_set_nutrition_capability(
     'fd000000-0000-0000-0000-000000000001',
     'personalizedAdultEnergy','18_plus',true,
-    'ci-only separate adult review decision',now()+interval '14 days')$$,
-  'Privileged reviewer may grant a time-bounded adult capability');
+    'ci-only separate adult review decision',now()+interval '14 days')$,
+  'P0001','Use independent MFA nutrition review workflow',
+  'Direct service grant is blocked without two independent MFA reviews');
 
 reset role;
 set local role authenticated;
@@ -119,7 +120,7 @@ select set_config('request.jwt.claims',
   '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',
   true);
 select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
-  true,'Owner can read active adult grant after trusted review');
+  false,'Owner has no adult grant from legal acceptance or bare service call');
 select set_config('request.jwt.claims',
   '{"sub":"fd000000-0000-0000-0000-000000000002","role":"authenticated","is_anonymous":false}',
   true);
@@ -143,7 +144,7 @@ reset role;
 set local role service_role;
 select ok((select count(*) from stk_secure.stk_nutrition_capability_audit
   where user_id='fd000000-0000-0000-0000-000000000001'
-    and decision='legal_withdrawn')=1,'Revocation creates privileged audit event');
+    and decision='legal_withdrawn')=0,'Without a grant no artificial numeric withdrawal audit is emitted');
 select ok((select count(*) from stk_secure.stk_legal_receipt_audit
   where user_id='fd000000-0000-0000-0000-000000000001'
     and event='accepted') = 1
