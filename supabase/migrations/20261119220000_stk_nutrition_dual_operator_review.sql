@@ -315,3 +315,67 @@ revoke all on function public.stk_service_set_nutrition_capability(
   uuid,text,text,boolean,text,timestamptz) from public, anon, authenticated;
 grant execute on function public.stk_service_set_nutrition_capability(
   uuid,text,text,boolean,text,timestamptz) to service_role;
+
+-- Numeric access also requires a live Supabase Auth session, not just a
+-- still-unexpired bearer token after a remote sign-out. service_role callers
+-- must pass the session UUID read from the VERIFIED user JWT, never the body.
+create or replace function public.stk_service_can_use_nutrition_capability_for_session(
+  p_user_id uuid, p_session_id uuid, p_capability text
+)
+returns boolean
+language sql stable security definer set search_path = ''
+as $$
+  select p_user_id is not null and p_session_id is not null
+    and exists(
+      select 1 from auth.sessions s
+      where s.id = p_session_id and s.user_id = p_user_id
+        and (s.not_after is null or s.not_after > now())
+    )
+    and public.stk_service_can_use_nutrition_capability(
+      p_user_id,p_capability);
+$$;
+revoke all on function public.stk_service_can_use_nutrition_capability_for_session(
+  uuid,uuid,text) from public, anon, authenticated;
+grant execute on function public.stk_service_can_use_nutrition_capability_for_session(
+  uuid,uuid,text) to service_role;
+
+-- The caller cannot supply a UID or session_id to this RPC. Both come from
+-- signed Auth JWT claims, cross-checked against auth.sessions on every read.
+create or replace function public.stk_get_nutrition_capabilities()
+returns jsonb
+language plpgsql stable security definer set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_session text := auth.jwt()->>'session_id';
+begin
+  if v_uid is null
+    or coalesce((auth.jwt()->>'is_anonymous')::boolean,false)
+    or v_session is null
+    or not exists(
+      select 1 from auth.sessions s
+      where s.user_id = v_uid and s.id::text = v_session
+        and (s.not_after is null or s.not_after > now())
+    ) then
+    return pg_catalog.jsonb_build_object(
+      'personalizedAdultEnergy',false,
+      'informationalFoodEstimate',false,
+      'legalCurrent',false);
+  end if;
+  return pg_catalog.jsonb_build_object(
+    'personalizedAdultEnergy',public.stk_service_can_use_nutrition_capability(
+      v_uid,'personalizedAdultEnergy'),
+    'informationalFoodEstimate',public.stk_service_can_use_nutrition_capability(
+      v_uid,'informationalFoodEstimate'),
+    'legalCurrent',exists(
+      select 1 from stk_secure.stk_legal_receipts r
+      join stk_secure.stk_legal_releases p on p.id = r.release_id
+      where r.user_id = v_uid and r.revoked_at is null
+        and p.is_current and p.published_at <= now()
+    ));
+end;
+$$;
+revoke all on function public.stk_get_nutrition_capabilities()
+  from public, anon, authenticated;
+grant execute on function public.stk_get_nutrition_capabilities()
+  to authenticated;

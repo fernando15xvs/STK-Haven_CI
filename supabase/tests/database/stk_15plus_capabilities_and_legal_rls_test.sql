@@ -47,9 +47,15 @@ insert into auth.users(
  'authenticated','authenticated','ci-p15-b@example.com','',
  now(),now(),now(),'{}'::jsonb,'{"adult_verified":true,"dob":"1970-01-01"}'::jsonb);
 
+insert into auth.sessions(id,user_id,created_at,updated_at,aal) values
+('fb000000-0000-0000-0000-000000000001',
+ 'fd000000-0000-0000-0000-000000000001',now(),now(),'aal1'),
+('fb000000-0000-0000-0000-000000000002',
+ 'fd000000-0000-0000-0000-000000000002',now(),now(),'aal1');
+
 set local role authenticated;
 select set_config('request.jwt.claims',
-  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',
+  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"session_id":"fb000000-0000-0000-0000-000000000001"}',
   true);
 select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
   false,'Forged DOB/metadata cannot grant adult calories');
@@ -74,7 +80,7 @@ insert into stk_secure.stk_legal_releases(
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claims',
-  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"user_metadata":{"adult_verified":true}}',
+  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"session_id":"fb000000-0000-0000-0000-000000000001","user_metadata":{"adult_verified":true}}',
   true);
 select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
   false,'Published policy and editable JWT metadata alone still grant nothing');
@@ -117,12 +123,12 @@ select throws_ok(
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claims',
-  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',
+  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"session_id":"fb000000-0000-0000-0000-000000000001"}',
   true);
 select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
   false,'Owner has no adult grant from legal acceptance or bare service call');
 select set_config('request.jwt.claims',
-  '{"sub":"fd000000-0000-0000-0000-000000000002","role":"authenticated","is_anonymous":false}',
+  '{"sub":"fd000000-0000-0000-0000-000000000002","role":"authenticated","is_anonymous":false,"session_id":"fb000000-0000-0000-0000-000000000002"}',
   true);
 select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
   false,'Account B cannot inherit account A grant');
@@ -132,7 +138,7 @@ select set_config('request.jwt.claims',
 select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
   false,'Anonymous sessions never use an existing numeric grant');
 select set_config('request.jwt.claims',
-  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',
+  '{"sub":"fd000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"session_id":"fb000000-0000-0000-0000-000000000001"}',
   true);
 select is(public.stk_revoke_legal_acceptance(),true,
   'User may revoke only their own acceptance and dependent grants');

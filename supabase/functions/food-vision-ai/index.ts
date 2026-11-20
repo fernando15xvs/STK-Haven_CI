@@ -158,6 +158,12 @@ const authenticatedHandler = withSupabase(
     // even if the same account UID was later upgraded.
     const isAnonymousJwt =
       (ctx.userClaims as { is_anonymous?: boolean } | null)?.is_anonymous === true;
+    const claimedSessionId =
+      (ctx.jwtClaims as { session_id?: unknown } | null)?.session_id;
+    const sessionId = typeof claimedSessionId === 'string' &&
+      /^[0-9a-fA-F-]{36}$/.test(claimedSessionId)
+        ? claimedSessionId
+        : null;
 
     const mimeType = typeof payload.mimeType === 'string'
       ? payload.mimeType.trim().toLowerCase()
@@ -173,10 +179,12 @@ const authenticatedHandler = withSupabase(
     // Fallback is allowed ONLY if the new RPC is genuinely absent, never on
     // a revocation, malformed result, permission error or network outage.
     let hasVerifiedAdultNutritionAccess = false;
-    if (payload.adultNumericNutrition === true && !isAnonymousJwt) {
+    if (payload.adultNumericNutrition === true && !isAnonymousJwt &&
+        sessionId !== null) {
       const { data: permitted, error: capabilityError } = await admin.rpc(
-        'stk_service_can_use_nutrition_capability', {
+        'stk_service_can_use_nutrition_capability_for_session', {
           p_user_id: userId,
+          p_session_id: sessionId,
           p_capability: 'personalizedAdultEnergy',
         },
       );

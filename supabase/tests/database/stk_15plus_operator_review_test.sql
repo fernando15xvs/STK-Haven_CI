@@ -1,7 +1,7 @@
 -- Independent operator approvals; isolated Supabase CI transactions only.
 -- No real users, document hashes, grants, or operator assignments are written.
 begin;
-select plan(29);
+select plan(32);
 
 select has_table('stk_secure','stk_nutrition_review_operators',
   'Privileged operator roster exists');
@@ -29,6 +29,12 @@ select ok(not has_function_privilege('anon',
 select ok(not has_function_privilege('anon',
   'public.stk_operator_approve_nutrition_review(uuid)',
   'EXECUTE'),'Anonymous role cannot approve review');
+select ok(not has_function_privilege('anon',
+  'public.stk_service_can_use_nutrition_capability_for_session(uuid,uuid,text)',
+  'EXECUTE'),'Anonymous cannot query another user session grant');
+select ok(not has_function_privilege('authenticated',
+  'public.stk_service_can_use_nutrition_capability_for_session(uuid,uuid,text)',
+  'EXECUTE'),'Clients cannot request arbitrary user or session grants');
 
 insert into auth.users (
   id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -50,6 +56,8 @@ insert into auth.users (
 -- The MFA JWT must also reference a live, same-user Supabase Auth session.
 -- Session IDs here are isolated synthetic CI fixtures, not production tokens.
 insert into auth.sessions(id,user_id,created_at,updated_at,aal) values
+('fa000000-0000-0000-0000-000000000001',
+ 'fe000000-0000-0000-0000-000000000001',now(),now(),'aal1'),
 ('fa000000-0000-0000-0000-000000000002',
  'fe000000-0000-0000-0000-000000000002',now(),now(),'aal2'),
 ('fa000000-0000-0000-0000-000000000003',
@@ -71,7 +79,7 @@ values
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claims',
-  '{"sub":"fe000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"aal":"aal1"}',
+  '{"sub":"fe000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"aal":"aal1","session_id":"fa000000-0000-0000-0000-000000000001"}',
   true);
 select lives_ok(
   $$select public.stk_record_legal_acceptance(
@@ -164,10 +172,18 @@ select throws_ok(
   'An already consumed review cannot be replayed');
 
 select set_config('request.jwt.claims',
-  '{"sub":"fe000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"aal":"aal1"}',
+  '{"sub":"fe000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"aal":"aal1","session_id":"fa000000-0000-0000-0000-000000000001"}',
   true);
 select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
   true,'A subject sees its own grant only after dual operator review');
+select set_config('request.jwt.claims',
+  '{"sub":"fe000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"aal":"aal1"}',
+  true);
+select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
+  false,'A token without its active Auth session cannot read an existing grant');
+select set_config('request.jwt.claims',
+  '{"sub":"fe000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"aal":"aal1","session_id":"fa000000-0000-0000-0000-000000000001"}',
+  true);
 
 reset role;
 set local role service_role;
@@ -191,7 +207,7 @@ select lives_ok(
   'A current MFA operator can promptly revoke without a second approver');
 
 select set_config('request.jwt.claims',
-  '{"sub":"fe000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"aal":"aal1"}',
+  '{"sub":"fe000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false,"aal":"aal1","session_id":"fa000000-0000-0000-0000-000000000001"}',
   true);
 select is((public.stk_get_nutrition_capabilities()->>'personalizedAdultEnergy')::boolean,
   false,'Server revocation hides previously authorized numeric access');

@@ -28,7 +28,10 @@ void main() {
     final edge = File('../../supabase/functions/food-vision-ai/index.ts')
         .readAsStringSync();
     expect(edge, contains('const userId = ctx.userClaims?.id;'));
-    expect(edge, contains("'stk_service_can_use_nutrition_capability'"));
+    expect(edge, contains("'stk_service_can_use_nutrition_capability_for_session'"));
+    expect(edge, contains('p_session_id: sessionId'));
+    expect(edge, contains('const claimedSessionId ='));
+    expect(edge, contains("sessionId !== null"));
     expect(edge, contains("p_capability: 'personalizedAdultEnergy'"));
     expect(edge, contains('p_user_id: userId'));
     expect(edge, contains('const isAnonymousJwt ='));
