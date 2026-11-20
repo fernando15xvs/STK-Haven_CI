@@ -94,7 +94,10 @@ class WorkoutNotificationService {
     // Keep concurrent attempts coalesced, but allow retry after failure.
     return _initialization ??= _initialize().onError((error, stack) {
       _initialization = null;
-      Error.throwWithStackTrace(error, stack);
+      Error.throwWithStackTrace(
+        error ?? StateError('No se pudo inicializar las notificaciones.'),
+        stack,
+      );
     });
   }
 

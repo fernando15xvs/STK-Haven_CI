@@ -59,7 +59,8 @@ void main() {
     ).readAsStringSync();
     expect(notifications, contains('_initialize().onError((error, stack)'));
     expect(notifications, contains('_initialization = null;'));
-    expect(notifications, contains('Error.throwWithStackTrace(error, stack);'));
+    expect(notifications, contains('Error.throwWithStackTrace('));
+    expect(notifications, contains("error ?? StateError('No se pudo inicializar las notificaciones.')"));
     expect(notifications, contains('audioAttributesUsage: AudioAttributesUsage.notificationEvent'));
   });
 
