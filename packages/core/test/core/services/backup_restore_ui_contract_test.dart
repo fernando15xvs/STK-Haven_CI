@@ -49,10 +49,10 @@ void main(){
     expect(start,greaterThanOrEqualTo(0));
     expect(end,greaterThan(start));
     final restore=source.substring(start,end);
-    final selection=restore.indexOf(".eq('user_id', identity.userId!)");
+    final selection=restore.indexOf(".eq('user_id', userId)");
     final freshIdentity=restore.indexOf(
       'final currentIdentity = ref.read(appIdentityProvider);');
-    final guard=restore.indexOf('currentIdentity.userId != identity.userId');
+    final guard=restore.indexOf('currentIdentity.userId != userId');
     final active=restore.indexOf(
       'ref.read(activeWorkoutProvider).session != null',guard);
     final write=restore.indexOf('await _backupService.restoreBackup(');
@@ -62,6 +62,9 @@ void main(){
     expect(active,greaterThan(guard));
     expect(write,greaterThan(active));
     expect(restore,contains('!currentIdentity.signedIn'));
+    expect(restore,contains('allowCommit: () =>'));
+    expect(restore,contains('_sameCloudSession(userId, token)'));
+    expect(restore,contains('ref.read(activeWorkoutProvider).session == null'));
     expect(restore,contains(
       'La cuenta cambió durante la descarga. No se restauró la copia.'));
   });
