@@ -60,7 +60,7 @@ void main() {
     ));
     await tester.tap(find.byKey(const ValueKey('stk_nutrition_access_info')));
     await tester.pumpAndSettle();
-    expect(find.text('Plan calórico pendiente de revisión'), findsOneWidget);
+    expect(find.text('Plan calórico pendiente de revisión'), findsNWidgets(2));
     expect(find.textContaining('sin volver al onboarding'), findsOneWidget);
     expect(find.textContaining('el servidor debe autorizarlo'), findsOneWidget);
     final action = find.byKey(const ValueKey('stk_nutrition_open_legal'));
