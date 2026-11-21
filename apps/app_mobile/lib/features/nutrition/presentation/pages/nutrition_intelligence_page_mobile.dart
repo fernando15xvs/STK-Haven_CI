@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/body_measurement_page.dart';
+import 'package:gym_tracker/features/nutrition/presentation/pages/nutrition_internal_demo_page.dart';
 import 'package:gym_tracker/features/onboarding/data/stk_mobile_legal_receipt_store.dart';
 import 'package:gym_tracker/features/onboarding/data/stk_mobile_optional_consent_store.dart';
 import 'package:gym_tracker/features/onboarding/presentation/stk_mobile_legal_config.dart';
@@ -163,6 +164,13 @@ class _NutritionIntelligencePageMobileState
         legalReviewAvailable: StkMobileLegalConfig.enabled &&
             StkMobileLegalConfig.documents.canCollectAcceptance,
         onOpenLegalAndPrivacy: () => unawaited(_openExistingUserLegalReview()),
+        onOpenInternalDemo: NutritionInternalDemoConfig.enabled
+            ? () => unawaited(Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => const NutritionInternalDemoPage(),
+                ),
+              ))
+            : null,
         onOpenMeasurements: () => Navigator.of(context).push(
           MaterialPageRoute<void>(builder: (_) => const BodyMeasurementPage()),
         ),
