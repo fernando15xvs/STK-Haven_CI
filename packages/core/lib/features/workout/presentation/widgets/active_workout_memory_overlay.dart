@@ -10,11 +10,26 @@ import 'package:core/features/workout/presentation/widgets/quick_set_entry_dialo
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Cross-platform high-value Workout UX actions.
-///
-/// On wide layouts the memory surface remains persistently visible. On compact
-/// mobile layouts it collapses to a small launcher so it never covers the rest
-/// banner or the first exercise card.
+/// Gives each exercise a direct entry into its own previous-performance tools.
+/// Memory never floats over set inputs or the permanent Finish action.
+class ActiveWorkoutMemoryAccess extends InheritedWidget {
+  const ActiveWorkoutMemoryAccess({
+    super.key,
+    required this.openForExercise,
+    required super.child,
+  });
+
+  final void Function(String instanceId) openForExercise;
+
+  static ActiveWorkoutMemoryAccess? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ActiveWorkoutMemoryAccess>();
+
+  @override
+  bool updateShouldNotify(ActiveWorkoutMemoryAccess oldWidget) =>
+      openForExercise != oldWidget.openForExercise;
+}
+
+/// Route boundary for contextual exercise memory and quick-entry actions.
 class ActiveWorkoutMemoryOverlay extends ConsumerStatefulWidget {
   const ActiveWorkoutMemoryOverlay({super.key, required this.child});
 
@@ -32,7 +47,7 @@ class _ActiveWorkoutMemoryOverlayState
 
   /// A modal sheet keeps memory tools reachable without a floating panel
   /// covering the rest countdown, set inputs or the Finish action.
-  Future<void> _openCompactMemory() async {
+  Future<void> _openCompactMemory(String requestedInstanceId) async {
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -48,9 +63,17 @@ class _ActiveWorkoutMemoryOverlayState
             if (session == null || session.exercises.isEmpty) {
               return const SizedBox.shrink();
             }
+            // Resolve by stable instance id, not by mutable list index.
+            // Reordering exercises while a sheet is open cannot show memory
+            // for a different exercise.
             var exerciseIndex = session.exercises.indexWhere(
-              (item) => !item.completed,
+              (item) => item.instanceId == requestedInstanceId,
             );
+            if (exerciseIndex < 0) {
+              exerciseIndex = session.exercises.indexWhere(
+                (item) => !item.completed,
+              );
+            }
             if (exerciseIndex < 0) {
               exerciseIndex = session.exercises.length - 1;
             }
@@ -126,104 +149,15 @@ class _ActiveWorkoutMemoryOverlayState
 
   @override
   Widget build(BuildContext context) {
-    final session = ref.watch(
-      activeWorkoutProvider.select((state) => state.session),
-    );
-    final canUndo = ref.watch(
-      activeWorkoutProvider.select((state) => state.canUndo),
-    );
-    if (session == null || session.exercises.isEmpty) return widget.child;
-
-    var exerciseIndex = session.exercises.indexWhere((item) => !item.completed);
-    if (exerciseIndex < 0) exerciseIndex = session.exercises.length - 1;
-    final exercise = session.exercises[exerciseIndex];
-    final memory = ref.watch(
-      activeWorkoutExerciseMemoryProvider.select(
-        (items) => items[exercise.exerciseId],
-      ),
-    );
-    final previousSession = ref.watch(activeWorkoutPreviousSessionProvider);
-    final previousAligned = _findExercise(previousSession, exercise.exerciseId);
-    final settings = ref.watch(settingsProvider);
-    final recommendedSide = exercise.unilateral
-        ? _recommendedSide(ref, exerciseIndex, exercise)
-        : null;
-    final visibleOneRmMessage = _oneRmExerciseId == exercise.exerciseId
-        ? _oneRmMessage
-        : null;
-    final compact = MediaQuery.sizeOf(context).width < 760;
-
-    final panel = _buildPanel(
-      context,
-      exerciseIndex: exerciseIndex,
-      exercise: exercise,
-      memory: memory,
-      previousAligned: previousAligned,
-      settings: settings,
-      recommendedSide: recommendedSide,
-      canUndo: canUndo,
-      visibleOneRmMessage: visibleOneRmMessage,
-    );
-
-    if (compact) {
-      // Do not float memory controls over a keyboard while editing a set.
-      final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-      return Stack(
-        children: [
-          widget.child,
-          if (!keyboardOpen)
-            Positioned(
-              right: 12,
-              bottom: MediaQuery.paddingOf(context).bottom + 96,
-              child: Material(
-                key: const ValueKey('memory_launcher'),
-                elevation: settings.performanceMode == PerformanceMode.savings
-                    ? 0
-                    : 6,
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(22),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(22),
-                  onTap: _openCompactMemory,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 13,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.history_rounded, size: 18),
-                        SizedBox(width: 7),
-                        Text(
-                          'Memoria',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      );
-    }
-
-    return Stack(
-      children: [
-        widget.child,
-        Positioned(
-          left: 10,
-          right: 10,
-          top: MediaQuery.paddingOf(context).top + 6,
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 860),
-              child: panel,
-            ),
-          ),
-        ),
-      ],
+    // The contextual launcher lives in each exercise header, inside normal
+    // layout flow. The sheet still supports previous sets, 1RM, quick entry
+    // and undo without obscuring table cells or the Finish button.
+    return ActiveWorkoutMemoryAccess(
+      openForExercise: (instanceId) {
+        FocusManager.instance.primaryFocus?.unfocus();
+        _openCompactMemory(instanceId);
+      },
+      child: widget.child,
     );
   }
 

@@ -10,6 +10,7 @@ import 'package:core/features/workout/application/unfinished_workout_reminder_po
 import 'package:core/features/workout/application/active_workout_suggestions_provider.dart';
 import 'package:core/features/workout/presentation/widgets/exercise_increment_control.dart';
 import 'package:core/features/workout/presentation/widgets/exercise_rep_range_notice.dart';
+import 'package:core/features/workout/presentation/widgets/active_workout_memory_overlay.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
@@ -21,6 +22,7 @@ import 'package:gym_tracker/features/exercises/presentation/pages/exercise_libra
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detail_page.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/barbell_calculator_modal.dart';
+import 'package:gym_tracker/features/workout/presentation/widgets/workout_rest_controls.dart';
 
 import 'package:gym_tracker/features/motivation/presentation/widgets/motivation_mini_player.dart';
 
@@ -506,8 +508,14 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
 
   @override
   Widget build(BuildContext context) {
-    final activeState = ref.watch(activeWorkoutProvider);
-    final session = activeState.session;
+    // Rebuild the exercise editor only when the session changes, not every
+    // second of an active rest countdown.
+    final session = ref.watch(
+      activeWorkoutProvider.select((state) => state.session),
+    );
+    final routineDisplayName = ref.watch(
+      activeWorkoutProvider.select((state) => state.routineDisplayName),
+    );
 
     if (session == null) {
       return Scaffold(
@@ -525,6 +533,13 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
         _focusIndex >= session.exercises.length) {
       _focusIndex = session.exercises.length - 1;
     }
+    // Set progress is factual: completed working sets only, not warmups.
+    final totalWorkingSets = session.exercises.fold<int>(0, (sum, exercise) =>
+        sum + exercise.sets.where((set) =>
+            set.setType == WorkoutSetType.working).length);
+    final completedWorkingSets = session.exercises.fold<int>(0, (sum, exercise) =>
+        sum + exercise.sets.where((set) =>
+            set.setType == WorkoutSetType.working && set.completed).length);
     // Back/minimize returns to the app while the provider keeps the session alive.
     return Scaffold(
         appBar: AppBar(
@@ -532,7 +547,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                activeState.routineDisplayName,
+                routineDisplayName,
                 style: AppTypography.headlineMedium,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -547,7 +562,9 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                           .clamp(0, 1 << 30)
                           .toInt();
                   return Text(
-                    _formatTime(timerValue),
+                    '${_formatTime(timerValue)} · $completedWorkingSets/$totalWorkingSets series',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.labelLarge.copyWith(
                       color: AppColors.of(context).primary,
                     ),
@@ -588,9 +605,25 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                   case 'plates':
                     BarbellCalculatorModal.show(context);
                     break;
+                  case 'focus':
+                    _toggleFocus(session);
+                    break;
                 }
               },
               itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  value: 'focus',
+                  enabled: session.exercises.isNotEmpty,
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(_focusMode
+                        ? Icons.view_agenda_outlined
+                        : Icons.center_focus_strong_outlined),
+                    title: Text(_focusMode
+                        ? 'Ver todos los ejercicios'
+                        : 'Modo enfoque'),
+                  ),
+                ),
                 PopupMenuItem<String>(
                   value: 'supersets',
                   enabled: session.exercises.length >= 2,
@@ -628,56 +661,28 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
         ),
         body: Column(
           children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: activeState.isResting
-                  ? Container(
-                      key: const ValueKey('rest_banner'),
-                      color: AppColors.of(context).primaryFaded,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(children: [
-                            Icon(Icons.timer_outlined,
-                              color: AppColors.of(context).warning, size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(
-                              'Descanso ${_formatTime(activeState.restTimerSeconds)}',
-                              key: const ValueKey('workout_rest_countdown'),
-                              style: AppTypography.headlineSmall.copyWith(
-                                color: AppColors.of(context).warning),
-                            )),
-                            TextButton(
-                              onPressed: () => ref.read(activeWorkoutProvider.notifier).skipRest(),
-                              child: const Text('Omitir'),
-                            ),
-                          ]),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 0,
-                            children: [
-                              TextButton(
-                                onPressed: () => _addRestSeconds(15),
-                                child: const Text('+15 s'),
-                              ),
-                              TextButton(
-                                onPressed: () => _addRestSeconds(30),
-                                child: const Text('+30 s'),
-                              ),
-                              TextButton(
-                                onPressed: _askAdditionalRestSeconds,
-                                child: const Text('Personalizar'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    )
-                  : const SizedBox.shrink(key: ValueKey('no_rest')),
+            Consumer(
+              builder: (context, restRef, _) {
+                final isResting = restRef.watch(
+                  activeWorkoutProvider.select((state) => state.isResting),
+                );
+                final remaining = restRef.watch(
+                  activeWorkoutProvider.select((state) => state.restTimerSeconds),
+                );
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  child: isResting
+                      ? WorkoutRestControls(
+                          remainingSeconds: remaining,
+                          onSkip: () => restRef
+                              .read(activeWorkoutProvider.notifier).skipRest(),
+                          onAdd15: () => _addRestSeconds(15),
+                          onAdd30: () => _addRestSeconds(30),
+                          onCustomize: _askAdditionalRestSeconds,
+                        )
+                      : const SizedBox.shrink(key: ValueKey('no_rest')),
+                );
+              },
             ),
             // Within the normal layout flow, never over timers or Finish.
             const MotivationMiniPlayer(showLauncherWhenEmpty: false),
@@ -694,7 +699,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                           : null,
                     )
                   : ReorderableListView.builder(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 110),
+                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
                       itemCount: session.exercises.length,
                       onReorder: (oldIndex, newIndex) {
                         ref
@@ -772,7 +777,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
         // Reserve space for the finish CTA: never cover editable sets.
         bottomNavigationBar: SafeArea(
           top: false,
-          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+          minimum: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: PrimaryButton(
             label: 'Finalizar entrenamiento',
             onPressed: _isFinishing ? null : () => _finish(context),
@@ -836,7 +841,7 @@ class _FocusedWorkoutView extends StatelessWidget {
   Widget build(BuildContext context) {
     final exercise = session.exercises[focusIndex];
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 110),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 24),
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -913,6 +918,7 @@ class _ExerciseBlock extends ConsumerStatefulWidget {
 class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
   bool? _manuallyExpanded;
   bool _showGuidance = false;
+  bool _showUnilateralHelp = false;
 
   @override
   void didUpdateWidget(covariant _ExerciseBlock oldWidget) {
@@ -1194,6 +1200,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    final memoryAccess = ActiveWorkoutMemoryAccess.maybeOf(context);
     final suggestions = ref.watch(activeWorkoutSuggestionsProvider);
     final suggestion = suggestions[widget.workoutExercise.exerciseId];
     final prevSession = ref.watch(activeWorkoutPreviousSessionProvider);
@@ -1255,12 +1262,12 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                 ? null
                 : () => setState(() => _manuallyExpanded = !expanded),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
               child: Row(
                 children: [
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: completed
@@ -1285,7 +1292,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                       size: 19,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1299,7 +1306,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         const SizedBox(height: 3),
                         if (widget.workoutExercise.unilateral)
                           Text(
-                            '${widget.workoutExercise.unilateralTarget.label} · I $leftDone/${unilateralSets.length} · D $rightDone/${unilateralSets.length}${widget.workoutExercise.isInSuperset ? ' · Superserie' : ''}',
+                            '${widget.workoutExercise.unilateralTarget == UnilateralTarget.other ? 'Unilateral' : widget.workoutExercise.unilateralTarget.label} · Izq. $leftDone/${unilateralSets.length} · Der. $rightDone/${unilateralSets.length}${widget.workoutExercise.isInSuperset ? ' · Superserie' : ''}',
                             style: AppTypography.bodySmall.copyWith(
                               color: completed
                                   ? AppColors.of(context).success
@@ -1318,6 +1325,20 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                       ],
                     ),
                   ),
+                  if (memoryAccess != null)
+                    IconButton(
+                      key: ValueKey('workout_exercise_memory_${widget.exIndex}'),
+                      tooltip: 'Memoria del ejercicio',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () => memoryAccess.openForExercise(
+                        widget.workoutExercise.instanceId,
+                      ),
+                      icon: Icon(
+                        Icons.history_rounded,
+                        color: AppColors.of(context).primary,
+                        size: 20,
+                      ),
+                    ),
                   if (!widget.forceExpanded)
                     Icon(
                       expanded ? Icons.expand_less : Icons.expand_more,
@@ -1480,71 +1501,46 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                     ),
                     const SizedBox(height: 10),
                   ],
-                  if (widget.workoutExercise.unilateral)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 9,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.of(context).primaryFaded,
-                        borderRadius: AppRadius.sm_,
-                      ),
-                      child: Text(
-                        '${widget.workoutExercise.unilateralTarget.label}: '
-                        '${widget.workoutExercise.preparationUnilateral ? 'preparación y efectivas' : 'solo series efectivas'} '
-                        'se registran por lado. '
-                        '${widget.workoutExercise.sets.isNotEmpty && widget.workoutExercise.sets.first.sideRestSeconds == 0 ? 'Cambia directamente al otro lado.' : 'Descansa ${widget.workoutExercise.sets.isEmpty ? settings.unilateralSideRestSeconds : widget.workoutExercise.sets.first.sideRestSeconds}s entre lados.'}',
-                        style: AppTypography.bodySmall.copyWith(
-                          color: AppColors.of(context).primary,
+                  if (widget.workoutExercise.unilateral) ...[
+                    Row(
+                      children: [
+                        Icon(Icons.compare_arrows, size: 17,
+                          color: AppColors.of(context).primary),
+                        const SizedBox(width: 6),
+                        Expanded(child: Text(
+                          'Registra izquierda y derecha en cada serie',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.of(context).textSecondary,
+                          ),
+                        )),
+                        TextButton(
+                          key: ValueKey('workout_unilateral_help_${widget.exIndex}'),
+                          onPressed: () => setState(() =>
+                            _showUnilateralHelp = !_showUnilateralHelp),
+                          child: Text(_showUnilateralHelp ? 'Ocultar' : 'Detalles'),
+                        ),
+                      ],
+                    ),
+                    if (_showUnilateralHelp)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+                        child: Text(
+                          '${widget.workoutExercise.preparationUnilateral ? 'Preparación y efectivas' : 'Solo efectivas'} por lado. '
+                          '${widget.workoutExercise.sets.isNotEmpty && widget.workoutExercise.sets.first.sideRestSeconds == 0 ? 'Cambia directamente al otro lado.' : 'Descansa ${widget.workoutExercise.sets.isEmpty ? settings.unilateralSideRestSeconds : widget.workoutExercise.sets.first.sideRestSeconds}s entre lados.'}',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.of(context).textSecondary,
+                          ),
                         ),
                       ),
-                    ),
-                  // Keep weight/reps/RIR and set completion directly in view.
-                  // References remain accessible without dominating every card.
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: TextButton.icon(
-                      key: ValueKey('workout_exercise_guidance_${widget.exIndex}'),
-                      onPressed: () => setState(
-                        () => _showGuidance = !_showGuidance,
-                      ),
-                      icon: Icon(
-                        _showGuidance ? Icons.expand_less : Icons.expand_more,
-                        size: 18,
-                      ),
-                      label: Text(
-                        _showGuidance
-                            ? 'Ocultar guía y progresión'
-                            : 'Guía y progresión',
-                        style: AppTypography.labelMedium,
-                      ),
-                    ),
-                  ),
-                  if (_showGuidance) ...[
-                    ExerciseRepRangeNotice(
-                      exerciseId: widget.workoutExercise.exerciseId,
-                    ),
-                    ExerciseIncrementControl(
-                      exerciseId: widget.workoutExercise.exerciseId,
-                    ),
-                    if (suggestion != null) ...[
-                      const SizedBox(height: 10),
-                      _ProgressionReferenceCard(
-                        suggestion: suggestion,
-                        unit: settings.weightUnit,
-                      ),
-                    ],
                   ],
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(
-                        flex: 2,
+                        flex: 3,
                         child: Text('SERIE', style: AppTypography.labelSmall),
                       ),
-                      if (MediaQuery.sizeOf(context).width >= 380)
+                      if (MediaQuery.sizeOf(context).width >= 460)
                         Expanded(
                           flex: 3,
                           child: Text(
@@ -1578,7 +1574,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                             style: AppTypography.labelSmall,
                           ),
                         ),
-                      const Expanded(flex: 2, child: SizedBox()),
+                      const Expanded(flex: 5, child: SizedBox()),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -1601,6 +1597,7 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                       isRirEnabled:
                           settings.isRirEnabled &&
                           set.setType == WorkoutSetType.working,
+                      showRirColumn: settings.isRirEnabled,
                       weightUnit: settings.weightUnit,
                       vibrationEnabled: settings.vibrationEnabled,
                       prevSet: prevSet,
@@ -1653,6 +1650,43 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  // Keep weight/reps/RIR and set completion directly in view.
+                  // References remain accessible without dominating every card.
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      key: ValueKey('workout_exercise_guidance_${widget.exIndex}'),
+                      onPressed: () => setState(
+                        () => _showGuidance = !_showGuidance,
+                      ),
+                      icon: Icon(
+                        _showGuidance ? Icons.expand_less : Icons.expand_more,
+                        size: 18,
+                      ),
+                      label: Text(
+                        _showGuidance
+                            ? 'Ocultar guía y progresión'
+                            : 'Guía y progresión',
+                        style: AppTypography.labelMedium,
+                      ),
+                    ),
+                  ),
+                  if (_showGuidance) ...[
+                    ExerciseRepRangeNotice(
+                      exerciseId: widget.workoutExercise.exerciseId,
+                    ),
+                    ExerciseIncrementControl(
+                      exerciseId: widget.workoutExercise.exerciseId,
+                    ),
+                    if (suggestion != null) ...[
+                      const SizedBox(height: 10),
+                      _ProgressionReferenceCard(
+                        suggestion: suggestion,
+                        unit: settings.weightUnit,
+                      ),
+                    ],
+                  ],
                 ],
               ),
             ),
@@ -1740,6 +1774,7 @@ class _SetRow extends ConsumerStatefulWidget {
   final int setIndex;
   final WorkoutSet initialSet;
   final bool isRirEnabled;
+  final bool showRirColumn;
   final WeightUnit weightUnit;
   final bool vibrationEnabled;
   final WorkoutSet? prevSet;
@@ -1753,6 +1788,7 @@ class _SetRow extends ConsumerStatefulWidget {
     required this.setIndex,
     required this.initialSet,
     required this.isRirEnabled,
+    required this.showRirColumn,
     required this.weightUnit,
     required this.vibrationEnabled,
     required this.prevSet,
@@ -1786,7 +1822,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
   String _sidePerformanceLabel(WorkoutSide side) {
     final short = side.shortLabel;
     if (!widget.initialSet.completedForSide(side)) {
-      return side == WorkoutSide.left ? 'Izq.' : 'Der.';
+      return side.label;
     }
     final displayedWeight = WeightConverter.displayWeight(
       widget.initialSet.weightForSide(side),
@@ -1965,9 +2001,11 @@ class _SetRowState extends ConsumerState<_SetRow> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         margin: const EdgeInsets.only(bottom: 5),
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 3),
         decoration: BoxDecoration(
-          color: done ? AppColors.of(context).successFaded : Colors.transparent,
+          color: done
+              ? AppColors.of(context).successFaded.withValues(alpha: 0.45)
+              : Colors.transparent,
           borderRadius: AppRadius.sm_,
         ),
         child: Column(
@@ -1975,26 +2013,24 @@ class _SetRowState extends ConsumerState<_SetRow> {
             Row(
               children: [
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: Row(
                     children: [
-                      _SetTypeBadge(type: widget.initialSet.setType),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${widget.setIndex + 1}',
-                        style: AppTypography.labelSmall,
+                      Tooltip(
+                        message: 'Serie de ${widget.initialSet.setType.label.toLowerCase()}',
+                        child: _SetTypeBadge(type: widget.initialSet.setType),
                       ),
+                      const SizedBox(width: 4),
+                      Text('${widget.setIndex + 1}',
+                        style: AppTypography.labelSmall),
                     ],
                   ),
                 ),
-                if (MediaQuery.sizeOf(context).width >= 380)
+                if (MediaQuery.sizeOf(context).width >= 460)
                   Expanded(
                     flex: 3,
-                    child: Text(
-                      prevText,
-                      textAlign: TextAlign.center,
-                      style: AppTypography.bodySmall,
-                    ),
+                    child: Text(prevText, textAlign: TextAlign.center,
+                      style: AppTypography.bodySmall),
                   ),
                 Expanded(
                   flex: 2,
@@ -2018,62 +2054,97 @@ class _SetRowState extends ConsumerState<_SetRow> {
                     onFocusChanged: (focused) => _repsFocused = focused,
                   ),
                 ),
-                if (widget.isRirEnabled)
+                if (widget.showRirColumn)
                   Expanded(
                     flex: 2,
-                    child: _MinimalCell(
-                      controller: _rirCtrl,
-                      enabled: !done,
-                      done: done,
-                      hint: '-',
-                      onChanged: (_) => _onFieldChanged(),
-                      onEditingComplete: _flushDebounce,
-                      onFocusChanged: (focused) => _rirFocused = focused,
-                    ),
-                  )
-                else
-                  const Expanded(flex: 2, child: SizedBox()),
+                    child: widget.isRirEnabled
+                        ? _MinimalCell(
+                            controller: _rirCtrl,
+                            enabled: !done,
+                            done: done,
+                            hint: '-',
+                            onChanged: (_) => _onFieldChanged(),
+                            onEditingComplete: _flushDebounce,
+                            onFocusChanged: (focused) => _rirFocused = focused,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
                 Expanded(
-                  flex: 2,
-                  child: widget.unilateral
-                      ? Icon(
-                          done ? Icons.done_all : Icons.compare_arrows,
-                          color: done
-                              ? AppColors.of(context).success
-                              : AppColors.of(context).textSecondary,
-                          size: 18,
+                  flex: 5,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (widget.unilateral)
+                        Tooltip(
+                          message: 'Registra izquierda y derecha abajo',
+                          child: Icon(Icons.compare_arrows, size: 20,
+                            color: done
+                                ? AppColors.of(context).success
+                                : AppColors.of(context).textSecondary),
                         )
-                      : GestureDetector(
-                          onTap: _toggle,
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: done
-                                  ? AppColors.of(context).success
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                              border: done
-                                  ? null
-                                  : Border.all(
-                                      color: AppColors.of(
-                                        context,
-                                      ).textSecondary.withValues(alpha: 0.3),
-                                    ),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 7),
-                            child: Icon(
-                              Icons.check,
-                              size: 15,
-                              color: done
-                                  ? AppColors.of(context).onPrimary
-                                  : AppColors.of(context).textSecondary,
-                            ),
+                      else
+                        IconButton(
+                          key: ValueKey('workout_set_toggle_${widget.exIndex}_${widget.setIndex}'),
+                          tooltip: done ? 'Marcar serie pendiente' : 'Completar serie',
+                          onPressed: _toggle,
+                          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                          icon: Icon(
+                            done ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+                            size: 23,
+                            color: done
+                                ? AppColors.of(context).success
+                                : AppColors.of(context).textSecondary,
                           ),
                         ),
+                      PopupMenuButton<String>(
+                        key: ValueKey('set_outcome_${widget.exIndex}_${widget.setIndex}'),
+                        tooltip: 'Acciones de la serie',
+                        icon: Icon(Icons.more_horiz,
+                          color: switch (widget.initialSet.recordedOutcome) {
+                            'skipped' => AppColors.of(context).warning,
+                            'failed' => AppColors.of(context).error,
+                            _ => AppColors.of(context).textSecondary,
+                          },
+                        ),
+                        iconSize: 21,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                        onSelected: (outcome) {
+                          if (outcome == 'delete') {
+                            _confirmRemoveSet();
+                            return;
+                          }
+                          if (done || widget.initialSet.leftCompleted ||
+                              widget.initialSet.rightCompleted) return;
+                          final updated = _setFromFields(completed: false).copyWith(
+                            recordedOutcome: outcome == 'pending' ? null : outcome,
+                            clearRecordedOutcome: outcome == 'pending',
+                          );
+                          ref.read(activeWorkoutProvider.notifier).updateSet(
+                            widget.exIndex, widget.setIndex, updated,
+                          );
+                        },
+                        itemBuilder: (_) => [
+                          if (!done && !widget.initialSet.leftCompleted &&
+                              !widget.initialSet.rightCompleted) ...[
+                            const PopupMenuItem(value: 'pending', child: Text('Pendiente')),
+                            const PopupMenuItem(value: 'skipped', child: Text('Omitida')),
+                            const PopupMenuItem(value: 'failed', child: Text('Fallida')),
+                          ],
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Eliminar serie'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            if (MediaQuery.sizeOf(context).width < 380 &&
+            if (MediaQuery.sizeOf(context).width < 460 &&
                 widget.prevSet != null)
               Align(
                 alignment: Alignment.centerLeft,
@@ -2087,70 +2158,20 @@ class _SetRowState extends ConsumerState<_SetRow> {
                   ),
                 ),
               ),
-            // This is a per-set action, distinct from skipping the rest timer.
-            // Historical false values remain pending until the user explicitly
-            // records a skipped/failed outcome. Partial unilateral sets are
-            // excluded because one completed side is already real work.
-            Align(
-                alignment: Alignment.centerRight,
-                child: PopupMenuButton<String>(
-                  key: ValueKey('set_outcome_${widget.exIndex}_${widget.setIndex}'),
-                  tooltip: 'Acciones de la serie',
-                  onSelected: (outcome) {
-                    if (outcome == 'delete') {
-                      _confirmRemoveSet();
-                      return;
-                    }
-                    if (done ||
-                        widget.initialSet.leftCompleted ||
-                        widget.initialSet.rightCompleted) return;
-                    final updated = _setFromFields(completed: false).copyWith(
-                      recordedOutcome: outcome == 'pending' ? null : outcome,
-                      clearRecordedOutcome: outcome == 'pending',
-                    );
-                    ref.read(activeWorkoutProvider.notifier).updateSet(
-                      widget.exIndex, widget.setIndex, updated,
-                    );
-                  },
-                  itemBuilder: (_) => [
-                    if (!done &&
-                        !widget.initialSet.leftCompleted &&
-                        !widget.initialSet.rightCompleted) ...[
-                      const PopupMenuItem(value: 'pending', child: Text('Pendiente')),
-                      const PopupMenuItem(value: 'skipped', child: Text('Omitida')),
-                      const PopupMenuItem(value: 'failed', child: Text('Fallida')),
-                    ],
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Text('Eliminar serie'),
-                    ),
-                  ],
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm, vertical: AppSpacing.xxs),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.more_horiz, size: 16,
-                          color: AppColors.of(context).textSecondary),
-                        const SizedBox(width: AppSpacing.xxs),
-                        Text(
-                          done
-                              ? 'Acciones'
-                              : switch (widget.initialSet.recordedOutcome) {
-                                  'skipped' => 'Omitida',
-                                  'failed' => 'Fallida',
-                                  _ => 'Acciones',
-                                },
-                          style: AppTypography.labelSmall.copyWith(
-                            color: switch (widget.initialSet.recordedOutcome) {
-                              'skipped' => AppColors.of(context).warning,
-                              'failed' => AppColors.of(context).error,
-                              _ => AppColors.of(context).textSecondary,
-                            },
-                          ),
-                        ),
-                      ],
+            if (widget.initialSet.recordedOutcome == 'skipped' ||
+                widget.initialSet.recordedOutcome == 'failed')
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 0, 3),
+                  child: Text(
+                    widget.initialSet.recordedOutcome == 'skipped'
+                        ? 'Serie omitida'
+                        : 'Serie fallida',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: widget.initialSet.recordedOutcome == 'skipped'
+                          ? AppColors.of(context).warning
+                          : AppColors.of(context).error,
                     ),
                   ),
                 ),
@@ -2258,6 +2279,7 @@ class _SideButton extends StatelessWidget {
             Flexible(
               child: Text(
                 label,
+                semanticsLabel: label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: AppTypography.labelMedium,
