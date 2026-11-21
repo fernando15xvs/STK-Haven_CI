@@ -43,12 +43,14 @@ jobs:
           cache: true
       - name: Resolve pinned workspace
         run: flutter pub get --enforce-lockfile
-      - name: Validate actual opt-in flag and isolated QA UI
+      - name: Validate Nutrition lab and frameless measurements in one QA build
         working-directory: apps/app_mobile
         run: >-
           flutter test --dart-define=STK_INTERNAL_NUTRITION_DEMO=true
           test/features/nutrition/nutrition_internal_qa_build_flag_test.dart
           test/features/nutrition/nutrition_internal_demo_page_test.dart
+          test/features/progress/measurement_map_seamless_background_test.dart
+          test/features/progress/progress_measurement_badge_theme_test.dart
       - name: Configure Maven mirror and pinned Android NDK
         shell: bash
         run: |
@@ -114,12 +116,14 @@ jobs:
           cache: true
       - name: Resolve pinned workspace
         run: flutter pub get --enforce-lockfile
-      - name: Validate actual opt-in flag and isolated QA UI
+      - name: Validate Nutrition lab and frameless measurements in one QA build
         working-directory: apps/app_mobile
         run: >-
           flutter test --dart-define=STK_INTERNAL_NUTRITION_DEMO=true
           test/features/nutrition/nutrition_internal_qa_build_flag_test.dart
           test/features/nutrition/nutrition_internal_demo_page_test.dart
+          test/features/progress/measurement_map_seamless_background_test.dart
+          test/features/progress/progress_measurement_badge_theme_test.dart
       - name: Install CocoaPods
         working-directory: apps/app_mobile/ios
         run: pod install
