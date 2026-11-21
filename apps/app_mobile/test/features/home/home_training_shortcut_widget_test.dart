@@ -37,6 +37,10 @@ void main() {
             expect(find.byKey(const ValueKey('home_continue_workout')),
                 findsOneWidget);
             expect(find.text('Continuar · Upper B'), findsOneWidget);
+            expect(
+              tester.getSize(find.byKey(const ValueKey('home_continue_workout'))).height,
+              greaterThanOrEqualTo(44),
+            );
             expect(tester.takeException(), isNull);
 
             await tester.tap(find.byKey(const ValueKey('home_continue_workout')));

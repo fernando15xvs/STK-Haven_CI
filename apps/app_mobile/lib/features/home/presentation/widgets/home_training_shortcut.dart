@@ -32,7 +32,7 @@ class HomeTrainingShortcut extends StatelessWidget {
         onTap: onContinue,
         borderRadius: AppRadius.md_,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
           child: Row(
             children: [
               Icon(
