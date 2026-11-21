@@ -66,16 +66,26 @@ class _ActiveWorkoutMemoryOverlayState
             // Resolve by stable instance id, not by mutable list index.
             // Reordering exercises while a sheet is open cannot show memory
             // for a different exercise.
-            var exerciseIndex = session.exercises.indexWhere(
+            final exerciseIndex = session.exercises.indexWhere(
               (item) => item.instanceId == requestedInstanceId,
             );
             if (exerciseIndex < 0) {
-              exerciseIndex = session.exercises.indexWhere(
-                (item) => !item.completed,
+              // The selected exercise was deleted during this session.
+              // Never silently display another exercise's performance.
+              return Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Este ejercicio ya no está en la sesión.'),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      child: const Text('Cerrar memoria'),
+                    ),
+                  ],
+                ),
               );
-            }
-            if (exerciseIndex < 0) {
-              exerciseIndex = session.exercises.length - 1;
             }
             final exercise = session.exercises[exerciseIndex];
             final memory = sheetRef.watch(

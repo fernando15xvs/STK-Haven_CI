@@ -780,6 +780,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
           minimum: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: PrimaryButton(
             label: 'Finalizar entrenamiento',
+            height: 48,
             onPressed: _isFinishing ? null : () => _finish(context),
           ),
         ),
@@ -1855,18 +1856,21 @@ class _SetRowState extends ConsumerState<_SetRow> {
         oldWidget.initialSet.weight != widget.initialSet.weight;
     final repsChanged = oldWidget.initialSet.reps != widget.initialSet.reps;
     final rirChanged = oldWidget.initialSet.rir != widget.initialSet.rir;
-    if (unitChanged ||
-        (weightChanged && !widget.initialSet.completed && !_weightFocused)) {
+    // Reflect the authoritative state after a completed set is reopened or
+    // updated elsewhere. Do not overwrite a field while it is being typed.
+    final completionChanged =
+        oldWidget.initialSet.completed != widget.initialSet.completed;
+    if (unitChanged || ((weightChanged || completionChanged) && !_weightFocused)) {
       final newText = _displayWeight(widget.initialSet.weight);
       if (_weightCtrl.text != newText) _weightCtrl.text = newText;
     }
-    if (repsChanged && !widget.initialSet.completed && !_repsFocused) {
+    if ((repsChanged || completionChanged) && !_repsFocused) {
       final next = widget.initialSet.reps == 0
           ? ''
           : '${widget.initialSet.reps}';
       if (_repsCtrl.text != next) _repsCtrl.text = next;
     }
-    if (rirChanged && !widget.initialSet.completed && !_rirFocused) {
+    if ((rirChanged || completionChanged) && !_rirFocused) {
       final next = widget.initialSet.rir == null
           ? ''
           : '${widget.initialSet.rir}';
@@ -2036,6 +2040,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
                   flex: 2,
                   child: _MinimalCell(
                     controller: _weightCtrl,
+                    accessibilityLabel: 'Peso de la serie ${widget.setIndex + 1} en ${widget.weightUnit.label}',
                     enabled: !done,
                     done: done,
                     onChanged: (_) => _onFieldChanged(),
@@ -2047,6 +2052,8 @@ class _SetRowState extends ConsumerState<_SetRow> {
                   flex: 2,
                   child: _MinimalCell(
                     controller: _repsCtrl,
+                    accessibilityLabel: 'Repeticiones de la serie ${widget.setIndex + 1}',
+                    integerOnly: true,
                     enabled: !done,
                     done: done,
                     onChanged: (_) => _onFieldChanged(),
@@ -2060,6 +2067,8 @@ class _SetRowState extends ConsumerState<_SetRow> {
                     child: widget.isRirEnabled
                         ? _MinimalCell(
                             controller: _rirCtrl,
+                            accessibilityLabel: 'Repeticiones en reserva de la serie ${widget.setIndex + 1}',
+                            integerOnly: true,
                             enabled: !done,
                             done: done,
                             hint: '-',
@@ -2297,6 +2306,8 @@ class _MinimalCell extends StatefulWidget {
   final bool enabled;
   final bool done;
   final String hint;
+  final String accessibilityLabel;
+  final bool integerOnly;
   final ValueChanged<String>? onChanged;
   final VoidCallback? onEditingComplete;
   final ValueChanged<bool>? onFocusChanged;
@@ -2306,6 +2317,8 @@ class _MinimalCell extends StatefulWidget {
     required this.enabled,
     required this.done,
     this.hint = '-',
+    required this.accessibilityLabel,
+    this.integerOnly = false,
     this.onChanged,
     this.onEditingComplete,
     this.onFocusChanged,
@@ -2352,11 +2365,15 @@ class _MinimalCellState extends State<_MinimalCell> {
           ),
         ),
       ),
-      child: TextFormField(
+      child: Semantics(
+        label: widget.accessibilityLabel,
+        child: TextFormField(
         focusNode: _focusNode,
         controller: widget.controller,
         textAlign: TextAlign.center,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        keyboardType: widget.integerOnly
+            ? TextInputType.number
+            : const TextInputType.numberWithOptions(decimal: true),
         textInputAction: TextInputAction.done,
         style: AppTypography.monoMedium.copyWith(
           color: widget.done
@@ -2382,6 +2399,7 @@ class _MinimalCellState extends State<_MinimalCell> {
           widget.onEditingComplete?.call();
           _focusNode.unfocus();
         },
+        ),
       ),
     );
   }

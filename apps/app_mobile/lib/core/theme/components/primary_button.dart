@@ -9,6 +9,8 @@ class PrimaryButton extends ConsumerWidget {
   final VoidCallback? onPressed;
   final bool isLoading;
   final IconData? icon;
+  /// Custom height for compact in-flow CTAs; default preserves existing UI.
+  final double height;
 
   const PrimaryButton({
     super.key,
@@ -16,6 +18,7 @@ class PrimaryButton extends ConsumerWidget {
     this.onPressed,
     this.isLoading = false,
     this.icon,
+    this.height = 56,
   });
 
   Future<void> _handlePress(BuildContext context, WidgetRef ref) async {
@@ -78,8 +81,14 @@ class PrimaryButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final scale = MediaQuery.textScalerOf(context).scale(1);
+    // The workout CTA is 48dp normally; grow it for large accessibility
+    // text rather than clipping its label or shrinking the user's font.
+    final adaptiveHeight = height < 56
+        ? height + (scale - 1).clamp(0.0, 1.0) * 44
+        : height;
     return SizedBox(
-      height: 56,
+      height: adaptiveHeight,
       width: double.infinity,
       child: FilledButton(
         onPressed: isLoading || onPressed == null
@@ -113,12 +122,17 @@ class PrimaryButton extends ConsumerWidget {
                     Icon(icon, size: 20),
                     const SizedBox(width: 8),
                   ],
-                  Text(
+                  Flexible(
+                    child: Text(
                     label.toUpperCase(),
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
                     style: AppTypography.labelLarge.copyWith(
                       color: onPressed == null
                           ? AppColors.of(context).textDisabled
                           : AppColors.of(context).onPrimary,
+                    ),
                     ),
                   ),
                 ],

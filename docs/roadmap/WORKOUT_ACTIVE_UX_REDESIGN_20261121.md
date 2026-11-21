@@ -24,13 +24,19 @@ La pantalla de Upper B mostraba descanso demasiado alto, Memoria flotante sobre 
 - [x] En ejercicios unilaterales, indicar «Izq.»/«Der.» en la cabecera y botones por lado con nombres completos; desplegar solo los detalles sobre descanso entre lados.
 - [x] Mover la sección desplegable «Guía y progresión» **después** de peso, reps, RIR y añadir serie.
 - [x] Modo enfoque disponible también por el menú del entrenamiento, con texto explícito.
+- [x] CTA fijo de finalizar a **48dp** en escala normal, creciendo automáticamente con textos grandes (160–200%) y sin alterar el componente en otras pantallas.
+- [x] Peso, repeticiones y RIR con etiquetas para VoiceOver/TalkBack y teclado numérico entero cuando corresponde.
+- [x] Al finalizar/reabrir una serie, los campos sin foco se resincronizan con los valores reales del estado; jamás se sobrescribe una edición activa.
+- [x] La hoja de Memoria no muestra los datos de un ejercicio distinto si el seleccionado se elimina mientras está abierta.
 
 ## Bloque C — Estabilidad y QA
 
 - [x] `Consumer` propio del countdown, evitando reconstruir todos los ejercicios cada segundo. Se mantienen datos inmutables del provider.
 - [x] Pruebas nuevas de barra de descanso y acceso contextual a memoria a 320/390/430 dp, texto 100/160/200 %, claro/oscuro, callbacks de +15/+30/personalizar/omitir.
 - [x] Contrato de acciones accesibles, hoja de memoria y estructura no flotante.
-- [ ] CI principal 7/7 verde **sobre el último SHA del espejo**.
+- [x] Test de CTA fija 320dp/100–200%, sincronización de campos, semántica de inputs y comportamiento seguro al eliminar ejercicio.
+- [x] CI principal anterior **7/7 SUCCESS**: [#44928398576](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/44928398576), SHA espejo `e56554ab5601b5b7feb0c6ae81a2456a37e5fe6d`.
+- [ ] Repetir **CI 7/7 sobre el SHA más reciente** tras el pulido final (la verificación anterior no equivale a esta).
 - [ ] QA física iOS/Android: teclado abierto, memoria de cada ejercicio, ordenación, series fallidas/omitidas, unilateral por lados, RIR on/off, 320dp 200 %, app bloqueada, descanso a cero y música externa.
 - [ ] QA de firma iOS: el IPA sin firmar no es instalable; mantener Team ID/Bundle ID/entitlements y nunca desinstalar una app con historial en Hive.
 
