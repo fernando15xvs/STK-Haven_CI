@@ -1,9 +1,7 @@
-import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/coach/presentation/pages/coach_hub_page.dart';
 import 'package:core/features/coach_pro/application/coach_pro_entitlement_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:gym_tracker/features/habits/presentation/study_habits_mobile_page.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -101,10 +99,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.listen<int>(homeTabReturnRequestProvider, (previous, next) {
       if (previous != next) _selectTab(0);
     });
-    final performanceMode = ref.watch(
-      settingsProvider.select((settings) => settings.performanceMode),
-    );
-    final savings = performanceMode == PerformanceMode.savings;
     final experienceProfile = ref.watch(userExperienceProfileProvider).value;
     final faithEnabled = experienceProfile?.faithEnabled ?? false;
     final coachCapability = experienceProfile?.isCoach ?? false;
@@ -128,88 +122,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           growable: false,
         ),
       ),
+      // No card, border, background panel or shadow: the tabs float on the
+      // same Scaffold background as the page, while honoring iOS safe areas.
       bottomNavigationBar: SafeArea(
+        top: false,
         child: Column(
-          mainAxisSize:MainAxisSize.min,
-          children:[
-            // Real layout space, not an OverlayEntry over workouts or tables.
-            // Playback survives tab changes because the engine is shared.
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Remains in the layout and above the tab row when playing.
             const MotivationHomeMiniPlayer(),
             Padding(
-          // Lower the dock 8 logical pixels while retaining the iPhone home-indicator safe area.
-          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
-          child: _BottomBarSurface(
-            savings: savings,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Expanded(child: _BottomNavItem(
-                  icon: Icons.home_outlined,
-                  activeIcon: Icons.home,
-                  label: 'Inicio',
-                  isSelected: _currentIndex == 0,
-                  onTap: () => _selectTab(0),
-                )),
-                Expanded(child: _BottomNavItem(
-                  icon: Icons.fitness_center_outlined,
-                  activeIcon: Icons.fitness_center,
-                  label: 'Entrenar',
-                  isSelected: _currentIndex == 1,
-                  onTap: () => _selectTab(1),
-                )),
-                _FloatingMenuButton(
-                  faithEnabled: faithEnabled,
-                  coachEnabled: coachEnabled,
-                ),
-                Expanded(child: _BottomNavItem(
-                  icon: Icons.bar_chart_outlined,
-                  activeIcon: Icons.bar_chart,
-                  label: 'Progreso',
-                  isSelected: _currentIndex == 2,
-                  onTap: () => _selectTab(2),
-                )),
-                Expanded(child: _BottomNavItem(
-                  icon: Icons.person_outline,
-                  activeIcon: Icons.person,
-                  label: 'Perfil',
-                  isSelected: _currentIndex == 3,
-                  onTap: () => _selectTab(3),
-                )),
-              ],
+              key: const ValueKey('flat_bottom_navigation'),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(child: _BottomNavItem(
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home,
+                    label: 'Inicio',
+                    isSelected: _currentIndex == 0,
+                    onTap: () => _selectTab(0),
+                  )),
+                  Expanded(child: _BottomNavItem(
+                    icon: Icons.fitness_center_outlined,
+                    activeIcon: Icons.fitness_center,
+                    label: 'Entrenar',
+                    isSelected: _currentIndex == 1,
+                    onTap: () => _selectTab(1),
+                  )),
+                  _FloatingMenuButton(
+                    faithEnabled: faithEnabled,
+                    coachEnabled: coachEnabled,
+                  ),
+                  Expanded(child: _BottomNavItem(
+                    icon: Icons.bar_chart_outlined,
+                    activeIcon: Icons.bar_chart,
+                    label: 'Progreso',
+                    isSelected: _currentIndex == 2,
+                    onTap: () => _selectTab(2),
+                  )),
+                  Expanded(child: _BottomNavItem(
+                    icon: Icons.person_outline,
+                    activeIcon: Icons.person,
+                    label: 'Perfil',
+                    isSelected: _currentIndex == 3,
+                    onTap: () => _selectTab(3),
+                  )),
+                ],
+              ),
             ),
-          ),
-        ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _BottomBarSurface extends StatelessWidget {
-  const _BottomBarSurface({required this.savings, required this.child});
-
-  final bool savings;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.of(context).surfaceHigh,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.of(context).surfaceBorder),
-        boxShadow: savings
-            ? const []
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.28),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
-              ],
-      ),
-      child: child,
     );
   }
 }
@@ -240,7 +205,9 @@ class _BottomNavItem extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(22),
           child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              // Reduce the space *below* the labels: icons settle 8 dp lower
+              // without approaching the iPhone home indicator.
+              padding: const EdgeInsets.only(top: 10, bottom: 2),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
