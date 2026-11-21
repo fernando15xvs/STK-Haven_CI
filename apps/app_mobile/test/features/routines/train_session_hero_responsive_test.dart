@@ -107,6 +107,10 @@ void main() {
         expect(find.byKey(const ValueKey('train_start_next_session')),
             findsOneWidget);
         expect(find.text('Upper B'), findsOneWidget);
+        expect(
+          tester.getSize(find.byKey(const ValueKey('train_next_session_hero'))).width,
+          closeTo(width, 0.1),
+        );
         expect(find.text('Rotación flexible · sin día obligatorio'),
             findsOneWidget);
         expect(tester.takeException(), isNull);

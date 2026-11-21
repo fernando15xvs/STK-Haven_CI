@@ -20,11 +20,19 @@ import 'package:core/features/workout/application/workout_history_provider.dart'
 import 'package:gym_tracker/features/routines/application/routine_card_evidence.dart';
 import 'package:intl/intl.dart';
 
-class RoutinesPage extends ConsumerWidget {
+class RoutinesPage extends ConsumerStatefulWidget {
   const RoutinesPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RoutinesPage> createState() => _RoutinesPageState();
+}
+
+class _RoutinesPageState extends ConsumerState<RoutinesPage> {
+  bool _showAllRoutines = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final routines = ref.watch(routineListProvider);
     final exercises = ref.watch(exerciseListProvider);
     final exerciseMap = {
@@ -36,6 +44,24 @@ class RoutinesPage extends ConsumerWidget {
     final workoutActive = ref.watch(
       activeWorkoutProvider.select((state) => state.isActive),
     );
+    final activeRoutineId = ref.watch(
+      activeWorkoutProvider.select((state) => state.session?.routineId),
+    );
+    final suggestedRoutineId =
+        nextProgramSession?.routine.id ?? legacyTodaySession?.routine.id;
+    // Keep the highlighted routine accessible, but do not duplicate its
+    // name and metadata immediately in the visible list.
+    final featuredRoutineId = workoutActive
+        ? activeRoutineId
+        : suggestedRoutineId;
+    final hasFeaturedRoutine = featuredRoutineId != null &&
+        routines.any((routine) => routine.id == featuredRoutineId);
+    final hideFeatured = hasFeaturedRoutine && !_showAllRoutines;
+    final visibleRoutines = hideFeatured
+        ? routines
+            .where((routine) => routine.id != featuredRoutineId)
+            .toList(growable: false)
+        : routines;
     List<String> musclesFor(Routine routine) {
       final unique = <String>{};
       for (final item in routine.exercises) {
@@ -57,8 +83,6 @@ class RoutinesPage extends ConsumerWidget {
       );
     }
 
-    void openTemplates() { _showTemplatesChooser(context); }
-
     return Scaffold(
       // The bottom dock already identifies Entrenar.
       body: SafeArea(
@@ -67,14 +91,15 @@ class RoutinesPage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xxl,
               ),
-              itemCount: routines.length + (routines.isEmpty ? 2 : 1),
+              itemCount: 1 +
+                  (routines.isEmpty
+                      ? 1
+                      : visibleRoutines.length + (hideFeatured ? 1 : 0)),
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Entrenar', style: AppTypography.headlineLarge),
-                      const SizedBox(height: AppSpacing.md),
                       NextTrainingSessionHero(
                         routines: routines,
                         historyByRoutine: usageByRoutine,
@@ -95,35 +120,21 @@ class RoutinesPage extends ConsumerWidget {
                           ),
                           _TrainingQuickLink(
                             key: const ValueKey('train_open_manage'),
-                            label: 'Administrar',
+                            label: 'Gestionar',
                             icon: Icons.tune_rounded,
-                            onTap: () => Navigator.push(
+                            onTap: () => _showTrainingManagement(
                               context,
-                              MaterialPageRoute(
-                                builder: (_) => const TrainingProgramsPage(),
-                              ),
+                              canCreatePlan:
+                                  activeProgram == null && routines.isNotEmpty,
                             ),
                           ),
-                          _TrainingQuickLink(
-                            key: const ValueKey('train_open_templates'),
-                            label: 'Plantillas',
-                            icon: Icons.layers_outlined,
-                            onTap: openTemplates,
-                          ),
-                          if (activeProgram == null && routines.isNotEmpty)
-                            _TrainingQuickLink(
-                              key: const ValueKey('train_create_plan'),
-                              label: 'Crear plan',
-                              icon: Icons.add_rounded,
-                              onTap: () => QuickTrainingPlanSheet.show(context),
-                            ),
                         ],
                       ),
-                      const SizedBox(height: AppSpacing.xl),
+                      const SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
                           Expanded(
-                            child: Text('MIS RUTINAS', style: AppTypography.labelLarge),
+                            child: Text('Mis rutinas', style: AppTypography.headlineSmall),
                           ),
                           if (routines.isNotEmpty)
                             TextButton.icon(
@@ -142,7 +153,19 @@ class RoutinesPage extends ConsumerWidget {
                   return _EmptyState(onCreate: createRoutine);
                 }
 
-                final routine = routines[index - 1];
+                if (hideFeatured && index == visibleRoutines.length + 1) {
+                  return Align(
+                    alignment: Alignment.center,
+                    child: TextButton.icon(
+                      key: const ValueKey('train_show_all_routines'),
+                      onPressed: () => setState(() => _showAllRoutines = true),
+                      icon: const Icon(Icons.expand_more_rounded),
+                      label: const Text('Ver todas las rutinas'),
+                    ),
+                  );
+                }
+
+                final routine = visibleRoutines[index - 1];
                 final muscleGroups = musclesFor(routine);
                 final linkedToActiveProgram =
                     activeProgram?.routineIds.contains(routine.id) ?? false;
@@ -151,10 +174,9 @@ class RoutinesPage extends ConsumerWidget {
                   child: _RoutineCard(
                     routine: routine,
                     muscleGroups: muscleGroups,
-                    isSuggested: !workoutActive &&
-                        (nextProgramSession?.routine.id ??
-                                legacyTodaySession?.routine.id) ==
-                            routine.id,
+                    isSuggested:
+                        !workoutActive && suggestedRoutineId == routine.id,
+                    allowStart: !workoutActive,
                     programName:
                         linkedToActiveProgram ? activeProgram!.name : null,
                     evidence: usageByRoutine[routine.id],
@@ -176,41 +198,87 @@ class RoutinesPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _showTemplatesChooser(BuildContext context) async {
+  Future<void> _showTrainingManagement(
+    BuildContext context, {
+    required bool canCreatePlan,
+  }) async {
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
+      isScrollControlled: true,
       backgroundColor: AppColors.of(context).surfaceHigh,
-      builder: (sheetContext) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Plantillas', style: AppTypography.headlineLarge),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.fitness_center_outlined),
-              title: const Text('Plantillas de rutinas'),
-              subtitle: const Text('Crea una rutina y personaliza sus ejercicios'),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => const RoutineTemplatesPage(),
-                ));
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.layers_outlined),
-              title: const Text('Plantillas de programas'),
-              subtitle: const Text('Administra planes y plantillas reutilizables'),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => const TrainingProgramsPage(templatesOnly: true),
-                ));
-              },
-            ),
-          ],
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.xl),
+        ),
+      ),
+      builder: (sheetContext) => SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.xl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Gestionar', style: AppTypography.headlineMedium),
+              const SizedBox(height: AppSpacing.sm),
+              ListTile(
+                key: const ValueKey('train_manage_programs'),
+                leading: const Icon(Icons.tune_rounded),
+                title: const Text('Administrar'),
+                subtitle: const Text('Programas, pausas y ajustes'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TrainingProgramsPage(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                key: const ValueKey('train_manage_routine_templates'),
+                leading: const Icon(Icons.fitness_center_outlined),
+                title: const Text('Plantillas de rutinas'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const RoutineTemplatesPage(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                key: const ValueKey('train_manage_program_templates'),
+                leading: const Icon(Icons.layers_outlined),
+                title: const Text('Plantillas de programas'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const TrainingProgramsPage(templatesOnly: true),
+                    ),
+                  );
+                },
+              ),
+              if (canCreatePlan)
+                ListTile(
+                  key: const ValueKey('train_create_plan'),
+                  leading: const Icon(Icons.add_rounded),
+                  title: const Text('Crear plan'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    QuickTrainingPlanSheet.show(context);
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -631,6 +699,7 @@ class _TrainingQuickLink extends StatelessWidget {
 }
 
 /// A compact context indicator. Full planning and settings live one tap away.
+/// Program context without a second heavy card competing with the workout.
 class _ProgramOrganizerCard extends ConsumerWidget {
   const _ProgramOrganizerCard({required this.routines});
 
@@ -651,60 +720,53 @@ class _ProgramOrganizerCard extends ConsumerWidget {
     final name = active?.name ??
         (hasExisting ? 'Programa pausado' : 'Sin programa activo');
 
-    return PremiumCard(
+    return Padding(
       key: const ValueKey('train_compact_program'),
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
+        horizontal: AppSpacing.xs,
         vertical: AppSpacing.sm,
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Icon(Icons.layers_outlined, color: colors.primary, size: 22),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: AppTypography.headlineMedium,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.layers_outlined, color: colors.primary, size: 20),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: AppTypography.headlineMedium,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      active == null
+                          ? (hasExisting
+                              ? 'Gestiona tu programa para reanudarlo.'
+                              : 'Tus rutinas funcionan sin plan.')
+                          : 'Semana $week/${active.durationWeeks} · $target sesiones/sem',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
-                if (active != null) ...[
-                  Text(
-                    'Semana $week/${active.durationWeeks} · $target sesiones/sem',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  LinearProgressIndicator(
-                    value: (week / active.durationWeeks.clamp(1, 9999))
-                        .clamp(0.0, 1.0).toDouble(),
-                    minHeight: 4,
-                    borderRadius: BorderRadius.circular(99),
-                    backgroundColor: colors.surfaceHigh,
-                  ),
-                ] else
-                  Text(
-                    hasExisting
-                        ? 'Administra tus planes para reanudar.'
-                        : 'Tus rutinas funcionan sin plan.',
-                    style: AppTypography.bodySmall.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-              ],
-            ),
+              ),
+            ],
           ),
           if (active != null) ...[
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              'ACTIVO',
-              style: AppTypography.labelSmall.copyWith(
-                color: colors.primary,
-              ),
+            const SizedBox(height: AppSpacing.xs),
+            LinearProgressIndicator(
+              value: (week / active.durationWeeks.clamp(1, 9999))
+                  .clamp(0.0, 1.0).toDouble(),
+              minHeight: 4,
+              borderRadius: BorderRadius.circular(99),
+              backgroundColor: colors.surfaceHigh,
             ),
           ],
         ],
@@ -719,6 +781,7 @@ class _RoutineCard extends StatelessWidget {
   final String? programName;
   final RoutineCardEvidence? evidence;
   final bool isSuggested;
+  final bool allowStart;
   final VoidCallback onStart;
   final VoidCallback onEdit;
   final VoidCallback onNotes;
@@ -731,6 +794,7 @@ class _RoutineCard extends StatelessWidget {
     required this.programName,
     required this.evidence,
     this.isSuggested = false,
+    this.allowStart = true,
     required this.onStart,
     required this.onEdit,
     required this.onNotes,
@@ -856,9 +920,9 @@ class _RoutineCard extends StatelessWidget {
                 ],
               );
               // Suggested workout owns the hero CTA above this list.
-              final Widget? start = isSuggested
+              final Widget? start = isSuggested || !allowStart
                   ? null
-                  : FilledButton.icon(
+                  : TextButton.icon(
                       onPressed: onStart,
                       icon: const Icon(Icons.play_arrow_rounded, size: 20),
                       label: const Text('Iniciar'),

@@ -113,36 +113,58 @@ class _NextTrainingSessionHeroState
             lastActivityAt ?? sessionStart,
             DateTime.now(),
           );
-      return PremiumCard(
-        key: const ValueKey('train_next_session_hero'),
-        backgroundColor: colors.primaryFaded,
-        borderColor: colors.primary.withValues(alpha: 0.4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              stale ? 'ENTRENAMIENTO PENDIENTE' : 'ENTRENAMIENTO EN CURSO',
-              style: AppTypography.labelMedium.copyWith(
-                color: colors.primary,
+      return SizedBox(
+        width: double.infinity,
+        child: PremiumCard(
+          key: const ValueKey('train_next_session_hero'),
+          backgroundColor: colors.primaryFaded,
+          borderColor: colors.primary.withValues(alpha: 0.4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.fitness_center_rounded,
+                      size: 18, color: colors.primary),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      stale ? 'PENDIENTE DE REVISAR' : 'EN CURSO',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: colors.primary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(activeName, style: AppTypography.headlineLarge),
-            if (stale)
+              const SizedBox(height: AppSpacing.xs),
               Text(
-                'Revisa la sesión antes de continuar o finalizar.',
-                style: AppTypography.bodySmall.copyWith(
-                  color: colors.textSecondary,
+                activeName,
+                style: AppTypography.headlineMedium,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (stale) ...[
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  'Revisa la sesión antes de continuar o finalizar.',
+                  style: AppTypography.bodySmall.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.xs),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton.icon(
+                  key: const ValueKey('train_resume_workout'),
+                  onPressed: _opening ? null : () => _open(null),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Continuar'),
                 ),
               ),
-            const SizedBox(height: AppSpacing.sm),
-            FilledButton.icon(
-              key: const ValueKey('train_resume_workout'),
-              onPressed: _opening ? null : () => _open(null),
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: const Text('Continuar'),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -193,66 +215,70 @@ class _NextTrainingSessionHeroState
       if (typicalMinutes != null) '~$typicalMinutes min habituales',
     ];
 
-    return PremiumCard(
-      key: const ValueKey('train_next_session_hero'),
-      backgroundColor: colors.primaryFaded,
-      borderColor: colors.primary.withValues(alpha: 0.38),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.fitness_center_rounded, size: 19, color: colors.primary),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  'SIGUIENTE SESIÓN',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: colors.primary,
+    return SizedBox(
+      width: double.infinity,
+      child: PremiumCard(
+        key: const ValueKey('train_next_session_hero'),
+        backgroundColor: colors.primaryFaded,
+        borderColor: colors.primary.withValues(alpha: 0.38),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.fitness_center_rounded,
+                    size: 19, color: colors.primary),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'SIGUIENTE SESIÓN',
+                    style: AppTypography.labelMedium.copyWith(
+                      color: colors.primary,
+                    ),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              routine.name,
+              style: AppTypography.headlineMedium,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              schedule,
+              style: AppTypography.bodySmall.copyWith(
+                color: colors.textSecondary,
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            routine.name,
-            style: AppTypography.headlineLarge,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            schedule,
-            style: AppTypography.bodySmall.copyWith(
-              color: colors.textSecondary,
             ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            children: [
-              for (final item in detailItems)
-                Text(
-                  item,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: colors.textSecondary,
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.xxs,
+              children: [
+                for (final item in detailItems)
+                  Text(
+                    item,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: colors.textSecondary,
+                    ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton.icon(
-              key: const ValueKey('train_start_next_session'),
-              onPressed: _opening ? null : () => _open(routine),
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: const Text('Iniciar'),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                key: const ValueKey('train_start_next_session'),
+                onPressed: _opening ? null : () => _open(routine),
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('Iniciar'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

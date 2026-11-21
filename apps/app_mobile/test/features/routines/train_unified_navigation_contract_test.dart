@@ -18,10 +18,13 @@ void main() {
     ).readAsStringSync();
     expect(routines, contains('NextTrainingSessionHero('));
     expect(routines, contains('nextProgramSessionProvider'));
-    expect(routines, contains('MIS RUTINAS'));
+    expect(routines, contains("Text('Mis rutinas'"));
+    expect(routines, isNot(contains("Text('Entrenar'")));
     expect(routines, contains("label: 'Planificación'"));
-    expect(routines, contains("label: 'Administrar'"));
-    expect(routines, contains("label: 'Plantillas'"));
+    expect(routines, contains("label: 'Gestionar'"));
+    expect(routines, contains("title: const Text('Administrar')"));
+    expect(routines, contains("title: const Text('Plantillas de rutinas')"));
+    expect(routines, contains("title: const Text('Plantillas de programas')"));
     expect(routines, contains('QuickTrainingPlanSheet.show(context)'));
     expect(routines, contains('WorkoutLauncher.launch(context, ref, routine)'));
     expect(hero, contains('SIGUIENTE SESIÓN'));
@@ -53,10 +56,15 @@ void main() {
     final source = File(
       'lib/features/routines/presentation/pages/routines_page.dart',
     ).readAsStringSync();
-    expect(source, contains('isSuggested: !workoutActive'));
-    expect(source, contains('nextProgramSession?.routine.id ??'));
-    expect(source, contains('legacyTodaySession?.routine.id'));
-    expect(source, contains('final Widget? start = isSuggested'));
+    expect(source, contains('final featuredRoutineId = workoutActive'));
+    expect(source, contains('routine.id != featuredRoutineId'));
+    expect(source, contains('final hideFeatured ='));
+    expect(source, contains('_showAllRoutines'));
+    expect(source, contains("ValueKey('train_show_all_routines')"));
+    expect(source, contains('isSuggested:'));
+    expect(source, contains('suggestedRoutineId == routine.id'));
+    expect(source, contains('allowStart: !workoutActive'));
+    expect(source, contains('final Widget? start = isSuggested || !allowStart'));
     expect(source, contains('if (start != null)'));
     expect(source, isNot(contains("Text('Plantillas', style: AppTypography.headlineMedium)")));
   });
