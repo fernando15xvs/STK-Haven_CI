@@ -51,10 +51,13 @@ void main() {
           ),
         ));
         await tester.pumpAndSettle();
-        final silhouette = tester.widget<Container>(
+        // The approved frameless map is a non-painting layout wrapper.
+        // A solid surface here would recreate the rectangular slab.
+        final silhouette = tester.widget<KeyedSubtree>(
           find.byKey(const Key('silhouette_front')));
-        expect(silhouette.color, colors.surface,
-          reason: 'One continuous silhouette surface per accent/OLED');
+        expect(silhouette.child, isA<LayoutBuilder>(),
+          reason: 'The anatomy map must float on the parent theme, '
+              'without an opaque enclosing card');
         final heading = tester.widget<Text>(find.text('Medidas corporales'));
         expect(heading.style?.fontFamily, 'Outfit');
         expect(heading.style?.fontSize, AppTypography.headlineSmall.fontSize);
