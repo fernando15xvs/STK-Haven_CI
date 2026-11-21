@@ -74,7 +74,7 @@ class ProgramRotationCoordinator {
       }
 
       if (latestSequenceCompletion != null &&
-          !session.startedAt.isAfter(latestSequenceCompletion)) {
+          session.startedAt.isBefore(latestSequenceCompletion)) {
         // Do not backfill a formerly off-sequence session behind a saved
         // completion. This is especially important when the app reopens and
         // reconciles the same complete workout history again.
