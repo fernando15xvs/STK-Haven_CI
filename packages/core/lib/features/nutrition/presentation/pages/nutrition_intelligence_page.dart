@@ -63,6 +63,8 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
   final VoidCallback? onRefreshAdultAccess;
   /// Existing mobile accounts can review approved terms without onboarding.
   final VoidCallback? onOpenLegalAndPrivacy;
+  /// Internal preview navigation only; never grants nutrition access.
+  final VoidCallback? onOpenInternalDemo;
   final bool legalReviewAvailable;
 
   const NutritionIntelligencePage({
@@ -79,6 +81,7 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
     this.onOpenMeasurements,
     this.onRefreshAdultAccess,
     this.onOpenLegalAndPrivacy,
+    this.onOpenInternalDemo,
     this.legalReviewAvailable = false,
   });
 
@@ -269,6 +272,13 @@ class _NutritionIntelligencePageState
           actions: _showMobileHistory
               ? null
               : [
+                  if (widget.onOpenInternalDemo != null)
+                    IconButton(
+                      key: const ValueKey('nutrition_internal_demo_entry'),
+                      tooltip: 'Laboratorio de nutrición · datos ficticios',
+                      onPressed: widget.onOpenInternalDemo,
+                      icon: const Icon(Icons.science_outlined),
+                    ),
                   IconButton(
                     key: const ValueKey('nutrition_mobile_history_appbar'),
                     tooltip: 'Mis análisis guardados',
