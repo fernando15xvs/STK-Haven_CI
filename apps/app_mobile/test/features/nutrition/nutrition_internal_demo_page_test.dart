@@ -52,7 +52,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     final minor = find.byKey(const ValueKey('nutrition_demo_teen'));
-    await tester.ensureVisible(minor);
+    // At 320dp/200%, the lazy ListView may not build this chip yet.
+    // Scroll until it exists instead of calling ensureVisible too early.
+    await tester.scrollUntilVisible(
+      minor,
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(minor);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
