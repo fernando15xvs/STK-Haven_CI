@@ -100,6 +100,14 @@ El usuario ha aprobado también que **Inicio solo tenga un acceso pequeño «Con
 - [ ] Revisar nueva ejecución CI 7/7, confirmar paridad de blobs tras los nuevos cambios y actualizar checklist si pasa.
 - [ ] Validar en equipos reales el salto Inicio → Entrenar y la música/notificaciones al reanudar.
 
+## Tercer bloque de QA — acceso compacto de Inicio
+
+- [x] Extraído componente testable `HomeTrainingShortcut`; conserva la ruta original a `ActiveWorkoutPage` y no inicia ni descarta sesiones.
+- [x] Prueba widget de pulsación real sobre «Continuar», estados normal y pendiente, etiqueta semántica para asistencia, y renderizado **320/390/430 dp × texto 100/160/200 % × claro/oscuro**.
+- [x] Adaptados los contratos de navegación y Home tras la extracción. El enlace alternativo «Ir a Entrenar» sigue apuntando a la pestaña real del `HomeScreen`.
+- [ ] Pruebas end-to-end de cambio de pestaña/restauración/música/temporizador y el resto de QA en dispositivos físicos aún pendientes; las pruebas de widget no sustituyen ese requisito.
+- [ ] Volver a comprobar 7/7 verde sobre el último SHA de espejo tras este bloque y confirmar paridad de fuentes.
+
 ## Criterios de aceptación
 
 - [ ] Inicio mantiene solo **«Continuar entrenamiento» compacto** cuando hay una sesión activa; o un acceso opcional pequeño «Ir a Entrenar» cuando no la hay. Sin gran hero ni «Siguiente sesión».

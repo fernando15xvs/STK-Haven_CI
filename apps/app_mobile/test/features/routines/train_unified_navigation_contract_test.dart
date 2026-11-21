@@ -34,7 +34,11 @@ void main() {
     ).readAsStringSync();
     expect(hero, contains('NextTrainingSessionLabel.forSchedule('));
     expect(scheduleLabel, contains('Rotación flexible · sin día obligatorio'));
-    expect(dashboard, contains('home_continue_workout'));
+    final homeShortcut = File(
+      'lib/features/home/presentation/widgets/home_training_shortcut.dart',
+    ).readAsStringSync();
+    expect(dashboard, contains('HomeTrainingShortcut('));
+    expect(homeShortcut, contains('home_continue_workout'));
     expect(dashboard, contains('home_open_train'));
     expect(dashboard, isNot(contains('_TodayRoutineCard')));
     expect(dashboard, isNot(contains('SIGUIENTE SESIÓN')));

@@ -14,7 +14,11 @@ void main() {
     expect(source, isNot(contains('Icons.bolt')));
     expect(source, contains('if (activeWorkout.isActive)'));
     expect(source, contains('_CompactActiveWorkoutAccess('));
-    expect(source, contains("ValueKey('home_continue_workout')"));
+    final shortcut = File(
+      'lib/features/home/presentation/widgets/home_training_shortcut.dart',
+    ).readAsStringSync();
+    expect(source, contains('HomeTrainingShortcut('));
+    expect(shortcut, contains("ValueKey('home_continue_workout')"));
     expect(source, contains("ValueKey('home_open_train')"));
     expect(source, contains('widget.onOpenTrain'));
     expect(source, isNot(contains('_TodayRoutineCard(')));

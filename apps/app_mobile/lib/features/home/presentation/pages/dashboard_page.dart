@@ -35,6 +35,7 @@ import 'package:gym_tracker/features/progress/presentation/pages/progress_page.d
 import 'package:gym_tracker/features/home/presentation/widgets/daily_steps_widget.dart';
 import 'package:gym_tracker/features/nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/recovery_check_in_card.dart';
+import 'package:gym_tracker/features/home/presentation/widgets/home_training_shortcut.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
@@ -447,46 +448,20 @@ class _CompactActiveWorkoutAccess extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = AppColors.of(context);
     final stale = UnfinishedWorkoutReminderPolicy.isStale(
       lastActivityAt ?? startedAt,
       DateTime.now(),
     );
-    return Semantics(
-      button: true,
-      label: stale
-          ? 'Entrenamiento pendiente. Continuar $name'
-          : 'Continuar entrenamiento $name',
-      child: InkWell(
-        key: const ValueKey('home_continue_workout'),
-        borderRadius: AppRadius.md_,
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ActiveWorkoutPage()),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          child: Row(
-            children: [
-              Icon(Icons.play_circle_outline_rounded, color: colors.primary),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  stale ? 'Pendiente de revisar · $name' : 'Continuar · $name',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.labelMedium.copyWith(
-                    color: colors.primary,
-                  ),
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded, color: colors.primary),
-            ],
-          ),
-        ),
+    return HomeTrainingShortcut(
+      routineName: name,
+      isPendingReview: stale,
+      onContinue: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ActiveWorkoutPage()),
       ),
     );
   }
+
 }
 
 class _CompletedTodayCard extends ConsumerWidget {
