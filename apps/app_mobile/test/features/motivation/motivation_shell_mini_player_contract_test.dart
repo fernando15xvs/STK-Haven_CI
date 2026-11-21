@@ -8,11 +8,18 @@ void main(){
       'lib/features/home/presentation/pages/home_screen.dart',
     ).readAsStringSync();
     expect(shell,contains('bottomNavigationBar: SafeArea('));
-    expect(shell,contains('mainAxisSize:MainAxisSize.min'));
+    expect(shell,contains('mainAxisSize: MainAxisSize.min'));
     expect(shell,contains('const MotivationHomeMiniPlayer()'));
-    expect(shell,contains('_BottomBarSurface('));
-    expect(shell.indexOf('const MotivationHomeMiniPlayer()'),
-      lessThan(shell.indexOf('_BottomBarSurface(',shell.indexOf('bottomNavigationBar:'))));
+    expect(shell,contains("key: const ValueKey('flat_bottom_navigation')"));
+    expect(shell,isNot(contains('_BottomBarSurface(')));
+    final navigationStart = shell.indexOf('bottomNavigationBar: SafeArea(');
+    final playerIndex = shell.indexOf('const MotivationHomeMiniPlayer()', navigationStart);
+    final tabRowIndex = shell.indexOf(
+      "key: const ValueKey('flat_bottom_navigation')",
+      navigationStart,
+    );
+    expect(playerIndex, greaterThan(navigationStart));
+    expect(tabRowIndex, greaterThan(playerIndex));
     expect(shell,contains('body: IndexedStack('));
     expect(shell,contains('extendBody: false'));
   });
