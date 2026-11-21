@@ -1,3 +1,5 @@
+> **Cambio aprobado 21/11/2026 (PR #57):** la tarjeta hero «Siguiente sesión» ahora pertenece a **Entrenar**; Inicio conserva solo «Continuar entrenamiento» compacto en sesiones activas o el enlace discreto «Ir a Entrenar». El estado «Finalizado hoy» conserva resumen/notas como fila discreta en Actividad. Para la matriz vigente y los pasos pendientes, revisar [STK_HOME_TRAIN_SESSION_OWNERSHIP_REDESIGN_20261121.md](../roadmap/STK_HOME_TRAIN_SESSION_OWNERSHIP_REDESIGN_20261121.md). Los criterios antiguos que exigían hero grande en Inicio se consideran históricos y no deben bloquear la QA nueva.
+
 # STK Haven — QA para Inicio/Entrenar: mensaje, bienestar y rutinas
 
 **Plan:** [HOME_TRAIN_LAST_MILE_UX_ROADMAP_20261113.md](../roadmap/HOME_TRAIN_LAST_MILE_UX_ROADMAP_20261113.md)  

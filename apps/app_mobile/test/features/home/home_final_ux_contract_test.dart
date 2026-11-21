@@ -9,24 +9,32 @@ void main() {
     'lib/features/home/presentation/widgets/recovery_check_in_card.dart',
   );
 
-  test('H01-H04 home keeps real training states with one completed CTA', () {
-    final s = dashboard.readAsStringSync();
-    expect(s, isNot(contains('Icon(Icons.bolt')));
-    expect(s, contains('if (activeWorkout.isActive)'));
-    expect(s, contains('else if (completedToday != null)'));
-    expect(s, contains('_TodayRoutineCard('));
-    expect(s, contains("label: const Text('Ver resumen')"));
-    expect(s, contains('RecentWorkoutDetails.show(context, session, weightUnit)'));
-    expect(s, contains("label: const Text('Editar nota')"));
-    expect(s, contains('id: session.id'));
-    expect(s, contains('exercises: session.exercises'));
-    expect(s, contains('durationSeconds: session.durationSeconds'));
+  test('H01-H04 Inicio owns no next-workout hero; preserves completed history', () {
+    final source = dashboard.readAsStringSync();
+    expect(source, isNot(contains('Icon(Icons.bolt'))));
+    expect(source, contains('if (activeWorkout.isActive)'));
+    expect(source, contains('_CompactActiveWorkoutAccess('));
+    expect(source, contains("ValueKey('home_continue_workout')"));
+    expect(source, contains("ValueKey('home_open_train')"));
+    expect(source, contains('widget.onOpenTrain'));
+    expect(source, isNot(contains('_TodayRoutineCard(')));
+    expect(source, isNot(contains('_ActiveWorkoutHero(')));
+    expect(source, isNot(contains('SIGUIENTE SESIÓN')));
+    // The existing note editor and today's completion access are preserved
+    // below the Activity block instead of another large hero.
+    expect(source, contains('_CompletedTodayCard('));
+    expect(source, contains("value: 'summary', child: Text('Ver resumen')"));
+    expect(source, contains('RecentWorkoutDetails.show(context, session, weightUnit)'));
+    expect(source, contains("value: 'notes', child: Text('Editar nota')"));
+    expect(source, contains('id: session.id'));
+    expect(source, contains('exercises: session.exercises'));
+    expect(source, contains('durationSeconds: session.durationSeconds'));
   });
 
   test('H02-H03 reflection respects faith controls and uses one real navigation', () {
     final s = dashboard.readAsStringSync();
     final a = s.indexOf('class _DailyMessageCard extends ConsumerWidget');
-    final b = s.indexOf('class _ActiveWorkoutHero extends StatelessWidget', a);
+    final b = s.indexOf('class _CompactActiveWorkoutAccess extends StatelessWidget', a);
     expect(a, greaterThan(0));
     expect(b, greaterThan(a));
     final section = s.substring(a, b);

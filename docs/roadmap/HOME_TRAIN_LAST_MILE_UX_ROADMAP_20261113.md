@@ -1,3 +1,5 @@
+> **Complemento 21/11/2026:** el contrato aprobado ahora mueve la hero «Siguiente sesión» a Entrenar y reduce Inicio a un enlace contextual compacto. Consultar `STK_HOME_TRAIN_SESSION_OWNERSHIP_REDESIGN_20261121.md`; las capturas y QA históricas quedan como referencia anterior.
+
 # STK Haven — Ajustes finales de Inicio y Entrenar
 
 **Fecha:** 13-11-2026  

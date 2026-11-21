@@ -14,6 +14,8 @@ import 'package:gym_tracker/features/routines/presentation/pages/routine_templat
 import 'package:gym_tracker/features/routines/presentation/widgets/quick_training_plan_sheet.dart';
 import 'package:core/features/programs/presentation/pages/training_programs_page.dart';
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
+import 'package:core/features/workout/application/active_workout_provider.dart';
+import 'package:gym_tracker/features/routines/presentation/widgets/next_training_session_hero.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:gym_tracker/features/routines/application/routine_card_evidence.dart';
 import 'package:intl/intl.dart';
@@ -29,6 +31,20 @@ class RoutinesPage extends ConsumerWidget {
       for (final exercise in exercises) exercise.id: exercise,
     };
     final activeProgram = ref.watch(activeTrainingProgramProvider);
+    final nextProgramSession = ref.watch(nextProgramSessionProvider);
+    final legacyTodaySession = ref.watch(legacyTodaySessionProvider);
+    final workoutActive = ref.watch(
+      activeWorkoutProvider.select((state) => state.isActive),
+    );
+    List<String> musclesFor(Routine routine) {
+      final unique = <String>{};
+      for (final item in routine.exercises) {
+        final raw = exerciseMap[item.exerciseId]?.muscleGroup.trim();
+        if (raw == null || raw.isEmpty) continue;
+        unique.add(_canonicalMuscleLabel(raw));
+      }
+      return unique.take(2).toList(growable: false);
+    }
     // A single pass over history replaces repeated per-card calculations.
     final usageByRoutine = RoutineCardEvidence.fromHistory(
       ref.watch(workoutHistoryProvider),
@@ -51,24 +67,59 @@ class RoutinesPage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xxl,
               ),
-              itemCount: routines.length + 2,
+              itemCount: routines.length + (routines.isEmpty ? 2 : 1),
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _ProgramOrganizerCard(
+                      Text('Entrenar', style: AppTypography.headlineLarge),
+                      const SizedBox(height: AppSpacing.md),
+                      NextTrainingSessionHero(
                         routines: routines,
-                        onViewWeek: () => _showWeeklyPlan(context, ref, routines),
-                        onManage: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const TrainingProgramsPage(),
-                          ),
-                        ),
-                        onCreate: () => QuickTrainingPlanSheet.show(context),
+                        historyByRoutine: usageByRoutine,
+                        musclesFor: musclesFor,
                       ),
-                      const SizedBox(height: AppSpacing.xxl),
+                      const SizedBox(height: AppSpacing.md),
+                      _ProgramOrganizerCard(routines: routines),
+                      const SizedBox(height: AppSpacing.sm),
+                      Wrap(
+                        spacing: AppSpacing.xs,
+                        runSpacing: AppSpacing.xs,
+                        children: [
+                          _TrainingQuickLink(
+                            key: const ValueKey('train_open_planning'),
+                            label: 'Planificación',
+                            icon: Icons.calendar_month_outlined,
+                            onTap: () => _showWeeklyPlan(context, ref, routines),
+                          ),
+                          _TrainingQuickLink(
+                            key: const ValueKey('train_open_manage'),
+                            label: 'Administrar',
+                            icon: Icons.tune_rounded,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const TrainingProgramsPage(),
+                              ),
+                            ),
+                          ),
+                          _TrainingQuickLink(
+                            key: const ValueKey('train_open_templates'),
+                            label: 'Plantillas',
+                            icon: Icons.layers_outlined,
+                            onTap: openTemplates,
+                          ),
+                          if (activeProgram == null && routines.isNotEmpty)
+                            _TrainingQuickLink(
+                              key: const ValueKey('train_create_plan'),
+                              label: 'Crear plan',
+                              icon: Icons.add_rounded,
+                              onTap: () => QuickTrainingPlanSheet.show(context),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
                       Row(
                         children: [
                           Expanded(
@@ -88,56 +139,22 @@ class RoutinesPage extends ConsumerWidget {
                 }
 
                 if (routines.isEmpty && index == 1) {
-                  return _EmptyState(onCreate: createRoutine, onTemplates: openTemplates);
-                }
-
-                final templatesIndex = routines.isEmpty ? 2 : routines.length + 1;
-                if (index == templatesIndex) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: AppSpacing.md, bottom: 24),
-                    child: PremiumCard(
-                      onTap: openTemplates,
-                      child: Row(
-                        children: [
-                          Icon(Icons.auto_awesome_outlined,
-                              color: AppColors.of(context).primary),
-                          const SizedBox(width: AppSpacing.md),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Plantillas', style: AppTypography.headlineMedium),
-                                Text(
-                                  'Rutinas y programas listos para personalizar',
-                                  style: AppTypography.bodySmall.copyWith(
-                                    color: AppColors.of(context).textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.chevron_right_rounded),
-                        ],
-                      ),
-                    ),
-                  );
+                  return _EmptyState(onCreate: createRoutine);
                 }
 
                 final routine = routines[index - 1];
-                final muscleGroups = <String>{};
-                for (final item in routine.exercises) {
-                  final muscle = exerciseMap[item.exerciseId]?.muscleGroup.trim();
-                  if (muscle != null && muscle.isNotEmpty) {
-                    muscleGroups.add(muscle);
-                  }
-                }
+                final muscleGroups = musclesFor(routine);
                 final linkedToActiveProgram =
                     activeProgram?.routineIds.contains(routine.id) ?? false;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: _RoutineCard(
                     routine: routine,
-                    muscleGroups: muscleGroups.take(2).toList(growable: false),
+                    muscleGroups: muscleGroups,
+                    isSuggested: !workoutActive &&
+                        (nextProgramSession?.routine.id ??
+                                legacyTodaySession?.routine.id) ==
+                            routine.id,
                     programName:
                         linkedToActiveProgram ? activeProgram!.name : null,
                     evidence: usageByRoutine[routine.id],
@@ -572,18 +589,52 @@ class RoutinesPage extends ConsumerWidget {
   }
 }
 
-class _ProgramOrganizerCard extends ConsumerWidget {
-  const _ProgramOrganizerCard({
-    required this.routines,
-    required this.onViewWeek,
-    required this.onManage,
-    required this.onCreate,
+String _canonicalMuscleLabel(String raw) {
+  final clean = raw.trim();
+  const synonyms = <String, String>{
+    'hombro': 'Hombros', 'hombros': 'Hombros',
+    'pierna': 'Piernas', 'piernas': 'Piernas',
+    'pantorrilla': 'Pantorrillas', 'pantorrillas': 'Pantorrillas',
+    'brazo': 'Brazos', 'brazos': 'Brazos',
+    'pectoral': 'Pecho', 'pecho': 'Pecho',
+    'espalda': 'Espalda',
+    'glúteo': 'Glúteos', 'glúteos': 'Glúteos',
+    'abdominal': 'Abdominales', 'abdominales': 'Abdominales',
+  };
+  return synonyms[clean.toLowerCase()] ?? clean;
+}
+
+/// Light quick links, with adaptive wrapping instead of a blocky 2x2 grid.
+class _TrainingQuickLink extends StatelessWidget {
+  const _TrainingQuickLink({
+    super.key,
+    required this.label,
+    required this.icon,
+    required this.onTap,
   });
 
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          shape: const StadiumBorder(),
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+        ),
+        onPressed: onTap,
+        icon: Icon(icon, size: 18),
+        label: Text(label, maxLines: 2),
+      );
+}
+
+/// A compact context indicator. Full planning and settings live one tap away.
+class _ProgramOrganizerCard extends ConsumerWidget {
+  const _ProgramOrganizerCard({required this.routines});
+
   final List<Routine> routines;
-  final VoidCallback onViewWeek;
-  final VoidCallback onManage;
-  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -597,87 +648,65 @@ class _ProgramOrganizerCard extends ConsumerWidget {
         : ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
             active, routines,
           );
+    final name = active?.name ??
+        (hasExisting ? 'Programa pausado' : 'Sin programa activo');
 
     return PremiumCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      key: const ValueKey('train_compact_program'),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(Icons.layers_outlined, color: colors.primary, size: 22),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text('MI PROGRAMA', style: AppTypography.labelLarge),
-              ),
-              if (active != null)
-                Text('ACTIVO', style: AppTypography.labelSmall.copyWith(
-                  color: colors.primary,
-                )),
-            ],
+          Icon(Icons.layers_outlined, color: colors.primary, size: 22),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: AppTypography.headlineMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (active != null) ...[
+                  Text(
+                    'Semana $week/${active.durationWeeks} · $target sesiones/sem',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  LinearProgressIndicator(
+                    value: (week / active.durationWeeks.clamp(1, 9999))
+                        .clamp(0.0, 1.0).toDouble(),
+                    minHeight: 4,
+                    borderRadius: BorderRadius.circular(99),
+                    backgroundColor: colors.surfaceHigh,
+                  ),
+                ] else
+                  Text(
+                    hasExisting
+                        ? 'Administra tus planes para reanudar.'
+                        : 'Tus rutinas funcionan sin plan.',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
           if (active != null) ...[
-            Text(active.name, style: AppTypography.headlineLarge),
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(width: AppSpacing.xs),
             Text(
-              'Semana $week/${active.durationWeeks} · $target sesiones por semana',
-              style: AppTypography.bodyMedium.copyWith(color: colors.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            LinearProgressIndicator(
-              value: (week / active.durationWeeks.clamp(1, 9999))
-                  .clamp(0.0, 1.0).toDouble(),
-              minHeight: 6,
-              borderRadius: BorderRadius.circular(99),
-              backgroundColor: colors.surfaceHigh,
-            ),
-          ] else ...[
-            Text(
-              hasExisting ? 'Programa pausado' : 'Organiza tus rutinas',
-              style: AppTypography.headlineLarge,
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              hasExisting
-                  ? 'Puedes reanudar un plan existente o crear uno diferente.'
-                  : routines.isEmpty
-                      ? 'Crea una rutina primero. No necesitas un programa para entrenar.'
-                      : 'Entrena con tus rutinas o crea un plan sencillo para organizar los días.',
-              style: AppTypography.bodyMedium.copyWith(
-                color: colors.textSecondary,
+              'ACTIVO',
+              style: AppTypography.labelSmall.copyWith(
+                color: colors.primary,
               ),
             ),
           ],
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            children: [
-              if (active != null)
-                OutlinedButton.icon(
-                  onPressed: onViewWeek,
-                  icon: const Icon(Icons.calendar_month_outlined, size: 18),
-                  label: const Text('Ver planificación'),
-                ),
-              if (hasExisting)
-                TextButton.icon(
-                  onPressed: onManage,
-                  icon: const Icon(Icons.settings_outlined, size: 18),
-                  label: const Text('Administrar'),
-                ),
-              if (routines.isNotEmpty && active == null)
-                FilledButton.icon(
-                  onPressed: onCreate,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Crear plan'),
-                ),
-              if (active == null && routines.isNotEmpty)
-                TextButton(
-                  onPressed: onViewWeek,
-                  child: const Text('Días opcionales'),
-                ),
-            ],
-          ),
         ],
       ),
     );
@@ -689,6 +718,7 @@ class _RoutineCard extends StatelessWidget {
   final List<String> muscleGroups;
   final String? programName;
   final RoutineCardEvidence? evidence;
+  final bool isSuggested;
   final VoidCallback onStart;
   final VoidCallback onEdit;
   final VoidCallback onNotes;
@@ -700,6 +730,7 @@ class _RoutineCard extends StatelessWidget {
     required this.muscleGroups,
     required this.programName,
     required this.evidence,
+    this.isSuggested = false,
     required this.onStart,
     required this.onEdit,
     required this.onNotes,
@@ -824,18 +855,23 @@ class _RoutineCard extends StatelessWidget {
                     ),
                 ],
               );
-              final start = FilledButton.icon(
-                onPressed: onStart,
-                icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                label: const Text('Iniciar'),
-              );
+              // Suggested workout owns the hero CTA above this list.
+              final Widget? start = isSuggested
+                  ? null
+                  : FilledButton.icon(
+                      onPressed: onStart,
+                      icon: const Icon(Icons.play_arrow_rounded, size: 20),
+                      label: const Text('Iniciar'),
+                    );
               if (!sideBySide) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     metadata,
-                    const SizedBox(height: AppSpacing.sm),
-                    start,
+                    if (start != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      start,
+                    ],
                   ],
                 );
               }
@@ -843,8 +879,10 @@ class _RoutineCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Expanded(child: metadata),
-                  const SizedBox(width: AppSpacing.sm),
-                  start,
+                  if (start != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    start,
+                  ],
                 ],
               );
             },
@@ -857,9 +895,8 @@ class _RoutineCard extends StatelessWidget {
 
 class _EmptyState extends StatelessWidget {
   final VoidCallback onCreate;
-  final VoidCallback onTemplates;
 
-  const _EmptyState({required this.onCreate, required this.onTemplates});
+  const _EmptyState({required this.onCreate});
 
   @override
   Widget build(BuildContext context) {
@@ -887,11 +924,6 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl),
             PrimaryButton(label: 'CREAR RUTINA', onPressed: onCreate),
             const SizedBox(height: AppSpacing.sm),
-            TextButton.icon(
-              onPressed: onTemplates,
-              icon: const Icon(Icons.auto_awesome_outlined),
-              label: const Text('VER PLANTILLAS'),
-            ),
           ],
         ),
       ),

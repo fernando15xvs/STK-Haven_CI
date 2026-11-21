@@ -1,5 +1,5 @@
 # STK Haven — Roadmap: Entrenar como centro de acción, Inicio sin duplicaciones
-**Fecha:** 21/11/2026 · **Estado:** aprobado a nivel de producto, implementación de código pendiente · **PR canónica:** [#57](https://github.com/fernando15xvs/STK-Haven/pull/57)
+**Fecha:** 21/11/2026 · **Estado:** implementación inicial de Inicio/Entrenar y pruebas de widgets incorporadas; CI final y QA física pendientes · **PR canónica:** [#57](https://github.com/fernando15xvs/STK-Haven/pull/57)
 
 ## Decisión aprobada y sustitución de la regla antigua
 
@@ -51,27 +51,27 @@ El usuario ha aprobado también que **Inicio solo tenga un acceso pequeño «Con
 
 ## Bloque 0 — Contrato y pruebas ANTES de mover UI
 
-- [ ] 0.1. Actualizar `train_unified_navigation_contract_test.dart`: ahora **sí** debe haber hero de próxima sesión en Entrenar; Home no la muestra. Evitar invertir la expectativa sin añadir nuevos tests.
-- [ ] 0.2. Actualizar QA y el criterio de propiedad de `TRAIN_UNIFIED_PROGRAMS_ROADMAP_20261113.md` y documentación asociada; marcarlo sustituido **solo para este punto**.
+- [x] 0.1. Actualizar `train_unified_navigation_contract_test.dart`: ahora **sí** debe haber hero de próxima sesión en Entrenar; Home no la muestra. Evitar invertir la expectativa sin añadir nuevos tests.
+- [x] 0.2. Actualizar QA y el criterio de propiedad de `TRAIN_UNIFIED_PROGRAMS_ROADMAP_20261113.md` y documentación asociada; marcarlo sustituido **solo para este punto**.
 - [ ] 0.3. Tests de fuente única: sesión activa gana al programa; plan flexible/fijo/continuo/pausado; sin programa; sin rutinas; retomar sesión por ID; navegación real desde el dock.
-- [ ] 0.4. No iniciar dos veces la misma sesión por toques repetidos, ni duplicar la CTA de la rutina destacada en la lista.
+- [x] 0.4. No iniciar dos veces la misma sesión por toques repetidos, ni duplicar la CTA de la rutina destacada en la lista.
 
 ## Bloque A — Inicio compacto (sin clones)
 
-- [ ] A1. Retirar `_TodayRoutineCard` y la hero grande programada del `DashboardPage`. No perder el cálculo canónico: reusar el provider en Entrenar.
-- [ ] A2. Reemplazar `_ActiveWorkoutHero` grande por una **fila pequeña** solo en sesión activa, con nombre breve, estado y «Continuar». Mantener recordatorio de sesión inacabada.
-- [ ] A3. Si no hay sesión activa, acceso opcional discreto `Ir a Entrenar`, enlazado a la **pestaña 1 del HomeScreen**, no a una pantalla duplicada apilada; exponer callback o proveedor de navegación seguro.
-- [ ] A4. Reordenar con cuidado para que Recuperación, Mensaje del día (solo Fe opt-in), Bienestar y Actividad no pierdan jerarquía ni funcionen distinto. No borrar historial/recent PR, nutrición ni otras secciones validadas.
+- [x] A1. Retirar `_TodayRoutineCard` y la hero grande programada del `DashboardPage`. No perder el cálculo canónico: reusar el provider en Entrenar.
+- [x] A2. Reemplazar `_ActiveWorkoutHero` grande por una **fila pequeña** solo en sesión activa, con nombre breve, estado y «Continuar». Mantener recordatorio de sesión inacabada.
+- [x] A3. Si no hay sesión activa, acceso opcional discreto `Ir a Entrenar`, enlazado a la **pestaña 1 del HomeScreen**, no a una pantalla duplicada apilada; exponer callback o proveedor de navegación seguro.
+- [x] A4. Reordenar con cuidado para que Recuperación, Mensaje del día (solo Fe opt-in), Bienestar y Actividad no pierdan jerarquía ni funcionen distinto. No borrar historial/recent PR, nutrición ni otras secciones validadas.
 - [ ] A5. Probar acceso a Entrenar desde Inicio, vuelta al scroll, y continuidad de cronómetro/música al cambiar pestaña.
 
 ## Bloque B — Entrenar como destino central
 
-- [ ] B1. Construir hero real en `RoutinesPage` con `activeWorkoutProvider`, `nextProgramSessionProvider`, `WorkoutLauncher` y `ActiveWorkoutPage`; fallback ante rutina ausente y no inventar datos del wireframe.
-- [ ] B2. Compactar `_ProgramOrganizerCard`: programa, semana, estado y progreso. Sacar botones de Planificación/Administrar hacia la fila compartida de accesos.
-- [ ] B3. Ordenar contenido **hero → programa compacto → accesos → Mis rutinas** (no secciones repetidas) con tarjetas suaves y listas más densas, sin 2×2 de paneles cuadrados.
-- [ ] B4. Evitar dos acciones principales para la misma rutina; conservar inicio manual y CRUD para las demás. Corregir nombres musculares repetidos y etiquetas vacías.
-- [ ] B5. «Mis rutinas» expone todas o sección «Ver todas» funcional; crear rutina sigue disponible sin crear un programa.
-- [ ] B6. Accesos Planificación, Administrar y Plantillas conservan rutas existentes, sin pantallas o CTAs huérfanos.
+- [x] B1. Construir hero real en `RoutinesPage` con `activeWorkoutProvider`, `nextProgramSessionProvider`, `WorkoutLauncher` y `ActiveWorkoutPage`; fallback ante rutina ausente y no inventar datos del wireframe.
+- [x] B2. Compactar `_ProgramOrganizerCard`: programa, semana, estado y progreso. Sacar botones de Planificación/Administrar hacia la fila compartida de accesos.
+- [x] B3. Ordenar contenido **hero → programa compacto → accesos → Mis rutinas** (no secciones repetidas) con tarjetas suaves y listas más densas, sin 2×2 de paneles cuadrados.
+- [x] B4. Evitar dos acciones principales para la misma rutina; conservar inicio manual y CRUD para las demás. Corregir nombres musculares repetidos y etiquetas vacías.
+- [x] B5. «Mis rutinas» expone todas o sección «Ver todas» funcional; crear rutina sigue disponible sin crear un programa.
+- [x] B6. Accesos Planificación, Administrar y Plantillas conservan rutas existentes, sin pantallas o CTAs huérfanos.
 
 ## Bloque C — QA de diseño, lógica e integridad
 
@@ -81,6 +81,14 @@ El usuario ha aprobado también que **Inicio solo tenga un acceso pequeño «Con
 - [ ] C4. Sin duplicados: ninguna hero grande en Inicio, una sola hero en Entrenar, no «Vista semanal» repetida, ni CTA «Iniciar» doble para sugerida.
 - [ ] C5. Revisar paridad exacta de blobs canónico/espejo, **7/7 checks verdes del último SHA** en `STK-Haven_CI`. No crear PR de espejo ni fusionar la #57.
 - [ ] C6. Prueba física iPhone/Android de navegación, safe area, scroll, rendimiento y continuidad de música/temporizador; CI no sustituye QA física.
+
+## Registro de implementación inicial — 21/11/2026
+
+- Inicio: se eliminó el hero de próxima sesión, se añadió el enlace de pestaña `home_open_train` y la continuación compacta `home_continue_workout`. «Finalizado hoy» se encuentra ahora como fila discreta en Actividad, con el mismo acceso al resumen y notas, sin alterar datos.
+- Entrenar: `NextTrainingSessionHero` consume `nextProgramSessionProvider` / `activeWorkoutProvider`, con retorno seguro a sesión existente, sin recomendaciones inventadas. Compatibilidad conservada con el onboarding antiguo cuando no hay programas modernos mediante `legacyTodaySessionProvider`.
+- Rutinas: la sugerida no muestra un segundo CTA de Inicio; tarjetas se mantienen editables, notas y menú disponibles. Programas se resumen en una tarjeta compacta; accesos ligeros a planificación, administración, plantillas y creación de plan si corresponde.
+- Tests: contratos actualizados de Inicio/Entrenar, nuevos widget tests de hero a 320/390/430 dp y escala 100/160/200 %, estados sin programa ni rutinas, decisión de rotación flexible. **Estos tests no sustituyen VoiceOver/TalkBack ni dispositivo real.**
+- Esta implementación **no modifica Supabase, Hive, datos guardados, programa de usuario ni PR fuera de #57**.
 
 ## Criterios de aceptación
 

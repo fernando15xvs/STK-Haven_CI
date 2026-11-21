@@ -41,12 +41,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   void initState() {
     super.initState();
     _pages = <Widget?>[
-      ProgramDashboardPage(onOpenProgress: _openProgress, isVisible: true),
+      ProgramDashboardPage(
+        onOpenProgress: _openProgress,
+        onOpenTrain: _openTrain,
+        isVisible: true,
+      ),
       null,
       null,
       null,
     ];
   }
+
+  void _openTrain() => _selectTab(1);
 
   void _openProgress() {
     _selectTab(2);
@@ -63,7 +69,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _createPage(int index) {
     return switch (index) {
-      0 => ProgramDashboardPage(onOpenProgress: _openProgress, isVisible: true),
+      0 => ProgramDashboardPage(
+        onOpenProgress: _openProgress,
+        onOpenTrain: _openTrain,
+        isVisible: true,
+      ),
       1 => const RoutinesPage(),
       2 => ProgressPage(summaryAnchorKey: _progressSummaryAnchorKey),
       3 => const ProfilePage(),
@@ -80,6 +90,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // allows sensor/clock polling to stop on the other tabs.
       _pages[0] = ProgramDashboardPage(
         onOpenProgress: _openProgress,
+        onOpenTrain: _openTrain,
         isVisible: index == 0,
       );
     });

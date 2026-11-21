@@ -1,3 +1,5 @@
+> **Actualización 21/11/2026:** prevalece `STK_HOME_TRAIN_SESSION_OWNERSHIP_REDESIGN_20261121.md` en la propiedad de la hero de siguiente sesión. El resto de este documento conserva valor histórico.
+
 # STK Haven · Entrenar unificado con Programas — Roadmap A/B/C (PR #57)
 
 **Fecha:** 13 de noviembre de 2026
@@ -26,8 +28,8 @@
 
 | Dominio | Inicio (hoy) | Entrenar (organizar) | Progreso (analizar) |
 | --- | --- | --- | --- |
-| Próxima sesión recomendada | **Tarjeta y acción** | **No duplicar** | No |
-| Entrenamiento en curso | Continuar desde el hero | Sin hero duplicado; acceso contextual solo si indispensable | No |
+| Próxima sesión recomendada | Solo acceso compacto para ir a Entrenar | **Única tarjeta y acción primaria** | No |
+| Entrenamiento en curso | **Continuar compacto** (la misma sesión) | **Hero Continuar**, no nuevo inicio | No |
 | Programa activo | No añadir otra tarjeta de administración; conservar únicamente el contexto mínimo existente si aporta información distinta | **Tarjeta «Mi programa», estado, semana, calendario y editar** | Análisis histórico del desempeño |
 | Rutinas | Acceso desde sesión sugerida | **Listado y operaciones CRUD; inicio manual** | Resultados asociados |
 | Calendario | Solo orientación de hoy | **Calendario futuro y distribución del plan** | Calendario y sesiones realmente completadas |
@@ -71,7 +73,7 @@ Reglas de precedencia: si hay plan activo, el calendario visible de Entrenar der
 - [ ] B2.3. Entrenamiento activo: cabecera sobria, acciones secundarias agrupadas sin saturación, datos de series peso/reps/RIR distinguibles con 320 dp, enfoque accesible, estados completados y descanso; no ocultar controles operativos.
 - [ ] B2.4. Resumen final: primero lo registrado (tiempo, series, volumen, récords de esa sesión), después detalles opcionales; enviar comparativas históricas y análisis profundos a Progreso, evitando sección duplicada.
 - [ ] B2.5. Plantillas, filtros y páginas de ejercicios: jerarquía coherente, botones de contacto accesibles, filtros progresivos y estados vacíos claros; preservar ficha técnica y demostraciones válidas sin reemplazos de medios.
-- [ ] B2.6. Inicio **no** gana una segunda tarjeta/programa de gestión; revisar que su tarjeta de próxima sesión sea el único hero «qué entrenar hoy». Entrenar **no** muestra un clon de esa tarjeta.
+- [ ] B2.6. **Sustituido el 21/11/2026:** «Siguiente sesión» pertenece **únicamente a Entrenar**; Inicio muestra solo «Continuar» compacto si hay sesión activa o «Ir a Entrenar» discreto. Véase `STK_HOME_TRAIN_SESSION_OWNERSHIP_REDESIGN_20261121.md`.
 - [x] B2-GATE. Golden/widget tests o inspección equivalente de pantallas clave; contraste/typography consistente; CI 7/7.
 
 ## 4. Bloque C — accesibilidad, rendimiento y QA final
@@ -95,7 +97,7 @@ Reglas de precedencia: si hay plan activo, el calendario visible de Entrenar der
 - [ ] Una persona con rutinas existentes puede crear plan con selección + frecuencia/días y guardarlo sin entrar en «Opciones avanzadas».
 - [ ] Un usuario avanzado puede editar semana fija, flexible, continua, duración, descarga, rotación, notas, plantillas y reordenación como antes.
 - [ ] No existe «Programas» en el menú `+`, y todo su contenido útil tiene acceso lógico desde Entrenar.
-- [ ] Inicio sigue siendo el único lugar donde se muestra la **próxima sesión recomendada como tarjeta hero**. Entrenar no repite ese bloque, pero permite iniciar manualmente otra rutina.
+- [ ] **Criterio sustituido el 21/11/2026:** Entrenar posee la tarjeta hero de la próxima sesión (o «Continuar» si está activa). Inicio no duplica esa tarjeta y solo permite entrar a Entrenar/continuar de forma compacta.
 - [ ] Entrenar muestra el calendario del programa activo de manera coherente; los días opcionales de las rutinas no contradicen esa agenda.
 - [ ] Progreso conserva los análisis de resultados; Entrenar no los duplica.
 - [ ] No se pierde un set editado rápidamente, ni se bloquea la lista reordenable al repetir ejercicios, ni falla duplicar semana.

@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:core/core/utils/fitness_formatter.dart';
-import 'package:core/domain/models/active_program_state.dart';
 import 'package:core/domain/models/personal_record.dart';
-import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
@@ -14,9 +12,6 @@ import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
-import 'package:core/features/programs/application/training_program_legacy_policy.dart';
-import 'package:core/features/routines/data/routine_repository.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/todays_workout_status.dart';
 import 'package:core/features/home/application/home_dashboard_session_policy.dart';
@@ -40,17 +35,18 @@ import 'package:gym_tracker/features/progress/presentation/pages/progress_page.d
 import 'package:gym_tracker/features/home/presentation/widgets/daily_steps_widget.dart';
 import 'package:gym_tracker/features/nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/recovery_check_in_card.dart';
-import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 
 class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({
     super.key,
     this.onOpenProgress,
+    this.onOpenTrain,
     this.isVisible = true,
   });
 
   final VoidCallback? onOpenProgress;
+  final VoidCallback? onOpenTrain;
   final bool isVisible;
 
   @override
@@ -145,7 +141,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
   Widget build(BuildContext context) {
     final history = ref.watch(workoutHistoryProvider);
     final prRepo = ref.watch(personalRecordRepositoryProvider);
-    final routineRepo = ref.watch(routineRepositoryProvider);
     final settings = ref.watch(settingsProvider);
     final faithEnabled = ref.watch(
       userExperienceProfileProvider.select(
@@ -153,13 +148,6 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
       ),
     );
     final activeWorkout = ref.watch(activeWorkoutProvider);
-    final nextProgramSession = ref.watch(nextProgramSessionProvider);
-    // The modern plan is authoritative even while paused. The onboarding
-    // snapshot is read only for users who have no modern plans yet.
-    final legacyProgram = TrainingProgramLegacyPolicy.dashboardFallback(
-      programs: ref.watch(trainingProgramListProvider),
-      legacy: settings.activeProgram,
-    );
 
     final completedToday = TodaysWorkoutStatus.latestCompletedToday(
       history,
@@ -192,33 +180,35 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
               const _DailyMessageCard(),
             ],
             const SizedBox(height: AppSpacing.md),
-            Text(
-              'TU ENTRENAMIENTO',
-              style: AppTypography.labelLarge.copyWith(
-                color: AppColors.of(context).textSecondary,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'TU ENTRENAMIENTO',
+                    style: AppTypography.labelLarge.copyWith(
+                      color: AppColors.of(context).textSecondary,
+                    ),
+                  ),
+                ),
+                if (!activeWorkout.isActive)
+                  TextButton.icon(
+                    key: const ValueKey('home_open_train'),
+                    onPressed: widget.onOpenTrain,
+                    icon: const Icon(Icons.arrow_forward_rounded, size: 17),
+                    label: const Text('Ir a Entrenar'),
+                  ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.sm),
-            if (activeWorkout.isActive)
-              _ActiveWorkoutHero(
-                session: activeWorkout.session!,
+            if (activeWorkout.isActive) ...[
+              const SizedBox(height: AppSpacing.xs),
+              _CompactActiveWorkoutAccess(
                 name: activeWorkout.routineDisplayName,
                 startedAt: activeWorkout.session!.startedAt,
                 lastActivityAt: ref
                     .read(activeWorkoutRepositoryProvider)
                     .lastActivityAt,
-              )
-            else if (completedToday != null)
-              _CompletedTodayCard(
-                session: completedToday,
-                weightUnit: settings.weightUnit,
-              )
-            else
-              _TodayRoutineCard(
-                routineRepo: routineRepo,
-                activeProgram: legacyProgram,
-                programSession: nextProgramSession,
               ),
+            ],
             const SizedBox(height: AppSpacing.sm),
             RecoveryCheckInCard(
               compact: true,
@@ -276,6 +266,13 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                         ),
                       ),
             ),
+            if (completedToday != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              _CompletedTodayCard(
+                session: completedToday,
+                weightUnit: settings.weightUnit,
+              ),
+            ],
             if (recentWorkout != null || recentPR != null) ...[
               const SizedBox(height: AppSpacing.lg),
               Text(
@@ -436,113 +433,57 @@ class _DailyMessageCard extends ConsumerWidget {
   }
 }
 
-class _ActiveWorkoutHero extends StatelessWidget {
-  final WorkoutSession session;
-  final String name;
-  final DateTime startedAt;
-  final DateTime? lastActivityAt;
-
-  const _ActiveWorkoutHero({
-    required this.session,
+/// Only an active session gets a direct action on Inicio.
+class _CompactActiveWorkoutAccess extends StatelessWidget {
+  const _CompactActiveWorkoutAccess({
     required this.name,
     required this.startedAt,
     this.lastActivityAt,
   });
 
+  final String name;
+  final DateTime startedAt;
+  final DateTime? lastActivityAt;
+
   @override
   Widget build(BuildContext context) {
-    final elapsed = DateTime.now().difference(startedAt);
-    final minutes = elapsed.inMinutes;
+    final colors = AppColors.of(context);
     final stale = UnfinishedWorkoutReminderPolicy.isStale(
       lastActivityAt ?? startedAt,
       DateTime.now(),
     );
-    final effectiveExercises = session.exercises.where((exercise) {
-      return exercise.sets.any((set) => set.setType == WorkoutSetType.working);
-    }).toList(growable: false);
-    final completedExercises = effectiveExercises.where((exercise) {
-      final sets = exercise.sets
-          .where((set) => set.setType == WorkoutSetType.working)
-          .toList(growable: false);
-      return sets.isNotEmpty && sets.every((set) => set.completed);
-    }).length;
-    final pendingExercises = effectiveExercises.length - completedExercises;
-
-    return PremiumCard(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ActiveWorkoutPage()),
-      ),
-      backgroundColor: AppColors.of(context).primaryFaded,
-      borderColor: AppColors.of(context).primary.withValues(alpha: 0.4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Semantics(
+      button: true,
+      label: stale
+          ? 'Entrenamiento pendiente. Continuar $name'
+          : 'Continuar entrenamiento $name',
+      child: InkWell(
+        key: const ValueKey('home_continue_workout'),
+        borderRadius: AppRadius.md_,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ActiveWorkoutPage()),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Row(
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: AppColors.of(context).primary,
-                  borderRadius: AppRadius.md_,
-                  boxShadow: AppElevation.accent(context),
-                ),
-                child: Icon(
-                  Icons.play_arrow_rounded,
-                  color: AppColors.of(context).onPrimary,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
+              Icon(Icons.play_circle_outline_rounded, color: colors.primary),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stale
-                          ? 'ENTRENAMIENTO PENDIENTE'
-                          : 'ENTRENAMIENTO EN CURSO',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.of(context).primary,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(name, style: AppTypography.headlineLarge),
-                    if (stale)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 6),
-                        child: Text(
-                          'Lleva varias horas sin cambios. Toca para revisar y finalizar o continuar.',
-                        ),
-                      ),
-                  ],
+                child: Text(
+                  stale ? 'Pendiente de revisar · $name' : 'Continuar · $name',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: colors.primary,
+                  ),
                 ),
               ),
-              Icon(
-                Icons.chevron_right,
-                color: AppColors.of(context).textSecondary,
-              ),
+              Icon(Icons.chevron_right_rounded, color: colors.primary),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            '${completedExercises} de ${effectiveExercises.length} ejercicios completados'
-            ' · ${pendingExercises} pendientes',
-            style: AppTypography.bodyMedium.copyWith(
-              color: AppColors.of(context).textSecondary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            minutes <= 0
-                ? 'Recién comenzado · toca para continuar'
-                : '$minutes min en curso · toca para continuar',
-            style: AppTypography.bodySmall.copyWith(
-              color: AppColors.of(context).textSecondary,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -603,214 +544,51 @@ class _CompletedTodayCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return PremiumCard(
-      backgroundColor: AppColors.of(context).primaryFaded,
-      borderColor: AppColors.of(context).success.withValues(alpha: 0.55),
-      // Explicit, independent actions below; no duplicate card-wide tap.
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final colors = AppColors.of(context);
+    return Padding(
+      key: const ValueKey('home_completed_today_compact'),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(Icons.check_circle, color: AppColors.of(context).success),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'FINALIZADO HOY',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.of(context).success,
-                      ),
-                    ),
-                    Text(
-                      session.routineNameSnapshot.isEmpty
-                          ? 'Entrenamiento libre'
-                          : session.routineNameSnapshot,
-                      style: AppTypography.headlineLarge,
-                    ),
-                    Text(
-                      'Completado · ${session.durationSeconds ~/ 60} min',
-                      style: AppTypography.bodySmall,
-                    ),
-                  ],
+          Icon(Icons.check_circle_outline_rounded, color: colors.success),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Finalizado hoy', style: AppTypography.labelSmall.copyWith(
+                  color: colors.success,
+                )),
+                Text(
+                  session.routineNameSnapshot.isEmpty
+                      ? 'Entrenamiento libre'
+                      : session.routineNameSnapshot,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodyMedium,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: 8,
-            children: [
-              OutlinedButton.icon(
-                icon: const Icon(Icons.history),
-                label: const Text('Ver resumen'),
-                onPressed: () =>
-                    RecentWorkoutDetails.show(context, session, weightUnit),
-              ),
-              TextButton.icon(
-                icon: const Icon(Icons.edit_note),
-                label: const Text('Editar nota'),
-                onPressed: () => _editNotes(context, ref),
-              ),
+          PopupMenuButton<String>(
+            tooltip: 'Opciones del entrenamiento finalizado',
+            onSelected: (action) {
+              if (action == 'summary') {
+                RecentWorkoutDetails.show(context, session, weightUnit);
+              } else if (action == 'notes') {
+                _editNotes(context, ref);
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'summary', child: Text('Ver resumen')),
+              PopupMenuItem(value: 'notes', child: Text('Editar nota')),
             ],
           ),
         ],
       ),
     );
   }
-}
 
-class _TodayRoutineCard extends ConsumerWidget {
-  final RoutineRepository routineRepo;
-  final ActiveProgramState? activeProgram;
-  final NextProgramSession? programSession;
-
-  const _TodayRoutineCard({
-    required this.routineRepo,
-    this.activeProgram,
-    this.programSession,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final todayWeekday = DateTime.now().weekday;
-    final routines = routineRepo.getAllRoutines();
-    Routine? todayRoutine;
-    String? programLabel;
-    String? restSubtitle;
-
-    if (programSession != null) {
-      programLabel = programSession!.program.name;
-      if (programSession!.isTrainingDay) {
-        todayRoutine = programSession!.routine;
-      } else {
-        restSubtitle =
-            'Próxima sesión: ${programSession!.routine.name}. La secuencia continúa en tu próximo día de entrenamiento.';
-      }
-    } else {
-      if (activeProgram != null) {
-        for (final routine in routines) {
-          if (activeProgram!.generatedRoutineIds.contains(routine.id) &&
-              routine.scheduledDays.contains(todayWeekday)) {
-            todayRoutine = routine;
-            break;
-          }
-        }
-      }
-
-      if (todayRoutine == null) {
-        for (final routine in routines) {
-          if (routine.scheduledDays.contains(todayWeekday)) {
-            todayRoutine = routine;
-            break;
-          }
-        }
-      }
-    }
-
-    if (todayRoutine == null) {
-      return PremiumCard(
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: AppColors.of(context).surfaceHigh,
-                borderRadius: AppRadius.md_,
-              ),
-              child: Icon(
-                Icons.self_improvement_outlined,
-                color: AppColors.of(context).textSecondary,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Día de descanso', style: AppTypography.headlineMedium),
-                  const SizedBox(height: 3),
-                  Text(
-                    restSubtitle ?? 'No tienes una rutina programada para hoy.',
-                    style: AppTypography.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final routine = todayRoutine;
-    final estimatedMinutes = (routine.exercises.length * 8).clamp(20, 90);
-
-    return PremiumCard(
-      onTap: () async => WorkoutLauncher.launch(context, ref, routine),
-      backgroundColor: AppColors.of(context).primaryFaded,
-      borderColor: AppColors.of(context).primary.withValues(alpha: 0.35),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: AppColors.of(context).primary,
-                  borderRadius: AppRadius.md_,
-                  boxShadow: AppElevation.accent(context),
-                ),
-                child: Icon(
-                  Icons.fitness_center,
-                  color: AppColors.of(context).onPrimary,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      programLabel == null
-                          ? 'ENTRENAR AHORA'
-                          : 'SIGUIENTE SESIÓN · $programLabel',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: AppColors.of(context).primary,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(routine.name, style: AppTypography.headlineLarge),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_rounded,
-                color: AppColors.of(context).primary,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xs,
-            children: [
-              _MetaPill(
-                icon: Icons.format_list_numbered,
-                text: '${routine.exercises.length} ejercicios',
-              ),
-              _MetaPill(icon: Icons.schedule, text: '~$estimatedMinutes min'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _RecentGrid extends StatelessWidget {
@@ -953,38 +731,6 @@ class _RecentPRCard extends ConsumerWidget {
           ),
           if (exercise != null)
             Icon(Icons.chevron_right, color: colors.textSecondary),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetaPill extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _MetaPill({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: AppColors.of(context).surfaceHigh.withValues(alpha: 0.75),
-        borderRadius: BorderRadius.circular(AppRadius.full),
-        border: Border.all(color: AppColors.of(context).surfaceBorder),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: AppColors.of(context).textSecondary),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: AppTypography.labelSmall.copyWith(
-              color: AppColors.of(context).textSecondary,
-            ),
-          ),
         ],
       ),
     );
