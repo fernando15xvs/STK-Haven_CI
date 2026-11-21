@@ -5,9 +5,20 @@ void main() {
   test('rest timer displays seconds and links native ongoing notification', () {
     final active = File('lib/features/workout/presentation/active_workout_page_content.dart').readAsStringSync();
     final notification = File('../../packages/core/lib/core/services/workout_notification_service.dart').readAsStringSync();
-    expect(active, contains("child: const Text('+15 s')"));
-    expect(active, contains("child: const Text('+30 s')"));
-    expect(active, contains("child: const Text('Personalizar')"));
+    // The rest buttons now live in a compact, in-flow component.
+    final rest = File(
+      'lib/features/workout/presentation/widgets/workout_rest_controls.dart',
+    ).readAsStringSync();
+    expect(active, contains('WorkoutRestControls('));
+    expect(active, contains('onAdd15: () => _addRestSeconds(15)'));
+    expect(active, contains('onAdd30: () => _addRestSeconds(30)'));
+    expect(active, contains('onCustomize: _askAdditionalRestSeconds'));
+    expect(active, contains('.skipRest()'));
+    expect(rest, contains("'workout_rest_countdown'"));
+    expect(rest, contains("'rest_banner'"));
+    for (final caption in ["'+15 s'", "'+30 s'", "'Personalizar'", "'Omitir'"]) {
+      expect(rest, contains(caption));
+    }
     expect(notification, contains('usesChronometer: true'));
     expect(notification, contains('chronometerCountDown: true'));
     expect(notification, contains('silent: true'));
