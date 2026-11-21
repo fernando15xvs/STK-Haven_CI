@@ -6,6 +6,7 @@ import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:gym_tracker/features/routines/presentation/widgets/next_training_session_hero.dart';
 
 class _NoActiveWorkout extends ActiveWorkoutNotifier {
@@ -29,6 +30,8 @@ class _WithActiveWorkout extends ActiveWorkoutNotifier {
 }
 
 void main() {
+  setUpAll(() async => initializeDateFormatting('es'));
+
   final now = DateTime(2026, 11, 21);
   final routine = Routine(
     id: 'existing-upper-b',

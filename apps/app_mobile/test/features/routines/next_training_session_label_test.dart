@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:gym_tracker/features/routines/application/next_training_session_label.dart';
 
 void main() {
+  setUpAll(() async => initializeDateFormatting('es'));
+
   final today = DateTime(2026, 11, 21, 16, 30);
 
   test('future projected session is not called today on an eligible day', () {
