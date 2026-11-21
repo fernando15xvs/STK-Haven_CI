@@ -96,6 +96,7 @@ El usuario ha aprobado también que **Inicio solo tenga un acceso pequeño «Con
 - [x] Nueva clase pura `NextTrainingSessionLabel`: distingue fecha real de la siguiente sesión de «día elegible para entrenar». Soluciona la etiqueta errónea **«hoy»** cuando la siguiente sesión es en otra fecha. No toca la lógica de la rotación ni escribe en Hive.
 - [x] Pruebas deterministas de etiquetas: día actual, futuro, flexible, fecha sin asignar y distintas horas del mismo día.
 - [x] Pruebas de widget: sesión activa tiene prioridad sobre la sugerida y reemplaza «Iniciar» por «Continuar»; modalidad fija con fecha futura no muestra «hoy», incluso si `isTrainingDay` señala true.
+- [x] El timestamp de última actividad del entrenamiento se vuelve a leer cuando cambia la sesión guardada, evitando mostrar «pendiente» después de registrar nuevas series; se conserva el recordatorio y no se modifica ningún dato.
 - [x] Matriz de visualización de hero ampliada a **320/390/430 dp × 100/160/200 % × claro/oscuro**, sin usar una cuenta de usuario ni su base de datos.
 - [ ] Revisar nueva ejecución CI 7/7, confirmar paridad de blobs tras los nuevos cambios y actualizar checklist si pasa.
 - [ ] Validar en equipos reales el salto Inicio → Entrenar y la música/notificaciones al reanudar.

@@ -42,9 +42,16 @@ final legacyTodaySessionProvider = Provider<LegacyTodaySession?>((ref) {
 
 /// Read last activity from persistent draft only when an active session is
 /// displayed. Overridable for widget QA without opening a user's Hive store.
-final activeWorkoutLastActivityProvider = Provider<DateTime?>(
-  (ref) => ref.read(activeWorkoutRepositoryProvider).lastActivityAt,
-);
+final activeWorkoutLastActivityProvider = Provider<DateTime?>((ref) {
+  // A saved set changes the immutable workout session; invalidate this
+  // read rather than caching the last activity timestamp for the whole
+  // exercise session and mislabeling recently edited workouts as stale.
+  final session = ref.watch(
+    activeWorkoutProvider.select((state) => state.session),
+  );
+  if (session == null) return null;
+  return ref.read(activeWorkoutRepositoryProvider).lastActivityAt;
+});
 
 /// Entrenar owns the sole next-session hero. Inicio only offers a small link.
 class NextTrainingSessionHero extends ConsumerStatefulWidget {

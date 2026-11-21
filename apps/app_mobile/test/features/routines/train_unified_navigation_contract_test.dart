@@ -26,6 +26,8 @@ void main() {
     expect(routines, contains('WorkoutLauncher.launch(context, ref, routine)'));
     expect(hero, contains('SIGUIENTE SESIÓN'));
     expect(hero, contains('activeWorkoutProvider'));
+    expect(hero, contains('activeWorkoutProvider.select((state) => state.session)'));
+    expect(hero, contains('activeWorkoutLastActivityProvider'));
     expect(hero, contains('nextProgramSessionProvider'));
     expect(hero, contains('WorkoutLauncher.launch(context, ref, routine)'));
     expect(hero, contains('const ActiveWorkoutPage()'));
