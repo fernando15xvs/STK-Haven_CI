@@ -109,6 +109,17 @@ El usuario ha aprobado también que **Inicio solo tenga un acceso pequeño «Con
 - [ ] Pruebas end-to-end de cambio de pestaña/restauración/música/temporizador y el resto de QA en dispositivos físicos aún pendientes; las pruebas de widget no sustituyen ese requisito.
 - [ ] Volver a comprobar 7/7 verde sobre el último SHA de espejo tras este bloque y confirmar paridad de fuentes.
 
+## Bloque D — integridad histórica y edición de rotación
+
+- [x] En `ProgramRotationCoordinator.reconcile`, rechazar el avance retroactivo de sesiones antiguas fuera de secuencia tras haber persistido una sesión posterior; respetar modo fijo y el historial intacto.
+- [x] Pruebas Core: replay incremental e idempotente, importación antigua, sesión B fuera de secuencia y casos de semana fija.
+- [x] En Administrar → Editar plan, al reordenar rutinas preservar la identidad de la siguiente mediante `ProgramRoutineOrderPolicy`; al eliminar la siguiente usar la próxima superviviente, sin inventar ID.
+- [x] Para proyecciones desde la última sesión hacia adelante, `ProgramScheduleProjector.rotationIndexAt` utiliza el puntero persistido actual. Los `ProgramCompletion` históricos no se reescriben cuando cambia el orden.
+- [x] Tests Core para reordenar B pendiente, eliminar B, lista nueva, lista vacía, historial previo y programación fija. La prueba existente cubre **4 rutinas/5 sesiones por semana** sin reinicio semanal.
+- [x] Preparado [checklist QA física](../qa/STK_TRAIN_SESSION_CONTINUITY_DEVICE_MATRIX_20261121.md) con pasos de iOS/Android, audio, notificaciones, copia de datos, continuidad y casos de programa, **sin atribuirles aprobación de dispositivo**.
+- [ ] CI 7/7 verde en commit actualizado del espejo, con pruebas Core de rotación y SHA parity.
+- [ ] Validación con evidencia en iPhone/Android firmados, sin desinstalación ni cambios a datos existentes.
+
 ## Criterios de aceptación
 
 - [ ] Inicio mantiene solo **«Continuar entrenamiento» compacto** cuando hay una sesión activa; o un acceso opcional pequeño «Ir a Entrenar» cuando no la hay. Sin gran hero ni «Siguiente sesión».

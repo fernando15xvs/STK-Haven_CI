@@ -4,6 +4,7 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_plan_insights.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
+import 'package:core/features/programs/application/program_routine_order_policy.dart';
 import 'package:core/features/programs/application/program_duration_choices.dart';
 import 'package:core/features/programs/application/youth_training_guidance.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
@@ -756,11 +757,12 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
               activate: true,
             );
       } else {
-        final safeNext = routineIds.isEmpty
-            ? 0
-            : existing.normalizedNextRotationIndex
-                .clamp(0, routineIds.length - 1)
-                .toInt();
+        // A reorder changes positions, never the identity of the pending
+        // workout. Historical completions are preserved unchanged.
+        final safeNext = ProgramRoutineOrderPolicy.nextIndexAfterEdit(
+          existing: existing,
+          updatedRoutineIds: routineIds,
+        );
         await ref.read(trainingProgramListProvider.notifier).save(
               existing.copyWith(
                 name: name.text.trim().isEmpty

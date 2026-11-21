@@ -91,6 +91,92 @@ void main() {
       expect(result.nextRoutineId, 'C');
     });
 
+    test('off-sequence workouts never advance retroactively on a later replay', () {
+      final earlyB = _session(
+        'out-of-order-b', 'B', start.add(const Duration(hours: 2)),
+      );
+      final a = _session(
+        'expected-a', 'A', start.add(const Duration(hours: 4)),
+      );
+
+      // The first replay sees B too early and records only A.
+      final first = ProgramRotationCoordinator.reconcile(
+        program(), [earlyB, a],
+      );
+      expect(first.completions.map((item) => item.workoutSessionId),
+          ['expected-a']);
+      expect(first.nextRoutineId, 'B');
+
+      // Previously the same old B became valid on the *second* replay.
+      final replay = ProgramRotationCoordinator.reconcile(
+        first, [earlyB, a],
+      );
+      expect(replay.completions.map((item) => item.workoutSessionId),
+          ['expected-a']);
+      expect(replay.nextRoutineId, 'B');
+
+      // A genuinely new B remains eligible and advances the rotation.
+      final newB = _session(
+        'new-b', 'B', start.add(const Duration(hours: 7)),
+      );
+      final later = ProgramRotationCoordinator.reconcile(
+        replay, [newB, earlyB, a],
+      );
+      expect(later.completions.map((item) => item.workoutSessionId),
+          ['expected-a', 'new-b']);
+      expect(later.nextRoutineId, 'C');
+      expect(
+        ProgramRotationCoordinator.reconcile(later, [a, newB, earlyB])
+            .completions.length,
+        2,
+      );
+    });
+
+    test('late imported sessions before saved progress never rewrite rotation', () {
+      final recordedA = program().recordCompletion(
+        workoutSessionId: 'saved-a',
+        routineId: 'A',
+        completedAt: start.add(const Duration(hours: 6)),
+      );
+      final olderB = _session(
+        'imported-old-b', 'B', start.add(const Duration(hours: 2)),
+      );
+      final result = ProgramRotationCoordinator.reconcile(
+        recordedA, [olderB],
+      );
+
+      expect(result.completions.map((entry) => entry.workoutSessionId),
+          ['saved-a']);
+      expect(result.nextRoutineId, 'B');
+    });
+
+    test('fixed-week historical completions remain independent of rotation order', () {
+      final fixed = program().copyWith(
+        scheduleMode: ProgramScheduleMode.fixed,
+        fixedWeekdayRoutineIds: const {
+          DateTime.friday: 'B',
+          DateTime.saturday: 'A',
+        },
+      );
+      final friday = DateTime(2026, 1, 2, 8);
+      final saturday = DateTime(2026, 1, 3, 8);
+      final savedSaturday = fixed.recordCompletion(
+        workoutSessionId: 'saved-sat-a',
+        routineId: 'A',
+        completedAt: saturday.add(const Duration(hours: 1)),
+      );
+      final importedFriday = _session(
+        'import-fri-b', 'B', friday,
+      );
+      final result = ProgramRotationCoordinator.reconcile(
+        savedSaturday, [importedFriday],
+      );
+
+      expect(result.completions.map((entry) => entry.workoutSessionId),
+          containsAll(['saved-sat-a', 'import-fri-b']));
+      expect(result.nextRotationIndex, fixed.nextRotationIndex);
+    });
+
     test('sessions before program start cannot mutate rotation', () {
       final history = [
         _session('old-a', 'A', start.subtract(const Duration(days: 1))),

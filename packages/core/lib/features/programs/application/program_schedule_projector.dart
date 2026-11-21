@@ -187,6 +187,18 @@ class ProgramScheduleProjector {
       return program.normalizedNextRotationIndex;
     }
 
+    // For the present and future, the persisted next pointer is authoritative:
+    // the user may have reordered routine IDs since a historical completion.
+    // Old completion.rotationIndex values describe the *previous* order and
+    // cannot safely index the edited program.
+    final latestRecorded = program.completions
+        .map((item) => item.completedAt)
+        .reduce((a, b) => a.isAfter(b) ? a : b);
+    if (!instant.isBefore(latestRecorded)) {
+      return program.normalizedNextRotationIndex;
+    }
+
+    // Historical estimates stay anchored to their recorded rotation slot.
     return (before.last.rotationIndex + 1) % program.routineIds.length;
   }
 

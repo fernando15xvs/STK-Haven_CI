@@ -33,6 +33,20 @@ class ProgramRotationCoordinator {
     var nextIndex = program.normalizedNextRotationIndex;
     var changed = false;
 
+    // An out-of-order workout skipped in an earlier reconciliation must not
+    // become the "next" program session merely because the expected workout
+    // was recorded later. Continuous/flexible rotations are append-only in
+    // chronological completion order. Historical sessions remain untouched.
+    DateTime? latestSequenceCompletion;
+    if (program.scheduleMode != ProgramScheduleMode.fixed) {
+      for (final completion in program.completions) {
+        if (latestSequenceCompletion == null ||
+            completion.completedAt.isAfter(latestSequenceCompletion)) {
+          latestSequenceCompletion = completion.completedAt;
+        }
+      }
+    }
+
     for (final session in candidates) {
       final routineId = session.routineId;
       if (routineId == null) continue;
@@ -59,6 +73,14 @@ class ProgramRotationCoordinator {
         continue;
       }
 
+      if (latestSequenceCompletion != null &&
+          !session.startedAt.isAfter(latestSequenceCompletion)) {
+        // Do not backfill a formerly off-sequence session behind a saved
+        // completion. This is especially important when the app reopens and
+        // reconciles the same complete workout history again.
+        continue;
+      }
+
       final expectedRoutine = program.routineIds[nextIndex];
       if (routineId != expectedRoutine) {
         // Off-sequence sessions remain valid workout history but do not advance
@@ -76,6 +98,7 @@ class ProgramRotationCoordinator {
         ),
       );
       nextIndex = (nextIndex + 1) % program.routineIds.length;
+      latestSequenceCompletion = session.finishedAt;
       changed = true;
     }
 
