@@ -57,11 +57,17 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
     final hasFeaturedRoutine = featuredRoutineId != null &&
         routines.any((routine) => routine.id == featuredRoutineId);
     final hideFeatured = hasFeaturedRoutine && !_showAllRoutines;
-    final visibleRoutines = hideFeatured
+    final eligibleRoutines = hideFeatured
         ? routines
             .where((routine) => routine.id != featuredRoutineId)
             .toList(growable: false)
         : routines;
+    // Keep the home surface short; expanding reveals the complete saved list.
+    final visibleRoutines = !_showAllRoutines && eligibleRoutines.length > 3
+        ? eligibleRoutines.take(3).toList(growable: false)
+        : eligibleRoutines;
+    final hasHiddenRoutines = !_showAllRoutines &&
+        (hideFeatured || eligibleRoutines.length != visibleRoutines.length);
     List<String> musclesFor(Routine routine) {
       final unique = <String>{};
       for (final item in routine.exercises) {
@@ -94,7 +100,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
               itemCount: 1 +
                   (routines.isEmpty
                       ? 1
-                      : visibleRoutines.length + (hideFeatured ? 1 : 0)),
+                      : visibleRoutines.length + (hasHiddenRoutines ? 1 : 0)),
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return Column(
@@ -153,7 +159,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
                   return _EmptyState(onCreate: createRoutine);
                 }
 
-                if (hideFeatured && index == visibleRoutines.length + 1) {
+                if (hasHiddenRoutines && index == visibleRoutines.length + 1) {
                   return Align(
                     alignment: Alignment.center,
                     child: TextButton.icon(

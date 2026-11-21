@@ -59,6 +59,8 @@ void main() {
     expect(source, contains('final featuredRoutineId = workoutActive'));
     expect(source, contains('routine.id != featuredRoutineId'));
     expect(source, contains('final hideFeatured ='));
+    expect(source, contains('eligibleRoutines.take(3)'));
+    expect(source, contains('final hasHiddenRoutines ='));
     expect(source, contains('_showAllRoutines'));
     expect(source, contains("ValueKey('train_show_all_routines')"));
     expect(source, contains('isSuggested:'));

@@ -6,7 +6,7 @@
 - [x] Se retira el título de contenido «Entrenar»; la pestaña ya identifica la pantalla.
 - [x] La sesión activa o siguiente ocupa el ancho completo, con contenido más compacto y una sola CTA principal.
 - [x] Se muestra «EN CURSO» / «PENDIENTE DE REVISAR» para sesiones existentes y «SIGUIENTE SESIÓN» para la proyección real.
-- [x] La rutina destacada queda oculta del listado inmediato por ID, sin eliminarse. «Ver todas las rutinas» es un botón funcional que permite verla y editarla.
+- [x] La rutina destacada queda oculta del listado inmediato por ID, sin eliminarse. El listado inicial muestra hasta tres rutinas distintas; «Ver todas las rutinas» es un botón funcional que revela todas, incluida la destacada, con sus opciones de edición.
 - [x] Mientras hay sesión activa, no se ofrecen CTAs para iniciar otra rutina; los menús CRUD siguen disponibles.
 - [x] El programa se presenta como franja sin tarjeta extra, con nombre/semana/meta/progreso sustentados.
 - [x] Planificación permanece accesible; «Gestionar» agrupa Administrar, Plantillas de rutinas, Plantillas de programas y Crear plan (cuando procede).
