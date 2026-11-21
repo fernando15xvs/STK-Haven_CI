@@ -11,7 +11,7 @@ void main() {
 
   test('H01-H04 Inicio owns no next-workout hero; preserves completed history', () {
     final source = dashboard.readAsStringSync();
-    expect(source, isNot(contains('Icon(Icons.bolt'))));
+    expect(source, isNot(contains('Icons.bolt')));
     expect(source, contains('if (activeWorkout.isActive)'));
     expect(source, contains('_CompactActiveWorkoutAccess('));
     expect(source, contains("ValueKey('home_continue_workout')"));
