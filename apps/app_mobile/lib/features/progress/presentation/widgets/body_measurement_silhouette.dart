@@ -244,9 +244,11 @@ class _BodyMeasurementSilhouetteState extends State<BodyMeasurementSilhouette> {
             ),
           ),
           const SizedBox(height: 12),
-          Container(
+          // The anatomy and individual badges float directly on the page.
+          // Do not paint a rectangular surface behind the entire map:
+          // that creates a visible slab in OLED / dark / light themes.
+          KeyedSubtree(
             key: Key(_back ? 'silhouette_back' : 'silhouette_front'),
-            color: accent.surface,
             child: LayoutBuilder(builder: (context, limits) {
               // The anatomical PNG has a 0.4 width/height ratio. Reserve
               // generous outer margins for readable left/right callouts.
