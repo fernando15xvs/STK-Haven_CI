@@ -29,7 +29,11 @@ void main() {
     expect(hero, contains('nextProgramSessionProvider'));
     expect(hero, contains('WorkoutLauncher.launch(context, ref, routine)'));
     expect(hero, contains('const ActiveWorkoutPage()'));
-    expect(hero, contains('Rotación flexible · sin día obligatorio'));
+    final scheduleLabel = File(
+      'lib/features/routines/application/next_training_session_label.dart',
+    ).readAsStringSync();
+    expect(hero, contains('NextTrainingSessionLabel.forSchedule('));
+    expect(scheduleLabel, contains('Rotación flexible · sin día obligatorio'));
     expect(dashboard, contains('home_continue_workout'));
     expect(dashboard, contains('home_open_train'));
     expect(dashboard, isNot(contains('_TodayRoutineCard')));
