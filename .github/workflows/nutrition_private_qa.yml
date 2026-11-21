@@ -1,0 +1,166 @@
+name: STK Haven - Nutrition Internal QA Artifacts
+
+# Separate artifacts. Normal CI and store builds never set this lab flag.
+# Rerun from Actions > Nutrition Internal QA Artifacts > Run workflow.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/nutrition_private_qa.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nutrition-internal-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.38.9"
+
+jobs:
+  android-nutrition-qa:
+    name: Android - synthetic Nutrition QA APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reclaim Android runner disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/share/powershell /opt/hostedtoolcache/CodeQL /usr/local/.ghcup
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          df -h /
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Resolve pinned workspace
+        run: flutter pub get --enforce-lockfile
+      - name: Validate actual opt-in flag and isolated QA UI
+        working-directory: apps/app_mobile
+        run: >-
+          flutter test --dart-define=STK_INTERNAL_NUTRITION_DEMO=true
+          test/features/nutrition/nutrition_internal_qa_build_flag_test.dart
+          test/features/nutrition/nutrition_internal_demo_page_test.dart
+      - name: Configure Maven mirror and pinned Android NDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s ci/public/maven_central_mirror.gradle
+          mkdir -p "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d"
+          cp ci/public/maven_central_mirror.gradle "${GRADLE_USER_HOME:-$HOME/.gradle}/init.d/stk-maven-central-mirror.gradle"
+          bash ci/public/install_android_ndk_with_retry.sh
+      - name: Build QA-only debug APK, retry HTTP 429 only
+        working-directory: apps/app_mobile
+        shell: bash
+        run: |
+          set +e
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            log="$(mktemp)"
+            flutter build apk --debug --target lib/main_android.dart --dart-define=STK_INTERNAL_NUTRITION_DEMO=true 2>&1 | tee "$log"
+            status=${PIPESTATUS[0]}
+            if [ "$status" -eq 0 ]; then
+              rm -f "$log"
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ] && grep -Eq 'Received status code 429|Too Many Requests|HTTP 429' "$log"; then
+              echo "HTTP 429: retry Android download, not Dart/Gradle failures."
+              rm -f "$log"
+              sleep $((attempt * 45))
+            else
+              rm -f "$log"
+              exit "$status"
+            fi
+          done
+          exit 1
+      - name: Verify SHA256 and APK archive
+        working-directory: apps/app_mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="build/app/outputs/flutter-apk/app-debug.apk"
+          test -s "$APK"
+          unzip -tqq "$APK"
+          sha256sum "$APK" > "$APK.sha256"
+          sha256sum -c "$APK.sha256"
+      - name: Upload private Nutrition QA Android debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-nutrition-internal-android-debug
+          path: |
+            apps/app_mobile/build/app/outputs/flutter-apk/app-debug.apk
+            apps/app_mobile/build/app/outputs/flutter-apk/app-debug.apk.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  ios-nutrition-qa:
+    name: iOS - synthetic Nutrition QA unsigned IPA
+    runs-on: macos-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Resolve pinned workspace
+        run: flutter pub get --enforce-lockfile
+      - name: Validate actual opt-in flag and isolated QA UI
+        working-directory: apps/app_mobile
+        run: >-
+          flutter test --dart-define=STK_INTERNAL_NUTRITION_DEMO=true
+          test/features/nutrition/nutrition_internal_qa_build_flag_test.dart
+          test/features/nutrition/nutrition_internal_demo_page_test.dart
+      - name: Install CocoaPods
+        working-directory: apps/app_mobile/ios
+        run: pod install
+      - name: Build unsigned internal QA IPA app
+        working-directory: apps/app_mobile
+        run: >-
+          flutter build ios --release --no-codesign
+          --target lib/main_ios.dart
+          --dart-define=STK_PNG_PILOTS=true
+          --dart-define=STK_INTERNAL_NUTRITION_DEMO=true
+      - name: Package and verify unsigned IPA and WidgetKit identity
+        working-directory: apps/app_mobile
+        shell: bash
+        run: |
+          set -euo pipefail
+          APP="build/ios/iphoneos/Runner.app"
+          EXT="$APP/PlugIns/StkVerseWidget.appex"
+          test -f "$APP/Info.plist"
+          test -f "$EXT/Info.plist"
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "com.FernandoSac.gymTracker" ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$EXT/Info.plist")" = "com.FernandoSac.gymTracker.StkVerseWidget" ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :NSExtension:NSExtensionPointIdentifier' "$EXT/Info.plist")" = "com.apple.widgetkit-extension" ]
+          EXPECTED_BUILD="$(sed -n 's/^version: .*+//p' pubspec.yaml)"
+          test -n "$EXPECTED_BUILD"
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Info.plist")" = "$EXPECTED_BUILD" ]
+          [ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$EXT/Info.plist")" = "$EXPECTED_BUILD" ]
+          mkdir -p build/nutrition_private_qa/Payload
+          cp -R "$APP" build/nutrition_private_qa/Payload/
+          cd build/nutrition_private_qa
+          /usr/bin/zip -qry STK-Haven-Nutrition-Internal-unsigned.ipa Payload
+          test -s STK-Haven-Nutrition-Internal-unsigned.ipa
+          unzip -tqq STK-Haven-Nutrition-Internal-unsigned.ipa
+          unzip -Z1 STK-Haven-Nutrition-Internal-unsigned.ipa | grep -F 'Payload/Runner.app/PlugIns/StkVerseWidget.appex/Info.plist'
+          shasum -a 256 STK-Haven-Nutrition-Internal-unsigned.ipa > STK-Haven-Nutrition-Internal-unsigned.ipa.sha256
+          shasum -a 256 -c STK-Haven-Nutrition-Internal-unsigned.ipa.sha256
+      - name: Upload internal Nutrition QA iOS IPA (unsigned, NOT installable)
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-haven-nutrition-internal-ios-unsigned
+          path: |
+            apps/app_mobile/build/nutrition_private_qa/STK-Haven-Nutrition-Internal-unsigned.ipa
+            apps/app_mobile/build/nutrition_private_qa/STK-Haven-Nutrition-Internal-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 7
