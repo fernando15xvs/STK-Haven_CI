@@ -1,5 +1,5 @@
 # STK Haven — Roadmap: Entrenar como centro de acción, Inicio sin duplicaciones
-**Fecha:** 21/11/2026 · **Estado:** implementación inicial de Inicio/Entrenar y pruebas de widgets incorporadas; CI final y QA física pendientes · **PR canónica:** [#57](https://github.com/fernando15xvs/STK-Haven/pull/57)
+**Fecha:** 21/11/2026 · **Estado:** Inicio y Entrenar implementados, CI inicial 7/7 verde; regresiones adicionales de fechas/estado activo pendientes de nueva ejecución y QA física · **PR canónica:** [#57](https://github.com/fernando15xvs/STK-Haven/pull/57)
 
 ## Decisión aprobada y sustitución de la regla antigua
 
@@ -90,6 +90,16 @@ El usuario ha aprobado también que **Inicio solo tenga un acceso pequeño «Con
 - Tests: contratos actualizados de Inicio/Entrenar, nuevos widget tests de hero a 320/390/430 dp y escala 100/160/200 %, estados sin programa ni rutinas, decisión de rotación flexible. **Estos tests no sustituyen VoiceOver/TalkBack ni dispositivo real.**
 - Esta implementación **no modifica Supabase, Hive, datos guardados, programa de usuario ni PR fuera de #57**.
 
+## Segundo bloque de QA — sesiones previstas y estados de navegación
+
+- [x] Confirmado **7/7 verde** para el commit anterior del espejo `b353fcc893121b16c6f9d043ee82bbd7df6e51cf` en [CI #44941475923](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/44941475923). Este resultado no valida automáticamente los commits nuevos.
+- [x] Nueva clase pura `NextTrainingSessionLabel`: distingue fecha real de la siguiente sesión de «día elegible para entrenar». Soluciona la etiqueta errónea **«hoy»** cuando la siguiente sesión es en otra fecha. No toca la lógica de la rotación ni escribe en Hive.
+- [x] Pruebas deterministas de etiquetas: día actual, futuro, flexible, fecha sin asignar y distintas horas del mismo día.
+- [x] Pruebas de widget: sesión activa tiene prioridad sobre la sugerida y reemplaza «Iniciar» por «Continuar»; modalidad fija con fecha futura no muestra «hoy», incluso si `isTrainingDay` señala true.
+- [x] Matriz de visualización de hero ampliada a **320/390/430 dp × 100/160/200 % × claro/oscuro**, sin usar una cuenta de usuario ni su base de datos.
+- [ ] Revisar nueva ejecución CI 7/7, confirmar paridad de blobs tras los nuevos cambios y actualizar checklist si pasa.
+- [ ] Validar en equipos reales el salto Inicio → Entrenar y la música/notificaciones al reanudar.
+
 ## Criterios de aceptación
 
 - [ ] Inicio mantiene solo **«Continuar entrenamiento» compacto** cuando hay una sesión activa; o un acceso opcional pequeño «Ir a Entrenar» cuando no la hay. Sin gran hero ni «Siguiente sesión».
@@ -104,4 +114,4 @@ El usuario ha aprobado también que **Inicio solo tenga un acceso pequeño «Con
 
 1. Código en `fernando15xvs/STK-Haven`, rama existente de PR #57. 2. Documentos y blobs afectados sincronizados a `fernando15xvs/STK-Haven_CI/main`, sin PR extra; **el espejo solo ejecuta Actions**. 3. La PR sigue en borrador, sin merge sin autorización explícita. 4. Sin despliegues de Supabase ni alteraciones de producción por este rediseño.
 
-**Este documento define el roadmap y sus checks; NO implementa todavía cambios en Inicio/Entrenar.**
+**Implementación de Inicio/Entrenar realizada en la PR #57. Quedan pendientes los controles manuales y las comprobaciones marcadas en este documento.**

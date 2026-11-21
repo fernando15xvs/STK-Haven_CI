@@ -1,4 +1,5 @@
 import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/workout_session.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
@@ -10,6 +11,21 @@ import 'package:gym_tracker/features/routines/presentation/widgets/next_training
 class _NoActiveWorkout extends ActiveWorkoutNotifier {
   @override
   ActiveWorkoutState build() => const ActiveWorkoutState();
+}
+
+class _WithActiveWorkout extends ActiveWorkoutNotifier {
+  @override
+  ActiveWorkoutState build() => ActiveWorkoutState(
+        session: WorkoutSession(
+          id: 'session-preserved-001',
+          routineId: 'existing-upper-b',
+          routineNameSnapshot: 'Upper B · sesión activa',
+          startedAt: DateTime.now().subtract(const Duration(minutes: 10)),
+          finishedAt: DateTime.now(),
+          exercises: const [],
+          durationSeconds: 600,
+        ),
+      );
 }
 
 void main() {
@@ -52,7 +68,8 @@ void main() {
 
   for (final width in [320.0, 390.0, 430.0]) {
     for (final scale in [1.0, 1.6, 2.0]) {
-      testWidgets('next workout hero fits ${width.toInt()}dp at $scale text',
+      for (final brightness in [Brightness.light, Brightness.dark]) {
+      testWidgets('next workout hero fits ${width.toInt()}dp at $scale text ($brightness)',
           (tester) async {
         tester.view.physicalSize = Size(width, 950);
         tester.view.devicePixelRatio = 1;
@@ -66,6 +83,7 @@ void main() {
             legacyTodaySessionProvider.overrideWith((ref) => null),
           ],
           child: MaterialApp(
+            theme: ThemeData(brightness: brightness),
             home: Scaffold(
               body: MediaQuery(
                 data: MediaQueryData(textScaler: TextScaler.linear(scale)),
@@ -90,8 +108,87 @@ void main() {
             findsOneWidget);
         expect(tester.takeException(), isNull);
       });
+      }
     }
   }
+
+  testWidgets('active session wins over projected workout and opens no new Start',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        activeWorkoutProvider.overrideWith(_WithActiveWorkout.new),
+        activeWorkoutLastActivityProvider.overrideWith(
+          (ref) => DateTime.now(),
+        ),
+        nextProgramSessionProvider.overrideWith((ref) => suggested),
+        activeTrainingProgramProvider.overrideWith((ref) => program),
+        legacyTodaySessionProvider.overrideWith((ref) => null),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: NextTrainingSessionHero(
+            routines: [routine],
+            historyByRoutine: const {},
+            musclesFor: (_) => const ['Hombros'],
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('train_next_session_hero')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('train_resume_workout')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('train_start_next_session')),
+        findsNothing);
+    expect(find.text('Upper B · sesión activa'), findsOneWidget);
+    expect(find.text('Continuar'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('inactive day uses projected date, never today eligibility',
+      (tester) async {
+    final fixedProgram = TrainingProgram(
+      id: 'fixed-plan',
+      name: 'Semana fija',
+      routineIds: [routine.id],
+      createdAt: now,
+      startedAt: now,
+      scheduleMode: ProgramScheduleMode.fixed,
+      fixedWeekdayRoutineIds: {DateTime.monday: routine.id},
+    );
+    final futureSession = NextProgramSession(
+      program: fixedProgram,
+      routine: routine,
+      week: 1,
+      isDeloadWeek: false,
+      isTrainingDay: true, // Historically this caused the incorrect label.
+      trainingWeekdays: const {DateTime.monday},
+      scheduledDate: DateTime.now().add(const Duration(days: 14)),
+      targetSessionsPerWeek: 1,
+    );
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        activeWorkoutProvider.overrideWith(_NoActiveWorkout.new),
+        nextProgramSessionProvider.overrideWith((ref) => futureSession),
+        activeTrainingProgramProvider.overrideWith((ref) => fixedProgram),
+        legacyTodaySessionProvider.overrideWith((ref) => null),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: NextTrainingSessionHero(
+            routines: [routine],
+            historyByRoutine: const {},
+            musclesFor: (_) => const [],
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Próximo día:'), findsOneWidget);
+    expect(find.text('Sesión programada para hoy'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('paused plan is not recommended as active workout', (tester) async {
     await tester.pumpWidget(ProviderScope(

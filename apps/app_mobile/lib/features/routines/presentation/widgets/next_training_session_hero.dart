@@ -1,5 +1,6 @@
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/programs/application/training_program_legacy_policy.dart';
+import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
@@ -10,9 +11,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/features/routines/application/routine_card_evidence.dart';
+import 'package:gym_tracker/features/routines/application/next_training_session_label.dart';
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
-import 'package:intl/intl.dart';
 
 /// Read-only fallback for accounts that only have the old onboarding plan.
 /// Modern paused plans suppress this fallback; there is no implicit rotation.
@@ -38,6 +39,12 @@ final legacyTodaySessionProvider = Provider<LegacyTodaySession?>((ref) {
   }
   return null;
 });
+
+/// Read last activity from persistent draft only when an active session is
+/// displayed. Overridable for widget QA without opening a user's Hive store.
+final activeWorkoutLastActivityProvider = Provider<DateTime?>(
+  (ref) => ref.read(activeWorkoutRepositoryProvider).lastActivityAt,
+);
 
 /// Entrenar owns the sole next-session hero. Inicio only offers a small link.
 class NextTrainingSessionHero extends ConsumerStatefulWidget {
@@ -92,8 +99,7 @@ class _NextTrainingSessionHeroState
 
     // Reuse the active workout; never start a second one automatically.
     if (active) {
-      final lastActivityAt =
-          ref.read(activeWorkoutRepositoryProvider).lastActivityAt;
+      final lastActivityAt = ref.watch(activeWorkoutLastActivityProvider);
       final sessionStart = ref.read(activeWorkoutProvider).session?.startedAt;
       final stale = sessionStart != null &&
           UnfinishedWorkoutReminderPolicy.isStale(
@@ -168,11 +174,12 @@ class _NextTrainingSessionHeroState
         widget.historyByRoutine[routine.id]?.typicalMinutes;
     final schedule = next == null
         ? 'Programada para hoy · ${legacyToday!.programName}'
-        : next.scheduledDate == null
-            ? 'Rotación flexible · sin día obligatorio'
-            : next.isTrainingDay
-                ? 'Sesión programada para hoy'
-                : 'Próximo día: ${DateFormat('EEE d MMM', 'es').format(next.scheduledDate!.toLocal())}';
+        : NextTrainingSessionLabel.forSchedule(
+            scheduledDate: next.scheduledDate,
+            isFlexible: next.program.scheduleMode ==
+                ProgramScheduleMode.flexible,
+            now: DateTime.now(),
+          );
     final detailItems = <String>[
       '${routine.exercises.length} ejercicios',
       if (muscles.isNotEmpty) muscles.join(' · '),
