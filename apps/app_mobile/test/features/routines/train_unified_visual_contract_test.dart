@@ -20,8 +20,12 @@ void main() {
     final source = File(
       'lib/features/workout/presentation/active_workout_page_content.dart',
     ).readAsStringSync();
-    expect(source, contains('MediaQuery.sizeOf(context).width >= 380'));
-    expect(source, contains("Anterior: "));
+    // In the current adaptive set table, the separate previous-set column
+    // needs at least 460dp; below that width the value moves beneath the row.
+    expect(source, contains('MediaQuery.sizeOf(context).width >= 460'));
+    expect(source, contains('MediaQuery.sizeOf(context).width < 460'));
+    expect(source, contains("'ANTERIOR'"));
+    expect(source, contains('Anterior: '));
   });
 
   test('saved summary closes to Inicio and honors reduced motion', () {
