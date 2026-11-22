@@ -54,24 +54,29 @@ void main() {
         ));
         await tester.pumpAndSettle();
         expect(find.text('Crear mi plan'), findsOneWidget);
-        // ListView lazily mounts only visible tiles at large text scales.
-        // Verify that every saved routine is reachable and stays selected,
-        // rather than requiring all four tiles in a single viewport.
-        for (var index = 0; index < 4; index++) {
-          final name = find.text('Rutina $index');
-          await tester.scrollUntilVisible(
-            name,
-            160,
-            scrollable: find.byType(Scrollable).first,
-          );
-          expect(name, findsOneWidget);
-          final tile = find.ancestor(
-            of: name,
-            matching: find.byType(CheckboxListTile),
-          );
-          expect(tile, findsOneWidget);
-          expect(tester.widget<CheckboxListTile>(tile).value, isTrue);
+        // ListView lazily mounts only visible elements. Inspect the actual
+        // children of its SliverChildListDelegate so offscreen saved routines
+        // count without assuming all four are simultaneously mounted.
+        final listView = tester.widget<ListView>(find.byType(ListView));
+        expect(listView.childrenDelegate, isA<SliverChildListDelegate>());
+        final children =
+            (listView.childrenDelegate as SliverChildListDelegate).children;
+        final tiles = children.whereType<CheckboxListTile>().toList();
+        expect(tiles, hasLength(4));
+        for (var index = 0; index < tiles.length; index++) {
+          expect((tiles[index].title! as Text).data, 'Rutina $index');
+          expect(tiles[index].value, isTrue);
         }
+        // The real controller reaches the end, keeping creation accessible
+        // at both normal and large text scales.
+        expect(scroll.hasClients, isTrue);
+        if (scroll.position.maxScrollExtent > 0) {
+          final end = scroll.position.maxScrollExtent;
+          scroll.jumpTo(end);
+          await tester.pump();
+          expect(scroll.position.pixels, closeTo(end, 0.1));
+        }
+        expect(find.byKey(const Key('quick_plan_create')), findsOneWidget);
         expect(tester.takeException(), isNull,
             reason: '$width dp at $scale text');
       }

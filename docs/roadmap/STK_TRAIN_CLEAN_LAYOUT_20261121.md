@@ -16,7 +16,8 @@
 ## Validación pendiente
 - [x] CI de la entrega visual inicial: 7/7 success en `44955992661` (SHA `d285b9bbbdf1775c3f33aa76181fc9c5cbddc21b`).
 - [ ] Confirmar CI del último SHA con `flutter test test/features/routines` agregado al trabajo Mobile Test.
-- [x] Primera ejecución de la etapa nueva: 48 tests PASS, 2 contratos antiguos FALLARON. Se corrigen las expectativas: umbral adaptativo >=/<460dp para «Anterior» y desplazamiento real de los cuatro CheckboxListTile de creación de plan. Ningún cambio de comportamiento de producción.
+- [x] Primera ejecución de la etapa nueva: 48 tests PASS, 2 contratos antiguos FALLARON. Se corrigen las expectativas: umbral adaptativo >=/<460dp para «Anterior» y existencia/selección de los cuatro CheckboxListTile dentro del SliverChildListDelegate, además de scroll hasta el botón de crear plan. Ningún cambio de comportamiento de producción.
+- [x] Segundo intento del gate: los contratos visuales corregidos pasan; el método `scrollUntilVisible` no hallaba elementos offscreen y se sustituyó por inspección del delegate + scroll real.
 - [x] Añadidas pruebas widget de pantalla completa: rutina destacada oculta en el listado inicial, expansión que revela todas, «Gestionar» con sus accesos, y bloqueo de otro «Iniciar» durante una sesión activa.
 - [ ] QA físico iPhone/Android: sesión activa, programa flexible/pausado, restauración, scroll y fondo seguro.
 - [ ] Comprobar VoiceOver/TalkBack, teclado y todas las combinaciones OLED/acentos en equipos físicos.
