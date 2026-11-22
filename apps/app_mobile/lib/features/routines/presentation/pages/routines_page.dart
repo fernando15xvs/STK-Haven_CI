@@ -178,6 +178,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: _RoutineCard(
+                    key: ValueKey('train_routine_${routine.id}'),
                     routine: routine,
                     muscleGroups: muscleGroups,
                     isSuggested:
@@ -795,6 +796,7 @@ class _RoutineCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   const _RoutineCard({
+    super.key,
     required this.routine,
     required this.muscleGroups,
     required this.programName,

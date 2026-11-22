@@ -14,7 +14,9 @@
 - [x] Contrato de fuente actualizado y matriz widget de ancho completo 320/390/430 dp a 100/160/200% en claro/oscuro.
 
 ## Validación pendiente
-- [ ] CI espejo de último SHA con los 7 trabajos obligatorios en success.
+- [x] CI de la entrega visual inicial: 7/7 success en `44955992661` (SHA `d285b9bbbdf1775c3f33aa76181fc9c5cbddc21b`).
+- [ ] Confirmar el siguiente CI **del HEAD nuevo**, que agrega pruebas de interacción; un verde anterior no valida commits posteriores.
+- [x] Añadidas pruebas widget de pantalla completa: rutina destacada oculta en el listado inicial, expansión que revela todas, «Gestionar» con sus accesos, y bloqueo de otro «Iniciar» durante una sesión activa.
 - [ ] QA físico iPhone/Android: sesión activa, programa flexible/pausado, restauración, scroll y fondo seguro.
 - [ ] Comprobar VoiceOver/TalkBack, teclado y todas las combinaciones OLED/acentos en equipos físicos.
 - [ ] Revisión visual de capturas físicas, sin confundir CI verde con una IPA firmada.
