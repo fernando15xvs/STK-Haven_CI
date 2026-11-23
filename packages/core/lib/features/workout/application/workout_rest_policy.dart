@@ -12,6 +12,17 @@ class WorkoutRestPolicy {
   }) {
     final exercise = exercises[exerciseIndex];
     final completed = exercise.sets[setIndex];
+    // A unilateral set is complete only after both sides. Never start a
+    // redundant post-set countdown when it was the final pending set in the
+    // entire workout, regardless of completed/next-set rest preference.
+    if (exercise.usesUnilateralTracking(completed) &&
+        completed.completed &&
+        !exercises.any((entry) => entry.sets.any((set) => !set.completed))) {
+      return const SupersetRestDecision(
+        shouldStartRest: false,
+        restSeconds: 0,
+      );
+    }
     // Supersets are an explicit round-based training mode, independent of this
     // preference. Inter-side rest is handled by UnilateralSetCoordinator.
     if (mode == RestTimingMode.completedSet ||

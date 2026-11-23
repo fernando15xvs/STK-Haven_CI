@@ -6,6 +6,7 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/unilateral_rest_choices.dart';
 import 'package:core/features/routines/application/routine_order_coordinator.dart';
 import 'package:core/features/routines/application/routine_superset_coordinator.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
@@ -97,6 +98,8 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
     int repsMin = current?.targetRepsMin ?? 8;
     int repsMax = current?.targetRepsMax ?? 12;
     int rest = current?.restSeconds ?? 90;
+    bool restEdited = false;
+    int? previousBilateralRest;
     int warmupSets = current?.warmupSets ?? personal.warmupSets;
     int approachSets = current?.approachSets ?? personal.approachSets;
     int warmupRest = current?.warmupRestSeconds ?? current?.restSeconds ?? 60;
@@ -107,6 +110,9 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
     int sideRestSeconds =
         current?.unilateralSideRestSeconds ??
         settings.unilateralSideRestSeconds;
+    int rememberedSideRest = sideRestSeconds > 0
+        ? sideRestSeconds : (settings.unilateralSideRestSeconds > 0
+            ? settings.unilateralSideRestSeconds : 60);
     PreferredWorkoutSide preferredStartSide =
         current?.preferredUnilateralStartSide ??
         settings.preferredUnilateralStartSide;
@@ -115,72 +121,109 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
     UnilateralTarget unilateralTarget =
         current?.unilateralTarget ?? UnilateralTarget.other;
 
+    bool dirty = false;
+    bool allowClose = false;
+    bool dialogOpen = false;
+
+    Future<void> requestClose(BuildContext sheetCtx, StateSetter refresh) async {
+      if (dialogOpen) return;
+      dialogOpen = true;
+      var discard = !dirty;
+      if (dirty) {
+        discard = await showDialog<bool>(
+              context: sheetCtx,
+              builder: (dialogCtx) => AlertDialog(
+                title: const Text('Descartar cambios'),
+                content: const Text('La configuración del ejercicio no se ha guardado.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogCtx, false),
+                    child: const Text('Seguir editando'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(dialogCtx, true),
+                    child: const Text('Descartar'),
+                  ),
+                ],
+              ),
+            ) ?? false;
+      }
+      dialogOpen = false;
+      if (!discard || !sheetCtx.mounted) return;
+      refresh(() => allowClose = true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (sheetCtx.mounted) Navigator.pop(sheetCtx);
+      });
+    }
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      isDismissible: false,
+      enableDrag: false,
       backgroundColor: AppColors.of(context).surfaceHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setBottomState) {
-          return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              24,
-              18,
-              24,
-              MediaQuery.of(ctx).viewInsets.bottom + 28,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.of(context).textDisabled,
-                      borderRadius: BorderRadius.circular(99),
+          void markDirty(VoidCallback update) {
+            setBottomState(() {
+              update();
+              dirty = true;
+            });
+          }
+          return PopScope<void>(
+            canPop: allowClose,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) requestClose(ctx, setBottomState);
+            },
+            child: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+            child: SizedBox(
+              height: (MediaQuery.sizeOf(ctx).height -
+                  MediaQuery.viewInsetsOf(ctx).bottom) * 0.90,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md, AppSpacing.sm, AppSpacing.xs, AppSpacing.sm,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(exercise.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.headlineLarge),
+                            Text('Configurar ejercicio',
+                              style: AppTypography.bodySmall),
+                          ],
+                        )),
+                        IconButton(
+                          key: const ValueKey('exercise_config_close'),
+                          tooltip: 'Cerrar configuración',
+                          onPressed: () => requestClose(ctx, setBottomState),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 18),
-                Text(exercise.name, style: AppTypography.headlineLarge),
-                const SizedBox(height: 4),
-                Text(
-                  'Configura solo lo que este ejercicio necesita.',
-                  style: AppTypography.bodySmall,
-                ),
-                const SizedBox(height: 22),
-                _ConfigSection(
-                  title: 'Ubicación en la sesión',
-                  subtitle:
-                      'Opcional: Movilidad va al inicio, Entrenamiento principal al centro y Estiramiento al final.',
-                  child: DropdownButtonFormField<RoutineExercisePhase>(
-                    initialValue: phase,
-                    decoration: const InputDecoration(
-                      labelText: 'Tipo de ejercicio dentro de la rutina',
-                    ),
-                    items: RoutineExercisePhase.values
-                        .map(
-                          (value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(value.label),
-                          ),
-                        )
-                        .toList(growable: false),
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setBottomState(() => phase = value);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 14),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      key: const ValueKey('exercise_config_scroll'),
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                 _ConfigSection(
                   title: phase == RoutineExercisePhase.main
-                      ? 'Series efectivas'
+                      ? 'Series y repeticiones'
                       : phase == RoutineExercisePhase.mobility
                       ? 'Movilidad'
                       : 'Estiramiento',
@@ -188,13 +231,13 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                     children: [
                       _CounterRow(
                         label: phase == RoutineExercisePhase.main
-                            ? 'Series efectivas'
+                            ? 'Series'
                             : 'Series / rondas',
                         value: sets,
                         min: 1,
                         max: 10,
                         onChanged: (value) =>
-                            setBottomState(() => sets = value),
+                            markDirty(() => sets = value),
                       ),
                       const SizedBox(height: 10),
                       _CounterRow(
@@ -203,7 +246,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                         min: 1,
                         max: repsMax,
                         onChanged: (value) =>
-                            setBottomState(() => repsMin = value),
+                            markDirty(() => repsMin = value),
                       ),
                       const SizedBox(height: 10),
                       _CounterRow(
@@ -212,94 +255,29 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                         min: repsMin,
                         max: 50,
                         onChanged: (value) =>
-                            setBottomState(() => repsMax = value),
+                            markDirty(() => repsMax = value),
                       ),
                       const SizedBox(height: 10),
                       _CounterRow(
-                        label: 'Descanso (s)',
+                        label: 'Descanso entre series',
                         value: rest,
-                        min: 15,
-                        max: 300,
+                        valueText: rest == 0 ? '0 s' :
+                            rest % 60 == 0 ? '${rest ~/ 60} min' :
+                            '${rest ~/ 60}:${(rest % 60).toString().padLeft(2, '0')}',
+                        min: 0,
+                        max: rest > 600 ? rest : 600,
                         step: 15,
-                        onChanged: (value) =>
-                            setBottomState(() => rest = value),
+                        onChanged: (value) => markDirty(() {
+                          rest = value;
+                          restEdited = true;
+                        }),
                       ),
                     ],
                   ),
                 ),
-                if (phase == RoutineExercisePhase.main) ...[
-                  const SizedBox(height: 14),
-                  _ConfigSection(
-                    title: 'Preparación predeterminada',
-                    subtitle:
-                        'Se recordará para la próxima vez que añadas este ejercicio. Estas series no cuentan como efectivas ni para PRs.',
-                    child: Column(
-                      children: [
-                        _CounterRow(
-                          label: 'Calentamiento',
-                          value: warmupSets,
-                          min: 0,
-                          max: 5,
-                          onChanged: (value) =>
-                              setBottomState(() => warmupSets = value),
-                        ),
-                        if (warmupSets > 0) ...[
-                          const SizedBox(height: 10),
-                          _CounterRow(
-                            label: 'Descanso calentamiento (s)',
-                            value: warmupRest,
-                            min: 0,
-                            max: 300,
-                            step: 15,
-                            onChanged: (value) =>
-                                setBottomState(() => warmupRest = value),
-                          ),
-                        ],
-                        const SizedBox(height: 10),
-                        _CounterRow(
-                          label: 'Aproximación',
-                          value: approachSets,
-                          min: 0,
-                          max: 5,
-                          onChanged: (value) =>
-                              setBottomState(() => approachSets = value),
-                        ),
-                        if (approachSets > 0) ...[
-                          const SizedBox(height: 10),
-                          _CounterRow(
-                            label: 'Descanso aproximación (s)',
-                            value: approachRest,
-                            min: 0,
-                            max: 300,
-                            step: 15,
-                            onChanged: (value) =>
-                                setBottomState(() => approachRest = value),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
+
                 _ConfigSection(
-                  title: 'Nota técnica personal',
-                  subtitle:
-                      'Guarda recordatorios propios de ejecución para este ejercicio.',
-                  child: TextField(
-                    controller: notesController,
-                    minLines: 2,
-                    maxLines: 5,
-                    maxLength: 1200,
-                    decoration: const InputDecoration(
-                      hintText: 'Ej. mantener escápulas atrás, pausa abajo...',
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _ConfigSection(
-                  title: 'Unilateral',
-                  subtitle:
-                      'Úsalo cuando trabajas un lado a la vez. Podrás marcar Izq. y Der. por separado.',
+                  title: 'Trabajo unilateral',
                   child: Column(
                     children: [
                       SwitchListTile.adaptive(
@@ -307,10 +285,25 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                         title: const Text('Registrar izquierda y derecha'),
                         value: unilateral,
                         activeTrackColor: AppColors.of(context).primary,
-                        onChanged: (value) =>
-                            setBottomState(() => unilateral = value),
+                        onChanged: (value) => markDirty(() {
+                          if (value && !unilateral && current == null && !restEdited) {
+                            previousBilateralRest = rest;
+                            rest = 0;
+                          } else if (!value && unilateral &&
+                              previousBilateralRest != null && !restEdited) {
+                            rest = previousBilateralRest!;
+                            previousBilateralRest = null;
+                          }
+                          unilateral = value;
+                        }),
                       ),
                       if (unilateral) ...[
+                        ExpansionTile(
+                          tilePadding: EdgeInsets.zero,
+                          title: Text('Opciones por lado', style: AppTypography.bodyMedium),
+                          initiallyExpanded: unilateralTarget != UnilateralTarget.other ||
+                              (preparationUnilateral && (warmupSets > 0 || approachSets > 0)),
+                          children: [
                         DropdownButtonFormField<UnilateralTarget>(
                           initialValue: unilateralTarget,
                           decoration: const InputDecoration(
@@ -326,7 +319,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                               .toList(),
                           onChanged: (value) {
                             if (value != null) {
-                              setBottomState(() => unilateralTarget = value);
+                              markDirty(() => unilateralTarget = value);
                             }
                           },
                         ),
@@ -340,37 +333,64 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                               'los haces bilateral.',
                             ),
                             value: preparationUnilateral,
-                            onChanged: (value) => setBottomState(
+                            onChanged: (value) => markDirty(
                               () => preparationUnilateral = value,
                             ),
                           ),
                         ],
-                        const SizedBox(height: 8),
+                          ],
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text('Cambio entre lados', style: AppTypography.labelMedium),
+                        const SizedBox(height: AppSpacing.xs),
+                        SegmentedButton<int>(
+                          key: const ValueKey('exercise_unilateral_mode'),
+                          segments: const [
+                            ButtonSegment(value: 0, label: Text('Directo')),
+                            ButtonSegment(value: 1, label: Text('Con pausa')),
+                          ],
+                          selected: {sideRestSeconds == 0 ? 0 : 1},
+                          onSelectionChanged: (values) => markDirty(() {
+                            if (values.first == 0) {
+                              if (sideRestSeconds > 0) rememberedSideRest = sideRestSeconds;
+                              sideRestSeconds = 0;
+                            } else {
+                              sideRestSeconds = rememberedSideRest;
+                            }
+                          }),
+                        ),
+                        if (sideRestSeconds > 0) ...[
+                        const SizedBox(height: AppSpacing.sm),
                         DropdownButtonFormField<int>(
+                          key: ValueKey('exercise_side_rest_$sideRestSeconds'),
                           initialValue: sideRestSeconds,
                           decoration: const InputDecoration(
-                            labelText: 'Descanso entre lados',
+                            labelText: 'Pausa antes del otro lado',
                           ),
-                          items: const [0, 15, 30, 45, 60, 90, 120, 180]
+                          items: ({...UnilateralRestChoices.forSelected(sideRestSeconds), sideRestSeconds}
+                              .where((seconds) => seconds > 0).toList()..sort())
                               .map(
                                 (seconds) => DropdownMenuItem(
                                   value: seconds,
                                   child: Text(
-                                    seconds == 0
-                                        ? 'Cambio directo'
-                                        : '$seconds s',
+                                    '$seconds s',
                                   ),
                                 ),
                               )
                               .toList(growable: false),
                           onChanged: (value) {
                             if (value != null) {
-                              setBottomState(() => sideRestSeconds = value);
+                              markDirty(() {
+                                sideRestSeconds = value;
+                                rememberedSideRest = value;
+                              });
                             }
                           },
                         ),
-                        const SizedBox(height: 8),
+                        ],
+                        const SizedBox(height: AppSpacing.sm),
                         DropdownButtonFormField<PreferredWorkoutSide>(
+                          key: const ValueKey('exercise_start_side'),
                           initialValue: preferredStartSide,
                           decoration: const InputDecoration(
                             labelText: 'Lado inicial',
@@ -385,19 +405,140 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                               .toList(growable: false),
                           onChanged: (value) {
                             if (value != null) {
-                              setBottomState(() => preferredStartSide = value);
+                              markDirty(() => preferredStartSide = value);
                             }
                           },
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          rest == 0
+                            ? 'Tras ambos lados: sin pausa adicional.'
+                            : 'Tras ambos lados: $rest s entre series.',
+                          style: AppTypography.bodySmall,
                         ),
                       ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 22),
-                SizedBox(
+
+
+                if (phase == RoutineExercisePhase.main) ...[
+                  const SizedBox(height: 14),
+                  _ConfigSection(
+                    title: 'Preparación',
+                    collapsible: true,
+                    initiallyExpanded: warmupSets > 0 || approachSets > 0,
+                    subtitle: 'Calentamiento y aproximación · no cuentan para PRs',
+                    child: Column(
+                      children: [
+                        _CounterRow(
+                          label: 'Calentamiento',
+                          value: warmupSets,
+                          min: 0,
+                          max: 5,
+                          onChanged: (value) =>
+                              markDirty(() => warmupSets = value),
+                        ),
+                        if (warmupSets > 0) ...[
+                          const SizedBox(height: 10),
+                          _CounterRow(
+                            label: 'Descanso calentamiento (s)',
+                            value: warmupRest,
+                            min: 0,
+                            max: 300,
+                            step: 15,
+                            onChanged: (value) =>
+                                markDirty(() => warmupRest = value),
+                          ),
+                        ],
+                        const SizedBox(height: 10),
+                        _CounterRow(
+                          label: 'Aproximación',
+                          value: approachSets,
+                          min: 0,
+                          max: 5,
+                          onChanged: (value) =>
+                              markDirty(() => approachSets = value),
+                        ),
+                        if (approachSets > 0) ...[
+                          const SizedBox(height: 10),
+                          _CounterRow(
+                            label: 'Descanso aproximación (s)',
+                            value: approachRest,
+                            min: 0,
+                            max: 300,
+                            step: 15,
+                            onChanged: (value) =>
+                                markDirty(() => approachRest = value),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 14),
+
+                _ConfigSection(
+                  title: 'Nota técnica',
+                  collapsible: true,
+                  initiallyExpanded: notesController.text.isNotEmpty,
+                  subtitle: 'Opcional',
+                  child: TextField(
+                    controller: notesController,
+                    onChanged: (_) => markDirty(() {}),
+                    minLines: 2,
+                    maxLines: 5,
+                    maxLength: 1200,
+                    decoration: const InputDecoration(
+                      hintText: 'Ej. mantener escápulas atrás, pausa abajo...',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                _ConfigSection(
+                  title: 'Ubicación en la sesión',
+                  collapsible: true,
+                  initiallyExpanded: phase != RoutineExercisePhase.main,
+                  subtitle: phase.label,
+                  child: DropdownButtonFormField<RoutineExercisePhase>(
+                    initialValue: phase,
+                    decoration: const InputDecoration(
+                      labelText: 'Tipo de ejercicio dentro de la rutina',
+                    ),
+                    items: RoutineExercisePhase.values
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text(value.label),
+                          ),
+                        )
+                        .toList(growable: false),
+                    onChanged: (value) {
+                      if (value == null) return;
+                      markDirty(() => phase = value);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 14),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md, AppSpacing.xs, AppSpacing.md, AppSpacing.xs,
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, bounds) {
+                          final save = SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: FilledButton(
+                    key: const ValueKey('exercise_config_save'),
                     onPressed: () async {
                       await ref
                           .read(exercisePersonalSettingsProvider.notifier)
@@ -450,15 +591,46 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                         }
                         _replaceExercises(_selectedExercises);
                       });
-                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (ctx.mounted) {
+                        setBottomState(() => allowClose = true);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        });
+                      }
                     },
                     child: Text(
                       index == null ? 'Añadir ejercicio' : 'Guardar cambios',
                     ),
                   ),
-                ),
-              ],
+                );
+                          final cancel = TextButton(
+                            key: const ValueKey('exercise_config_cancel'),
+                            onPressed: () => requestClose(ctx, setBottomState),
+                            child: const Text('Cancelar'),
+                          );
+                          if (bounds.maxWidth < 350 ||
+                              MediaQuery.textScalerOf(context).scale(14) > 20) {
+                            return Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [save, cancel],
+                            );
+                          }
+                          return Row(
+                            children: [
+                              cancel,
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(child: save),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
+          ),
           );
         },
       ),
@@ -989,34 +1161,44 @@ class _ConfigSection extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget child;
+  final bool collapsible;
+  final bool initiallyExpanded;
 
   const _ConfigSection({
     required this.title,
     this.subtitle,
     required this.child,
+    this.collapsible = false,
+    this.initiallyExpanded = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.of(context).surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.of(context).border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTypography.headlineSmall),
-          if (subtitle != null) ...[
-            const SizedBox(height: 3),
-            Text(subtitle!, style: AppTypography.bodySmall),
-          ],
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
+    final heading = Text(title, style: AppTypography.headlineSmall);
+    return PremiumCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: collapsible
+          ? ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: heading,
+              subtitle: subtitle == null
+                  ? null
+                  : Text(subtitle!, style: AppTypography.bodySmall),
+              initiallyExpanded: initiallyExpanded,
+              children: [child],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                heading,
+                if (subtitle != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(subtitle!, style: AppTypography.bodySmall),
+                ],
+                const SizedBox(height: AppSpacing.sm),
+                child,
+              ],
+            ),
     );
   }
 }
@@ -1027,6 +1209,7 @@ class _CounterRow extends StatelessWidget {
   final int min;
   final int max;
   final int step;
+  final String? valueText;
   final ValueChanged<int> onChanged;
 
   const _CounterRow({
@@ -1035,6 +1218,7 @@ class _CounterRow extends StatelessWidget {
     required this.min,
     required this.max,
     this.step = 1,
+    this.valueText,
     required this.onChanged,
   });
 
@@ -1046,10 +1230,7 @@ class _CounterRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: TextStyle(
-              color: AppColors.of(context).textPrimary,
-              fontSize: 15,
-            ),
+            style: AppTypography.bodyMedium,
           ),
         ),
         Row(
@@ -1061,15 +1242,11 @@ class _CounterRow extends StatelessWidget {
               icon: const Icon(Icons.remove, size: 18),
             ),
             SizedBox(
-              width: 48,
+              width: valueText == null ? 48 : 70,
               child: Text(
-                '$value',
+                valueText ?? '$value',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.of(context).textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTypography.headlineSmall,
               ),
             ),
             IconButton.outlined(

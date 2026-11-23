@@ -12,6 +12,7 @@ import 'package:core/features/workout/presentation/widgets/exercise_increment_co
 import 'package:core/features/workout/presentation/widgets/exercise_rep_range_notice.dart';
 import 'package:core/features/workout/presentation/widgets/active_workout_memory_overlay.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/unilateral_rest_choices.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/domain/models/routine.dart';
@@ -939,6 +940,9 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
     int sideRestSeconds = widget.workoutExercise.sets.isEmpty
         ? settings.unilateralSideRestSeconds
         : widget.workoutExercise.sets.first.sideRestSeconds;
+    int previousPause = sideRestSeconds > 0 ? sideRestSeconds :
+        (settings.unilateralSideRestSeconds > 0
+            ? settings.unilateralSideRestSeconds : 60);
     PreferredWorkoutSide preferredStartSide =
         widget.workoutExercise.preferredUnilateralStartSide;
 
@@ -1001,30 +1005,50 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                         onChanged: (value) =>
                             setDialogState(() => preparationUnilateral = value),
                       ),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<int>(
-                        initialValue: sideRestSeconds,
-                        decoration: const InputDecoration(
-                          labelText: 'Descanso entre lados',
-                        ),
-                        items: const [0, 15, 30, 45, 60, 90, 120, 180]
-                            .map(
-                              (seconds) => DropdownMenuItem(
-                                value: seconds,
-                                child: Text(
-                                  seconds == 0
-                                      ? 'Cambio directo'
-                                      : '$seconds s',
-                                ),
-                              ),
-                            )
-                            .toList(growable: false),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setDialogState(() => sideRestSeconds = value);
+                      const SizedBox(height: AppSpacing.sm),
+                      Text('Cambio entre lados', style: AppTypography.labelMedium),
+                      const SizedBox(height: AppSpacing.xs),
+                      SegmentedButton<int>(
+                        key: const ValueKey('active_unilateral_mode'),
+                        segments: const [
+                          ButtonSegment(value: 0, label: Text('Directo')),
+                          ButtonSegment(value: 1, label: Text('Con pausa')),
+                        ],
+                        selected: {sideRestSeconds == 0 ? 0 : 1},
+                        onSelectionChanged: (values) => setDialogState(() {
+                          if (values.first == 0) {
+                            if (sideRestSeconds > 0) previousPause = sideRestSeconds;
+                            sideRestSeconds = 0;
+                          } else {
+                            sideRestSeconds = previousPause;
                           }
-                        },
+                        }),
                       ),
+                      if (sideRestSeconds > 0) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        DropdownButtonFormField<int>(
+                          key: ValueKey('active_side_rest_$sideRestSeconds'),
+                          initialValue: sideRestSeconds,
+                          decoration: const InputDecoration(
+                            labelText: 'Pausa antes del otro lado',
+                          ),
+                          items: ({...UnilateralRestChoices.forSelected(sideRestSeconds), sideRestSeconds}
+                                .where((seconds) => seconds > 0).toList()..sort())
+                              .map((seconds) => DropdownMenuItem(
+                                    value: seconds,
+                                    child: Text('$seconds s'),
+                                  ))
+                              .toList(growable: false),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setDialogState(() {
+                                sideRestSeconds = value;
+                                previousPause = value;
+                              });
+                            }
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       DropdownButtonFormField<PreferredWorkoutSide>(
                         initialValue: preferredStartSide,
