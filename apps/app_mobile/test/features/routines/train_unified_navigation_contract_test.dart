@@ -44,10 +44,10 @@ void main() {
     ).readAsStringSync();
     expect(dashboard, contains('HomeTrainingShortcut('));
     expect(homeShortcut, contains('home_continue_workout'));
-    expect(dashboard, contains('home_open_train'));
+    expect(dashboard, isNot(contains('home_open_train')));
     expect(dashboard, isNot(contains('_TodayRoutineCard')));
     expect(dashboard, isNot(contains('SIGUIENTE SESIÓN')));
-    expect(shell, contains('void _openTrain() => _selectTab(1)'));
+    expect(shell, isNot(contains('void _openTrain()')));
     expect(shell, isNot(contains("label: 'Programas'")));
     expect(shell, contains("label: 'Entrenar'"));
   });

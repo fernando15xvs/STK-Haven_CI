@@ -321,6 +321,11 @@ jobs:
       - name: Test Entrenar routines, layout and navigation
         working-directory: apps/app_mobile
         run: flutter test test/features/routines
+      # Regression coverage for the Home tab, verse preview, recovery,
+      # wellness and direct navigation without duplicated Entrenar actions.
+      - name: Test Inicio layout, verse, recovery and activity
+        working-directory: apps/app_mobile
+        run: flutter test test/features/home
       # These 13 x 2 synthetic Flutter renders are for visual inspection,
       # NOT evidence of QA on an iPhone or Android device.
       - name: Upload anatomy detail visual QA (13 contours x light/dark)

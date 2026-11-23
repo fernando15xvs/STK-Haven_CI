@@ -19,8 +19,9 @@ void main() {
     ).readAsStringSync();
     expect(source, contains('HomeTrainingShortcut('));
     expect(shortcut, contains("ValueKey('home_continue_workout')"));
-    expect(source, contains("ValueKey('home_open_train')"));
-    expect(source, contains('widget.onOpenTrain'));
+    expect(source, isNot(contains("ValueKey('home_open_train')")));
+    expect(source, isNot(contains('widget.onOpenTrain')));
+    expect(source, contains("'RECUPERACIÓN'"));
     expect(source, isNot(contains('_TodayRoutineCard(')));
     expect(source, isNot(contains('_ActiveWorkoutHero(')));
     expect(source, isNot(contains('SIGUIENTE SESIÓN')));
@@ -43,7 +44,7 @@ void main() {
     expect(b, greaterThan(a));
     final section = s.substring(a, b);
     expect(s, contains('if (faithEnabled && settings.showDailyVerse)'));
-    expect(section, contains('maxLines: 2,'));
+    expect(section, contains('maxLines: 4,'));
     expect(section, contains('TextOverflow.ellipsis'));
     expect(section, contains('stateAsync.when('));
     expect(section, contains('loadingCard(providerError: true)'));
@@ -85,7 +86,7 @@ void main() {
     expect(s, contains('HydrationWidget('));
     expect(s, contains('DailyStepsWidget('));
     expect(s, contains("ValueKey('home_open_nutrition_plan')"));
-    expect(s, contains("'ACTIVIDAD'"));
-    expect(s, contains("const SizedBox(height: AppSpacing.lg),\n            Row("));
+    expect(s, contains("'ACTIVIDAD SEMANAL'"));
+    expect(s, contains("label:const Text('Nutrición')"));
   });
 }

@@ -8,7 +8,7 @@ void main() {
     ).readAsStringSync();
     expect(dashboard.split('HomeWellnessLayout(').length-1,1);
     expect(dashboard.split("ValueKey('home_open_nutrition_plan')").length-1,1);
-    expect(dashboard,contains("label:const Text('Mi plan')"));
+    expect(dashboard,contains("label:const Text('Nutrición')"));
     expect(dashboard,contains('const NutritionIntelligencePageMobile()'));
     expect(dashboard.indexOf("ValueKey('home_open_nutrition_plan')"),
       lessThan(dashboard.indexOf('HomeWellnessLayout(')));
@@ -26,20 +26,24 @@ void main() {
     ).readAsStringSync();
     final greeting = source.indexOf('_GreetingHeader(now: _observedAt)');
     final message = source.indexOf('const _DailyMessageCard(),');
-    final training = source.indexOf("'TU ENTRENAMIENTO'");
+    final activeAccess = source.indexOf('if (activeWorkout.isActive) ...[');
+    final recoveryHeading = source.indexOf("'RECUPERACIÓN'");
     final recovery = source.indexOf('RecoveryCheckInCard(');
     final wellness = source.indexOf("'BIENESTAR'");
-    final activity = source.indexOf("'ACTIVIDAD'");
+    final activity = source.indexOf("'ACTIVIDAD SEMANAL'");
     expect(greeting, greaterThanOrEqualTo(0));
     expect(message, greaterThan(greeting));
-    expect(training, greaterThan(message));
-    expect(recovery, greaterThan(training));
+    expect(activeAccess, greaterThan(message));
+    expect(recoveryHeading, greaterThan(activeAccess));
+    expect(recovery, greaterThan(recoveryHeading));
     expect(wellness, greaterThan(recovery));
     expect(activity, greaterThan(wellness));
     expect(source, contains('faithEnabled && settings.showDailyVerse'));
     expect(source, contains('loadingCard(providerError: true)'));
     expect(source, contains("ValueKey('home_daily_reflection')"));
-    expect(source, contains('maxLines: 2,'));
+    expect(source, contains('maxLines: 4,'));
+    expect(source, isNot(contains("'TU ENTRENAMIENTO'")));
+    expect(source, isNot(contains("'Ir a Entrenar'")));
     expect(source, isNot(contains("const Text('Leer completo')")));
     expect(source, isNot(contains("'MENSAJE DE HOY'")));
     expect(source, isNot(contains('Icon(Icons.bolt')));

@@ -37,48 +37,54 @@ class WeeklyActivityCard extends StatelessWidget {
             ? '1 día con entrenamiento esta semana.'
             : '$activeDays días con entrenamiento esta semana.';
 
-    return PremiumCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    // Inicio owns the heading. This whole compact summary opens Progreso.
+    return Semantics(
+      button: true,
+      label: 'Actividad semanal. $summary Abrir Progreso',
+      child: ExcludeSemantics(
+        child: PremiumCard(
+          key: const ValueKey('home_open_progress'),
+          onTap: onOpenProgress,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
             children: [
               Icon(
                 Icons.calendar_today_outlined,
                 color: AppColors.of(context).primary,
-                size: 24,
+                size: 23,
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ACTIVIDAD SEMANAL', style: AppTypography.labelLarge),
-                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Resumen de tus sesiones',
+                      style: AppTypography.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     Text(
                       summary,
                       key: const ValueKey('home_weekly_active_days'),
-                      style: AppTypography.bodyMedium.copyWith(
+                      style: AppTypography.bodySmall.copyWith(
                         color: AppColors.of(context).textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.xs),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.of(context).primary,
+              ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xs),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              key: const ValueKey('home_open_progress'),
-              onPressed: onOpenProgress,
-              icon: const Icon(Icons.insights_outlined, size: 18),
-              label: const Text('Ver análisis en Progreso'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

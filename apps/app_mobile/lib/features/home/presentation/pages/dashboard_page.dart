@@ -42,12 +42,10 @@ class DashboardPage extends ConsumerStatefulWidget {
   const DashboardPage({
     super.key,
     this.onOpenProgress,
-    this.onOpenTrain,
     this.isVisible = true,
   });
 
   final VoidCallback? onOpenProgress;
-  final VoidCallback? onOpenTrain;
   final bool isVisible;
 
   @override
@@ -180,28 +178,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
               const SizedBox(height: AppSpacing.sm),
               const _DailyMessageCard(),
             ],
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'TU ENTRENAMIENTO',
-                    style: AppTypography.labelLarge.copyWith(
-                      color: AppColors.of(context).textSecondary,
-                    ),
-                  ),
-                ),
-                if (!activeWorkout.isActive)
-                  TextButton.icon(
-                    key: const ValueKey('home_open_train'),
-                    onPressed: widget.onOpenTrain,
-                    icon: const Icon(Icons.arrow_forward_rounded, size: 17),
-                    label: const Text('Ir a Entrenar'),
-                  ),
-              ],
-            ),
+            // The dock owns Entrenar navigation; resume only active drafts.
             if (activeWorkout.isActive) ...[
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: AppSpacing.md),
               _CompactActiveWorkoutAccess(
                 name: activeWorkout.routineDisplayName,
                 startedAt: activeWorkout.session!.startedAt,
@@ -210,7 +189,14 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                     .lastActivityAt,
               ),
             ],
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'RECUPERACIÓN',
+              style: AppTypography.labelLarge.copyWith(
+                color: AppColors.of(context).textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
             RecoveryCheckInCard(
               compact: true,
               trainingContext: activeWorkout.isActive
@@ -235,7 +221,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                     ),
                   ),
                   icon:const Icon(Icons.restaurant_menu_outlined,size:18),
-                  label:const Text('Mi plan'),
+                  label:const Text('Nutrición'),
                 ),
               ],
             ),
@@ -252,7 +238,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
             ),
             const SizedBox(height: AppSpacing.xxl),
             Text(
-              'ACTIVIDAD',
+              'ACTIVIDAD SEMANAL',
               style: AppTypography.labelLarge.copyWith(
                 color: AppColors.of(context).textSecondary,
               ),
@@ -404,7 +390,7 @@ class _DailyMessageCard extends ConsumerWidget {
                     children: [
                       Text(
                         '“${verse.text}”',
-                        maxLines: 2,
+                        maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.bodyMedium.copyWith(
                           fontStyle: FontStyle.italic,

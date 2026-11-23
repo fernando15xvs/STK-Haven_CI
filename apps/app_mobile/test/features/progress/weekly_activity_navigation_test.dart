@@ -58,7 +58,7 @@ void main() {
         ),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('ACTIVIDAD SEMANAL'), findsOneWidget);
+      expect(find.text('Resumen de tus sesiones'), findsOneWidget);
       expect(find.text('1 día con entrenamiento esta semana.'), findsOneWidget);
       for (final duplicate in ['ENTRENOS', 'SERIES', 'TIEMPO', 'VOLUMEN']) {
         expect(find.text(duplicate), findsNothing);
@@ -147,7 +147,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text('Aún no tienes actividad registrada esta semana.'), findsOneWidget);
-    await tester.tap(find.text('Ver análisis en Progreso'));
+    await tester.tap(find.byKey(const ValueKey('home_open_progress')));
     expect(opened, isTrue);
     expect(tester.takeException(), isNull);
   });
