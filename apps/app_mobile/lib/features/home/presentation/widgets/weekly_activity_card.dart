@@ -41,6 +41,7 @@ class WeeklyActivityCard extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Actividad semanal. $summary Abrir Progreso',
+      onTap: onOpenProgress,
       child: ExcludeSemantics(
         child: PremiumCard(
           key: const ValueKey('home_open_progress'),
