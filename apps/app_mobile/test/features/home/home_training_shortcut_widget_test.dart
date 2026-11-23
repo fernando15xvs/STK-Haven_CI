@@ -57,9 +57,8 @@ void main() {
       (tester) async {
     var continues = 0;
     final semantics = tester.ensureSemantics();
-    addTearDown(semantics.dispose);
-
-    await tester.pumpWidget(MaterialApp(
+    try {
+      await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: HomeTrainingShortcut(
           routineName: 'Lower A',
@@ -77,5 +76,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('home_continue_workout')));
     expect(continues, 1);
     expect(tester.takeException(), isNull);
+    } finally {
+      // WidgetTester verifies open semantics handles before addTearDown.
+      // Dispose synchronously, including when any assertion fails.
+      semantics.dispose();
+    }
   });
 }
