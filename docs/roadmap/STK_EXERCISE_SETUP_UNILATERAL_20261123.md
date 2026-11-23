@@ -7,7 +7,7 @@
 - [x] Evitar descartar cambios sin avisar: PopScope + confirmación. Edición y creación preservan la rutina hasta pulsar Guardar.
 - [x] Reutilizar PremiumCard, controles y tokens de la app; reducir textos y plegar Ubicación, Preparación y Nota técnica.
 - [x] «Series y repeticiones» sin título duplicado; tiempo de descanso entre series formateado y configurable a cero.
-- [x] «Trabajo unilateral» con opciones Directo (0 s entre lados) y Con pausa (duración guardada); edición de valores existentes compatible y selector compartido con preferencias.
+- [x] «Trabajo unilateral» con Directo (0 s) y Con pausa; un campo compartido reutilizado en rutina y sesión permite duraciones recomendadas o segundos personalizados 1–600, conservando valores históricos.
 - [x] En ejercicio nuevo unilateral, para evitar un segundo contador no solicitado, el descanso posterior a la serie comienza en cero si todavía no fue editado. En rutinas existentes se respetan ambos descansos previos hasta su edición.
 - [x] Guardar sigue conservando sets, reps, calentamiento, aproximación, descansos, preferencia de lado, nota técnica y grupo de superserie.
 - [x] El motor nunca inicia un segundo descanso automáticamente cuando la última serie unilateral cierra toda la sesión. Mantiene descanso de serie cuando hay trabajo pendiente, y no cambia el comportamiento bilateral heredado.

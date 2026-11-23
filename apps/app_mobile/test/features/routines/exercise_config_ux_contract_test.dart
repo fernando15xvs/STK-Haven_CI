@@ -38,7 +38,7 @@ void main() {
     expect(code, contains("label: Text('Con pausa')"));
     expect(code, contains('sideRestSeconds = 0;'));
     expect(code, contains('rememberedSideRest'));
-    expect(code, contains('UnilateralRestChoices.forSelected(sideRestSeconds)'));
+    expect(code, contains('UnilateralPauseDurationField('));
     expect(code, contains("label: 'Descanso entre series'"));
     expect(code, contains('min: 0,'));
     expect(code, contains('previousBilateralRest'));

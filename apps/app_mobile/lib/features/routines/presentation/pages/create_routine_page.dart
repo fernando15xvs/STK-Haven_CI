@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/features/workout/presentation/widgets/unilateral_pause_duration_field.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/features/profile/application/unilateral_rest_choices.dart';
 import 'package:core/features/routines/application/routine_order_coordinator.dart';
 import 'package:core/features/routines/application/routine_superset_coordinator.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
@@ -361,33 +361,15 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
                         ),
                         if (sideRestSeconds > 0) ...[
                         const SizedBox(height: AppSpacing.sm),
-                        DropdownButtonFormField<int>(
-                          key: ValueKey('exercise_side_rest_$sideRestSeconds'),
-                          initialValue: sideRestSeconds,
-                          decoration: const InputDecoration(
-                            labelText: 'Pausa antes del otro lado',
-                          ),
-                          items: ({...UnilateralRestChoices.forSelected(sideRestSeconds), sideRestSeconds}
-                              .where((seconds) => seconds > 0).toList()..sort())
-                              .map(
-                                (seconds) => DropdownMenuItem(
-                                  value: seconds,
-                                  child: Text(
-                                    '$seconds s',
-                                  ),
-                                ),
-                              )
-                              .toList(growable: false),
-                          onChanged: (value) {
-                            if (value != null) {
-                              markDirty(() {
-                                sideRestSeconds = value;
-                                rememberedSideRest = value;
-                              });
-                            }
-                          },
+                        UnilateralPauseDurationField(
+                          keyPrefix: 'exercise_side_rest',
+                          seconds: sideRestSeconds,
+                          onChanged: (value) => markDirty(() {
+                            sideRestSeconds = value;
+                            rememberedSideRest = value;
+                          }),
                         ),
-                        ],
+                      ],
                         const SizedBox(height: AppSpacing.sm),
                         DropdownButtonFormField<PreferredWorkoutSide>(
                           key: const ValueKey('exercise_start_side'),

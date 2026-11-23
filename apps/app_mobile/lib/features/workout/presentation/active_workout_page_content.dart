@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/features/workout/presentation/widgets/unilateral_pause_duration_field.dart';
 import 'package:gym_tracker/core/theme/components/primary_button.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/core/utils/fitness_formatter.dart';
@@ -12,7 +13,6 @@ import 'package:core/features/workout/presentation/widgets/exercise_increment_co
 import 'package:core/features/workout/presentation/widgets/exercise_rep_range_notice.dart';
 import 'package:core/features/workout/presentation/widgets/active_workout_memory_overlay.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/features/profile/application/unilateral_rest_choices.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/domain/models/routine.dart';
@@ -1026,27 +1026,13 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                       ),
                       if (sideRestSeconds > 0) ...[
                         const SizedBox(height: AppSpacing.sm),
-                        DropdownButtonFormField<int>(
-                          key: ValueKey('active_side_rest_$sideRestSeconds'),
-                          initialValue: sideRestSeconds,
-                          decoration: const InputDecoration(
-                            labelText: 'Pausa antes del otro lado',
-                          ),
-                          items: ({...UnilateralRestChoices.forSelected(sideRestSeconds), sideRestSeconds}
-                                .where((seconds) => seconds > 0).toList()..sort())
-                              .map((seconds) => DropdownMenuItem(
-                                    value: seconds,
-                                    child: Text('$seconds s'),
-                                  ))
-                              .toList(growable: false),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setDialogState(() {
-                                sideRestSeconds = value;
-                                previousPause = value;
-                              });
-                            }
-                          },
+                        UnilateralPauseDurationField(
+                          keyPrefix: 'active_side_rest',
+                          seconds: sideRestSeconds,
+                          onChanged: (value) => setDialogState(() {
+                            sideRestSeconds = value;
+                            previousPause = value;
+                          }),
                         ),
                       ],
                       const SizedBox(height: 8),
