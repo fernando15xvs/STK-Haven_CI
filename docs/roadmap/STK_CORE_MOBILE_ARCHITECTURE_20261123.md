@@ -82,6 +82,7 @@
 - [x] C.1.b: trasladar la implementación completa de `WorkoutNotificationService` a Mobile, conservando fachada `WorkoutNotificationBackend` Dart puro en Core e inyección desde el bootstrap; colas, permisos, IDs y Live Activities sin alterar. [Contrato y QA](../architecture/STK_C1B_MOBILE_WORKOUT_NOTIFICATIONS_20261123.md).
 - [ ] C.1.b: confirmar CI 7/7 del último HEAD y QA física de audio/temporizador.
 - [ ] C.1.c: migrar `LocalNotificationTimezone`, recordatorios de agua/pasos/Fe/Coach y los demás servicios Flutter de Core a adaptadores Mobile, sin cambiar el comportamiento.
+**C.1.c.1 implementado (23/11/2026):** Hidratación/Pasos ahora delegan por puertos Dart a implementaciones Mobile inyectadas en bootstrap; [contrato y QA](../architecture/STK_C1C_WELLNESS_REMINDERS_20261123.md). Pendiente CI del nuevo SHA, QA física y servicios restantes antes de cerrar C.1.c.
 **Piloto C.0 (compatible):** sustituir únicamente el import `hive_flutter` por `hive` Dart puro en ocho repositorios Core que reciben un `Box` y no inicializan Flutter. No hay cambios de claves, escritura, serialización, servicios de base de datos ni onboarding. Esta migración reduce ocho declaraciones prohibidas y dispone de test de contrato; requiere CI del último HEAD antes de contarse como validada.
 - [x] C.0: revisión de ocho repositorios Hive sin `Hive.initFlutter()`; cambio de import puro con el mismo `Box` y mismo comportamiento.
 - [x] C.0: test automatizado que impide regresar a `hive_flutter` en esos ocho archivos.

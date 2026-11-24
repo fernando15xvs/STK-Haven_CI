@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:core/core/config/supabase_config.dart';
 import 'package:core/database/hive/hive_database.dart';
 import 'package:core/core/services/workout_notification_service.dart';
+import 'package:core/core/services/hydration_reminder_service.dart';
+import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app/stk_haven_app.dart';
 import '../../platform/workout/mobile_workout_native_services.dart';
 import '../../platform/workout/mobile_workout_notification_service.dart';
+import '../../platform/reminders/mobile_hydration_reminder_service.dart';
+import '../../platform/reminders/mobile_step_goal_reminder_service.dart';
 
 typedef PlatformServicesInitializer = Future<void> Function();
 
@@ -39,6 +43,12 @@ Future<void> bootstrapMobileApp({
   // Install it before mounting providers or restoring platform reminders.
   WorkoutNotificationService.installBackend(
     const MobileWorkoutNotificationBackend(),
+  );
+  HydrationReminderService.installBackend(
+    const MobileHydrationReminderBackend(),
+  );
+  StepGoalReminderService.installBackend(
+    const MobileStepGoalReminderBackend(),
   );
 
   // Initialise OS lock-screen and notification controls before creating a player.
