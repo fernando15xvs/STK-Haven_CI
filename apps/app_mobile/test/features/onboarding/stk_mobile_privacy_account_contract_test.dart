@@ -43,7 +43,7 @@ void main() {
 
   test('new 15+ Food Vision checks consent before ALL image requests', () {
     final core = File(
-      '../../packages/core/lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
+      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
     ).readAsStringSync();
     final mobile = File(
       'lib/features/nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart',

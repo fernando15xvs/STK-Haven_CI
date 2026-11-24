@@ -3,7 +3,6 @@ import 'package:core/features/coach_pro/data/coach_pro_template_service.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_template.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:riverpod/riverpod.dart';
-import 'package:supabase/supabase.dart';
 
 final coachProTemplateServiceProvider = Provider<CoachProTemplateService>(
   (ref) => CoachProTemplateService(CoreSupabaseClient.client),
