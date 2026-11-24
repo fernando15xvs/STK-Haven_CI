@@ -35,6 +35,18 @@ jobs:
           name: stk-architecture-inventory
           path: /tmp/stk_architecture_inventory.json
           retention-days: 14
+      # Phase B: strictly forbid any NEW Core UI/Flutter/platform import or
+      # Core -> Mobile/Web and Mobile -> Web edge. Existing debt can only shrink.
+      - name: Test Core/Mobile architecture boundary
+        run: python3 -m unittest discover -s tools/tests -p 'test_architecture_guard.py' -v
+      - name: Reject new prohibited architecture imports
+        run: python3 tools/architecture_guard.py --json-out /tmp/stk_architecture_guard.json
+      - name: Publish architecture no-regressions report
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-architecture-guard
+          path: /tmp/stk_architecture_guard.json
+          retention-days: 14
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
