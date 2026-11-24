@@ -52,16 +52,6 @@ void main() {
     expect(restore, contains('ref.read(activeWorkoutProvider).session == null'));
   });
 
-  test('native rest notification initialization retries after plugin failure',
-      () {
-    final notifications = File(
-      'lib/core/services/workout_notification_service.dart',
-    ).readAsStringSync();
-    expect(notifications, contains('_initialize().onError((error, stack)'));
-    expect(notifications, contains('_initialization = null;'));
-    expect(notifications, contains('Error.throwWithStackTrace('));
-    expect(notifications, contains("error ?? StateError('No se pudo inicializar las notificaciones.')"));
-    expect(notifications, contains('audioAttributesUsage: AudioAttributesUsage.notificationEvent'));
-  });
+
 
 }

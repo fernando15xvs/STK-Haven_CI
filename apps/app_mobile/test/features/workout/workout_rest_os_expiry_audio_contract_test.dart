@@ -12,8 +12,8 @@ void main() {
       File('$root/../../packages/core/$relativePath').readAsStringSync();
 
   test('Android rest notification expires even if Flutter is suspended', () {
-    final service = shared(
-      'lib/core/services/workout_notification_service.dart',
+    final service = project(
+      'lib/platform/workout/mobile_workout_notification_service.dart',
     );
     expect(service, contains("MethodChannel('stk_haven/rest_expiry')"));
     expect(service, contains('ongoing: false'));
@@ -82,8 +82,8 @@ void main() {
       'android/app/src/main/kotlin/com/Fernando_S_ac/gym_tracker/'
       'MainActivity.kt',
     );
-    final service = shared(
-      'lib/core/services/workout_notification_service.dart',
+    final service = project(
+      'lib/platform/workout/mobile_workout_notification_service.dart',
     );
     expect(main, contains('AudioAttributes.USAGE_ASSISTANCE_SONIFICATION'));
     expect(main, contains('AudioAttributes.CONTENT_TYPE_SONIFICATION'));
@@ -142,7 +142,7 @@ void main() {
     expect(native, contains('AppLifecycleState.resumed'));
     expect(native, contains('HapticFeedback.mediumImpact()'));
     expect(native, isNot(contains('SystemSound.play(SystemSoundType.alert)')));
-    expect(native, contains('WorkoutNotificationService.cancelRestTimerNotification()'));
+    expect(native, contains('MobileWorkoutNotificationService.cancelRestTimerNotification()'));
     expect(bootstrap, contains('workoutNativeServicesProvider.overrideWithValue('));
     expect(bootstrap, contains('const MobileWorkoutNativeServices()'));
   });

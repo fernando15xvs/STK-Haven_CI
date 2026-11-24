@@ -1,7 +1,7 @@
 import 'package:core/features/progress/services/measurement_reminder_service.dart';
 import 'package:core/features/progress/data/body_measurement_repository.dart';
 import 'package:core/database/hive/models/hive_body_measurement.dart';
-import 'package:core/core/services/workout_notification_service.dart';
+import 'package:gym_tracker/platform/workout/mobile_workout_notification_service.dart';
 import 'package:core/core/services/personal_motivational_reminder_service.dart';
 import 'package:core/features/profile/data/personal_reminder_repository.dart';
 import 'package:core/database/hive/hive_boxes.dart';
@@ -66,12 +66,12 @@ Future<void> initializeIosPlatformServices() async {
   }
 
   if (settings.workoutRemindersEnabled) {
-    await WorkoutNotificationService.scheduleDailyWorkoutReminder(
+    await MobileWorkoutNotificationService.scheduleDailyWorkoutReminder(
       hour: settings.workoutReminderHour,
       minute: settings.workoutReminderMinute,
       requestPermission: false,
     );
   } else {
-    await WorkoutNotificationService.cancelDailyWorkoutReminder();
+    await MobileWorkoutNotificationService.cancelDailyWorkoutReminder();
   }
 }

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:core/core/services/workout_notification_service.dart';
+import 'mobile_workout_notification_service.dart';
 import 'package:core/features/workout/application/workout_native_services_port.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -16,27 +16,27 @@ class MobileWorkoutNativeServices implements WorkoutNativeServices {
   Future<void> scheduleRestTimerNotification(
     DateTime endsAt, {
     String? workoutSessionId,
-  }) => WorkoutNotificationService.scheduleRestTimerNotification(
+  }) => MobileWorkoutNotificationService.scheduleRestTimerNotification(
     endsAt,
     workoutSessionId: workoutSessionId,
   );
 
   @override
   Future<void> cancelRestTimerNotification() =>
-      WorkoutNotificationService.cancelRestTimerNotification();
+      MobileWorkoutNotificationService.cancelRestTimerNotification();
 
   @override
   Future<void> scheduleUnfinishedWorkoutReminder({
     required DateTime lastActivityAt,
     required String workoutName,
-  }) => WorkoutNotificationService.scheduleUnfinishedWorkoutReminder(
+  }) => MobileWorkoutNotificationService.scheduleUnfinishedWorkoutReminder(
     lastActivityAt: lastActivityAt,
     workoutName: workoutName,
   );
 
   @override
   Future<void> cancelUnfinishedWorkoutReminders() =>
-      WorkoutNotificationService.cancelUnfinishedWorkoutReminders();
+      MobileWorkoutNotificationService.cancelUnfinishedWorkoutReminders();
 
   @override
   void playRestCompletionCueIfForeground({
@@ -50,7 +50,7 @@ class MobileWorkoutNativeServices implements WorkoutNativeServices {
 
     // On a foreground completion, clear the OS timer to avoid a duplicate cue.
     // Do not await the notification queue before playing the native sound.
-    unawaited(WorkoutNotificationService.cancelRestTimerNotification());
+    unawaited(MobileWorkoutNotificationService.cancelRestTimerNotification());
 
     if (soundEnabled) unawaited(_playStkRestTone());
     if (vibrationEnabled) unawaited(HapticFeedback.mediumImpact());

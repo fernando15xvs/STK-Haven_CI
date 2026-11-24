@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('rest timer displays seconds and links native ongoing notification', () {
     final active = File('lib/features/workout/presentation/active_workout_page_content.dart').readAsStringSync();
-    final notification = File('../../packages/core/lib/core/services/workout_notification_service.dart').readAsStringSync();
+    final notification = File('lib/platform/workout/mobile_workout_notification_service.dart').readAsStringSync();
     // The rest buttons now live in a compact, in-flow component.
     final rest = File(
       'lib/features/workout/presentation/widgets/workout_rest_controls.dart',
@@ -30,6 +30,29 @@ void main() {
     expect(notification, contains('AudioAttributesUsage.notificationEvent'));
     expect(notification, contains('ongoing: false'));
     expect(notification, contains('timeoutAfter: remainingMs,'));
+  });
+
+  test('native notification startup retries after a plugin failure', () {
+    final notification = File(
+      'lib/platform/workout/mobile_workout_notification_service.dart',
+    ).readAsStringSync();
+    final facade = File(
+      '../../packages/core/lib/core/services/workout_notification_service.dart',
+    ).readAsStringSync();
+    final bootstrap = File(
+      'lib/shared/bootstrap/mobile_app_bootstrap.dart',
+    ).readAsStringSync();
+    expect(notification, contains('_initialize().onError((error, stack)'));
+    expect(notification, contains('_initialization = null;'));
+    expect(notification, contains('Error.throwWithStackTrace('));
+    expect(notification, contains('AudioAttributesUsage.notificationEvent'));
+    expect(notification, contains("_restOngoingNotificationId = 998"));
+    expect(notification, contains("_restTimerNotificationId = 999"));
+    expect(facade, isNot(contains("package:flutter/")));
+    expect(facade, isNot(contains('FlutterLocalNotificationsPlugin')));
+    expect(facade, contains('installBackend(WorkoutNotificationBackend backend)'));
+    expect(bootstrap, contains('WorkoutNotificationService.installBackend('));
+    expect(bootstrap, contains('const MobileWorkoutNotificationBackend()'));
   });
 
   test('original rest tone is bundled for both native platforms', () {

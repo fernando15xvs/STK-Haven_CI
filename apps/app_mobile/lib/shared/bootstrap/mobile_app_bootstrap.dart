@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:core/core/config/supabase_config.dart';
 import 'package:core/database/hive/hive_database.dart';
+import 'package:core/core/services/workout_notification_service.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../app/stk_haven_app.dart';
 import '../../platform/workout/mobile_workout_native_services.dart';
+import '../../platform/workout/mobile_workout_notification_service.dart';
 
 typedef PlatformServicesInitializer = Future<void> Function();
 
@@ -32,6 +34,12 @@ Future<void> bootstrapMobileApp({
   );
 
   await HiveDatabase.init();
+
+  // One native backend for Core settings and Mobile workout effects.
+  // Install it before mounting providers or restoring platform reminders.
+  WorkoutNotificationService.installBackend(
+    const MobileWorkoutNotificationBackend(),
+  );
 
   // Initialise OS lock-screen and notification controls before creating a player.
   try {
