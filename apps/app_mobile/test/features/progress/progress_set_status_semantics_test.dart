@@ -72,7 +72,7 @@ void main() {
           final text = tester.widget<Text>(findBadge);
           expect(text.data, item.$2);
           expect(text.style?.color, item.$3);
-          expect(text.style?.fontFamily, 'Outfit');
+          expect(text.style?.fontFamily, isNull, reason: 'Widget text inherits font from Material theme');
           expect(
             AppColors.contrast(text.style!.color!, palette.surface),
             greaterThanOrEqualTo(4.5),

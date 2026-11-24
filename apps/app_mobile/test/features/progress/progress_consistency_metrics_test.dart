@@ -41,7 +41,7 @@ void main() {
       expect(find.text('252m'), findsOneWidget);
       for (final number in ['2.5', '252m']) {
         final text = tester.widget<Text>(find.text(number));
-        expect(text.style?.fontFamily, 'Outfit');
+        expect(text.style?.fontFamily, isNull, reason: 'Widget text inherits font from Material theme');
         expect(text.style?.color, colors.textPrimary);
         expect(
           text.style?.fontFeatures,

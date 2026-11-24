@@ -79,7 +79,7 @@ void main() {
             expect(find.text('1'), findsOneWidget);
             expect(find.text('2'), findsOneWidget);
             final firstGlyph = tester.widget<Text>(find.text('L'));
-            expect(firstGlyph.style?.fontFamily, 'Outfit');
+            expect(firstGlyph.style?.fontFamily, isNull, reason: 'Widget text inherits font from Material theme');
             expect(firstGlyph.style?.color, colors.textSecondary);
             expect(tester.takeException(), isNull);
           } finally {

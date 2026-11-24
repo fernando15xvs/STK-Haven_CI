@@ -108,7 +108,7 @@ void main() {
     ).where((value) => int.tryParse(value.data ?? '') != null).toList();
     expect(summaryDigits, hasLength(3));
     for (final text in summaryDigits) {
-      expect(text.style?.fontFamily, 'Outfit');
+      expect(text.style?.fontFamily, isNull, reason: 'Widget text inherits font from Material theme');
       expect(text.style?.fontFeatures,
           contains(const FontFeature.tabularFigures()));
     }
@@ -220,7 +220,7 @@ void main() {
                   matching: find.textContaining(' → '),
                 ),
               );
-              expect(dateLabel.style?.fontFamily, 'Outfit');
+              expect(dateLabel.style?.fontFamily, isNull, reason: 'Widget text inherits font from Material theme');
               expect(dateLabel.style?.color, colors.textSecondary);
               expect(dateLabel.softWrap, isTrue);
               expect(tester.takeException(), isNull);

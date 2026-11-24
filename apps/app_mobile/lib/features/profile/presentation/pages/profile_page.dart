@@ -1,25 +1,23 @@
-import 'package:gym_tracker/features/coach/presentation/pages/coach_connections_page.dart';
-import 'package:gym_tracker/features/profile/presentation/pages/appearance_settings_page.dart';
-import 'package:gym_tracker/features/profile/presentation/pages/experience_preferences_page.dart';
-import 'package:gym_tracker/features/profile/presentation/pages/notifications_settings_page.dart';
-import 'package:gym_tracker/features/profile/presentation/pages/personal_profile_page.dart';
-import 'package:gym_tracker/features/profile/presentation/pages/training_preferences_page.dart';
+import 'package:core/domain/models/settings_state.dart';
+import 'package:core/domain/models/user_experience_profile.dart';
+import 'package:core/domain/models/gamification_state.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
-import 'package:gym_tracker/features/profile/presentation/widgets/personal_profile_summary.dart';
-import 'package:gym_tracker/features/profile/presentation/widgets/platform_settings_page.dart';
-import 'package:gym_tracker/features/sync/presentation/backup_status_page.dart';
+import 'package:core/features/profile/application/gamification_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/core/theme/app_ui_styles.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
-import 'package:gym_tracker/features/faith/presentation/pages/favorites_page.dart';
+import 'package:gym_tracker/features/profile/presentation/pages/personal_profile_page.dart';
+import 'package:gym_tracker/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/achievements_page.dart';
-import 'package:gym_tracker/features/profile/presentation/pages/stk_mobile_privacy_page.dart';
+import 'package:gym_tracker/features/profile/presentation/pages/profile_settings_page.dart';
+import 'package:gym_tracker/features/profile/presentation/widgets/personal_profile_summary.dart';
 
-/// Identity and app preferences. Routines/programs live in Entrenar,
-/// performance metrics in Progreso and Motivation in the global + menu.
+/// One owner for visible identity and achievements. Preferences live in Ajustes;
+/// performance metrics and training programs stay in Progreso and Entrenar.
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
@@ -29,257 +27,222 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(userExperienceProfileProvider).value;
     final settings = ref.watch(settingsProvider);
-    final savedProfile=ref.watch(userExperienceProfileProvider).value;
-    final faithEnabled = ref.watch(
-      userExperienceProfileProvider.select(
-        (profile) => profile.value?.faithEnabled ?? false,
-      ),
-    );
-
+    final gamification = ref.watch(gamificationProvider);
+    final colors = AppColors.of(context);
+    final tokens = AppUiTokens.of(context);
     return Scaffold(
-      // The bottom dock identifies Perfil; preserve only the device safe area.
+      appBar: AppBar(
+        title: const Text('Perfil'),
+        actions: [
+          IconButton(
+            key: const ValueKey('profile_open_settings'),
+            tooltip: 'Ajustes',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => _open(context, const ProfileSettingsPage()),
+          ),
+        ],
+      ),
       body: SafeArea(
         bottom: false,
         child: ListView(
-        padding: AppSpacing.pagePadding,
-        children: [
-          const SizedBox(height: AppSpacing.md),
-          PersonalProfileSummary(
-            onEdit: () => _open(context, const PersonalProfilePage(mobileCompactLayout: true)),
-          ),
-          if(savedProfile?.needsOptionalTrainingFollowup == true) ...[
-            const SizedBox(height: AppSpacing.md),
+          padding: EdgeInsets.symmetric(horizontal: tokens.pageHorizontalPadding),
+          children: [
+            const SizedBox(height: 8),
+            PersonalProfileSummary(
+              onEdit: () => _open(
+                context,
+                const PersonalProfilePage(mobileCompactLayout: true),
+              ),
+            ),
+            if (profile?.needsOptionalTrainingFollowup == true) ...[
+              SizedBox(height: tokens.sectionGap),
+              PremiumCard(
+                key: const ValueKey('profile_legacy_training_followup'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Personaliza tu entrenamiento cuando quieras',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 6),
+                    Text('Puedes completar solo lo que falte. Tus rutinas, '
+                        'respuestas anteriores y cuenta se conservan.',
+                        style: Theme.of(context).textTheme.bodySmall),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        FilledButton.tonal(
+                          key: const ValueKey('profile_complete_legacy_training'),
+                          onPressed: () => _open(
+                            context, const ExperiencePreferencesPage()),
+                          child: const Text('Revisar mis ajustes'),
+                        ),
+                        TextButton(
+                          key: const ValueKey('profile_skip_legacy_training'),
+                          onPressed: () async {
+                            try {
+                              await ref.read(userExperienceProfileProvider.notifier)
+                                  .updateProfile(profile!.copyWith(
+                                      legacyTrainingFollowupDismissed: true));
+                            } catch (_) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text(
+                                    'No se pudo guardar tu elección. Puedes reintentarlo.')),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text('Ahora no'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            SizedBox(height: tokens.sectionGap),
+            const SectionHeading(title: 'TUS DATOS'),
+            const SizedBox(height: 10),
             PremiumCard(
-              key:const ValueKey('profile_legacy_training_followup'),
-              child:Column(
-                crossAxisAlignment:CrossAxisAlignment.start,
-                children:[
-                  Row(children:[
-                    Icon(Icons.tune_rounded,
-                      color:AppColors.of(context).primary),
-                    const SizedBox(width:AppSpacing.sm),
-                    Expanded(child:Text(
-                      'Personaliza tu entrenamiento cuando quieras',
-                      style:AppTypography.headlineMedium)),
-                  ]),
-                  const SizedBox(height:AppSpacing.xs),
-                  Text('Puedes completar solo los ajustes que falten. '
-                    'Tus rutinas, respuestas anteriores y cuenta se conservan.',
-                    style:AppTypography.bodySmall.copyWith(
-                      color:AppColors.of(context).textSecondary)),
-                  const SizedBox(height:AppSpacing.sm),
-                  Wrap(spacing:8,runSpacing:4,children:[
-                    FilledButton.tonal(
-                      key:const ValueKey('profile_complete_legacy_training'),
-                      onPressed:()=>_open(context,
-                        const ExperiencePreferencesPage()),
-                      child:const Text('Revisar mis ajustes'),
-                    ),
-                    TextButton(
-                      key:const ValueKey('profile_skip_legacy_training'),
-                      onPressed:()async{
-                        try{
-                          await ref.read(userExperienceProfileProvider.notifier)
-                            .updateProfile(savedProfile!.copyWith(
-                              legacyTrainingFollowupDismissed:true));
-                        }catch(_){
-                          if(context.mounted)ScaffoldMessenger.of(context)
-                            .showSnackBar(const SnackBar(content:Text(
-                              'No se pudo guardar tu elección. '
-                              'Puedes reintentarlo.')));
-                        }
-                      },
-                      child:const Text('Ahora no'),
-                    ),
-                  ]),
-                ],
-              ),
+              child: _ProfileFacts(profile: profile, unit: settings.weightUnit),
             ),
-          ],
-          const SizedBox(height: AppSpacing.xxl),
-          const SectionHeading(title: 'PREFERENCIAS'),
-          const SizedBox(height: AppSpacing.sm),
-          _ProfileGroup(
-            entries: [
-              _ProfileLink(
-                icon: Icons.palette_outlined,
-                title: 'Aspecto',
-                subtitle: 'Modo claro, oscuro, OLED y colores',
-                onTap: () => _open(context, const AppearanceSettingsPage()),
-              ),
-              _ProfileLink(
-                icon: Icons.tune_rounded,
-                title: 'Tu experiencia',
-                subtitle: 'Objetivos, recomendaciones y contenido de Fe',
-                onTap: () => _open(context, const ExperiencePreferencesPage()),
-              ),
-              _ProfileLink(
-                icon: Icons.fitness_center_outlined,
-                title: 'Entrenamiento y unidades',
-                subtitle: 'Peso, RIR, descanso y registro de series',
-                onTap: () => _open(context, const TrainingPreferencesPage()),
-              ),
-              _ProfileLink(
-                icon: Icons.notifications_none_rounded,
-                title: 'Notificaciones',
-                subtitle: 'Entrenamiento, agua, pasos y avisos',
-                onTap: () => _open(context, const NotificationsSettingsPage()),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          const SectionHeading(title: 'SERVICIOS Y PRIVACIDAD'),
-          const SizedBox(height: AppSpacing.sm),
-          _ProfileGroup(
-            entries: [
-              _ProfileLink(
-                icon: Icons.sports_outlined,
-                title: 'Mi Coach',
-                subtitle: 'Vínculos y permisos para compartir datos',
-                onTap: () =>
-                    _open(context, const CoachConnectionsPage(clientOnly: true)),
-              ),
-              _ProfileLink(
-                icon: Icons.cloud_sync_outlined,
-                title: 'Datos y sincronización',
-                subtitle: 'Copias de seguridad, cuenta y exportación',
-                onTap: () => _open(context, const BackupStatusPage()),
-              ),
-              _ProfileLink(
-                icon: Icons.policy_outlined,
-                title: 'Legal y privacidad',
-                subtitle: 'Términos, uso de datos y permisos opcionales',
-                onTap: () => _open(context, const StkMobilePrivacyPage()),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          const SectionHeading(title: 'RECONOCIMIENTOS'),
-          const SizedBox(height: AppSpacing.sm),
-          _ProfileGroup(
-            entries: [
-              _ProfileLink(
-                icon: Icons.emoji_events_outlined,
-                title: 'Nivel y logros',
-                subtitle: 'Tu nivel, XP y medallas desbloqueadas',
-                onTap: () => _open(context, const AchievementsPage()),
-              ),
-            ],
-          ),
-          if (faithEnabled) ...[
-            const SizedBox(height: AppSpacing.xl),
-            const SectionHeading(title: 'FE'),
-            const SizedBox(height: AppSpacing.sm),
+            SizedBox(height: tokens.sectionGap),
+            const SectionHeading(title: 'RECONOCIMIENTOS'),
+            const SizedBox(height: 10),
             PremiumCard(
-              padding: EdgeInsets.zero,
-              child: Column(
-                children: [
-                  SwitchListTile.adaptive(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
-                    title: Text(
-                      'Mostrar tarjeta en Inicio',
-                      style: AppTypography.headlineMedium,
-                    ),
-                    subtitle: const Text('Versículo diario de Fortaleza'),
-                    value: settings.showDailyVerse,
-                    onChanged: ref
-                        .read(settingsProvider.notifier)
-                        .setShowDailyVerse,
-                  ),
-                  Divider(height: 1, color: AppColors.of(context).surfaceBorder),
-                  _ProfileLink(
-                    icon: Icons.bookmark_border_rounded,
-                    title: 'Versículos favoritos',
-                    subtitle: 'Tus versículos guardados',
-                    onTap: () => _open(context, const FavoritesPage()),
-                  ),
-                ],
+              onTap: () => _open(context, const AchievementsPage()),
+              child: _LevelSummary(gamification: gamification),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Solo mostramos aquí tus preferencias guardadas. '
+              'Puedes editarlas sin volver a iniciar el onboarding.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: colors.textSecondary,
               ),
             ),
+            SizedBox(height: tokens.sectionGap + 24),
           ],
-          const SizedBox(height: AppSpacing.xl),
-          const SectionHeading(title: 'APP'),
-          const SizedBox(height: AppSpacing.sm),
-          _ProfileGroup(
-            entries: [
-              _ProfileLink(
-                icon: Icons.devices_outlined,
-                title: 'App y dispositivo',
-                subtitle: 'Rendimiento, accesibilidad y licencias',
-                onTap: () => _open(context, const PlatformSettingsPage()),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xxxl),
-          Center(
-            child: Text(
-              'STK Haven',
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.of(context).textSecondary,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-        ],
         ),
       ),
     );
   }
 }
 
-class _ProfileGroup extends StatelessWidget {
-  const _ProfileGroup({required this.entries});
+class _ProfileFacts extends StatelessWidget {
+  const _ProfileFacts({required this.profile, required this.unit});
+  final UserExperienceProfile? profile;
+  final WeightUnit unit;
 
-  final List<_ProfileLink> entries;
-
-  @override
-  Widget build(BuildContext context) => PremiumCard(
-        padding: EdgeInsets.zero,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (var index = 0; index < entries.length; index++) ...[
-              if (index > 0)
-                Divider(height: 1, color: AppColors.of(context).surfaceBorder),
-              entries[index],
-            ],
-          ],
-        ),
-      );
-}
-
-class _ProfileLink extends StatelessWidget {
-  const _ProfileLink({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
+  String get goal => switch (profile?.trainingGoal) {
+    TrainingGoal.hypertrophy => 'Ganar músculo',
+    TrainingGoal.strength => 'Ganar fuerza',
+    TrainingGoal.activeLifestyle => 'Vida activa',
+    TrainingGoal.conditioning => 'Acondicionamiento',
+    TrainingGoal.selfDirected => 'Entrenamiento libre',
+    null => 'Sin definir',
+  };
+  String get experience => switch (profile?.trainingExperience) {
+    TrainingExperience.beginner => 'Principiante',
+    TrainingExperience.intermediate => 'Intermedio',
+    TrainingExperience.advanced => 'Avanzado',
+    null => 'Sin definir',
+  };
+  String get environment => switch (profile?.trainingEnvironment) {
+    TrainingEnvironment.fullGym => 'Gimnasio',
+    TrainingEnvironment.homeWeights => 'Casa con pesas',
+    TrainingEnvironment.minimalEquipment => 'Casa · equipamiento básico',
+    TrainingEnvironment.mixed => 'Casa y gimnasio',
+    null => 'Sin definir',
+  };
+  String get duration => switch (profile?.sessionDuration) {
+    SessionDurationPreference.minutes30 => '30 minutos',
+    SessionDurationPreference.minutes45 => '45 minutos',
+    SessionDurationPreference.minutes60 => '60 minutos',
+    SessionDurationPreference.minutes75Plus => '75 minutos o más',
+    SessionDurationPreference.variable => 'Flexible',
+    null => 'Sin definir',
+  };
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      leading: Icon(icon, color: colors.primary, size: 23),
-      title: Text(title, style: AppTypography.headlineMedium),
-      subtitle: Text(
-        subtitle,
-        style: AppTypography.bodySmall.copyWith(color: colors.textSecondary),
-      ),
-      trailing: Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
-      onTap: onTap,
+    final items = <(String, String)>[
+      ('Objetivo', goal),
+      ('Experiencia', experience),
+      ('Días por semana',
+       profile?.trainingDaysPerWeek == null
+           ? 'Sin definir'
+           : '${profile!.trainingDaysPerWeek} días'),
+      ('Dónde entrenas', environment),
+      ('Duración', duration),
+      ('Unidad de peso', unit.label),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) ...[
+            const SizedBox(height: 12),
+            Divider(height: 1, color: colors.surfaceBorder),
+            const SizedBox(height: 12),
+          ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 2,
+                child: Text(items[i].$1,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: colors.textSecondary)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 3,
+                child: Text(items[i].$2,
+                  textAlign: TextAlign.end,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _LevelSummary extends StatelessWidget {
+  const _LevelSummary({required this.gamification});
+  final GamificationState gamification;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
+    final unlocked = gamification.achievements
+        .where((a) => a.isUnlocked).length;
+    return Row(
+      children: [
+        Icon(Icons.emoji_events_outlined, color: colors.gold, size: 34),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Nivel ${gamification.level}',
+                style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 4),
+              Text('${gamification.xp} XP · $unlocked medallas desbloqueadas',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colors.textSecondary)),
+            ],
+          ),
+        ),
+        Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
+      ],
     );
   }
 }

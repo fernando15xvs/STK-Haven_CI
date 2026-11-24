@@ -59,7 +59,7 @@ void main() {
           reason: 'The anatomy map must float on the parent theme, '
               'without an opaque enclosing card');
         final heading = tester.widget<Text>(find.text('Medidas corporales'));
-        expect(heading.style?.fontFamily, 'Outfit');
+        expect(heading.style?.fontFamily, isNull, reason: 'Widget text inherits font from Material theme');
         expect(heading.style?.fontSize, AppTypography.headlineSmall.fontSize);
         for (final sample in [
           (

@@ -126,6 +126,8 @@
 - [ ] Validar que Perfil muestre solo datos reales autorizados, sin exponer ni duplicar datos privados; guardar/editar no restablece onboarding ni datos antiguos.
 **Criterio de salida:** Perfil identifica al usuario sin navegar a editar, Ajustes concentra configuración y todos los cambios se guardan/restauran.
 
+**Entrega E.1 (24/11/2026):** Perfil deja de ser un menú de configuraciones: muestra foto grande (54dp de radio), nombre y datos autorizados del programa guardado (objetivo, experiencia, días, entorno, duración, unidad) directamente, con «Sin definir» cuando corresponde y «Editar perfil» secundario. Nivel, XP y medallas viven en Perfil sin duplicar Entrenar/Progreso; el engranaje abre Ajustes para aspecto, experiencia, entrenamiento, notificaciones, Fe, servicios, privacidad y dispositivo. Ajustes ofrece claro/oscuro rápido y el modo Automático continúa en Aspecto. Se conservan historial, consentimiento, datos locales, sesión activa y el aviso opcional para onboarding antiguo. Pruebas de navegación/responsividad nuevas: [alcance y validación](../architecture/STK_PHASE_E_PROFILE_SETTINGS_20261124.md). **No cerrar E hasta CI 7/7 del nuevo commit y QA física de lectura con Dynamic Type.**
+
 ## Fase F — Auditoría final y entrega
 - [ ] Repetir auditoría completa de import/export/dependencias con **allowlist vacía**, incluyendo test automatizado que impida reintroducir UI en Core y Web en Mobile.
 - [ ] Pruebas de migración/persistencia (`AppearanceSettings.fromJson` antigua+nueva, Hive, offline, perfiles existentes, rutinas, backups) y contract tests de providers/adaptadores.

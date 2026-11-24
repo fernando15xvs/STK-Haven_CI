@@ -116,7 +116,7 @@ void main() {
         // in OLED mode with accessibility text scaled to 160%.
         expect(find.text('+14,5%'), findsOneWidget);
         final trend = tester.widget<Text>(find.text('+14,5%'));
-        expect(trend.style?.fontFamily, 'Outfit');
+        expect(trend.style?.fontFamily, isNull, reason: 'Widget text inherits font from Material theme');
         expect(trend.style?.color, colors.textPrimary);
         expect(trend.style?.fontFeatures,
             contains(const FontFeature.tabularFigures()));

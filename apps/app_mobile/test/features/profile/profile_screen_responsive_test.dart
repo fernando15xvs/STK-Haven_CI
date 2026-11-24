@@ -1,5 +1,7 @@
 import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'package:core/domain/models/appearance_settings.dart';
+import 'package:core/domain/models/gamification_state.dart';
+import 'package:core/features/profile/application/gamification_provider.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
@@ -23,6 +25,11 @@ class _FakeExperience extends UserExperienceProfileNotifier {
   );
 }
 
+class _FakeGamification extends GamificationNotifier {
+  @override
+  GamificationState build() => const GamificationState(level: 3, xp: 650);
+}
+
 void main() {
   testWidgets('Profile uses scrollable groups at 320/390/430 and 100/160/200%',
       (tester) async {
@@ -40,6 +47,7 @@ void main() {
           await tester.pumpWidget(ProviderScope(
             overrides: [
               settingsProvider.overrideWith(_FakeSettings.new),
+              gamificationProvider.overrideWith(_FakeGamification.new),
               userExperienceProfileProvider.overrideWith(_FakeExperience.new),
             ],
             child: MaterialApp(

@@ -9,8 +9,14 @@ void main() {
     final identity = File(
       'lib/features/profile/presentation/widgets/personal_profile_summary.dart',
     ).readAsStringSync();
-    expect(screen, contains("SectionHeading(title: 'PREFERENCIAS')"));
-    expect(screen, contains("SectionHeading(title: 'SERVICIOS Y PRIVACIDAD')"));
+    final settings = File(
+      'lib/features/profile/presentation/pages/profile_settings_page.dart',
+    ).readAsStringSync();
+    expect(settings, contains("SectionHeading(title: 'PREFERENCIAS')"));
+    expect(settings, contains("SectionHeading(title: 'SERVICIOS Y PRIVACIDAD')"));
+    expect(screen, contains("ValueKey('profile_open_settings')"));
+    expect(screen, isNot(contains("SectionHeading(title: 'PREFERENCIAS')")));
+    expect(screen, contains("SectionHeading(title: 'TUS DATOS')"));
     expect(screen, contains("SectionHeading(title: 'RECONOCIMIENTOS')"));
     expect(screen, contains('PremiumCard('));
     expect(screen, isNot(contains('STK MOTIVATION')));

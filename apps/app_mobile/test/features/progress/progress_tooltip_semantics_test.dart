@@ -38,7 +38,7 @@ void main() {
         );
         final colors = AppColors.from(appearance, brightness);
         await tester.pumpWidget(MaterialApp(
-          theme: ThemeData(brightness: brightness, extensions: [colors]),
+          theme: ThemeData(brightness: brightness, fontFamily: 'Outfit', extensions: [colors]),
           home: Scaffold(
             body: MediaQuery(
               data: const MediaQueryData(

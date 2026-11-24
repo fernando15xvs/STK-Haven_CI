@@ -6,20 +6,23 @@ import 'package:flutter/material.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 
-/// Shared chart tokens: use Outfit and semantic colors in both themes.
+/// Chart text resolves the selected bundled font from ThemeData.
 class ProgressChartStyle {
   ProgressChartStyle._();
 
   static TextStyle axisText(BuildContext context) =>
       AppTypography.labelLarge.copyWith(
+        fontFamily: Theme.of(context).textTheme.labelLarge?.fontFamily ?? 'Outfit',
         color: AppColors.of(context).textSecondary,
         fontFeatures: const [FontFeature.tabularFigures()],
       );
 
   static TextStyle tooltipText(BuildContext context) =>
       AppTypography.bodyMedium.copyWith(
+        fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily ?? 'Outfit',
         color: AppColors.of(context).textPrimary,
         fontWeight: FontWeight.w600,
+        fontVariations: const [FontVariation('wght', 600)],
         fontFeatures: const [FontFeature.tabularFigures()],
       );
 
