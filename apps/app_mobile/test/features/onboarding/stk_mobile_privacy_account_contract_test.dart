@@ -7,11 +7,16 @@ void main() {
     final profile = File(
       'lib/features/profile/presentation/pages/profile_page.dart',
     ).readAsStringSync();
+    final settings = File(
+      'lib/features/profile/presentation/pages/profile_settings_page.dart',
+    ).readAsStringSync();
     final privacy = File(
       'lib/features/profile/presentation/pages/stk_mobile_privacy_page.dart',
     ).readAsStringSync();
-    expect(profile, contains("title: 'Legal y privacidad'"));
-    expect(profile, contains('const StkMobilePrivacyPage()'));
+    expect(profile, contains("ValueKey('profile_open_settings')"));
+    expect(profile, contains('const ProfileSettingsPage()'));
+    expect(settings, contains("title: 'Legal y privacidad'"));
+    expect(settings, contains('const StkMobilePrivacyPage()'));
     expect(privacy, contains('Supabase.instance.client.auth.currentUser?.id'));
     expect(privacy, contains('StkLegalSubjectType.authenticated'));
     expect(privacy, contains('StkLegalSubjectType.guest'));
