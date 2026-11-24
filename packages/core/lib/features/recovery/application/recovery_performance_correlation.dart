@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 
 import 'recovery_provider.dart';
 

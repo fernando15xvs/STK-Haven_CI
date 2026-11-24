@@ -1,7 +1,7 @@
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/domain/models/training_program.dart';
-import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
+import 'package:core/features/programs/application/providers/training_program_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

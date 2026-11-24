@@ -1,5 +1,5 @@
 import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 /// A descriptive selection, not an energy plan, adult grant or training goal.
 /// Lives in the existing backup-aware metadata box; no implicit writes on read.

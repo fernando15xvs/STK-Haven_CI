@@ -1,9 +1,9 @@
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/programs/application/training_program_legacy_policy.dart';
 import 'package:core/domain/models/training_program.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
-import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
+import 'package:core/features/programs/application/providers/training_program_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
 import 'package:flutter/material.dart';

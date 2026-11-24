@@ -1,8 +1,8 @@
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:gym_tracker/features/programs/presentation/pages/training_programs_page.dart';
-import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/programs/application/providers/training_program_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';

@@ -6,7 +6,7 @@ import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
 import 'package:core/features/home/application/steps_reading_freshness.dart';
 import 'package:core/domain/models/settings_state.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:gym_tracker/features/home/application/home_refresh_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

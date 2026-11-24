@@ -3,7 +3,7 @@ import 'package:core/core/services/backup_service.dart';
 import 'package:core/database/hive/models/hive_exercise.dart';
 import 'package:core/database/hive/models/hive_routine.dart';
 import 'package:core/database/hive/models/hive_workout_session.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 /// Only type-adapter-compatible archived records are eligible. Unknown older
 /// formats remain untouched in their original boxes for manual recovery.

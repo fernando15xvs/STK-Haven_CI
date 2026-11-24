@@ -16,7 +16,7 @@ import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plan
 import 'package:core/features/nutrition/application/food_vision_mobile_image_guard.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_age_aware_nutrition_goals.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
 import 'package:core/features/home/application/hydration_provider.dart';
 import 'package:core/features/nutrition/application/wellness_goal_suggestions.dart';

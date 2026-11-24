@@ -2,7 +2,7 @@ import 'package:riverpod/riverpod.dart';
 import '../../../domain/models/workout_session.dart';
 import '../../../domain/models/workout_analysis.dart';
 import 'package:core/features/routines/application/providers/routine_provider.dart';
-import '../presentation/providers/personal_record_provider.dart';
+import 'package:core/features/workout/application/providers/personal_record_provider.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'exercise_session_comparison.dart';

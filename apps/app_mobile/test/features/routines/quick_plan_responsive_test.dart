@@ -1,7 +1,7 @@
 import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:core/domain/models/routine.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

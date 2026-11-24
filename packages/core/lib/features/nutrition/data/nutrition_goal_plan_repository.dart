@@ -1,5 +1,5 @@
 import 'package:core/domain/models/nutrition_goal_plan.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 /// Per authenticated account on-device. No backend grant is read or written
 /// here: the caller must still check server-side adult nutrition access.

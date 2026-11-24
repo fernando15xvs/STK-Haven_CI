@@ -1,6 +1,6 @@
 import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 /// Server-stamped proof that a *signed-in account* accepted the exact
 /// published T&C and privacy versions. This does not prove identity or age,

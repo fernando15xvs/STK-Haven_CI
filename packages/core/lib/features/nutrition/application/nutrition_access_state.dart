@@ -1,7 +1,7 @@
 import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
 import 'package:core/features/nutrition/application/stk_nutrition_capability_policy.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
+import 'package:riverpod/riverpod.dart';
 
 /// An editable birthday is useful for age-appropriate UI but is NEVER proof
 /// of adult nutrition access. Only the authenticated backend RPC can grant it.
