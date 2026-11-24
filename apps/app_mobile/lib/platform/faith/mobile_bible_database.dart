@@ -5,7 +5,7 @@ import 'package:path/path.dart';
 import 'package:core/features/faith/data/bible_public_domain_source.dart';
 
 class MobileBibleDatabase implements BibleDatabaseBackend {
-  static final MobileBibleDatabase instance = MobileMobileBibleDatabase._init();
+  static final MobileBibleDatabase instance = MobileBibleDatabase._init();
   static Database? _database;
 
   MobileBibleDatabase._init();
