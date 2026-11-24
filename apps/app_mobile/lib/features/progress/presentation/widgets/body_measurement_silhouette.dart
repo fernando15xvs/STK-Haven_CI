@@ -4,7 +4,7 @@ import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:core/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/app_palette.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:intl/intl.dart';
 

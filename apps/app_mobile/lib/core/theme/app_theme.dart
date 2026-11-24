@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:core/core/theme/appearance_theme.dart';
+import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 
 class AppScrollBehavior extends ScrollBehavior {

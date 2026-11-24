@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:core/core/theme/appearance_theme.dart';
-import 'package:core/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/appearance_theme.dart';
+import 'package:gym_tracker/core/theme/app_palette.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';

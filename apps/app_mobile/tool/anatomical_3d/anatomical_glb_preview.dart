@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:core/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'mobile_device_qa_probe.dart';

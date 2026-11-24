@@ -1,4 +1,4 @@
-import 'package:core/core/theme/appearance_theme.dart';
+import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'dart:async';
 
 import 'package:core/domain/models/settings_state.dart';

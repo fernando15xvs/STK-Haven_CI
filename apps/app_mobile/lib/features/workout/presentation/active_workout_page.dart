@@ -1,4 +1,4 @@
-import 'package:core/features/workout/presentation/widgets/active_workout_memory_overlay.dart';
+import 'package:gym_tracker/features/workout/presentation/widgets/active_workout_memory_overlay.dart';
 import 'package:flutter/material.dart';
 
 import 'active_workout_page_content.dart' as content;

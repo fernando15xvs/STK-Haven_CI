@@ -6,7 +6,7 @@ import 'package:core/features/nutrition/application/food_vision_mobile_image_gua
 import 'package:core/features/nutrition/data/stk_nutrition_intent_repository.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
-import 'package:core/features/nutrition/presentation/pages/nutrition_intelligence_page.dart';
+import 'package:gym_tracker/features/nutrition/presentation/pages/nutrition_intelligence_page.dart';
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
 import 'package:core/features/nutrition/data/stk_nutrition_server_capabilities.dart';
 import 'package:flutter/material.dart';

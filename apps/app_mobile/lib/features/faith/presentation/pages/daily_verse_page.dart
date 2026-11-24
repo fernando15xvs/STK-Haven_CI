@@ -5,7 +5,7 @@ import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/faith/data/contextual_passage_catalog.dart';
 import 'package:core/features/faith/application/bible_reader_provider.dart';
-import 'package:core/features/faith/presentation/widgets/contextual_passage_details.dart';
+import 'package:gym_tracker/features/faith/presentation/widgets/contextual_passage_details.dart';
 import 'bible_reader_page.dart';
 import 'package:core/features/faith/services/verse_widget_sync.dart';
 import 'package:core/features/faith/application/favorites_provider.dart';

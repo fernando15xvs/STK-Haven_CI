@@ -12,7 +12,7 @@ import 'package:gym_tracker/core/theme/components/primary_button.dart';
 import 'package:gym_tracker/features/routines/presentation/pages/create_routine_page.dart';
 import 'package:gym_tracker/features/routines/presentation/pages/routine_templates_page.dart';
 import 'package:gym_tracker/features/routines/presentation/widgets/quick_training_plan_sheet.dart';
-import 'package:core/features/programs/presentation/pages/training_programs_page.dart';
+import 'package:gym_tracker/features/programs/presentation/pages/training_programs_page.dart';
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:gym_tracker/features/routines/presentation/widgets/next_training_session_hero.dart';

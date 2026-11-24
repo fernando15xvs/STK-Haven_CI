@@ -2,7 +2,7 @@ import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:gym_tracker/platform/reminders/mobile_local_notification_timezone.dart';
+import 'package:core/core/services/local_notification_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 class MobileStepGoalReminderService {
@@ -17,7 +17,7 @@ class MobileStepGoalReminderService {
   }
 
   static Future<void> _initialize() async {
-    await MobileLocalNotificationTimezone.ensureInitialized();
+    await LocalNotificationTimezone.ensureInitialized();
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: false,

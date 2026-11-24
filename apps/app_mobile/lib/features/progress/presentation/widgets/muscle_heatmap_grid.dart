@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
-import 'package:core/features/progress/presentation/widgets/compact_progress_period_selector.dart';
+import 'package:gym_tracker/features/progress/presentation/widgets/compact_progress_period_selector.dart';
 
 /// Kept under the historical name for navigation/backup compatibility.
 /// All muscle analytics now live in this single Balance Muscular tab.

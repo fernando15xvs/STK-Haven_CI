@@ -21,7 +21,7 @@ import 'package:core/features/recovery/application/recovery_provider.dart';
 import 'package:gym_tracker/features/home/application/home_refresh_policy.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/focused_exercise_progress_page.dart';
-import 'package:core/features/workout/presentation/widgets/recent_workout_details.dart';
+import 'package:gym_tracker/features/workout/presentation/widgets/recent_workout_details.dart';
 import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';

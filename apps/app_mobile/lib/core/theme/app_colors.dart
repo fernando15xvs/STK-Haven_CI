@@ -1,5 +1,5 @@
-export 'package:core/core/theme/app_palette.dart';
-import 'package:core/core/theme/app_palette.dart';
+export 'package:gym_tracker/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/app_palette.dart';
 import 'package:flutter/material.dart';
 
 // ─── Colors ─────────────────────────────────────────────────────────────────

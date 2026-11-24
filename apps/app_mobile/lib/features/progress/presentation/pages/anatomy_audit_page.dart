@@ -1,7 +1,7 @@
 import 'package:core/features/exercises/application/exercise_anatomy_audit.dart';
 import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
-import 'package:core/features/sync/presentation/backup_status_page.dart';
+import 'package:gym_tracker/features/sync/presentation/backup_status_page.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

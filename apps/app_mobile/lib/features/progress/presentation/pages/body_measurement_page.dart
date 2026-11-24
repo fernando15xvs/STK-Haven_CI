@@ -12,7 +12,7 @@ import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
-import 'package:core/features/progress/presentation/widgets/measurement_reminder_controls.dart';
+import 'package:gym_tracker/features/progress/presentation/widgets/measurement_reminder_controls.dart';
 
 class BodyMeasurementPage extends ConsumerStatefulWidget {
   const BodyMeasurementPage({super.key});

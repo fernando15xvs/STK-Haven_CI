@@ -1,5 +1,5 @@
 import 'package:core/domain/models/exercise.dart';
-import 'package:core/features/progress/presentation/pages/progress_intelligence_page.dart';
+import 'package:gym_tracker/features/progress/presentation/pages/progress_intelligence_page.dart';
 import 'package:flutter/material.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_history_page.dart';

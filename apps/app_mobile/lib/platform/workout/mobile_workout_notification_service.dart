@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:gym_tracker/platform/reminders/mobile_local_notification_timezone.dart';
+import 'package:core/core/services/local_notification_timezone.dart';
 import 'package:core/core/services/workout_notification_service.dart';
 import 'package:timezone/timezone.dart' as tz;
 
@@ -103,7 +103,7 @@ class MobileWorkoutNotificationService {
   }
 
   static Future<void> _initialize() async {
-    await MobileLocalNotificationTimezone.ensureInitialized();
+    await LocalNotificationTimezone.ensureInitialized();
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: false,

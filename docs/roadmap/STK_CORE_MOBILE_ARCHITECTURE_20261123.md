@@ -100,6 +100,8 @@
 - [ ] Mover pruebas widget a Mobile y conservar/ampliar tests de casos de uso en Core.
 **Criterio de salida:** **0 pantallas/widgets/material/BuildContext/ThemeData y 0 importaciones UI/plataforma en Core**; **0 referencias a Web en Mobile**; API de lógica Core estable y tests verdes.
 
+**Avance C.2 (24/11/2026):** trasladadas **54 fuentes UI/tema** desde `packages/core/lib` a `apps/app_mobile/lib`, con sus imports reescritos hacia Core solo para dominio, providers y datos. **14 tests widget** que importaban UI pasan a `apps/app_mobile/test/migrated_core`; referencias en rutas, widgets, diseño y tests móviles actualizadas. [Inventario de alcance, regresiones y estado](../architecture/STK_C2_MOBILE_ONLY_PRESENTATION_20261124.md). CI del SHA nuevo **pendiente**, no fusionar ni declarar C completa. Aún es necesario retirar dependencias Flutter de providers/servicios Core y comprobar que la allowlist termina en cero. Web continúa congelada sin adaptaciones.
+
 ## Fase D — Sistema visual centralizado SOLO en Mobile
 - [ ] Consolidar archivos canónicos `app_typography.dart`, `app_colors.dart`, `app_spacing.dart`, `app_radius.dart`, `app_ui_styles.dart`, `app_theme.dart` y componentes reutilizables.
 - [ ] Migrar estilos locales de Inicio, Entrenar, Progreso, Nutrición, Perfil, modales, gráficos y tablas hacia tokens y componentes; añadir lint/guardias contra nueva duplicación.

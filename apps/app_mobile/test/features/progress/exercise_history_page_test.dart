@@ -1,4 +1,4 @@
-import 'package:core/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/app_palette.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';

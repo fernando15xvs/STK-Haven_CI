@@ -15,7 +15,7 @@ import 'package:gym_tracker/features/workout/presentation/active_workout_page.da
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_comparison_summary.dart';
-import 'package:core/features/faith/presentation/widgets/workout_closing_reflection_card.dart';
+import 'package:gym_tracker/features/faith/presentation/widgets/workout_closing_reflection_card.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:gym_tracker/features/home/application/home_tab_return_request.dart';
 
