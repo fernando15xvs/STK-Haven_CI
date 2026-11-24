@@ -66,11 +66,4 @@ abstract final class WorkoutCsvExport {
     return rows;
   }
   
-  class MobileDataExportBackend implements DataExportBackend {
-    const MobileDataExportBackend();
-  
-    @override
-    Future<void> exportWorkoutsToCSV(List<WorkoutSession> sessions) =>
-        MobileDataExportService().exportWorkoutsToCSV(sessions);
-  }
 }

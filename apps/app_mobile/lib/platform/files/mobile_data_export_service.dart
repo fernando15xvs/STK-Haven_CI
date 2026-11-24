@@ -24,3 +24,10 @@ class MobileDataExportService {
   }
 }
 
+class MobileDataExportBackend implements DataExportBackend {
+  const MobileDataExportBackend();
+
+  @override
+  Future<void> exportWorkoutsToCSV(List<WorkoutSession> sessions) =>
+      MobileDataExportService().exportWorkoutsToCSV(sessions);
+}
