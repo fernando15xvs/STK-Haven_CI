@@ -76,7 +76,8 @@ class AppColors extends ThemeExtension<AppColors> {
       error: legible(const Color(0xFFCF2547)),
       gold: legible(const Color(0xFF9A6700)),
       info: legible(const Color(0xFF2563EB)),
-      elevatedCards: settings.cardStyle == AppCardStyle.elevated,
+      elevatedCards: settings.uiStyle == AppUiStyle.classic &&
+          settings.cardStyle == AppCardStyle.elevated,
     );
   }
   static double contrast(Color a, Color b) {

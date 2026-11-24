@@ -14,6 +14,7 @@ class AppearanceSettingsPage extends ConsumerStatefulWidget {
 class _AppearanceSettingsPageState
     extends ConsumerState<AppearanceSettingsPage> {
   bool _saving = false;
+  double? _draftTextScale;
   Future<void> _save(AppearanceSettings value) async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -27,7 +28,10 @@ class _AppearanceSettingsPageState
           ),
         );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() {
+        _saving = false;
+        _draftTextScale = null;
+      });
     }
   }
 
@@ -192,6 +196,101 @@ class _AppearanceSettingsPageState
                 ],
               ),
               const SizedBox(height: 24),
+              Text('Estilo de interfaz', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                'Tres acabados coherentes para las mismas pantallas.',
+                style: theme.textTheme.bodySmall,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final style in [
+                    (AppUiStyle.classic, 'Clásico'),
+                    (AppUiStyle.minimalist, 'Minimalista'),
+                    (AppUiStyle.compact, 'Compacto'),
+                  ])
+                    ChoiceChip(
+                      key: ValueKey('appearance_ui_style_${style.$1.name}'),
+                      label: Text(style.$2),
+                      selected: appearance.uiStyle == style.$1,
+                      onSelected: _saving
+                          ? null
+                          : (_) => _save(appearance.copyWith(uiStyle: style.$1)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Text('Tipo de letra', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final font in [
+                    (AppFontFamily.outfit, 'Outfit'),
+                    (AppFontFamily.inter, 'Inter'),
+                    (AppFontFamily.manrope, 'Manrope'),
+                    (AppFontFamily.plusJakartaSans, 'Plus Jakarta Sans'),
+                  ])
+                    ChoiceChip(
+                      key: ValueKey('appearance_font_${font.$1.name}'),
+                      label: Text(font.$2),
+                      selected: appearance.fontFamily == font.$1,
+                      onSelected: _saving
+                          ? null
+                          : (_) => _save(appearance.copyWith(fontFamily: font.$1)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Text('Tamaño de letra', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final size in [
+                    (AppTextSize.small, 'Pequeño'),
+                    (AppTextSize.medium, 'Mediano'),
+                    (AppTextSize.large, 'Grande'),
+                    (AppTextSize.custom, 'Personalizado'),
+                  ])
+                    ChoiceChip(
+                      key: ValueKey('appearance_text_size_${size.$1.name}'),
+                      label: Text(size.$2),
+                      selected: appearance.textSize == size.$1,
+                      onSelected: _saving
+                          ? null
+                          : (_) => _save(appearance.copyWith(textSize: size.$1)),
+                    ),
+                ],
+              ),
+              if (appearance.textSize == AppTextSize.custom) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Escala: ${((_draftTextScale ?? appearance.customTextScale) * 100).round()}%',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                Slider.adaptive(
+                  key: const ValueKey('appearance_custom_text_scale'),
+                  value: _draftTextScale ?? appearance.customTextScale,
+                  min: 0.85,
+                  max: 1.6,
+                  divisions: 15,
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _draftTextScale = value),
+                  onChangeEnd: _saving
+                      ? null
+                      : (value) => _save(appearance.copyWith(
+                            customTextScale: value,
+                          )),
+                ),
+              ],
+              const SizedBox(height: 24),
               Text('Acabado', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Card(
@@ -234,7 +333,7 @@ class _AppearanceSettingsPageState
                     ? null
                     : () => _save(const AppearanceSettings()),
                 icon: const Icon(Icons.restart_alt),
-                label: const Text('Restablecer colores y acabado'),
+                label: const Text('Restablecer aspecto'),
               ),
               if (_saving) const LinearProgressIndicator(),
             ],

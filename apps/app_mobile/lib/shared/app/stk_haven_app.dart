@@ -104,8 +104,14 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         final reduceMotion =
             reduceMotionSetting || savings || media.disableAnimations;
         final content = child ?? const SizedBox.shrink();
+        // Multiply the existing accessibility scale; do not replace it.
+        final baseScale = media.textScaler.scale(16) / 16;
+        final userScale = appearance.textScale;
         return MediaQuery(
-          data: media.copyWith(disableAnimations: reduceMotion),
+          data: media.copyWith(
+            disableAnimations: reduceMotion,
+            textScaler: TextScaler.linear(baseScale * userScale),
+          ),
           child: MobileContentFrame(child: content),
         );
       },

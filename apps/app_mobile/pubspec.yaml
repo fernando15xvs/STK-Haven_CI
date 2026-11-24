@@ -64,9 +64,19 @@ flutter:
     - family: Outfit
       fonts:
         - asset: assets/fonts/Outfit-Variable.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/Manrope-Variable.ttf
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
 
   assets:
     - assets/imagenes/
+    - assets/fonts/licenses/
     - assets/measurement_anatomy/
     - assets/measurement_anatomy/png/
     - assets/exercise_media/png_pilots/ex_bench_press/

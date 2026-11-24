@@ -17,7 +17,8 @@ void main() {
       mobile.AppTypography.headlineSmall,
       mobile.AppTypography.monoMedium,
     ]) {
-      expect(style.fontFamily, 'Outfit');
+      expect(style.fontFamily, isNull,
+          reason: 'Shared tokens must inherit the selected Material font');
       expect(style.fontSize, greaterThanOrEqualTo(12));
       expect(style.fontWeight!.index,
           greaterThanOrEqualTo(FontWeight.w500.index));

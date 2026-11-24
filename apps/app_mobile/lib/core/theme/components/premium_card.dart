@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_colors.dart';
+import '../app_ui_styles.dart';
 
 class PremiumCard extends StatefulWidget {
   final Widget child;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
   final Color? backgroundColor;
   final Color? borderColor;
@@ -12,7 +13,7 @@ class PremiumCard extends StatefulWidget {
   const PremiumCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(AppSpacing.md),
+    this.padding,
     this.onTap,
     this.backgroundColor,
     this.borderColor,
@@ -50,6 +51,7 @@ class _PremiumCardState extends State<PremiumCard> {
     final bgColor = widget.backgroundColor ?? AppColors.of(context).surface;
     final bColor = widget.borderColor ?? AppColors.of(context).surfaceBorder;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final ui = AppUiTokens.of(context);
 
     final content = AnimatedContainer(
       duration: reduceMotion
@@ -61,10 +63,10 @@ class _PremiumCardState extends State<PremiumCard> {
         _isPressed ? 0.985 : 1.0,
         1.0,
       ),
-      padding: widget.padding,
+      padding: widget.padding ?? EdgeInsets.all(ui.cardPadding),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(ui.cardRadius),
         border: Border.all(color: bColor),
         boxShadow: AppColors.of(context).shadows,
       ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:gym_tracker/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/app_ui_styles.dart';
+import 'package:gym_tracker/core/theme/app_font_family.dart';
 
 class AppearanceTheme {
   static ThemeMode mode(AppThemeMode mode) => switch (mode) {
@@ -11,6 +13,7 @@ class AppearanceTheme {
   };
   static ThemeData build(AppearanceSettings settings, Brightness brightness) {
     final p = AppColors.from(settings, brightness);
+    final ui = AppUiTokens.from(settings.uiStyle);
     final scheme =
         ColorScheme.fromSeed(
           seedColor: AppColors.accentSeed(settings.accent),
@@ -32,7 +35,7 @@ class AppearanceTheme {
     final base = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      fontFamily: 'Outfit',
+      fontFamily: appFontFamilyName(settings.fontFamily),
     );
     // Material widgets (lists, menus, settings, search and dialogs) must be
     // as readable as widgets explicitly using AppTypography. Material 3
@@ -71,7 +74,7 @@ class AppearanceTheme {
       displayColor: p.textPrimary,
     );
     return base.copyWith(
-      extensions: [p],
+      extensions: [p, ui],
       scaffoldBackgroundColor: p.background,
       textTheme: readableText,
       appBarTheme: AppBarTheme(
@@ -90,19 +93,20 @@ class AppearanceTheme {
         elevation: p.elevatedCards ? 2 : 0,
         shadowColor: Colors.black.withValues(alpha: .12),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(ui.cardRadius),
           side: BorderSide(color: p.surfaceBorder),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: p.surfaceHigh,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(ui.cardRadius + 4)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: p.surfaceHigh,
         surfaceTintColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(ui.cardRadius + 4)),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -118,7 +122,7 @@ class AppearanceTheme {
         filled: true,
         fillColor: p.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(ui.inputRadius),
           borderSide: BorderSide(color: p.surfaceBorder),
         ),
       ),
@@ -137,7 +141,7 @@ class AppearanceTheme {
           foregroundColor: p.onPrimary,
           minimumSize: const Size(48, 48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(ui.buttonRadius),
           ),
         ),
       ),

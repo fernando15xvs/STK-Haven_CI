@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 
 import '../app_colors.dart';
+import '../app_ui_styles.dart';
 
 class PrimaryButton extends ConsumerWidget {
   final String label;
@@ -100,7 +101,7 @@ class PrimaryButton extends ConsumerWidget {
           disabledBackgroundColor: AppColors.of(context).surfaceBorder,
           disabledForegroundColor: AppColors.of(context).textDisabled,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppUiTokens.of(context).buttonRadius),
           ),
           elevation: 0,
         ),

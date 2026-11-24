@@ -104,6 +104,8 @@
 
 **C.3 — corte de dependencias preparado (24/11/2026):** 167 tests de Core convertidos a `package:test`, sin bindings/widget tests de Flutter, y `pubspec.yaml` de Core deja solo dependencias Dart. Las implementaciones SQFlite (`biblia_v4.db`), Workmanager, SharedPreferences, MethodChannel de Fe, import/export y compartición de archivos se alojan en Mobile; Core conserva contratos, lógica CSV, programación y snapshots de negocio. Se instala la misma instancia de backend al arrancar Android/iOS (y SQLite en el isolate Workmanager). Ver [invariantes de C.3](../architecture/STK_C3_PURE_DART_PLATFORM_PORTS_20261124.md). **Este bloque no es definitivo hasta pasar CI 7/7, trasladar los providers lógicos de rutas `presentation`, auditar imports transitivos y dejar el gate estricto en cero.**
 
+**C.4 — cierre estructural preparado (24/11/2026):** los últimos ocho providers de estado de Core, sin widgets ni APIs Flutter, salen de carpetas `presentation/providers` a `application/providers`. Se actualizan las referencias Core/Mobile y las pruebas sin editar Web. Se añade `tools/core_purity_gate.py` como aceptación estricta: **0 imports prohibidos, 0 Dart UI en Core, 0 Core→Mobile/Web, 0 Mobile→Web y 0 imports no resueltos en Core/Mobile**. C se declarará cerrado únicamente cuando el último commit pase los siete jobs obligatorios del espejo y el gate de pureza; el QA físico queda registrado como tarea separada de fase F.
+
 ## Fase D — Sistema visual centralizado SOLO en Mobile
 - [ ] Consolidar archivos canónicos `app_typography.dart`, `app_colors.dart`, `app_spacing.dart`, `app_radius.dart`, `app_ui_styles.dart`, `app_theme.dart` y componentes reutilizables.
 - [ ] Migrar estilos locales de Inicio, Entrenar, Progreso, Nutrición, Perfil, modales, gráficos y tablas hacia tokens y componentes; añadir lint/guardias contra nueva duplicación.
@@ -112,6 +114,8 @@
 - [ ] Agregar 4 tipografías seleccionables (**Outfit, Inter, Manrope, Plus Jakarta Sans**) y tamaños **Pequeño, Mediano, Grande, Personalizado**, respetando Dynamic Type/accesibilidad y modo sin conexión.
 - [ ] Core solo persiste la selección tipada (sin Flutter `TextStyle`, `Color` o `ThemeData`), con lectura backward-compatible y valores por defecto; Mobile traduce esa preferencia a estilos.
 **Criterio de salida:** un cambio de fuente/escala/estilo se refleja globalmente, sin archivos de interfaz duplicados ni alteraciones no solicitadas de funcionalidad.
+
+**Entrega D.1 — Tipografía y UI Styles (24/11/2026):** selección persistente en Core (Clásico/Minimalista/Compacto, Outfit/Inter/Manrope/Plus Jakarta Sans, Pequeño/Mediano/Grande/Personalizado), fuentes variables empaquetadas bajo licencia SIL OFL en Mobile, tema centralizado y tokens separados de tipografía, espacios, radios y estilos. Componentes Card/Input/Button/PremiumCard comparten geometría; `TextScaler` combina la preferencia con la escala del sistema. Valores predeterminados antiguos idénticos; pruebas Dart de retrocompatibilidad y widgets de fuente/estilos/contraste. [Alcance](../architecture/STK_PHASE_D_DESIGN_SYSTEM_20261124.md). **No dar D por cerrado hasta que el CI del nuevo SHA esté 7/7 y se auditen los estilos locales de las pantallas restantes.**
 
 ## Fase E — Rediseño aprobado de Perfil, Editar perfil y Ajustes
 - [ ] **Perfil lectura directa**: foto grande, nombre, objetivo, experiencia y demás datos autorizados guardados, con estados «Sin definir» si corresponde; Nivel y logros continúan en Perfil.
