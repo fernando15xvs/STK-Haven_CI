@@ -3,7 +3,7 @@ import 'package:core/domain/models/habit_task.dart';
 import 'package:core/features/habits/application/habit_schedule_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:core/core/services/local_notification_timezone.dart';
+import 'package:gym_tracker/platform/reminders/mobile_local_notification_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 class MobileCoachTaskNotificationService {
@@ -17,7 +17,7 @@ class MobileCoachTaskNotificationService {
   }
 
   static Future<void> _initialize() async {
-    await LocalNotificationTimezone.ensureInitialized();
+    await MobileLocalNotificationTimezone.ensureInitialized();
     const settings = InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(

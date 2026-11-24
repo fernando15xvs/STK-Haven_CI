@@ -1,5 +1,5 @@
 import 'package:core/core/services/coach_pro_local_reminder_service.dart';
-import 'package:core/core/services/local_notification_timezone.dart';
+import 'package:gym_tracker/platform/reminders/mobile_local_notification_timezone.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_reminder_consent.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -19,7 +19,7 @@ class MobileCoachProLocalReminderService {
   }
 
   static Future<void> _initialize() async {
-    await LocalNotificationTimezone.ensureInitialized();
+    await MobileLocalNotificationTimezone.ensureInitialized();
     await _plugin.initialize(settings: const InitializationSettings(
       android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(

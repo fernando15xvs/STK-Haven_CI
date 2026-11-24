@@ -6,6 +6,9 @@ import 'package:core/core/services/workout_notification_service.dart';
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/core/services/coach_pro_local_reminder_service.dart';
+import 'package:core/core/services/personal_motivational_reminder_service.dart';
+import 'package:core/features/faith/services/verse_notification_service.dart';
+import 'package:core/features/progress/services/measurement_reminder_service.dart';
 import 'package:core/features/coach/application/coach_task_notification_service.dart';
 import 'package:core/features/habits/application/habit_task_notification_service.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
@@ -24,6 +27,9 @@ import '../../platform/reminders/mobile_step_goal_reminder_service.dart';
 import '../../platform/reminders/mobile_coach_pro_local_reminder_service.dart';
 import '../../platform/reminders/mobile_coach_task_notification_service.dart';
 import '../../platform/reminders/mobile_habit_task_notification_service.dart';
+import '../../platform/reminders/mobile_verse_notification_service.dart';
+import '../../platform/reminders/mobile_personal_motivational_reminder_service.dart';
+import '../../platform/reminders/mobile_measurement_reminder_service.dart';
 
 typedef PlatformServicesInitializer = Future<void> Function();
 
@@ -65,6 +71,11 @@ Future<void> bootstrapMobileApp({
   HabitTaskNotificationService.installBackend(
     const MobileHabitTaskNotificationBackend(),
   );
+  VerseNotificationService.installBackend(const MobileVerseNotificationBackend());
+  PersonalMotivationalReminderService.installBackend(
+    const MobilePersonalMotivationalReminderBackend(),
+  );
+  MeasurementReminderService.installBackend(const MobileMeasurementReminderBackend());
 
   // Initialise OS lock-screen and notification controls before creating a player.
   try {

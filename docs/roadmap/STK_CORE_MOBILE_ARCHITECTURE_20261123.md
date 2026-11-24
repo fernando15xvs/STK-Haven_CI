@@ -74,6 +74,9 @@
 **Criterio de salida:** guardia activa en CI y nuevas dependencias prohibidas imposibles de introducir inadvertidamente.
 
 ## Fase C — Extraer lógica, migrar UI de Core a Mobile
+**Avance consolidado C.1.c.3 (24/11/2026):** se extrajeron juntas las implementaciones de versículos, mensajes personales, medidas y resolución nativa de zona horaria a Mobile. Los tests que interceptan canales Flutter de Fe/Medidas se trasladan a Mobile; Core mantiene sus APIs y settings de negocio mediante contratos Dart y test de puertos. Incluye toda la familia de notificaciones del descanso, hidratación, pasos, Coach, hábitos, Fe y Medidas. [Contrato y riesgos](../architecture/STK_C1C3_NATIVE_REMINDERS_CONSOLIDATION_20261124.md). **CI del nuevo SHA y QA física aún sin aprobar; C.1 (migración nativa) no es el cierre de toda C (queda UI/tema).**
+
+
 **Avance C.1 (23/11/2026):** [Puerto nativo de entrenamiento y pruebas](../architecture/STK_C1_WORKOUT_NATIVE_PORT_20261123.md). Core conserva reglas de descanso y delega al adaptador Mobile los efectos de notificaciones, tono y vibración. La implementación anterior de `WorkoutNotificationService` sigue temporalmente en Core hasta migrar los demás consumidores.
 - [x] C.1.a: introducir `WorkoutNativeServices` Dart puro, proveedor inyectable, implementación Mobile y override único en bootstrap Android/iOS.
 - [x] C.1.a: eliminar `flutter/widgets.dart` y `flutter/services.dart` de `active_workout_provider.dart`; conservar IDs, plazos y notificaciones nativas.

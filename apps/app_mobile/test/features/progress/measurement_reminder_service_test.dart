@@ -1,3 +1,5 @@
+import 'package:gym_tracker/platform/reminders/mobile_measurement_reminder_service.dart';
+import 'package:gym_tracker/platform/reminders/mobile_local_notification_timezone.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:core/features/progress/services/measurement_reminder_service.dart';
@@ -18,6 +20,7 @@ void main() {
   var failSchedule = false;
 
   setUp(() {
+    MobileLocalNotificationTimezone.resetForTesting();
     IOSFlutterLocalNotificationsPlugin.registerWith();
     SharedPreferences.setMockInitialValues({});
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
@@ -65,7 +68,7 @@ void main() {
   ];
   test('schedules calendar date and only replaces own notification', () async {
     pending[1310] = {'id': 1310};
-    await MeasurementReminderService.configure(
+    await MobileMeasurementReminderService.configure(
       const MeasurementReminderSettings(
         enabled: true,
         months: 1,
@@ -80,25 +83,25 @@ void main() {
       contains('2099-02-28T18:30:00'),
     );
     expect(scheduled.single['timeZoneName'], 'America/Lima');
-    expect((await MeasurementReminderService.read()).enabled, true);
-    await MeasurementReminderService.configure(
+    expect((await MobileMeasurementReminderService.read()).enabled, true);
+    await MobileMeasurementReminderService.configure(
       const MeasurementReminderSettings(),
       measurements,
     );
     expect(pending.keys.toSet(), {1310});
-    expect((await MeasurementReminderService.read()).enabled, false);
+    expect((await MobileMeasurementReminderService.read()).enabled, false);
   });
   test('permission denial does not save enabled consent', () async {
     permission = false;
     await expectLater(
-      MeasurementReminderService.configure(
+      MobileMeasurementReminderService.configure(
         const MeasurementReminderSettings(enabled: true),
         measurements,
       ),
       throwsStateError,
     );
     expect(scheduled, isEmpty);
-    expect((await MeasurementReminderService.read()).enabled, false);
+    expect((await MobileMeasurementReminderService.read()).enabled, false);
   });
   test(
     'full iOS queue preserves other notifications and existing configuration',
@@ -107,31 +110,31 @@ void main() {
         pending[i] = {'id': i};
       }
       await expectLater(
-        MeasurementReminderService.configure(
+        MobileMeasurementReminderService.configure(
           const MeasurementReminderSettings(enabled: true),
           measurements,
         ),
         throwsStateError,
       );
       expect(pending.length, 60);
-      expect((await MeasurementReminderService.read()).enabled, false);
+      expect((await MobileMeasurementReminderService.read()).enabled, false);
     },
   );
   test(
     'new measurement shifts the reminder; deleting all cancels it',
     () async {
-      await MeasurementReminderService.configure(
+      await MobileMeasurementReminderService.configure(
         const MeasurementReminderSettings(enabled: true, months: 3),
         measurements,
       );
-      await MeasurementReminderService.synchronize([
+      await MobileMeasurementReminderService.synchronize([
         BodyMeasurement(id: 'new', date: DateTime(2099, 2, 10)),
       ]);
       expect(
         scheduled.last['scheduledDateTime'],
         contains('2099-05-10T09:00:00'),
       );
-      await MeasurementReminderService.synchronize([]);
+      await MobileMeasurementReminderService.synchronize([]);
       expect(pending, isEmpty);
     },
   );
@@ -139,11 +142,11 @@ void main() {
     'overdue reminder is scheduled once, not resent on every startup',
     () async {
       final old = [BodyMeasurement(id: 'old', date: DateTime(2020, 1))];
-      await MeasurementReminderService.configure(
+      await MobileMeasurementReminderService.configure(
         const MeasurementReminderSettings(enabled: true),
         old,
       );
-      await MeasurementReminderService.synchronize(old);
+      await MobileMeasurementReminderService.synchronize(old);
       expect(scheduled.length, 1);
     },
   );
@@ -152,13 +155,13 @@ void main() {
     () async {
       failSchedule = true;
       await expectLater(
-        MeasurementReminderService.configure(
+        MobileMeasurementReminderService.configure(
           const MeasurementReminderSettings(enabled: true),
           measurements,
         ),
         throwsA(isA<PlatformException>()),
       );
-      expect((await MeasurementReminderService.read()).enabled, false);
+      expect((await MobileMeasurementReminderService.read()).enabled, false);
     },
   );
 }
