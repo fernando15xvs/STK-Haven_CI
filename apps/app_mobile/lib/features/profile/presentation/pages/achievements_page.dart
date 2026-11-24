@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:core/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/app_palette.dart';
 import 'package:core/features/profile/application/gamification_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

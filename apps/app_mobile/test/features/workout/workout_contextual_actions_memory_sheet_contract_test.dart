@@ -38,7 +38,7 @@ void main() {
       'lib/features/workout/presentation/active_workout_page_content.dart',
     ).readAsStringSync();
     final memory = File(
-      '../../packages/core/lib/features/workout/presentation/widgets/'
+      'lib/features/workout/presentation/widgets/'
       'active_workout_memory_overlay.dart',
     ).readAsStringSync();
 

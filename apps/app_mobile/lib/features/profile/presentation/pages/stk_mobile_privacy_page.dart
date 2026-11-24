@@ -5,7 +5,7 @@ import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
 import 'package:core/features/onboarding/data/stk_legal_server_receipt_service.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
-import 'package:core/features/sync/presentation/backup_status_page.dart';
+import 'package:gym_tracker/features/sync/presentation/backup_status_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';

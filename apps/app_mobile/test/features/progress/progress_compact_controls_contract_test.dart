@@ -13,7 +13,7 @@ void main() {
     expect(root, contains('const CompactProgressPeriodSelector()'));
     expect(muscle, contains('child: CompactProgressPeriodSelector()'));
     expect(muscle, isNot(contains('El período se cambia arriba')));
-    final exercises = File('../../packages/core/lib/features/progress/presentation/pages/progress_intelligence_page.dart').readAsStringSync();
+    final exercises = File('lib/features/progress/presentation/pages/progress_intelligence_page.dart').readAsStringSync();
     expect(exercises, isNot(contains('const CompactProgressPeriodSelector()')));
     expect(exercises, contains('final from = widget.useSharedPeriod'));
     expect(exercises, contains('dos últimas sesiones registradas'));

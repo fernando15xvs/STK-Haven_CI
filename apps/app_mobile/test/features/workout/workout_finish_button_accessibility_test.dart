@@ -75,7 +75,7 @@ void main() {
 
   test('contextual memory never falls back to another exercise after deletion', () {
     final source = File(
-      '../../packages/core/lib/features/workout/presentation/widgets/'
+      'lib/features/workout/presentation/widgets/'
       'active_workout_memory_overlay.dart',
     ).readAsStringSync();
     expect(source, contains('item.instanceId == requestedInstanceId'));

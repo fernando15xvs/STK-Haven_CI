@@ -1,5 +1,5 @@
 import 'package:core/domain/models/user_experience_profile.dart';
-import 'package:core/features/profile/presentation/pages/personal_profile_page.dart';
+import 'package:gym_tracker/features/profile/presentation/pages/personal_profile_page.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
