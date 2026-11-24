@@ -1,5 +1,5 @@
 import 'package:core/domain/models/verse.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 class ReflectionJournalEntry {
   final String id;

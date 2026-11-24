@@ -42,7 +42,7 @@ void main(){
 
   test('cloud backup cannot restore into a different signed-in account',(){
     final source=File(
-      'lib/features/sync/application/cloud_sync_provider.dart',
+      '../../packages/core/lib/features/sync/application/cloud_sync_provider.dart',
     ).readAsStringSync();
     final start=source.indexOf('Future<bool> restoreFromCloud() async');
     final end=source.indexOf('void _invalidateRestoredState()',start);
@@ -80,7 +80,7 @@ void main(){
     expect(restore,contains('conserva el archivo de respaldo.'));
     expect(restore,isNot(contains(r'Error al restaurar la copia: $error')));
     final service=File(
-      'lib/core/services/backup_service.dart',
+      '../../packages/core/lib/core/services/backup_service.dart',
     ).readAsStringSync();
     expect(service,contains('La restauración falló y no se pudo confirmar'));
     expect(service,contains('Se recuperaron los datos locales anteriores.'));
@@ -89,7 +89,7 @@ void main(){
 
   test('backup data is preflighted before replacing metadata, history or routines',(){
     final source=File(
-      'lib/core/services/backup_service.dart',
+      '../../packages/core/lib/core/services/backup_service.dart',
     ).readAsStringSync();
     final begin=source.indexOf('Future<void> restoreBackup(');
     final end=source.indexOf('Map<String, dynamic> _exerciseToMap',begin);

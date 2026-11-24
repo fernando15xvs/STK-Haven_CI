@@ -1,8 +1,8 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/features/coach_pro/data/coach_pro_task_agenda_service.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_agenda.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
 
 typedef CoachProTaskAgendaQuery = ({
   String userId,
@@ -11,7 +11,7 @@ typedef CoachProTaskAgendaQuery = ({
 });
 
 final coachProTaskAgendaServiceProvider = Provider<CoachProTaskAgendaService>(
-  (ref) => CoachProTaskAgendaService(Supabase.instance.client),
+  (ref) => CoachProTaskAgendaService(CoreSupabaseClient.client),
 );
 
 /// A single page, invalidated on logout or client-permission changes.

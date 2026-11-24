@@ -1,5 +1,5 @@
 import 'package:core/database/hive/hive_boxes.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 /// Device-local operational metadata for backup UX.
 ///

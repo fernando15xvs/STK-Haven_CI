@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 import 'stk_nutrition_server_capabilities.dart';
 
 /// A result of checking the trusted backend, not proof of age by itself.

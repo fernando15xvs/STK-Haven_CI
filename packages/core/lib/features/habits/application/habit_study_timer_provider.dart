@@ -1,6 +1,6 @@
 import 'package:core/domain/models/habit_study_timer.dart';
 import 'package:core/features/habits/application/habit_tasks_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 
 final habitStudyTimerProvider =
     NotifierProvider<HabitStudyTimerNotifier, HabitStudyTimerState?>(

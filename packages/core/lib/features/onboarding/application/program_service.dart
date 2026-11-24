@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/preset_program.dart';

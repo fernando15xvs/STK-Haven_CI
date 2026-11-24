@@ -1,10 +1,11 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'dart:async';
 
 import 'package:core/domain/models/app_identity_state.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/identity/application/app_identity_rules.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:supabase/supabase.dart';
 
 final appIdentityProvider =
     NotifierProvider<AppIdentityNotifier, AppIdentityState>(
@@ -14,7 +15,7 @@ final appIdentityProvider =
 class AppIdentityNotifier extends Notifier<AppIdentityState> {
   StreamSubscription<AuthState>? _authSubscription;
 
-  SupabaseClient get _client => Supabase.instance.client;
+  SupabaseClient get _client => CoreSupabaseClient.client;
 
   @override
   AppIdentityState build() {

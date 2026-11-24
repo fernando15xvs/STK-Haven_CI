@@ -1,5 +1,5 @@
 import 'package:core/domain/models/nutrition_guidance.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 class NutritionGuidanceService {
   final SupabaseClient client;

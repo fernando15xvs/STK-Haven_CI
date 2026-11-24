@@ -1,3 +1,4 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/domain/models/coach_client_progress.dart';
 import 'package:core/domain/models/coach_exercise_progress.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
@@ -7,8 +8,7 @@ import 'package:core/domain/models/coach_pro_client_summary.dart';
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/features/coach_pro/data/coach_pro_client_detail_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
 
 enum CoachProClientSection {
   summary,
@@ -57,7 +57,7 @@ class CoachProClientDetail {
 }
 
 final coachProClientDetailServiceProvider = Provider<CoachProClientDetailService>(
-  (ref) => CoachProClientDetailService(Supabase.instance.client),
+  (ref) => CoachProClientDetailService(CoreSupabaseClient.client),
 );
 
 /// One relationship and one selected section/page; never a persisted client cache.

@@ -1,5 +1,5 @@
 import 'package:core/features/coach_pro/domain/coach_pro_template.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 /// RPCs re-check subscription, coach ownership and client consent per request.
 class CoachProTemplateService {

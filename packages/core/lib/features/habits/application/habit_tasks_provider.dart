@@ -5,8 +5,8 @@ import 'package:core/features/habits/application/habit_task_templates.dart';
 import 'package:core/features/habits/application/habit_task_notification_service.dart';
 import 'package:core/features/habits/data/habit_task_repository.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
 class HabitTasksState {

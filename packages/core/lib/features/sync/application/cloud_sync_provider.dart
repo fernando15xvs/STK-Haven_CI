@@ -1,7 +1,8 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'dart:convert';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:supabase/supabase.dart';
 
 import 'package:core/core/services/backup_activity_service.dart';
 import 'package:core/core/services/backup_service.dart';
@@ -73,7 +74,7 @@ class CloudSyncNotifier extends Notifier<CloudSyncState> {
   static const _table = 'stk_haven_cloud_backups';
   final BackupService _backupService = BackupService();
 
-  SupabaseClient get _client => Supabase.instance.client;
+  SupabaseClient get _client => CoreSupabaseClient.client;
 
   // UID alone is insufficient: the same account can sign out and return
   // under a different token while a download or Hive write is in flight.

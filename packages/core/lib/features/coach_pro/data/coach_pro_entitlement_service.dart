@@ -1,5 +1,5 @@
 import 'package:core/domain/models/subscription_entitlement.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 class CoachProEntitlementService {
   final SupabaseClient client;

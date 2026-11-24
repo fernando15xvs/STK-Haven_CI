@@ -1,10 +1,10 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/features/coach_pro/data/coach_pro_nutrition_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
 
 final coachProNutritionServiceProvider = Provider<CoachProNutritionService>(
-  (ref) => CoachProNutritionService(Supabase.instance.client));
+  (ref) => CoachProNutritionService(CoreSupabaseClient.client));
 final coachProNutritionVersionsProvider = FutureProvider.autoDispose
     .family<CoachProNutritionVersionsPage?, CoachProNutritionQuery>((ref, query) async {
   final identity = ref.watch(appIdentityProvider.select((s) => (s.signedIn, s.userId)));

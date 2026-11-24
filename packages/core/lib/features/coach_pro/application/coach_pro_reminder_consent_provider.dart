@@ -1,13 +1,13 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/features/coach_pro/data/coach_pro_reminder_consent_service.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_reminder_consent.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
 
 typedef CoachProReminderConsentQuery = ({String userId, String relationshipId});
 
 final coachProReminderConsentServiceProvider = Provider<CoachProReminderConsentService>(
-  (ref) => CoachProReminderConsentService(Supabase.instance.client),
+  (ref) => CoachProReminderConsentService(CoreSupabaseClient.client),
 );
 
 final coachProReminderConsentProvider = FutureProvider.autoDispose

@@ -4,8 +4,8 @@ import 'package:core/domain/models/hydration_preferences.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:core/domain/models/wellness_goal_change.dart';
 import 'package:core/features/home/data/wellness_repository.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:hive/hive.dart';
 
 final wellnessRepositoryProvider = Provider<WellnessRepository>((ref) {
   return WellnessRepository(Hive.box(HiveBoxes.metadata));

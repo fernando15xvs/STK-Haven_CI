@@ -1,5 +1,5 @@
 import 'package:core/domain/models/coach_checkin.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 class CoachCheckinService {
   final SupabaseClient client;
   const CoachCheckinService(this.client);

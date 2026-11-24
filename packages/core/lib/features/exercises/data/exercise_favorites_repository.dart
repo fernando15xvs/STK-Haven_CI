@@ -1,4 +1,4 @@
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 class ExerciseFavoritesRepository {
   static const String storageKey = 'favorite_exercise_ids';

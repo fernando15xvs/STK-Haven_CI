@@ -1,6 +1,6 @@
 import '../services/measurement_reminder_service.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:hive/hive.dart';
 import '../../../database/hive/hive_boxes.dart';
 import '../../../database/hive/models/hive_body_measurement.dart';
 import '../../../domain/models/body_measurement.dart';

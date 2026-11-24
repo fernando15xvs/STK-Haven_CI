@@ -1,7 +1,7 @@
 import 'package:core/domain/models/daily_steps_state.dart';
 import 'package:core/domain/models/hydration_preferences.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 class WellnessRepository {
   static const String hydrationPreferencesKey = 'hydration_preferences_v1';

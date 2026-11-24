@@ -1,6 +1,6 @@
 import 'package:core/domain/models/coach_assigned_task.dart';
 import 'package:core/domain/models/habit_task.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 typedef CoachProTaskQuery = ({String relationshipId, String taskId, int offset});
 

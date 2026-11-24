@@ -20,7 +20,7 @@ void main() {
 
   test('Experience cannot silently revert the weight unit', () {
     final experience = File(
-      '../../packages/core/lib/features/profile/presentation/pages/experience_preferences_page.dart',
+      'lib/features/profile/presentation/pages/experience_preferences_page.dart',
     ).readAsStringSync();
     expect(experience, isNot(contains('setWeightUnit(draft.weightUnit)')));
     expect(experience, isNot(contains('SegmentedButton<WeightUnit>')));

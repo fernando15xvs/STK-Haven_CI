@@ -2,8 +2,8 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/profile/data/user_experience_profile_repository.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:hive/hive.dart';
 
 final userExperienceProfileRepositoryProvider =
     Provider<UserExperienceProfileRepository>((ref) {

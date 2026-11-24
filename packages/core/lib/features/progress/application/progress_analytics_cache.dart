@@ -1,7 +1,7 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
 import 'package:core/features/workout/application/workout_history_index.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 
 class ProgressPeriod {
   final DateTime? from;

@@ -1,4 +1,4 @@
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 import '../../core/services/backup_service.dart';
 import 'hive_adapters.dart';
 import 'hive_boxes.dart';
@@ -13,7 +13,6 @@ import '../../domain/models/hive_favorite_verse.dart';
 
 class HiveDatabase {
   static Future<void> init() async {
-    await Hive.initFlutter();
     registerHiveAdapters();
 
     final metaBox = await Hive.openBox(HiveBoxes.metadata);

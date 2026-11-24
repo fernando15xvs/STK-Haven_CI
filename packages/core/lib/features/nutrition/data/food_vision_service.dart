@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:core/domain/models/nutrition_intelligence.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 class FoodVisionService {
   static const int maxImageBytes = 4 * 1024 * 1024;

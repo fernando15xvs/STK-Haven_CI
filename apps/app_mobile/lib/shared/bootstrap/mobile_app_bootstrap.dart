@@ -2,12 +2,20 @@ import 'dart:async';
 
 import 'package:core/core/config/supabase_config.dart';
 import 'package:core/database/hive/hive_database.dart';
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/core/services/workout_notification_service.dart';
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/core/services/step_goal_reminder_service.dart';
+import 'package:core/core/services/coach_pro_local_reminder_service.dart';
+import 'package:core/core/services/personal_motivational_reminder_service.dart';
+import 'package:core/features/faith/services/verse_notification_service.dart';
+import 'package:core/features/progress/services/measurement_reminder_service.dart';
+import 'package:core/features/coach/application/coach_task_notification_service.dart';
+import 'package:core/features/habits/application/habit_task_notification_service.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:just_audio_background/just_audio_background.dart';
@@ -18,6 +26,12 @@ import '../../platform/workout/mobile_workout_native_services.dart';
 import '../../platform/workout/mobile_workout_notification_service.dart';
 import '../../platform/reminders/mobile_hydration_reminder_service.dart';
 import '../../platform/reminders/mobile_step_goal_reminder_service.dart';
+import '../../platform/reminders/mobile_coach_pro_local_reminder_service.dart';
+import '../../platform/reminders/mobile_coach_task_notification_service.dart';
+import '../../platform/reminders/mobile_habit_task_notification_service.dart';
+import '../../platform/reminders/mobile_verse_notification_service.dart';
+import '../../platform/reminders/mobile_personal_motivational_reminder_service.dart';
+import '../../platform/reminders/mobile_measurement_reminder_service.dart';
 
 typedef PlatformServicesInitializer = Future<void> Function();
 
@@ -36,7 +50,9 @@ Future<void> bootstrapMobileApp({
     url: SupabaseConfig.url,
     publishableKey: SupabaseConfig.publishableKey,
   );
+  CoreSupabaseClient.installClient(Supabase.instance.client);
 
+  await Hive.initFlutter(); // platform initialization remains in Mobile
   await HiveDatabase.init();
 
   // One native backend for Core settings and Mobile workout effects.
@@ -50,6 +66,20 @@ Future<void> bootstrapMobileApp({
   StepGoalReminderService.installBackend(
     const MobileStepGoalReminderBackend(),
   );
+  CoachProLocalReminderService.installBackend(
+    const MobileCoachProLocalReminderBackend(),
+  );
+  CoachTaskNotificationService.installBackend(
+    const MobileCoachTaskNotificationBackend(),
+  );
+  HabitTaskNotificationService.installBackend(
+    const MobileHabitTaskNotificationBackend(),
+  );
+  VerseNotificationService.installBackend(const MobileVerseNotificationBackend());
+  PersonalMotivationalReminderService.installBackend(
+    const MobilePersonalMotivationalReminderBackend(),
+  );
+  MeasurementReminderService.installBackend(const MobileMeasurementReminderBackend());
 
   // Initialise OS lock-screen and notification controls before creating a player.
   try {

@@ -1,14 +1,14 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/domain/models/coach_checkin.dart';
 import 'package:core/features/coach/data/coach_checkin_service.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
 class CoachCheckinState {
   final List<CoachCheckin> items; final Map<String,List<CoachCheckinComment>> comments; final bool busy; final String? message;
   const CoachCheckinState({this.items=const [],this.comments=const {},this.busy=false,this.message});
   CoachCheckinState copyWith({List<CoachCheckin>? items,Map<String,List<CoachCheckinComment>>? comments,bool? busy,String? message,bool clear=false})=>
     CoachCheckinState(items:items??this.items,comments:comments??this.comments,busy:busy??this.busy,message:clear?null:(message??this.message));
 }
-final coachCheckinServiceProvider=Provider((ref)=>CoachCheckinService(Supabase.instance.client));
+final coachCheckinServiceProvider=Provider((ref)=>CoachCheckinService(CoreSupabaseClient.client));
 final coachCheckinProvider=NotifierProvider<CoachCheckinNotifier,CoachCheckinState>(CoachCheckinNotifier.new);
 class CoachCheckinNotifier extends Notifier<CoachCheckinState>{
   late final CoachCheckinService _service;

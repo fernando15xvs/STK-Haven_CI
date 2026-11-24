@@ -1,8 +1,9 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'dart:convert';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 class ChatMessage {
   final String text;
@@ -67,7 +68,7 @@ class AiChatNotifier extends Notifier<AiChatState> {
   }
 
   Future<void> _ensureSecureSession() async {
-    final client = Supabase.instance.client;
+    final client = CoreSupabaseClient.client;
     if (client.auth.currentSession != null) return;
 
     await client.auth.signInAnonymously();
@@ -107,7 +108,7 @@ class AiChatNotifier extends Notifier<AiChatState> {
     try {
       await _ensureSecureSession();
 
-      final response = await Supabase.instance.client.functions.invoke(
+      final response = await CoreSupabaseClient.client.functions.invoke(
         _functionName,
         body: {
           'message': trimmed,

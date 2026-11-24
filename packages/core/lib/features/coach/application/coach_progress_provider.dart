@@ -1,11 +1,12 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/domain/models/coach_client_progress.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/coach/application/coach_progress_snapshot_builder.dart';
 import 'package:core/features/coach/application/coach_exercise_progress_snapshot_builder.dart';
 import 'package:core/features/coach/data/coach_progress_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:supabase/supabase.dart';
 
 enum CoachProgressOperation {
   idle,
@@ -45,7 +46,7 @@ class CoachProgressState {
 }
 
 final coachProgressServiceProvider = Provider<CoachProgressService>((ref) {
-  return CoachProgressService(Supabase.instance.client);
+  return CoachProgressService(CoreSupabaseClient.client);
 });
 
 final coachProgressProvider =

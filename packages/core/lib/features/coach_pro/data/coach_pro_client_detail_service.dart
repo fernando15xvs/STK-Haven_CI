@@ -6,7 +6,7 @@ import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
 import 'package:core/domain/models/coach_checkin.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 class CoachProCheckinPage {
   final List<CoachCheckin> items;

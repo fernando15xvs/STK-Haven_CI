@@ -1,3 +1,4 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'dart:async';
 
 import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
@@ -5,11 +6,10 @@ import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
 import 'package:core/domain/models/coach_pro_client_summary.dart';
 import 'package:core/features/coach_pro/data/coach_pro_dashboard_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
 
 final coachProDashboardServiceProvider = Provider<CoachProDashboardService>(
-  (ref) => CoachProDashboardService(Supabase.instance.client),
+  (ref) => CoachProDashboardService(CoreSupabaseClient.client),
 );
 
 enum CoachProDashboardStatus { accountRequired, loading, ready, error }

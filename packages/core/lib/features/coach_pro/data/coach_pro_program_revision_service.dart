@@ -1,6 +1,6 @@
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_program_revision.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 typedef CoachProProgramRevisionHistoryQuery = ({
   String relationshipId,

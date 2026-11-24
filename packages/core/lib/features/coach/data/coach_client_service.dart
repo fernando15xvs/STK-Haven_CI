@@ -1,5 +1,5 @@
 import 'package:core/domain/models/coach_relationship.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 class CoachClientService {
   final SupabaseClient client;

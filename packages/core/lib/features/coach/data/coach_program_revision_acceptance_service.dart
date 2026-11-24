@@ -1,6 +1,6 @@
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach/domain/coach_program_revision_acceptance.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 typedef ClientProgramRevisionPageQuery = ({
   String assignmentId,

@@ -1,11 +1,11 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/domain/models/subscription_entitlement.dart';
 import 'package:core/features/coach_pro/data/coach_pro_entitlement_service.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
 
 final coachProEntitlementServiceProvider =
     Provider<CoachProEntitlementService>((ref) {
-  return CoachProEntitlementService(Supabase.instance.client);
+  return CoachProEntitlementService(CoreSupabaseClient.client);
 });
 
 final coachProEntitlementProvider = AsyncNotifierProvider<

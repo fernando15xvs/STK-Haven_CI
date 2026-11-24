@@ -1,5 +1,5 @@
 import 'package:core/domain/models/coach_assigned_task.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 class CoachTaskService {
   final SupabaseClient client;

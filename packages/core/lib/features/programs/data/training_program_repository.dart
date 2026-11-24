@@ -1,6 +1,6 @@
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/training_program.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 class TrainingProgramRepository {
   TrainingProgramRepository(this._box, {Box? metadataBox})

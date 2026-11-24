@@ -1,8 +1,8 @@
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/study_plan.dart';
 import 'package:core/features/habits/data/study_plan_repository.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
 final studyPlanRepositoryProvider = Provider<StudyPlanRepository>((ref) {

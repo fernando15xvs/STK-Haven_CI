@@ -1,5 +1,5 @@
 import 'package:core/features/coach_pro/domain/coach_pro_checkin_cadence.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 class CoachProCheckinCadenceService {
   final SupabaseClient client;

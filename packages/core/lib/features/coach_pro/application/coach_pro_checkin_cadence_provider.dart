@@ -1,8 +1,8 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/features/coach_pro/data/coach_pro_checkin_cadence_service.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_checkin_cadence.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
 
 typedef CoachProCheckinCadenceQuery = ({
   String userId,
@@ -11,7 +11,7 @@ typedef CoachProCheckinCadenceQuery = ({
 
 final coachProCheckinCadenceServiceProvider =
     Provider<CoachProCheckinCadenceService>(
-  (ref) => CoachProCheckinCadenceService(Supabase.instance.client),
+  (ref) => CoachProCheckinCadenceService(CoreSupabaseClient.client),
 );
 
 final coachProCheckinCadenceProvider = FutureProvider.autoDispose

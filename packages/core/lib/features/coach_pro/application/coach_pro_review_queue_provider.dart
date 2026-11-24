@@ -3,7 +3,7 @@ import 'package:core/features/coach_pro/application/coach_pro_dashboard_provider
 import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_review_reason.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 
 typedef CoachProReviewQueueQuery = ({String userId, int offset});
 

@@ -1,11 +1,11 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/features/coach_pro/data/coach_pro_task_comments_service.dart';
 import 'package:core/features/coach_pro/data/coach_pro_task_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
 
 final coachProTaskCommentsServiceProvider = Provider<CoachProTaskCommentsService>(
-  (ref) => CoachProTaskCommentsService(Supabase.instance.client),
+  (ref) => CoachProTaskCommentsService(CoreSupabaseClient.client),
 );
 final coachProTaskCommentsProvider = FutureProvider.autoDispose
     .family<CoachProTaskCommentsPage?, CoachProTaskQuery>((ref, query) async {

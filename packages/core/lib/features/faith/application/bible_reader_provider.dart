@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/domain/models/verse.dart';

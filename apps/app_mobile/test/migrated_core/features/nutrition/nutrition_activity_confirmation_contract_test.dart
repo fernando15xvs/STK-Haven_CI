@@ -40,7 +40,7 @@ void main() {
 
   test('planner rejects non-finite weights and heights', () {
     final planner=File(
-      'lib/features/nutrition/application/adult_energy_planner.dart',
+      '../../packages/core/lib/features/nutrition/application/adult_energy_planner.dart',
     ).readAsStringSync();
     expect(planner,contains('!profile.weightKg.isFinite'));
     expect(planner,contains('!profile.heightCm.isFinite'));

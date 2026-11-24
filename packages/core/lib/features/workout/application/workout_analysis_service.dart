@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 import '../../../domain/models/workout_session.dart';
 import '../../../domain/models/workout_analysis.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';

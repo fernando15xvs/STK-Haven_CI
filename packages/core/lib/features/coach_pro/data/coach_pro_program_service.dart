@@ -1,5 +1,5 @@
 import 'package:core/domain/models/coach_program_assignment.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 typedef CoachProProgramQuery = ({String relationshipId, String assignmentId,
   int version, String? routineId, int offset});

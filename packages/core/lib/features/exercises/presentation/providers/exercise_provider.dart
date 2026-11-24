@@ -1,5 +1,5 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/database/hive/models/hive_exercise.dart';
 import 'package:core/features/exercises/application/custom_exercise_service.dart';

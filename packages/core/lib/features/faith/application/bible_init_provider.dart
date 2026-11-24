@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/riverpod.dart';
 import 'package:core/features/faith/data/bible_database.dart';
 import 'package:core/features/faith/application/faith_feature_policy.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';

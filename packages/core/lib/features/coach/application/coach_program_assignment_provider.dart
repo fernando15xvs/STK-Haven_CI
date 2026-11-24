@@ -1,3 +1,4 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/training_program.dart';
@@ -9,9 +10,9 @@ import 'package:core/features/exercises/presentation/providers/exercise_provider
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:hive/hive.dart';
+import 'package:supabase/supabase.dart';
 
 enum CoachProgramAssignmentOperation {
   idle,
@@ -62,7 +63,7 @@ class CoachProgramAssignmentsState {
 
 final coachProgramAssignmentServiceProvider =
     Provider<CoachProgramAssignmentService>((ref) {
-  return CoachProgramAssignmentService(Supabase.instance.client);
+  return CoachProgramAssignmentService(CoreSupabaseClient.client);
 });
 
 final coachProgramInstallerProvider = Provider<CoachProgramInstaller>((ref) {

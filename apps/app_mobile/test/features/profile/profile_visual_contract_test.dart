@@ -7,7 +7,7 @@ void main() {
       'lib/features/profile/presentation/pages/profile_page.dart',
     ).readAsStringSync();
     final identity = File(
-      '../../packages/core/lib/features/profile/presentation/widgets/personal_profile_summary.dart',
+      'lib/features/profile/presentation/widgets/personal_profile_summary.dart',
     ).readAsStringSync();
     expect(screen, contains("SectionHeading(title: 'PREFERENCIAS')"));
     expect(screen, contains("SectionHeading(title: 'SERVICIOS Y PRIVACIDAD')"));
@@ -21,10 +21,10 @@ void main() {
 
   test('profile editors protect unsaved changes', () {
     final personal = File(
-      '../../packages/core/lib/features/profile/presentation/pages/personal_profile_page.dart',
+      'lib/features/profile/presentation/pages/personal_profile_page.dart',
     ).readAsStringSync();
     final experience = File(
-      '../../packages/core/lib/features/profile/presentation/pages/experience_preferences_page.dart',
+      'lib/features/profile/presentation/pages/experience_preferences_page.dart',
     ).readAsStringSync();
     for (final editor in [personal, experience]) {
       expect(editor, contains('PopScope('));
@@ -48,10 +48,10 @@ void main() {
   });
   test('Reduce Motion is configured once and Appearance has no fake button', () {
     final appearance = File(
-      '../../packages/core/lib/features/profile/presentation/pages/appearance_settings_page.dart',
+      'lib/features/profile/presentation/pages/appearance_settings_page.dart',
     ).readAsStringSync();
     final device = File(
-      '../../packages/core/lib/features/profile/presentation/widgets/platform_settings_page.dart',
+      'lib/features/profile/presentation/widgets/platform_settings_page.dart',
     ).readAsStringSync();
     expect(appearance, isNot(contains("title: const Text('Reducir animaciones')")));
     expect(appearance, isNot(contains('onPressed: () {}')));

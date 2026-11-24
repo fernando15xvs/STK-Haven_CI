@@ -1,8 +1,9 @@
+import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/nutrition/data/nutrition_guidance_service.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:supabase/supabase.dart';
 
 enum NutritionGuidanceOperation {
   idle,
@@ -49,7 +50,7 @@ class NutritionGuidanceState {
 
 final nutritionGuidanceServiceProvider =
     Provider<NutritionGuidanceService>((ref) {
-  return NutritionGuidanceService(Supabase.instance.client);
+  return NutritionGuidanceService(CoreSupabaseClient.client);
 });
 
 final nutritionGuidanceProvider =

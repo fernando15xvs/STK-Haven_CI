@@ -8,8 +8,8 @@ import 'package:core/features/programs/data/training_program_repository.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/routines/presentation/providers/routine_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
 final trainingProgramRepositoryProvider = Provider<TrainingProgramRepository>(

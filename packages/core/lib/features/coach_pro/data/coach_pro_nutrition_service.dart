@@ -1,6 +1,6 @@
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_summary.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 typedef CoachProNutritionQuery = ({String relationshipId, String clientUserId, String planId, int version, int offset});
 class CoachProNutritionPage {

@@ -1,6 +1,6 @@
 import 'package:core/domain/models/coach_assigned_task.dart';
 import 'package:core/features/coach_pro/data/coach_pro_task_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 class CoachProTaskCommentsPage {
   final List<CoachTaskComment> items;
