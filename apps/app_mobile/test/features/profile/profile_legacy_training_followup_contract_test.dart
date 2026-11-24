@@ -7,14 +7,15 @@ void main(){
     final profile=File(
       'lib/features/profile/presentation/pages/profile_page.dart',
     ).readAsStringSync();
-    expect(profile,contains('savedProfile?.needsOptionalTrainingFollowup == true'));
+    expect(profile,contains('profile?.needsOptionalTrainingFollowup == true'));
     expect(profile,contains("ValueKey('profile_legacy_training_followup')"));
     expect(profile,contains("ValueKey('profile_complete_legacy_training')"));
     expect(profile,contains("ValueKey('profile_skip_legacy_training')"));
-    expect(profile,contains("child:const Text('Ahora no')"));
-    expect(profile,contains('legacyTrainingFollowupDismissed:true'));
+    expect(profile,contains("child: const Text('Ahora no')"));
+    expect(profile,contains('legacyTrainingFollowupDismissed: true'));
     expect(profile,contains('const ExperiencePreferencesPage()'));
-    expect(profile,contains('Tus rutinas, respuestas anteriores y cuenta se conservan.'));
+    expect(profile,contains('Tus rutinas, '));
+    expect(profile,contains('respuestas anteriores y cuenta se conservan.'));
     // It only links to an existing editing route. No forced onboarding,
     // sign-out, remote consent creation or automated recommendations.
     expect(profile,isNot(contains('pushReplacement')));
