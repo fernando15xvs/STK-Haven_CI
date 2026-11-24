@@ -170,7 +170,21 @@ class _ProfileFacts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
+    final personal = profile;
+    final birthDate = personal?.dateOfBirth;
+    final gender = switch (personal?.genderIdentity) {
+      GenderIdentity.woman => 'Mujer',
+      GenderIdentity.man => 'Hombre',
+      GenderIdentity.nonBinary => 'No binario / otra identidad',
+      GenderIdentity.preferNotToSay => 'Prefiero no decirlo',
+      null => 'Sin definir',
+    };
     final items = <(String, String)>[
+      if (personal?.optionalDemographicsConsented == true) ...[
+        ('Fecha de nacimiento', birthDate == null ? 'Sin definir' :
+          MaterialLocalizations.of(context).formatCompactDate(birthDate)),
+        ('Género', gender),
+      ],
       ('Objetivo', goal),
       ('Experiencia', experience),
       ('Días por semana',
@@ -199,7 +213,7 @@ class _ProfileFacts extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: colors.textSecondary)),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 flex: 3,
                 child: Text(items[i].$2,

@@ -3,6 +3,9 @@ import 'package:core/domain/models/appearance_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core/features/progress/application/progress_metrics_service.dart';
+import 'package:gym_tracker/features/progress/presentation/widgets/compact_progress_period_selector.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'package:gym_tracker/core/theme/app_font_family.dart';
@@ -65,5 +68,23 @@ void main() {
     expect(oled.background, Colors.black);
     expect(AppColors.contrast(oled.textPrimary, oled.background),
         greaterThanOrEqualTo(4.5));
+  });
+
+  testWidgets('progress period selector inherits every selected family', (tester) async {
+    for (final font in AppFontFamily.values) {
+      final settings = AppearanceSettings(fontFamily: font, uiStyle: AppUiStyle.compact);
+      await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+          theme: AppearanceTheme.build(settings, Brightness.dark),
+          home: const Scaffold(body: Center(child: CompactProgressPeriodSelector())),
+        ),
+      ));
+      await tester.pumpAndSettle();
+      final label = tester.widget<Text>(find.text(TimeFilter.month.label));
+      expect(label.style?.fontFamily, appFontFamilyName(font));
+      expect(tester.getSize(find.byKey(const ValueKey('progress_shared_period'))).height,
+          greaterThanOrEqualTo(48));
+      expect(tester.takeException(), isNull);
+    }
   });
 }

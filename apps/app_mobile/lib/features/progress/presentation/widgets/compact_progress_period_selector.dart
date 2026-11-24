@@ -1,4 +1,5 @@
-import 'package:gym_tracker/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/core/theme/app_ui_styles.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ class CompactProgressPeriodSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(timeFilterProvider);
     final colors = AppColors.of(context);
+    final tokens = AppUiTokens.of(context);
     return PopupMenuButton<TimeFilter>(
       key: const ValueKey('progress_shared_period'),
       tooltip: 'Seleccionar período de análisis',
@@ -29,12 +31,14 @@ class CompactProgressPeriodSelector extends ConsumerWidget {
         button: true,
         label: 'Período de análisis: ${selected.label}. Cambiar período',
         child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
           decoration: BoxDecoration(
             color: colors.surfaceHigh,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.surfaceBorder),
+            borderRadius: BorderRadius.circular(tokens.buttonRadius),
+            border: Border.all(
+              color: colors.surfaceBorder, width: tokens.borderWidth),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -45,8 +49,8 @@ class CompactProgressPeriodSelector extends ConsumerWidget {
               Text(
                 selected.label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  fontFamily: 'Outfit',
                   fontWeight: FontWeight.w700,
+                  fontVariations: const [FontVariation('wght', 700)],
                   color: colors.primary,
                 ),
               ),

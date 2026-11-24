@@ -128,6 +128,8 @@
 
 **Entrega E.1 (24/11/2026):** Perfil deja de ser un menú de configuraciones: muestra foto grande (54dp de radio), nombre y datos autorizados del programa guardado (objetivo, experiencia, días, entorno, duración, unidad) directamente, con «Sin definir» cuando corresponde y «Editar perfil» secundario. Nivel, XP y medallas viven en Perfil sin duplicar Entrenar/Progreso; el engranaje abre Ajustes para aspecto, experiencia, entrenamiento, notificaciones, Fe, servicios, privacidad y dispositivo. Ajustes ofrece claro/oscuro rápido y el modo Automático continúa en Aspecto. Se conservan historial, consentimiento, datos locales, sesión activa y el aviso opcional para onboarding antiguo. Pruebas de navegación/responsividad nuevas: [alcance y validación](../architecture/STK_PHASE_E_PROFILE_SETTINGS_20261124.md). **No cerrar E hasta CI 7/7 del nuevo commit y QA física de lectura con Dynamic Type.**
 
+**D.2/E.2 (24/11/2026):** baseline previo [CI 7/7 #45477654987](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/45477654987). Se elimina el Outfit fijo del selector de período de Progreso, con familia heredada, peso variable coherente, geometría central y objetivo táctil de 48dp. Perfil conserva foto de 108dp, nombre sin recorte y edición accesible en una columna en ancho reducido/texto grande. Fecha de nacimiento y género local solo se muestran con consentimiento demográfico explícito; no se presenta DOB de elegibilidad ni se cambia el cálculo nutricional. Nuevas regresiones de las cuatro fuentes y matriz Perfil/Ajustes 320/390/430dp × 100/160/200%. CI de este incremento pendiente; no marcar QA física ni auditoría total de estilos locales como completadas.
+
 ## Fase F — Auditoría final y entrega
 - [ ] Repetir auditoría completa de import/export/dependencias con **allowlist vacía**, incluyendo test automatizado que impida reintroducir UI en Core y Web en Mobile.
 - [ ] Pruebas de migración/persistencia (`AppearanceSettings.fromJson` antigua+nueva, Hive, offline, perfiles existentes, rutinas, backups) y contract tests de providers/adaptadores.
@@ -148,4 +150,7 @@
 ## Estado
 - [x] Arquitectura objetivo y alcance Web pausada acordados.
 - [x] Roadmap redactado y guardado en GitHub.
-- [ ] A, B, C, D, E y F: **pendientes de implementación**, sujetos a sus criterios de salida.
+- [x] C: implementación y gate estricto aprobados en [CI #45460099395](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/45460099395); QA física permanece en F.
+- [ ] D/E: incrementos implementados, auditoría restante de estilos y último CI pendientes.
+- [ ] F: auditoría y QA final; no merge automático.
+- [ ] A/B: reconciliar las casillas históricas con la evidencia final sin inventar validaciones.

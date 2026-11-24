@@ -27,14 +27,20 @@ class _SettingsFixture extends SettingsNotifier {
 }
 
 class _ProfileFixture extends UserExperienceProfileNotifier {
+  _ProfileFixture({this.consent = false});
+  final bool consent;
+
   @override
-  Future<UserExperienceProfile> build() async => const UserExperienceProfile(
+  Future<UserExperienceProfile> build() async => UserExperienceProfile(
     displayName: 'Perfil de prueba',
     trainingGoal: TrainingGoal.hypertrophy,
     trainingExperience: TrainingExperience.intermediate,
     trainingDaysPerWeek: 4,
     trainingEnvironment: TrainingEnvironment.fullGym,
     sessionDuration: SessionDurationPreference.minutes60,
+    dateOfBirth: DateTime(1995, 5, 12),
+    genderIdentity: GenderIdentity.nonBinary,
+    optionalDemographicsConsented: consent,
   );
 }
 
@@ -73,6 +79,8 @@ void main() {
     expect(find.text('Ganar músculo'), findsWidgets);
     expect(find.text('Intermedio'), findsWidgets);
     expect(find.text('4 días'), findsWidgets);
+    expect(find.text('Fecha de nacimiento'), findsNothing);
+    expect(find.text('Género'), findsNothing);
     expect(find.byKey(const ValueKey('profile_open_settings')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('profile_open_settings')));
@@ -89,4 +97,44 @@ void main() {
     expect(container.read(settingsProvider).appearance.mode, AppThemeMode.light);
     expect(container.read(settingsProvider).hasCompletedOnboarding, isTrue);
   });
+
+  for (final width in [320.0, 390.0, 430.0]) {
+    for (final scale in [1.0, 1.6, 2.0]) {
+      testWidgets('Perfil y Ajustes are reachable at $width dp / $scale text', (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(width, 840);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(ProviderScope(
+          overrides: [
+            settingsProvider.overrideWith(_SettingsFixture.new),
+            userExperienceProfileProvider.overrideWith(() => _ProfileFixture(consent: true)),
+            gamificationProvider.overrideWith(_GamificationFixture.new),
+          ],
+          child: MaterialApp(
+            theme: AppearanceTheme.build(const AppearanceSettings(), Brightness.dark),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+              child: child!,
+            ),
+            home: const ProfilePage(),
+          ),
+        ));
+        await tester.pumpAndSettle();
+        expect(find.text('Perfil de prueba'), findsOneWidget);
+        expect(find.text('Editar perfil'), findsOneWidget);
+        await tester.scrollUntilVisible(find.text('Fecha de nacimiento'), 150);
+        expect(find.text('Fecha de nacimiento'), findsOneWidget);
+        await tester.scrollUntilVisible(find.text('Género'), 150);
+        expect(find.text('Género'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.byKey(const ValueKey('profile_open_settings')));
+        await tester.pumpAndSettle();
+        expect(find.byType(ProfileSettingsPage), findsOneWidget);
+        await tester.scrollUntilVisible(find.text('Legal y privacidad'), 180);
+        expect(find.text('Legal y privacidad'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
 }
