@@ -74,6 +74,12 @@
 **Criterio de salida:** guardia activa en CI y nuevas dependencias prohibidas imposibles de introducir inadvertidamente.
 
 ## Fase C — Extraer lógica, migrar UI de Core a Mobile
+**Avance C.1 (23/11/2026):** [Puerto nativo de entrenamiento y pruebas](../architecture/STK_C1_WORKOUT_NATIVE_PORT_20261123.md). Core conserva reglas de descanso y delega al adaptador Mobile los efectos de notificaciones, tono y vibración. La implementación anterior de `WorkoutNotificationService` sigue temporalmente en Core hasta migrar los demás consumidores.
+- [x] C.1.a: introducir `WorkoutNativeServices` Dart puro, proveedor inyectable, implementación Mobile y override único en bootstrap Android/iOS.
+- [x] C.1.a: eliminar `flutter/widgets.dart` y `flutter/services.dart` de `active_workout_provider.dart`; conservar IDs, plazos y notificaciones nativas.
+- [x] C.1.a: pruebas Core del puerto y contratos Mobile de tono sin cambio de foco musical, cancelación OS y Live Activity.
+- [ ] C.1.a: obtener 7/7 verde y QA física de música, avisos, timer y suspensión.
+- [ ] C.1.b: migrar implementación de `WorkoutNotificationService` y demás consumidores Flutter a adaptadores Mobile, preservando colas y permisos.
 **Piloto C.0 (compatible):** sustituir únicamente el import `hive_flutter` por `hive` Dart puro en ocho repositorios Core que reciben un `Box` y no inicializan Flutter. No hay cambios de claves, escritura, serialización, servicios de base de datos ni onboarding. Esta migración reduce ocho declaraciones prohibidas y dispone de test de contrato; requiere CI del último HEAD antes de contarse como validada.
 - [x] C.0: revisión de ocho repositorios Hive sin `Hive.initFlutter()`; cambio de import puro con el mismo `Box` y mismo comportamiento.
 - [x] C.0: test automatizado que impide regresar a `hive_flutter` en esos ocho archivos.

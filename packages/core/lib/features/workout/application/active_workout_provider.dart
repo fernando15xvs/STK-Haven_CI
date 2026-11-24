@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:core/database/hive/hive_boxes.dart';
@@ -21,7 +19,7 @@ import 'package:core/features/workout/application/exercise_memory_actions.dart';
 import 'package:core/features/workout/application/exercise_performance_memory.dart';
 import 'package:core/domain/models/workout_analysis.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/core/services/workout_notification_service.dart';
+import 'package:core/features/workout/application/workout_native_services_port.dart';
 import 'package:core/features/coach/application/coach_progress_provider.dart';
 import 'package:core/features/profile/application/gamification_provider.dart';
 import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
@@ -109,12 +107,19 @@ final activeWorkoutProvider =
       ActiveWorkoutNotifier.new,
     );
 
+/// Core only knows this Dart contract; Mobile supplies the real native adapter.
+final workoutNativeServicesProvider = Provider<WorkoutNativeServices>(
+  (ref) => const NoOpWorkoutNativeServices(),
+);
+
 class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
+  late WorkoutNativeServices _native;
   Timer? _restTimer;
   WorkoutSession? _undoSession;
 
   @override
   ActiveWorkoutState build() {
+    _native = ref.read(workoutNativeServicesProvider);
     ref.onDispose(_cancelTimers);
     final draft = ref.read(activeWorkoutRepositoryProvider).getDraft();
     if (draft != null) {
@@ -135,7 +140,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
           // Timer may have finished while the process was asleep or dead.
           // Remove stale OS/UI state immediately at session restoration.
           _clearRestInDraft(draft);
-          unawaited(WorkoutNotificationService.cancelRestTimerNotification());
+          unawaited(_native.cancelRestTimerNotification());
         }
       }
 
@@ -152,7 +157,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     }
     // A workout no longer exists but an old native countdown may survive
     // an OS/plugin restart. Do not leave a permanently pinned "0:00".
-    unawaited(WorkoutNotificationService.cancelRestTimerNotification());
+    unawaited(_native.cancelRestTimerNotification());
     return const ActiveWorkoutState();
   }
 
@@ -333,7 +338,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     if (previous == null) return false;
 
     _restTimer?.cancel();
-    WorkoutNotificationService.cancelRestTimerNotification();
+    _native.cancelRestTimerNotification();
     _undoSession = null;
 
     final now = DateTime.now();
@@ -392,7 +397,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         _maybeStartRest(decision.restSeconds, exercises);
       } else if (ref.read(settingsProvider).autoRestEnabled) {
         _restTimer?.cancel();
-        unawaited(WorkoutNotificationService.cancelRestTimerNotification());
+        unawaited(_native.cancelRestTimerNotification());
         state = state.copyWith(
           isResting: false,
           restTimerSeconds: 0,
@@ -855,7 +860,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     if (state.session == null) return;
     _captureUndo();
     _restTimer?.cancel();
-    WorkoutNotificationService.cancelRestTimerNotification();
+    _native.cancelRestTimerNotification();
     state = state.copyWith(
       isResting: false,
       restTimerSeconds: 0,
@@ -1033,7 +1038,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
   void _startRestTimer(int initialSeconds, DateTime endsAt) {
     _restTimer?.cancel();
     state = state.copyWith(isResting: true, restTimerSeconds: initialSeconds);
-    unawaited(WorkoutNotificationService.scheduleRestTimerNotification(
+    unawaited(_native.scheduleRestTimerNotification(
       endsAt, workoutSessionId: state.session?.id,
     ));
 
@@ -1056,40 +1061,18 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
   }
 
   void _playRestCompletionFeedbackIfForeground() {
-    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) {
-      return;
-    }
-
-    // The background notification is intentionally scheduled a moment after
-    // the timer. Cancel it here so foreground users receive one direct cue,
-    // while suspended apps still receive the local notification.
-    unawaited(WorkoutNotificationService.cancelRestTimerNotification());
-
     final settings = ref.read(settingsProvider);
-    if (settings.timerSoundEnabled) {
-      unawaited(_playStkRestTone());
-    }
-    if (settings.vibrationEnabled) {
-      unawaited(HapticFeedback.mediumImpact());
-    }
-  }
-
-  Future<void> _playStkRestTone() async {
-    try {
-      final played = await const MethodChannel('stk_haven/rest_tone')
-          .invokeMethod<bool>('play');
-      if (played == true) return;
-    } catch (_) {
-      // Channel absent (web/older build): use the platform's single alert.
-    }
-    // Deliberately do not fall back to SystemSound.alert: on some devices
-    // a generic alert takes audio focus and pauses the user's music.
-    // A failed native cue is silent; optional haptics still run.
+    // Core decides *when* a rest is complete; the injected Mobile adapter
+    // chooses native sound, vibration and foreground/OS notification behavior.
+    _native.playRestCompletionCueIfForeground(
+      soundEnabled: settings.timerSoundEnabled,
+      vibrationEnabled: settings.vibrationEnabled,
+    );
   }
 
   void _cancelTimers() {
     _restTimer?.cancel();
-    WorkoutNotificationService.cancelRestTimerNotification();
+    _native.cancelRestTimerNotification();
     _restTimer = null;
   }
 
@@ -1118,7 +1101,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
           !ref.read(settingsProvider).unfinishedWorkoutRemindersEnabled) {
         return;
       }
-      await WorkoutNotificationService.scheduleUnfinishedWorkoutReminder(
+      await _native.scheduleUnfinishedWorkoutReminder(
         lastActivityAt:
             ref.read(activeWorkoutRepositoryProvider).lastActivityAt ??
             session.startedAt,
@@ -1131,7 +1114,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
 
   Future<void> _cancelUnfinishedReminder() async {
     try {
-      await WorkoutNotificationService.cancelUnfinishedWorkoutReminders();
+      await _native.cancelUnfinishedWorkoutReminders();
     } catch (_) {
       // Draft removal remains authoritative.
     }

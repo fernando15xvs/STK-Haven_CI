@@ -67,10 +67,8 @@ void main() {
     final provider = shared(
       'lib/features/workout/application/active_workout_provider.dart',
     );
-    expect(provider, contains('unawaited(WorkoutNotificationService.'
-        'cancelRestTimerNotification());'));
-    expect(provider, contains('WorkoutNotificationService.'
-        'cancelRestTimerNotification();'));
+    expect(provider, contains('unawaited(_native.cancelRestTimerNotification());'));
+    expect(provider, contains('_native.cancelRestTimerNotification();'));
     expect(provider, contains('_clearRestInDraft(draft);'));
     expect(provider, contains('session: _rebuildSession('));
     expect(provider, contains('restTimerSeconds: 0'));
@@ -121,14 +119,31 @@ void main() {
     final provider = shared(
       'lib/features/workout/application/active_workout_provider.dart',
     );
+    final native = project(
+      'lib/platform/workout/mobile_workout_native_services.dart',
+    );
+    final bootstrap = project(
+      'lib/shared/bootstrap/mobile_app_bootstrap.dart',
+    );
     expect(delegate, contains('import AudioToolbox'));
     expect(delegate, contains('AudioServicesCreateSystemSoundID('));
     expect(delegate, contains('AudioServicesPlaySystemSound('));
     expect(delegate, isNot(contains('AVAudioPlayer(')));
     expect(delegate, isNot(contains('setCategory(.playback')));
     expect(provider, isNot(contains('SystemSound.play(SystemSoundType.alert)')));
-    expect(provider, contains("MethodChannel('stk_haven/rest_tone')"));
+    expect(provider, isNot(contains("MethodChannel('stk_haven/rest_tone')")));
+    expect(provider, isNot(contains('package:flutter/widgets.dart')));
+    expect(provider, isNot(contains('package:flutter/services.dart')));
     expect(provider, contains('settings.timerSoundEnabled'));
     expect(provider, contains('settings.vibrationEnabled'));
+    expect(provider, contains('_native.playRestCompletionCueIfForeground('));
+    expect(native, contains("MethodChannel('stk_haven/rest_tone')"));
+    expect(native, contains('WidgetsBinding.instance.lifecycleState'));
+    expect(native, contains('AppLifecycleState.resumed'));
+    expect(native, contains('HapticFeedback.mediumImpact()'));
+    expect(native, isNot(contains('SystemSound.play(SystemSoundType.alert)')));
+    expect(native, contains('WorkoutNotificationService.cancelRestTimerNotification()'));
+    expect(bootstrap, contains('workoutNativeServicesProvider.overrideWithValue('));
+    expect(bootstrap, contains('const MobileWorkoutNativeServices()'));
   });
 }
