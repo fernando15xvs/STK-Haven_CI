@@ -48,7 +48,8 @@
 **Avance A.1 (23/11/2026):** [auditoría preliminar](../architecture/STK_CORE_MOBILE_AUDIT_BASELINE_20261123.md) e [inventario de fuentes](../architecture/STK_CORE_MOBILE_SOURCE_INVENTORY_20261123.md) guardados en la misma PR. En el corte se inspeccionaron los 62 archivos Core de presentación/tema (52 visuales, 2 tema, 8 providers), declaraciones de import/export/part de los 114 archivos Mobile de producción y 17 servicios Core + 15 archivos críticos de integraciones. Se identificaron 18 consumidores Mobile→Core UI y ninguna importación directa de Mobile→Web en esos 114. **Fase A sigue EN CURSO**: inspeccionar las 279 rutas Core restantes y los tests, resolver el grafo completo y documentar contratos de puertos. No declarar arquitectura limpia todavía.
 - [x] A.1: árbol de archivos reproducible, inventario de Core/Mobile/test y referencia Web congelada.
 - [x] A.1: primera clasificación de Core `presentation`/tema y dependencias directas de Mobile.
-- [ ] A.2: mapa completo de import/export/part en las 279 rutas restantes de Core y 373 pruebas Core/Mobile.
+- [x] A.2 instrumentada: `tools/architecture_inventory.py` recorre todas las fuentes/test con salida JSON; el espejo CI adjunta informe en modo diagnóstico (sin exigir todavía cero violaciones).
+- [ ] A.2: revisar el JSON de ejecución y cerrar mapa completo de import/export/part en las 279 rutas restantes de Core y 373 pruebas Core/Mobile.
 - [ ] A.3: resolución de dependencias indirectas, plataformas y modelos/servicios mezclados.
 - [ ] A.4: validar baseline del último SHA y completar la matriz archivo-por-archivo.
 

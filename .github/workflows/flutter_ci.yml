@@ -25,6 +25,16 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+      # Phase A: report the complete dependency graph without failing for
+      # known legacy Core/Flutter violations. Phase B adds enforcement.
+      - name: Inventory architecture imports (diagnostic only)
+        run: python3 tools/architecture_inventory.py --json-out /tmp/stk_architecture_inventory.json
+      - name: Publish architecture inventory for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-architecture-inventory
+          path: /tmp/stk_architecture_inventory.json
+          retention-days: 14
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}

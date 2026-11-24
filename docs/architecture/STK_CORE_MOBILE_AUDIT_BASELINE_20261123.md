@@ -100,6 +100,12 @@ El `pubspec.yaml` de Core todavía declara `flutter`, `flutter_riverpod`, `hive_
 
 **CI previo de código funcional:** [Actions #45289091283](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/45289091283) completado con `success` en commit espejo `d6f200ab02cde33a69f24dd9054cbd5e701a6a0e`. La ejecución sobre el roadmap previo (`00a10e5`) estaba todavía en progreso al tomar la línea base. Un nuevo commit de documentación requiere su propia confirmación de CI.
 
+## Herramienta para completar A.2
+- `tools/architecture_inventory.py`: recorre todos los `.dart` del checkout sin modificar la app; registra `import`/`export`/`part` (incluyendo imports condicionales), resuelve referencias de paquetes Core/Mobile/Web y dependencias Core→UI transitivas por imports, y genera un JSON reproducible.
+- En el **espejo CI**, el job `Analyze + Core tests` lo ejecuta en modo **diagnóstico que siempre sale 0**, y publica el JSON `stk-architecture-inventory` durante 14 días. **No es todavía la barrera estricta de Fase B**, pues la deuda heredada haría fallar un bloqueo prematuro.
+- `--enforce` está disponible pero **no se activa** hasta verificar reglas/cobertura del analizador, depurar falsas alarmas, aplicar allowlist decreciente y terminar la migración.
+- Queda revisar el primer JSON/CI y actualizar métricas por archivo antes de cerrar A.2.
+
 ## Checklist de Fase A
 - [x] Árbol GitHub sin truncar, rutas de Core/Mobile/Web/test inventariadas.
 - [x] Inspeccionados los 62 archivos de Core en `presentation`/tema; separados 52 widgets/páginas + 2 temas + 8 providers.
