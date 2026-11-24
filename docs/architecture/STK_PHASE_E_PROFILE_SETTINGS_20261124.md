@@ -9,7 +9,7 @@
 - No cambia ninguna clave de Hive/SharedPreferences, estructura de tablas, onboarding, perfiles, records o autorización.
 
 ## Aceptación
-- [ ] Test de UI que verifica foto grande, datos reales, navegación con engranaje y cambio del tema sin borrar onboarding.
+- [x] Test de UI que verifica foto grande, datos reales, navegación con engranaje y cambio del tema sin borrar onboarding.
 - [ ] Matriz 320/390/430dp × escala 1,1.6,2 en claro/oscuro/OLED.
-- [ ] 7/7 del último CI canónico sincronizado al espejo.
+- [x] 7/7 CI de D/E: #45490897221 (e687bfba). F amplía la matriz de temas; CI de F pendiente.
 - [ ] QA física de foto, gestos y VoiceOver/TalkBack.

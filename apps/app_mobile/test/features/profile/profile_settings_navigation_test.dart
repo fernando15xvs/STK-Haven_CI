@@ -100,7 +100,8 @@ void main() {
 
   for (final width in [320.0, 390.0, 430.0]) {
     for (final scale in [1.0, 1.6, 2.0]) {
-      testWidgets('Perfil y Ajustes are reachable at $width dp / $scale text', (tester) async {
+      for (final surface in ['light', 'dark', 'oled']) {
+      testWidgets('Perfil y Ajustes are reachable at $width dp / $scale text / $surface', (tester) async {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = Size(width, 840);
         addTearDown(tester.view.resetPhysicalSize);
@@ -112,7 +113,10 @@ void main() {
             gamificationProvider.overrideWith(_GamificationFixture.new),
           ],
           child: MaterialApp(
-            theme: AppearanceTheme.build(const AppearanceSettings(), Brightness.dark),
+            theme: AppearanceTheme.build(
+              AppearanceSettings(oledBlack: surface == 'oled'),
+              surface == 'light' ? Brightness.light : Brightness.dark,
+            ),
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
               child: child!,
@@ -135,6 +139,7 @@ void main() {
         expect(find.text('Legal y privacidad'), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
+      }
     }
   }
 }

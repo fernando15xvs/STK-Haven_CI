@@ -9,6 +9,12 @@ import 'package:core/database/hive/models/hive_personal_record.dart';
 import 'package:core/database/hive/models/hive_routine.dart';
 import 'package:core/database/hive/models/hive_workout_session.dart';
 import 'package:core/domain/models/hive_favorite_verse.dart';
+import 'package:core/domain/models/settings_state.dart';
+import 'package:core/domain/models/user_experience_profile.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
+import 'package:core/features/profile/data/settings_repository.dart';
+import 'package:core/features/profile/data/user_experience_profile_repository.dart';
+import 'package:riverpod/riverpod.dart';
 import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
@@ -64,6 +70,69 @@ void main() {
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
     }
+  });
+
+  test('F: appearance survives real Hive restart and backup restore without data loss', () async {
+    final meta = Hive.box<dynamic>(HiveBoxes.metadata);
+    await meta.put(SettingsRepository.storageKey, {
+      'hasCompletedOnboarding': true,
+      'weightUnit': 'lb',
+      'defaultIncrement': 5.0,
+      'unilateralSideRestSeconds': 75,
+      'timerSoundEnabled': false,
+      'appearance': {'mode': 'light', 'accent': 'violet'},
+    });
+    const profile = UserExperienceProfile(
+      displayName: 'Fixture offline',
+      trainingDaysPerWeek: 4,
+      trainingGoal: TrainingGoal.hypertrophy,
+      onboardingVersion: 2,
+      optionalDemographicsConsented: false,
+    );
+    await UserExperienceProfileRepository(meta).saveProfile(profile);
+    await Hive.box<HiveWorkoutSession>(HiveBoxes.history)
+        .put('original', originalWorkout('original'));
+    final container = ProviderContainer();
+    const appearance = AppearanceSettings(
+      mode: AppThemeMode.system,
+      accent: AppAccent.emerald,
+      oledBlack: true,
+      uiStyle: AppUiStyle.compact,
+      fontFamily: AppFontFamily.manrope,
+      textSize: AppTextSize.custom,
+      customTextScale: 1.45,
+    );
+    final before = container.read(settingsProvider);
+    expect(before.appearance.fontFamily, AppFontFamily.outfit);
+    expect(before.hasCompletedOnboarding, isTrue);
+    await container.read(settingsProvider.notifier).setAppearance(appearance);
+    final expected = before.copyWith(appearance: appearance).toJson();
+    expect(container.read(settingsProvider).toJson(), expected);
+    container.dispose();
+
+    await Hive.close();
+    Hive.init(tempDir.path);
+    await openRestoreBoxes();
+    final reopened = Hive.box<dynamic>(HiveBoxes.metadata);
+    expect(SettingsRepository(reopened).getSettings().toJson(), expected);
+    expect(UserExperienceProfileRepository(reopened).getStoredProfile()?.toJson(),
+        profile.toJson());
+    final service = BackupService();
+    final backup = service.validateBackup(service.createBackup());
+    expect(backup.isValid, isTrue, reason: backup.errorMessage);
+    // Simulated replacement only in these disposable test boxes.
+    await SettingsRepository(reopened).saveSettings(const SettingsState());
+    await service.restoreBackup(
+      backup.parsedData!, schemaVersion: backup.schemaVersion!,
+    );
+    expect(SettingsRepository(reopened).getSettings().toJson(), expected);
+    expect(UserExperienceProfileRepository(reopened).getStoredProfile()?.toJson(),
+        profile.toJson());
+    final restored = Hive.box<HiveWorkoutSession>(HiveBoxes.history)
+        .get('original')!;
+    expect(restored.exercises.single.sets.first.weight, 50);
+    expect(restored.exercises.single.sets.first.reps, 8);
+    expect(restored.exercises.single.sets.last.recordedOutcome, 'skipped');
   });
 
   test('B1.8: interrupted Hive restore survives process restart', () async {

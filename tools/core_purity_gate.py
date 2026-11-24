@@ -7,13 +7,82 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import re
 import sys
 
-from architecture_inventory import audit
+from architecture_inventory import audit, resolve_uri, platform_package
 
 ROOT = Path(__file__).resolve().parent.parent
 CHECKED = ("packages/core/lib/", "packages/core/test/",
            "apps/app_mobile/lib/", "apps/app_mobile/test/")
+
+
+# These are the reviewed Dart-only direct dependencies, not exceptions for
+# prohibited imports. A new dependency requires a review of its SDK/platform
+# requirements, rather than silently extending the old migration baseline.
+PURE_CORE_DEPENDENCIES = frozenset({
+    "riverpod", "supabase", "hive", "intl", "uuid", "path", "http", "csv",
+    "test", "lints",
+})
+FORBIDDEN_DART = frozenset({
+    "dart:ui", "dart:html", "dart:js", "dart:js_util", "dart:js_interop",
+    "dart:js_interop_unsafe", "dart:svg", "dart:web_audio",
+})
+
+
+def manifest_violations(root: Path) -> list[str]:
+    manifest = root / "packages/core/pubspec.yaml"
+    if not manifest.is_file():
+        return ["missing Core pubspec.yaml"]
+    content = manifest.read_text(encoding="utf-8")
+    violations = []
+    section = ""
+    for raw in content.splitlines():
+        line = raw.split("#", 1)[0].rstrip()
+        if not line.strip():
+            continue
+        top = re.match(r"^([\\w]+):", line)
+        if top:
+            section = top.group(1)
+            if section in {"flutter", "dependency_overrides"}:
+                violations.append(f"forbidden Core manifest section: {section}")
+        if section not in {"dependencies", "dev_dependencies"}:
+            continue
+        dep = re.match(r"^  ([\\w]+):\\s*(.*)$", line)
+        if dep:
+            name, version = dep.groups()
+            if name not in PURE_CORE_DEPENDENCIES:
+                violations.append(f"unreviewed Core dependency: {name}")
+            # Current pure dependencies are version constraints, not
+            # local/path/git/SDK overrides of an otherwise approved name.
+            if not version or not re.fullmatch(
+                    r"[\\^~<>=0-9.*+\\- \\'\\\"]+", version):
+                violations.append(f"non-version Core dependency: {name}")
+    return violations
+
+
+def boundary_violations(report: dict) -> list[dict]:
+    failures = []
+    for path, uris in report["all_imports"].items():
+        core = path.startswith(("packages/core/lib/", "packages/core/test/"))
+        mobile = path.startswith(("apps/app_mobile/lib/", "apps/app_mobile/test/"))
+        if not (core or mobile):
+            continue
+        for uri in uris:
+            target = resolve_uri(path, uri)
+            package = uri[8:].split("/", 1)[0] if uri.startswith("package:") else ""
+            web = (package == "gym_tracker_web" or "apps/app_web/" in uri
+                   or bool(target and target.startswith("apps/app_web/")))
+            mobile_target = (package == "gym_tracker" or "apps/app_mobile/" in uri
+                             or bool(target and target.startswith("apps/app_mobile/")))
+            forbidden = (mobile and web) or (core and (
+                web or mobile_target or uri in FORBIDDEN_DART
+                or platform_package(uri) is not None
+                or package.startswith("flutter")
+            ))
+            if forbidden:
+                failures.append({"path": path, "uri": uri})
+    return failures
 
 
 def inspect(root: Path = ROOT) -> dict:
@@ -36,10 +105,15 @@ def inspect(root: Path = ROOT) -> dict:
         entry for entry in report["unresolved_imports"]
         if entry["path"].startswith(CHECKED)
     ]
+    manifest = manifest_violations(root)
+    boundary = boundary_violations(report)
     return {
         "status": "pass" if not (forbidden or core_ui_files or
-                               report["core_ui_transitive"] or unresolved)
+                               report["core_ui_transitive"] or unresolved
+                               or manifest or boundary)
                   else "fail",
+        "core_manifest_violations": manifest,
+        "production_and_test_boundary_violations": boundary,
         "direct": forbidden,
         "core_ui_files": core_ui_files,
         "core_ui_transitive": report["core_ui_transitive"],

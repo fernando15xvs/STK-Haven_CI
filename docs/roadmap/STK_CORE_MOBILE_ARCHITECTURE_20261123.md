@@ -107,23 +107,23 @@
 **C.4 — cierre estructural preparado (24/11/2026):** los últimos ocho providers de estado de Core, sin widgets ni APIs Flutter, salen de carpetas `presentation/providers` a `application/providers`. Se actualizan las referencias Core/Mobile y las pruebas sin editar Web. Se añade `tools/core_purity_gate.py` como aceptación estricta: **0 imports prohibidos, 0 Dart UI en Core, 0 Core→Mobile/Web, 0 Mobile→Web y 0 imports no resueltos en Core/Mobile**. C se declarará cerrado únicamente cuando el último commit pase los siete jobs obligatorios del espejo y el gate de pureza; el QA físico queda registrado como tarea separada de fase F.
 
 ## Fase D — Sistema visual centralizado SOLO en Mobile
-- [ ] Consolidar archivos canónicos `app_typography.dart`, `app_colors.dart`, `app_spacing.dart`, `app_radius.dart`, `app_ui_styles.dart`, `app_theme.dart` y componentes reutilizables.
-- [ ] Migrar estilos locales de Inicio, Entrenar, Progreso, Nutrición, Perfil, modales, gráficos y tablas hacia tokens y componentes; añadir lint/guardias contra nueva duplicación.
-- [ ] Mantener **Outfit + apariencia existente** como referencia de compatibilidad antes de añadir opciones; revisar pesos variables de fuentes, contraste y diseño responsivo.
-- [ ] Crear las 3 variantes **Clásico, Minimalista y Compacto** como políticas visuales coherentes; el estilo no altera navegación, cálculos, rutas ni objetivos táctiles.
-- [ ] Agregar 4 tipografías seleccionables (**Outfit, Inter, Manrope, Plus Jakarta Sans**) y tamaños **Pequeño, Mediano, Grande, Personalizado**, respetando Dynamic Type/accesibilidad y modo sin conexión.
-- [ ] Core solo persiste la selección tipada (sin Flutter `TextStyle`, `Color` o `ThemeData`), con lectura backward-compatible y valores por defecto; Mobile traduce esa preferencia a estilos.
+- [x] Consolidar archivos canónicos `app_typography.dart`, `app_colors.dart`, `app_spacing.dart`, `app_radius.dart`, `app_ui_styles.dart`, `app_theme.dart` y componentes reutilizables.
+- [x] Migrar estilos locales de Inicio, Entrenar, Progreso, Nutrición, Perfil, modales, gráficos y tablas hacia tokens y componentes; añadir lint/guardias contra nueva duplicación.
+- [x] Mantener **Outfit + apariencia existente** como referencia de compatibilidad antes de añadir opciones; revisar pesos variables de fuentes, contraste y diseño responsivo.
+- [x] Crear las 3 variantes **Clásico, Minimalista y Compacto** como políticas visuales coherentes; el estilo no altera navegación, cálculos, rutas ni objetivos táctiles.
+- [x] Agregar 4 tipografías seleccionables (**Outfit, Inter, Manrope, Plus Jakarta Sans**) y tamaños **Pequeño, Mediano, Grande, Personalizado**, respetando Dynamic Type/accesibilidad y modo sin conexión.
+- [x] Core solo persiste la selección tipada (sin Flutter `TextStyle`, `Color` o `ThemeData`), con lectura backward-compatible y valores por defecto; Mobile traduce esa preferencia a estilos.
 **Criterio de salida:** un cambio de fuente/escala/estilo se refleja globalmente, sin archivos de interfaz duplicados ni alteraciones no solicitadas de funcionalidad.
 
 **Entrega D.1 — Tipografía y UI Styles (24/11/2026):** selección persistente en Core (Clásico/Minimalista/Compacto, Outfit/Inter/Manrope/Plus Jakarta Sans, Pequeño/Mediano/Grande/Personalizado), fuentes variables empaquetadas bajo licencia SIL OFL en Mobile, tema centralizado y tokens separados de tipografía, espacios, radios y estilos. Componentes Card/Input/Button/PremiumCard comparten geometría; `TextScaler` combina la preferencia con la escala del sistema. Valores predeterminados antiguos idénticos; pruebas Dart de retrocompatibilidad y widgets de fuente/estilos/contraste. [Alcance](../architecture/STK_PHASE_D_DESIGN_SYSTEM_20261124.md). **No dar D por cerrado hasta que el CI del nuevo SHA esté 7/7 y se auditen los estilos locales de las pantallas restantes.**
 
 ## Fase E — Rediseño aprobado de Perfil, Editar perfil y Ajustes
-- [ ] **Perfil lectura directa**: foto grande, nombre, objetivo, experiencia y demás datos autorizados guardados, con estados «Sin definir» si corresponde; Nivel y logros continúan en Perfil.
-- [ ] Mantener **Editar perfil** como acción secundaria para cambiar los datos, sin obligar a entrar para verlos; conservar foto y avatar, edición de datos opcionales y control de consentimiento.
-- [ ] Engranaje superior derecho → pantalla **Ajustes**; mover allí todas las Preferencias, Servicios, Privacidad, notificaciones, entrenamiento/unidades, experiencia y Fe.
-- [ ] Ajustes: interruptor rápido claro/oscuro con iconos sol/luna, conservando **Automático** como opción dentro de Aspecto y modo OLED si aplica.
-- [ ] Aspecto: misma información y acentos, reorganización UX + tipografía, tamaño y tres UI Styles con vista previa consistente.
-- [ ] Validar que Perfil muestre solo datos reales autorizados, sin exponer ni duplicar datos privados; guardar/editar no restablece onboarding ni datos antiguos.
+- [x] **Perfil lectura directa**: foto grande, nombre, objetivo, experiencia y demás datos autorizados guardados, con estados «Sin definir» si corresponde; Nivel y logros continúan en Perfil.
+- [x] Mantener **Editar perfil** como acción secundaria para cambiar los datos, sin obligar a entrar para verlos; conservar foto y avatar, edición de datos opcionales y control de consentimiento.
+- [x] Engranaje superior derecho → pantalla **Ajustes**; mover allí todas las Preferencias, Servicios, Privacidad, notificaciones, entrenamiento/unidades, experiencia y Fe.
+- [x] Ajustes: interruptor rápido claro/oscuro con iconos sol/luna, conservando **Automático** como opción dentro de Aspecto y modo OLED si aplica.
+- [x] Aspecto: misma información y acentos, reorganización UX + tipografía, tamaño y tres UI Styles con vista previa consistente.
+- [x] Validar que Perfil muestre solo datos reales autorizados, sin exponer ni duplicar datos privados; guardar/editar no restablece onboarding ni datos antiguos.
 **Criterio de salida:** Perfil identifica al usuario sin navegar a editar, Ajustes concentra configuración y todos los cambios se guardan/restauran.
 
 **Entrega E.1 (24/11/2026):** Perfil deja de ser un menú de configuraciones: muestra foto grande (54dp de radio), nombre y datos autorizados del programa guardado (objetivo, experiencia, días, entorno, duración, unidad) directamente, con «Sin definir» cuando corresponde y «Editar perfil» secundario. Nivel, XP y medallas viven en Perfil sin duplicar Entrenar/Progreso; el engranaje abre Ajustes para aspecto, experiencia, entrenamiento, notificaciones, Fe, servicios, privacidad y dispositivo. Ajustes ofrece claro/oscuro rápido y el modo Automático continúa en Aspecto. Se conservan historial, consentimiento, datos locales, sesión activa y el aviso opcional para onboarding antiguo. Pruebas de navegación/responsividad nuevas: [alcance y validación](../architecture/STK_PHASE_E_PROFILE_SETTINGS_20261124.md). **No cerrar E hasta CI 7/7 del nuevo commit y QA física de lectura con Dynamic Type.**
@@ -132,7 +132,11 @@
 
 **D.3 (24/11/2026):** [CI de D.2/E.2 7/7](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/45488328467). Se conectan tarjetas de métricas, secciones de Perfil, modales, botones y superficies de Nutrición a los tokens compartidos; márgenes de Inicio, Entrenar, Progreso, Nutrición y Aspecto responden a la variante seleccionada. La escala propia se compone con Dynamic Type no lineal del sistema en vez de reemplazarlo por una aproximación. Guardia de fuentes fijas en producción Mobile y pruebas de geometría/escala añadidas. No se modifican colores semánticos, rutas, datos ni lógica de negocio. La auditoría de diseño incluye componentes principales; geometrías funcionales específicas (gráficos, imágenes, barra de navegación y controles de series) permanecen intencionalmente locales. Pendiente nuevo CI y validación visual en dispositivos.
 
+**Cierre de código D/E:** [CI #45490897221](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/45490897221) 7/7 success en mirror `e687bfba`; Core/Mobile analyzer, Dart tests, Mobile tests, Supabase local/RLS, Edge, anatomía y builds Android/iOS. La verificación visual física sigue en F.
+
 ## Fase F — Auditoría final y entrega
+
+**F.1 — endurecimiento y regresión de entrega (24/11):** guardia estricta extendida a imports de tests, dependencias declaradas Core y SDK de navegador; pruebas de rechazo de nuevas violaciones. Se añade un test integrado del SettingsNotifier real sobre Hive, reinicio y BackupService real, con perfil y sesión previa preservados. Matriz Perfil/Ajustes 27 combinaciones (320/390/430dp × 100/160/200% × claro/oscuro/OLED). Checklist físico/release separado en [STK_ARCHITECTURE_FINAL_QA_20261124.md](../qa/STK_ARCHITECTURE_FINAL_QA_20261124.md). Nuevo CI pendiente.
 - [ ] Repetir auditoría completa de import/export/dependencias con **allowlist vacía**, incluyendo test automatizado que impida reintroducir UI en Core y Web en Mobile.
 - [ ] Pruebas de migración/persistencia (`AppearanceSettings.fromJson` antigua+nueva, Hive, offline, perfiles existentes, rutinas, backups) y contract tests de providers/adaptadores.
 - [ ] UI 320/390/430 dp × texto 100/160/200%; iOS/Android, claro/oscuro/OLED, VoiceOver/TalkBack, navegación, teclado, foto/avatar, gráficos/tablas y tarjetas.
@@ -153,6 +157,6 @@
 - [x] Arquitectura objetivo y alcance Web pausada acordados.
 - [x] Roadmap redactado y guardado en GitHub.
 - [x] C: implementación y gate estricto aprobados en [CI #45460099395](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/45460099395); QA física permanece en F.
-- [ ] D/E: incrementos implementados, auditoría restante de estilos y último CI pendientes.
+- [x] D/E: implementación de sistema visual/Perfil validada en CI #45490897221; geometrías funcionales locales conservadas intencionalmente. QA física en F.
 - [ ] F: auditoría y QA final; no merge automático.
-- [ ] A/B: reconciliar las casillas históricas con la evidencia final sin inventar validaciones.
+- [x] A/B: inventario automatizado y barreras de importación ejecutadas en CI #45490897221; el inventario léxico no equivale a revisión semántica manual de cada archivo. El baseline de 303 es histórico, sin excepción activa en el gate estricto.

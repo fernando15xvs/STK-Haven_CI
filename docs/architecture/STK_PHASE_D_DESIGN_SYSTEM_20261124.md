@@ -14,7 +14,7 @@ Las fuentes alternativas están empaquetadas en `apps/app_mobile/assets/fonts` y
 El preview de Aspecto muestra datos de ejemplo, sin consultar nutrición, entrenamientos ni datos privados.
 
 ## Aceptación
-- [ ] Core Dart tests de lectura de datos previos/invalidación de escala y round trip.
-- [ ] Mobile tests de 4 familias, 3 estilos, escalas, fondos/OLED y tap targets.
-- [ ] 7/7 CI del último commit sincronizado a espejo y gate de pureza.
+- [x] Core Dart tests de lectura de datos previos/invalidación de escala y round trip.
+- [x] Mobile tests de 4 familias, 3 estilos, escalas, fondos/OLED y tap targets.
+- [x] 7/7 CI de D/E y gate de pureza: #45490897221 (e687bfba). Nuevo gate F por separado.
 - [ ] QA física iOS/Android, sobre todo tamaño grande y VoiceOver/TalkBack.
