@@ -1,6 +1,6 @@
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/body_measurement.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

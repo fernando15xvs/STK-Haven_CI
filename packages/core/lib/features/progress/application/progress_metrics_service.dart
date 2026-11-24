@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/features/progress/application/calendar_heatmap_calculator.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
-import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
+import 'package:core/features/workout/application/providers/personal_record_provider.dart';
 
 /// A frequency/calendar training day needs evidence of completed working
 /// exercise, not merely an imported or empty historical row. A partially

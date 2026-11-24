@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/programs/application/youth_training_guidance.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

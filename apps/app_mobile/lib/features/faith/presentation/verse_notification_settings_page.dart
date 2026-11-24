@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/faith/data/verse_schedule_repository.dart';
 import 'package:core/features/faith/domain/verse_notification_schedule.dart';
 import 'package:core/features/faith/services/verse_notification_service.dart';

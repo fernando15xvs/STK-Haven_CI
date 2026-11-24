@@ -8,7 +8,7 @@ import 'package:core/domain/models/personal_record.dart';
 import 'package:core/domain/models/workout_analysis.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/domain/models/settings_state.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/workout/application/workout_summary_snapshot.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
@@ -16,7 +16,7 @@ import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_comparison_summary.dart';
 import 'package:gym_tracker/features/faith/presentation/widgets/workout_closing_reflection_card.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:gym_tracker/features/home/application/home_tab_return_request.dart';
 
 class WorkoutSummaryPage extends ConsumerStatefulWidget {

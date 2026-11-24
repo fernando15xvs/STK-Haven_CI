@@ -6,12 +6,12 @@ import 'package:gym_tracker/features/workout/presentation/widgets/unilateral_pau
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/settings_state.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/routines/application/routine_order_coordinator.dart';
 import 'package:core/features/routines/application/routine_superset_coordinator.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_personal_settings_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
+import 'package:core/features/exercises/application/providers/exercise_personal_settings_provider.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_library_page.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';

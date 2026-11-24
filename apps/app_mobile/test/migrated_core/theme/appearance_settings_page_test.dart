@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/appearance_settings_page.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 
 class _Settings extends SettingsNotifier {
   @override

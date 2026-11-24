@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
-import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
+import 'package:core/features/programs/application/providers/training_program_provider.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 
 class WorkoutLauncher {

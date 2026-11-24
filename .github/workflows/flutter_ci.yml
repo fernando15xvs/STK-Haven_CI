@@ -47,6 +47,8 @@ jobs:
           name: stk-architecture-guard
           path: /tmp/stk_architecture_guard.json
           retention-days: 14
+      - name: Strict Core purity and import-resolution gate
+        run: python3 tools/core_purity_gate.py
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -74,7 +76,7 @@ jobs:
         run: flutter analyze --no-fatal-infos
       - name: Core Dart tests (no Flutter dependency)
         working-directory: packages/core
-        run: dart test
+        run: dart test -r expanded
 
   supabase-db:
     name: Supabase DB + RLS tests

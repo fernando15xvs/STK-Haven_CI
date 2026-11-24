@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/core/utils/weight_converter.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:core/features/progress/services/measurement_reminder_service.dart';
 

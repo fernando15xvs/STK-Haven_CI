@@ -1,8 +1,8 @@
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/anatomy_audit_page.dart';
 import 'package:core/features/progress/application/muscle_balance_calculator.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

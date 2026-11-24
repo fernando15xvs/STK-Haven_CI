@@ -1,8 +1,8 @@
 import 'package:gym_tracker/core/theme/app_palette.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

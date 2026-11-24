@@ -14,7 +14,7 @@ import 'package:gym_tracker/features/progress/presentation/pages/focused_exercis
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:core/domain/models/settings_state.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 
 class ExerciseDetailPage extends ConsumerWidget {
   final Exercise exercise;

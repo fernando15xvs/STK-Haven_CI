@@ -1,7 +1,7 @@
 import 'package:riverpod/riverpod.dart';
 import 'package:core/features/faith/data/bible_database.dart';
 import 'package:core/features/faith/application/faith_feature_policy.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 
 /// Observable initialization state for the Bible SQLite database.
 enum BibleDbStatus { idle, loading, ready, error }

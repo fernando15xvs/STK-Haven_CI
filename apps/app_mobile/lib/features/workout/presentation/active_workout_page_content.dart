@@ -12,7 +12,7 @@ import 'package:core/features/workout/application/active_workout_suggestions_pro
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_increment_control.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_rep_range_notice.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/active_workout_memory_overlay.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/domain/models/routine.dart';
@@ -21,7 +21,7 @@ import 'package:core/domain/models/exercise.dart';
 import 'package:gym_tracker/features/workout/presentation/workout_summary_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_library_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detail_page.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/barbell_calculator_modal.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/workout_rest_controls.dart';
 

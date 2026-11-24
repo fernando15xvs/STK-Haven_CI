@@ -6,9 +6,9 @@ import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/workout_history_index.dart';
 import 'package:core/features/workout/application/progression_engine.dart';
 import 'package:core/features/workout/application/exercise_performance_memory.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/recovery/application/recovery_provider.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
 
 /// Latest completed performance for every exercise in the active session,
 /// independent of routineId. The history index avoids scanning every exercise

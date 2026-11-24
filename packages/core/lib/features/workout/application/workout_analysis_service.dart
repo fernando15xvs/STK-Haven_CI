@@ -1,7 +1,7 @@
 import 'package:riverpod/riverpod.dart';
 import '../../../domain/models/workout_session.dart';
 import '../../../domain/models/workout_analysis.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
 import '../presentation/providers/personal_record_provider.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
@@ -10,7 +10,7 @@ import 'pr_detector.dart';
 import 'plateau_detector.dart';
 import 'progression_engine.dart';
 import 'workout_comparator.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/profile/application/gamification_provider.dart';
 import 'package:core/features/recovery/application/recovery_provider.dart';
 

@@ -18,11 +18,11 @@ import 'package:core/features/workout/application/unilateral_set_coordinator.dar
 import 'package:core/features/workout/application/exercise_memory_actions.dart';
 import 'package:core/features/workout/application/exercise_performance_memory.dart';
 import 'package:core/domain/models/workout_analysis.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/workout/application/workout_native_services_port.dart';
 import 'package:core/features/coach/application/coach_progress_provider.dart';
 import 'package:core/features/profile/application/gamification_provider.dart';
-import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
+import 'package:core/features/programs/application/providers/training_program_provider.dart';
 
 sealed class FinishWorkoutResult {}
 

@@ -10,8 +10,8 @@ import 'package:gym_tracker/features/profile/presentation/pages/personal_reminde
 import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:core/features/home/application/hydration_provider.dart';
 import 'package:core/features/home/application/wellness_provider.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

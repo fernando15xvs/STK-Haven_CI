@@ -1,8 +1,8 @@
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

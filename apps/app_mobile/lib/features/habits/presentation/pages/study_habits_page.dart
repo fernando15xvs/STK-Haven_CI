@@ -11,7 +11,7 @@ import 'package:core/features/habits/application/habit_tasks_provider.dart';
 import 'package:core/features/habits/application/study_plan_catalog.dart';
 import 'package:core/features/habits/application/study_plan_provider.dart';
 import 'package:gym_tracker/features/habits/presentation/pages/habit_study_timer_page.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';

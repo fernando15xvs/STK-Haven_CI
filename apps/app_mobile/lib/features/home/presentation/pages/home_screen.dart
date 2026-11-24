@@ -2,7 +2,7 @@ import 'package:gym_tracker/features/coach/presentation/pages/coach_hub_page.dar
 import 'package:core/features/coach_pro/application/coach_pro_entitlement_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:gym_tracker/features/habits/presentation/study_habits_mobile_page.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

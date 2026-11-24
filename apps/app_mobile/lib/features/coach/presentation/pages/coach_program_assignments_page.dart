@@ -4,7 +4,7 @@ import 'package:core/features/coach/application/coach_program_assignment_provide
 import 'package:core/features/coach/application/coach_program_revision_acceptance_provider.dart';
 import 'package:gym_tracker/features/coach/presentation/pages/coach_program_revision_review_page.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
+import 'package:core/features/programs/application/providers/training_program_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

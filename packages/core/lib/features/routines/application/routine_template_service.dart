@@ -1,9 +1,9 @@
 import 'package:core/core/constants/preset_programs.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/routine_template.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
 import 'package:core/features/routines/data/routine_repository.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:uuid/uuid.dart';
 

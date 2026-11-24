@@ -6,20 +6,20 @@ import 'package:supabase/supabase.dart';
 
 import 'package:core/core/services/backup_activity_service.dart';
 import 'package:core/core/services/backup_service.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/habits/application/habit_study_timer_provider.dart';
 import 'package:core/features/habits/application/habit_tasks_provider.dart';
 import 'package:core/features/habits/application/study_plan_provider.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
-import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
+import 'package:core/features/programs/application/providers/training_program_provider.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
-import 'package:core/features/workout/presentation/providers/personal_record_provider.dart';
+import 'package:core/features/workout/application/providers/personal_record_provider.dart';
 
 enum CloudSyncOperation { idle, signingIn, signingUp, uploading, downloading }
 

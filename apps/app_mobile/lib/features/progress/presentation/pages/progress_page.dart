@@ -4,7 +4,7 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
 import 'package:core/features/progress/application/progress_insight_calculator.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_insights_panel.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/progress_intelligence_page.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/muscle_heatmap_grid.dart';
@@ -17,7 +17,7 @@ import 'package:gym_tracker/features/progress/presentation/widgets/progress_volu
 import 'package:gym_tracker/features/progress/presentation/widgets/progress_consistency_metrics.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/compact_progress_period_selector.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/body_measurement_page.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 
 class ProgressPage extends ConsumerWidget {
   const ProgressPage({super.key, this.summaryAnchorKey});

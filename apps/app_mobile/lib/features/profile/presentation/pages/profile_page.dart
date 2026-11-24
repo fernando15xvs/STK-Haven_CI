@@ -4,8 +4,8 @@ import 'package:gym_tracker/features/profile/presentation/pages/experience_prefe
 import 'package:gym_tracker/features/profile/presentation/pages/notifications_settings_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/personal_profile_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/training_preferences_page.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:gym_tracker/features/profile/presentation/widgets/personal_profile_summary.dart';
 import 'package:gym_tracker/features/profile/presentation/widgets/platform_settings_page.dart';
 import 'package:gym_tracker/features/sync/presentation/backup_status_page.dart';

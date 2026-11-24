@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/exercise.dart';
-import 'package:core/features/exercises/presentation/providers/exercise_provider.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/tools/application/training_tools.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

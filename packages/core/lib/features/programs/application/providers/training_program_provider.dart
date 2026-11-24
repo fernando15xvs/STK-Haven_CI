@@ -5,8 +5,8 @@ import 'package:core/features/programs/application/program_rotation_coordinator.
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/training_program_legacy_policy.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
-import 'package:core/features/profile/presentation/providers/settings_provider.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:hive/hive.dart';

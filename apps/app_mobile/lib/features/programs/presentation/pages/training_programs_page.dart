@@ -7,9 +7,9 @@ import 'package:core/features/programs/application/program_schedule_projector.da
 import 'package:core/features/programs/application/program_routine_order_policy.dart';
 import 'package:core/features/programs/application/program_duration_choices.dart';
 import 'package:core/features/programs/application/youth_training_guidance.dart';
-import 'package:core/features/programs/presentation/providers/training_program_provider.dart';
-import 'package:core/features/routines/presentation/providers/routine_provider.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/programs/application/providers/training_program_provider.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

@@ -3,7 +3,7 @@ import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/coach/application/coach_client_provider.dart';
 import 'package:gym_tracker/features/coach/presentation/pages/coach_client_detail_page.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
