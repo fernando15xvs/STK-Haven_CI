@@ -5,6 +5,9 @@ import 'package:core/database/hive/hive_database.dart';
 import 'package:core/core/services/workout_notification_service.dart';
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/core/services/step_goal_reminder_service.dart';
+import 'package:core/core/services/coach_pro_local_reminder_service.dart';
+import 'package:core/features/coach/application/coach_task_notification_service.dart';
+import 'package:core/features/habits/application/habit_task_notification_service.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +21,9 @@ import '../../platform/workout/mobile_workout_native_services.dart';
 import '../../platform/workout/mobile_workout_notification_service.dart';
 import '../../platform/reminders/mobile_hydration_reminder_service.dart';
 import '../../platform/reminders/mobile_step_goal_reminder_service.dart';
+import '../../platform/reminders/mobile_coach_pro_local_reminder_service.dart';
+import '../../platform/reminders/mobile_coach_task_notification_service.dart';
+import '../../platform/reminders/mobile_habit_task_notification_service.dart';
 
 typedef PlatformServicesInitializer = Future<void> Function();
 
@@ -49,6 +55,15 @@ Future<void> bootstrapMobileApp({
   );
   StepGoalReminderService.installBackend(
     const MobileStepGoalReminderBackend(),
+  );
+  CoachProLocalReminderService.installBackend(
+    const MobileCoachProLocalReminderBackend(),
+  );
+  CoachTaskNotificationService.installBackend(
+    const MobileCoachTaskNotificationBackend(),
+  );
+  HabitTaskNotificationService.installBackend(
+    const MobileHabitTaskNotificationBackend(),
   );
 
   // Initialise OS lock-screen and notification controls before creating a player.
