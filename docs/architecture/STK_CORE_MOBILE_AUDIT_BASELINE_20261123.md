@@ -40,8 +40,8 @@ La totalidad de los 52 archivos de interfaz identificados en `presentation/` imp
 
 **Decisión:** extraer primero las reglas contenidas dentro de pantallas/diálogos, cambiar imports y rutas en Mobile y recién después eliminar los originales Core. No dar por pura una carpeta solo porque no se llame `presentation`.
 
-## Mobile → Core UI: 18 archivos consumidores confirmados
-Inspeccionadas las declaraciones `import`, `export` y `part` de **los 114 Dart de producción de Mobile**. Identificados **18 archivos** con importaciones a elementos visuales de Core. El destino de esas referencias debe cambiar a nuevas rutas Mobile.
+## Mobile → Core UI: muestra manual de 18 consumidores (total automático: 25)
+Inspeccionadas las declaraciones `import`, `export` y `part` de **los 114 Dart de producción de Mobile**. Identificados **18 archivos** en la revisión manual inicial (el barrido automático posterior detectó **25**). El destino de esas referencias debe cambiar a nuevas rutas Mobile.
 
 | Área | Consumidor (ruta relativa a `apps/app_mobile/lib`) | UI de Core actualmente utilizada |
 |---|---|---|
@@ -106,13 +106,17 @@ El `pubspec.yaml` de Core todavía declara `flutter`, `flutter_riverpod`, `hive_
 - `--enforce` está disponible pero **no se activa** hasta verificar reglas/cobertura del analizador, depurar falsas alarmas, aplicar allowlist decreciente y terminar la migración.
 - Queda revisar el primer JSON/CI y actualizar métricas por archivo antes de cerrar A.2.
 
+## Resultado automatizado posterior
+Ver [A.2 — escaneo completo](STK_ARCHITECTURE_AUTOMATED_RESULTS_20261123.md): 890 Dart, **55 archivos Core con importaciones de UI** (incluido `features/workout/application/active_workout_provider.dart` fuera de `presentation`), **70 Core con importaciones Flutter**, **170 Core con importaciones de plugins/Flutter**, **25 consumidores Mobile→Core UI** y **2 dependientes Core indirectos**. No se detectaron imports directos Core→Mobile/Web ni Mobile→Web. Los 6 imports no resueltos pertenecen a Web congelada. Los conteos manuales se conservan como historial de la primera revisión, no como cifras totales.
+
 ## Checklist de Fase A
 - [x] Árbol GitHub sin truncar, rutas de Core/Mobile/Web/test inventariadas.
 - [x] Inspeccionados los 62 archivos de Core en `presentation`/tema; separados 52 widgets/páginas + 2 temas + 8 providers.
 - [x] Inspeccionadas las importaciones declaradas en los 114 archivos de producción Mobile; 18 consumidores Core UI, sin Mobile→Web directo en la muestra.
 - [x] Documentado el subconjunto de servicios/plugins críticos y el SHA de referencia Web congelada.
-- [ ] **A.2** Inspeccionar por contenido las 279 rutas restantes Core (no solo por nombre) y catalogar todas sus importaciones/exportaciones/parts y las dependencias transitivas.
-- [ ] **A.3** Examinar los 196 tests Core y los 177 Mobile y mapear referencias antiguas y rutas necesarias al mover widgets; revisar otros scripts.
+- [x] **A.2 léxica:** análisis de declaraciones de los 890 Dart (incluidos los 279 Core restantes y los tests), con JSON generado por GitHub Actions #45307024472.
+- [ ] **A.2 semántica:** revisar los 170 Core consumidores de plugins/Flutter, los 55 Core UI y las dependencias indirectas, antes de mover código.
+- [ ] **A.3** Revisar funcionalmente los 196 tests Core y 177 Mobile y mapear referencias que deban migrar; las declaraciones de imports de estos tests ya están inventariadas.
 - [ ] **A.4** Clasificar UI+reglas mezcladas y diseñar puertos concretos por archivo/feature, con métricas definitivas de violaciones.
 - [ ] **A.5** Verificar baseline actualizado de la PR + espejo y cerrar Fase A **antes de mover código funcional**.
 

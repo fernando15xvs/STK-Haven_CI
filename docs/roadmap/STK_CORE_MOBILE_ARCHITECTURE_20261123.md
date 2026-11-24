@@ -49,7 +49,8 @@
 - [x] A.1: árbol de archivos reproducible, inventario de Core/Mobile/test y referencia Web congelada.
 - [x] A.1: primera clasificación de Core `presentation`/tema y dependencias directas de Mobile.
 - [x] A.2 instrumentada: `tools/architecture_inventory.py` recorre todas las fuentes/test con salida JSON; el espejo CI adjunta informe en modo diagnóstico (sin exigir todavía cero violaciones).
-- [ ] A.2: revisar el JSON de ejecución y cerrar mapa completo de import/export/part en las 279 rutas restantes de Core y 373 pruebas Core/Mobile.
+- [x] A.2 léxica: JSON automatizado sobre 890 Dart en [CI #45307024472](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/45307024472) y [resultados](../architecture/STK_ARCHITECTURE_AUTOMATED_RESULTS_20261123.md): 55 Core UI, 70 Core Flutter, 170 Core plugins, 25 Mobile→Core UI; 0 Core→Mobile/Web y 0 Mobile→Web directos.
+- [ ] A.2 semántica: revisar esos consumidores, dependencias transitivas y migraciones de pruebas; el escaneo léxico no valida la pureza completa.
 - [ ] A.3: resolución de dependencias indirectas, plataformas y modelos/servicios mezclados.
 - [ ] A.4: validar baseline del último SHA y completar la matriz archivo-por-archivo.
 
