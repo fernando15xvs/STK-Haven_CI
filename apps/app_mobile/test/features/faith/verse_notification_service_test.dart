@@ -3,11 +3,9 @@ import 'package:gym_tracker/platform/reminders/mobile_personal_motivational_remi
 import 'package:gym_tracker/platform/reminders/mobile_local_notification_timezone.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:core/core/services/personal_motivational_reminder_service.dart';
 import 'package:core/features/profile/domain/personal_reminder_settings.dart';
 import 'package:core/domain/models/verse.dart';
 import 'package:core/features/faith/domain/verse_notification_schedule.dart';
-import 'package:core/features/faith/services/verse_notification_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';

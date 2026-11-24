@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:gym_tracker/platform/reminders/mobile_local_notification_timezone.dart';
 import 'package:core/domain/models/body_measurement.dart';
-import 'package:core/features/progress/domain/measurement_progress.dart';
 
 /// One reminder per measurement cycle, replaced after recording new data.
 /// No periodic background process or server access is needed.
