@@ -1,5 +1,5 @@
 import 'package:core/features/profile/domain/personal_reminder_settings.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 
 /// This box is not included in STK Haven's backup/cloud export.
 class PersonalReminderRepository {

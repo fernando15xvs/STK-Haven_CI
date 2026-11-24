@@ -62,6 +62,11 @@
 **Criterio de salida:** inventario revisable con rutas reales, plan de migración archivo por archivo y baseline verde previo.
 
 ## Fase B — Frontera de dependencias y CI
+**Avance B.1:** guardia progresiva operativa en el espejo: se congelan **303 declaraciones import/export/part preexistentes** por huella estable (path + NUL + URI) y **2 rutas transitivas Core→UI**. Los nuevos imports Core UI/Flutter/SDK/plataforma o Core→Mobile/Web y Mobile→Web hacen **fallar** CI; eliminar los antiguos está permitido. [Clasificación semántica](../architecture/STK_ARCHITECTURE_SEMANTIC_TRIAGE_20261123.md) y [baseline congelado](../architecture/STK_CORE_LEGACY_IMPORT_BASELINE_20261123.md).
+- [x] B.1: baseline inmutable de importaciones heredadas (303) y transitivas (2), documentado desde auditor de GitHub Actions.
+- [x] B.1: `tools/architecture_guard.py` y siete pruebas de regresión para Core/Flutter, Mobile→Web y borrado de deuda antigua; la etapa de guardia pasó en el primer CI.
+- [ ] B.2: refinar cobertura semántica (Dart analyzer), pruebas sobre exportación transitiva, plugins y dependencias indirectas, y reducir la allowlist hasta cero.
+- [ ] B.3: cierre de CI 7/7 **del último HEAD** tras el piloto de importaciones puras.
 - [ ] Crear test/guardia de importaciones con análisis Dart (no solo `grep`): Core no importa Material/Widgets/Cupertino, presentaciones, Mobile ni Web; Mobile no importa Web; detección también de `export`/`part` y dependencias de `pubspec`.
 - [ ] Durante la transición, **allowlist explícita y decreciente** para violaciones heredadas con ruta+motivo; fallar ante cualquier violación nueva. Al finalizar migración: allowlist VACÍA y CI obligatoriamente verde.
 - [ ] Añadir pruebas de interfaces/adaptadores, dependencias circulares y pureza de providers. No crear una PR nueva ni modificar los jobs del Web pausado.
@@ -69,6 +74,10 @@
 **Criterio de salida:** guardia activa en CI y nuevas dependencias prohibidas imposibles de introducir inadvertidamente.
 
 ## Fase C — Extraer lógica, migrar UI de Core a Mobile
+**Piloto C.0 (compatible):** sustituir únicamente el import `hive_flutter` por `hive` Dart puro en ocho repositorios Core que reciben un `Box` y no inicializan Flutter. No hay cambios de claves, escritura, serialización, servicios de base de datos ni onboarding. Esta migración reduce ocho declaraciones prohibidas y dispone de test de contrato; requiere CI del último HEAD antes de contarse como validada.
+- [x] C.0: revisión de ocho repositorios Hive sin `Hive.initFlutter()`; cambio de import puro con el mismo `Box` y mismo comportamiento.
+- [x] C.0: test automatizado que impide regresar a `hive_flutter` en esos ocho archivos.
+- [ ] C.0: confirmar Core tests, Mobile tests y compilaciones nativas 7/7 del commit de piloto.
 - [ ] Mover `AppearanceTheme`/`AppColors` Flutter a Mobile preservando la salida visual; dejar en Core solo datos serializables de preferencias.
 - [ ] Migrar pantallas/widgets de Perfil, Aspecto, Preferencias, Sync e Identidad y actualizar imports, rutas y pruebas; extraer previamente reglas de negocio embebidas.
 - [ ] Migrar pantallas/widgets de Entrenar, Workout, Programas, Progreso, Nutrición, Coach/Coach Pro, Hábitos y Fe desde Core a Mobile por grupos de dependencias.

@@ -1,4 +1,4 @@
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 import '../../../domain/models/personal_record.dart';
 import '../../../database/hive/models/hive_personal_record.dart';
 

@@ -38,7 +38,7 @@ jobs:
       # Phase B: strictly forbid any NEW Core UI/Flutter/platform import or
       # Core -> Mobile/Web and Mobile -> Web edge. Existing debt can only shrink.
       - name: Test Core/Mobile architecture boundary
-        run: python3 -m unittest discover -s tools/tests -p 'test_architecture_guard.py' -v
+        run: python3 -m unittest discover -s tools/tests -p 'test_*.py' -v
       - name: Reject new prohibited architecture imports
         run: python3 tools/architecture_guard.py --json-out /tmp/stk_architecture_guard.json
       - name: Publish architecture no-regressions report

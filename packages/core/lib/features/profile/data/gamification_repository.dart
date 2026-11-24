@@ -1,4 +1,4 @@
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive/hive.dart';
 import 'package:core/domain/models/gamification_state.dart';
 
 class GamificationRepository {

@@ -40,6 +40,9 @@ Los **115 Core no visuales** se componen de 54 providers, 41 datos, 17 integraci
 
 **D–F:** sistema de diseño centralizado **solo Mobile**, Aspecto/tamaño/fuente/UI Styles, Perfil y Ajustes, QA físico y CI 7/7.
 
+## Primer piloto de purificación de persistencia (C.0)
+Los repositorios `settings_repository`, `routine_repository`, `active_workout_repository`, `hydration_repository`, `workout_repository`, `personal_record_repository`, `gamification_repository` y `personal_reminder_repository` en `packages/core/lib/features/*/data/` solo consumen `Box`/API Hive; el import de `hive_flutter` se cambia a `hive` Dart puro. **`HiveDatabase.initFlutter()` se conserva intacto** porque es inicialización de plataforma que requiere extracción por puerto posteriormente. La guardia debe registrar **8 eliminaciones** sin nuevas importaciones prohibidas. Sin conversión de bytes, claves, modelos, datos ni migraciones.
+
 ## Criterios y evidencia
 
 - Confirmar clasificación contra pruebas pertinentes: Core 196 tests, Mobile 177 tests. La extracción de un archivo exige contratos cubiertos y navegación probada antes de borrar su ruta antigua.
