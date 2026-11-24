@@ -94,7 +94,7 @@ class AppearanceTheme {
         shadowColor: Colors.black.withValues(alpha: .12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(ui.cardRadius),
-          side: BorderSide(color: p.surfaceBorder),
+          side: BorderSide(color: p.surfaceBorder, width: ui.borderWidth),
         ),
       ),
       dialogTheme: DialogThemeData(
@@ -134,6 +134,22 @@ class AppearanceTheme {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: p.primary,
         foregroundColor: p.onPrimary,
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(ui.buttonRadius),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(ui.buttonRadius),
+          ),
+        ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(

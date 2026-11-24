@@ -166,10 +166,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
+          padding: EdgeInsets.fromLTRB(
+            AppUiTokens.of(context).pageHorizontalPadding,
             AppSpacing.xl,
-            AppSpacing.md,
+            AppUiTokens.of(context).pageHorizontalPadding,
             120,
           ),
           children: [

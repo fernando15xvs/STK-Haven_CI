@@ -745,7 +745,7 @@ class _ActiveWorkoutPageState extends ConsumerState<ActiveWorkoutPage> {
                               ).primary.withValues(alpha: 0.35),
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(AppUiTokens.of(context).buttonRadius),
                             ),
                             padding: const EdgeInsets.symmetric(vertical: 15),
                             backgroundColor: AppColors.of(context).primaryFaded,

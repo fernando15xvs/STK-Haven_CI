@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +12,9 @@ import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'package:gym_tracker/core/theme/app_font_family.dart';
 import 'package:gym_tracker/core/theme/app_ui_styles.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
+import 'package:gym_tracker/core/theme/components/metric_tile.dart';
+import 'package:gym_tracker/core/theme/app_text_scaler.dart';
+import 'package:gym_tracker/features/profile/presentation/widgets/profile_section_card.dart';
 
 void main() {
   test('all four variable fonts are registered and locally bundled', () async {
@@ -87,4 +91,60 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  test('production Mobile text styles do not hardcode font families', () {
+    final root = Directory('lib');
+    expect(root.existsSync(), isTrue);
+    final violations = <String>[];
+    final fixedFont = RegExp(r"""fontFamily\s*:\s*['"]""");
+    for (final file in root.listSync(recursive: true).whereType<File>()) {
+      if (!file.path.endsWith('.dart')) continue;
+      if (fixedFont.hasMatch(file.readAsStringSync())) {
+        violations.add(file.path);
+      }
+    }
+    expect(violations, isEmpty, reason: 'Use the selected Material theme family');
+  });
+
+  test('user text preference composes with nonlinear accessibility scaling', () {
+    const platform = _NonlinearFixture();
+    expect(combineAppTextScale(platform, 1), same(platform));
+    final scaled = combineAppTextScale(platform, 1.25);
+    expect(scaled.scale(12), platform.scale(12) * 1.25);
+    expect(scaled.scale(28), platform.scale(28) * 1.25);
+    expect(scaled, combineAppTextScale(platform, 1.25));
+  });
+
+  for (final style in AppUiStyle.values) {
+    testWidgets('shared metric and Profile card geometry: ${style.name}', (tester) async {
+      final settings = AppearanceSettings(uiStyle: style);
+      final ui = AppUiTokens.from(style);
+      await tester.pumpWidget(MaterialApp(
+        theme: AppearanceTheme.build(settings, Brightness.light),
+        home: const Scaffold(body: SingleChildScrollView(child: Column(children: [
+          MetricTile(label: 'Sesiones completadas', value: '12'),
+          ProfileSectionCard(title: 'Preferencias', children: [Text('Datos')]),
+        ]))),
+      ));
+      final metric = find.descendant(
+        of: find.byType(MetricTile), matching: find.byType(Container)).first;
+      final box = tester.widget<Container>(metric).decoration! as BoxDecoration;
+      expect(box.borderRadius, BorderRadius.circular(ui.cardRadius));
+      final card = tester.widget<AnimatedContainer>(find.descendant(
+        of: find.byType(ProfileSectionCard), matching: find.byType(AnimatedContainer)).first);
+      final decoration = card.decoration! as BoxDecoration;
+      expect(decoration.borderRadius, BorderRadius.circular(ui.cardRadius));
+      expect(tester.takeException(), isNull);
+    });
+  }
+}
+
+class _NonlinearFixture extends TextScaler {
+  const _NonlinearFixture();
+
+  @override
+  double scale(double fontSize) => fontSize * (fontSize < 16 ? 2 : 1.5);
+
+  @override
+  double get textScaleFactor => 2;
 }

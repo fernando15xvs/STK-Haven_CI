@@ -94,8 +94,9 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
       body: SafeArea(
         bottom: false,
         child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xxl,
+              padding: EdgeInsets.fromLTRB(
+                AppUiTokens.of(context).pageHorizontalPadding, AppSpacing.sm,
+                AppUiTokens.of(context).pageHorizontalPadding, AppSpacing.xxl,
               ),
               itemCount: 1 +
                   (routines.isEmpty

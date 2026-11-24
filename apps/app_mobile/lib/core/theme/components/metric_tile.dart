@@ -17,19 +17,15 @@ class MetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ui = AppUiTokens.of(context);
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(ui.cardPadding),
       decoration: BoxDecoration(
         color: AppColors.of(context).surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.of(context).surfaceBorder),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 5,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(ui.cardRadius),
+        border: Border.all(
+          color: AppColors.of(context).surfaceBorder, width: ui.borderWidth),
+        boxShadow: AppColors.of(context).shadows,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -37,7 +33,7 @@ class MetricTile extends StatelessWidget {
           Row(
             children: [
               if (icon != null) ...[icon!, const SizedBox(width: 8)],
-              Text(label.toUpperCase(), style: AppTypography.labelSmall),
+              Flexible(child: Text(label.toUpperCase(), style: AppTypography.labelSmall)),
             ],
           ),
           const SizedBox(height: 8),

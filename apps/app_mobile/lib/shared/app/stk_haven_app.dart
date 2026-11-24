@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/layout/mobile_content_frame.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/theme/app_text_scaler.dart';
 import '../../splash/splash_screen.dart';
 
 /// Shared Flutter application shell for Android and iOS.
@@ -104,13 +105,11 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
         final reduceMotion =
             reduceMotionSetting || savings || media.disableAnimations;
         final content = child ?? const SizedBox.shrink();
-        // Multiply the existing accessibility scale; do not replace it.
-        final baseScale = media.textScaler.scale(16) / 16;
-        final userScale = appearance.textScale;
+        // Preserve the platform's nonlinear Dynamic Type curve.
         return MediaQuery(
           data: media.copyWith(
             disableAnimations: reduceMotion,
-            textScaler: TextScaler.linear(baseScale * userScale),
+            textScaler: combineAppTextScale(media.textScaler, appearance.textScale),
           ),
           child: MobileContentFrame(child: content),
         );

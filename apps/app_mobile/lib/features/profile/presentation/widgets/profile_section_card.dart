@@ -1,8 +1,8 @@
-import 'package:gym_tracker/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:flutter/material.dart';
 
-/// Shared Perfil settings surface. Uses the same 20dp radius, semantic
-/// colors, borders and optional elevation as mobile PremiumCard.
+/// Shared Perfil settings surface built on the canonical PremiumCard.
 class ProfileSectionCard extends StatelessWidget {
   const ProfileSectionCard({
     super.key,
@@ -16,14 +16,10 @@ class ProfileSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        border: Border.all(color: colors.surfaceBorder),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: colors.shadows,
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+    final ui = AppUiTokens.of(context);
+    return PremiumCard(
+      padding: EdgeInsets.fromLTRB(ui.cardPadding, ui.cardPadding - 2,
+          ui.cardPadding, AppSpacing.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -32,6 +28,7 @@ class ProfileSectionCard extends StatelessWidget {
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: colors.textPrimary,
                   fontWeight: FontWeight.w700,
+                  fontVariations: const [FontVariation('wght', 700)],
                 ),
           ),
           const SizedBox(height: 8),

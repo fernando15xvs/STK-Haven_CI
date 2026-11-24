@@ -30,6 +30,7 @@ import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_goal_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:gym_tracker/core/theme/app_ui_styles.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -292,7 +293,9 @@ class _NutritionIntelligencePageState
             key: ValueKey(_showMobileHistory
                 ? 'nutrition_mobile_history_view'
                 : 'nutrition_mobile_overview'),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+            padding: EdgeInsets.fromLTRB(
+              AppUiTokens.of(context).pageHorizontalPadding, 12,
+              AppUiTokens.of(context).pageHorizontalPadding, 32),
             children: _showMobileHistory
                 ? [
                     _buildHistory(colors),
@@ -342,7 +345,9 @@ class _NutritionIntelligencePageState
       appBar: AppBar(title: const Text('Nutrición Inteligente')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
+          padding: EdgeInsets.fromLTRB(
+            AppUiTokens.of(context).pageHorizontalPadding, 18,
+            AppUiTokens.of(context).pageHorizontalPadding, 32),
           children: [
             _HeroCard(colors: colors),
             const SizedBox(height: 16),
@@ -2457,11 +2462,11 @@ class _HeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       key: const ValueKey('nutrition_compact_plan_header'),
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(AppUiTokens.of(context).cardPadding),
       decoration: BoxDecoration(
         color: colors.surfaceContainerHigh,
         border: Border.all(color: colors.outlineVariant),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppUiTokens.of(context).cardRadius),
       ),
       child: Row(
         children: [
@@ -2522,10 +2527,10 @@ class NutritionAccessStatusPanel extends StatelessWidget {
     };
     return Container(
       key:const ValueKey('nutrition_access_state_panel'),
-      padding:const EdgeInsets.all(16),
+      padding: EdgeInsets.all(AppUiTokens.of(context).cardPadding),
       decoration:BoxDecoration(
         border:Border.all(color:colors.outlineVariant),
-        borderRadius:BorderRadius.circular(18),
+        borderRadius:BorderRadius.circular(AppUiTokens.of(context).cardRadius),
         color:colors.surfaceContainerLow,
       ),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -2593,10 +2598,10 @@ class _EnergyResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(AppUiTokens.of(context).cardPadding),
       decoration: BoxDecoration(
         color: colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppUiTokens.of(context).cardRadius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2634,10 +2639,10 @@ class _FoodVisionResultCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(AppUiTokens.of(context).cardPadding),
       decoration: BoxDecoration(
         color: colors.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(AppUiTokens.of(context).cardRadius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

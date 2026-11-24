@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:gym_tracker/core/theme/app_palette.dart';
+import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
 
@@ -56,7 +56,9 @@ class _AppearanceSettingsPageState
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            padding: EdgeInsets.fromLTRB(
+              AppUiTokens.of(context).pageHorizontalPadding, 12,
+              AppUiTokens.of(context).pageHorizontalPadding, 32),
             children: [
               Text(
                 'Tu espacio, a tu estilo',
@@ -73,11 +75,12 @@ class _AppearanceSettingsPageState
               ),
               const SizedBox(height: 20),
               Container(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(AppUiTokens.of(context).cardPadding),
                 decoration: BoxDecoration(
                   color: colors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: colors.surfaceBorder),
+                  borderRadius: BorderRadius.circular(AppUiTokens.of(context).cardRadius),
+                  border: Border.all(color: colors.surfaceBorder,
+                      width: AppUiTokens.of(context).borderWidth),
                   boxShadow: colors.shadows,
                 ),
                 child: Column(

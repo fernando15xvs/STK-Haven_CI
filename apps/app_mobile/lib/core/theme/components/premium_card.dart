@@ -67,7 +67,7 @@ class _PremiumCardState extends State<PremiumCard> {
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(ui.cardRadius),
-        border: Border.all(color: bColor),
+        border: Border.all(color: bColor, width: ui.borderWidth),
         boxShadow: AppColors.of(context).shadows,
       ),
       child: widget.child,

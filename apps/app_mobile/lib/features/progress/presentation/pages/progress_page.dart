@@ -128,8 +128,8 @@ class ProgressSummaryTab extends ConsumerWidget {
     );
 
     return ListView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
+      padding: EdgeInsets.symmetric(
+        horizontal: AppUiTokens.of(context).pageHorizontalPadding,
         vertical: AppSpacing.lg,
       ),
       children: [

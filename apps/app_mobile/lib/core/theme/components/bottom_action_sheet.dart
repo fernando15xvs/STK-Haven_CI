@@ -11,8 +11,10 @@ class BottomActionSheet {
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.of(context).surfaceHigh,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppUiTokens.of(context).cardRadius + 4),
+        ),
       ),
       builder: (ctx) {
         return Padding(
@@ -36,10 +38,8 @@ class BottomActionSheet {
               const SizedBox(height: 16),
               Text(
                 title,
-                style: TextStyle(
-                  color: AppColors.of(context).textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                  color: AppColors.of(ctx).textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
