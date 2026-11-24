@@ -1,6 +1,6 @@
 import 'package:core/features/faith/application/faith_feature_policy.dart';
 import 'package:core/features/faith/data/bible_public_domain_source.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('FaithFeaturePolicy', () {

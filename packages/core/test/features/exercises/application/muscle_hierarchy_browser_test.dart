@@ -2,7 +2,7 @@ import 'package:core/core/constants/muscle_taxonomy_v1.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/features/exercises/application/exercise_library_filter.dart';
 import 'package:core/features/exercises/application/muscle_hierarchy_browser.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('hierarchy walks from groups down to specific regions', () {

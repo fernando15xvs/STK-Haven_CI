@@ -1,6 +1,6 @@
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/nutrition/application/nutrition_weight_trend.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   BodyMeasurement entry(String id, int day, {double? kg, double? waist}) =>

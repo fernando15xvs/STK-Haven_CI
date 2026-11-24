@@ -1,5 +1,5 @@
 import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('STK 15+ declaration: account eligibility', () {

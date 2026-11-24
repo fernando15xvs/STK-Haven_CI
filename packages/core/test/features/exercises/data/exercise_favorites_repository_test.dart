@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:core/features/exercises/data/exercise_favorites_repository.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

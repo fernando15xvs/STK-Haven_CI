@@ -1,5 +1,5 @@
 import 'package:core/features/progress/application/progress_metrics_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   final anchor = DateTime(2026, 8, 5, 17, 30);

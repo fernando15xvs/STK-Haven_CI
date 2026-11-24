@@ -1,7 +1,7 @@
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/progress/application/progress_insight_calculator.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   final now = DateTime(2026, 10, 17, 12);

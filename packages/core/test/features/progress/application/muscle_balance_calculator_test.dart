@@ -2,7 +2,7 @@ import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/progress/application/muscle_balance_calculator.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   final primary = Exercise(

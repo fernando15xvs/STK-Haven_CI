@@ -1,6 +1,6 @@
 import 'package:core/domain/models/daily_steps_state.dart';
 import 'package:core/features/home/application/steps_reading_freshness.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main(){
   final now=DateTime(2026,11,15,18);

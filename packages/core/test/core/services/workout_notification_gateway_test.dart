@@ -1,5 +1,5 @@
 import 'package:core/core/services/workout_notification_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 class _FakeBackend implements WorkoutNotificationBackend {
   final events = <String>[];

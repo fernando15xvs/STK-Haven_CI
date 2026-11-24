@@ -1,5 +1,5 @@
 import 'package:core/features/coach_pro/domain/coach_pro_checkin_cadence.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 Map<String, dynamic> cadence() => {
   'relationship_id': 'relationship-1',

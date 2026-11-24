@@ -72,9 +72,9 @@ jobs:
       - name: Analyze Mobile
         working-directory: apps/app_mobile
         run: flutter analyze --no-fatal-infos
-      - name: Core tests
+      - name: Core Dart tests (no Flutter dependency)
         working-directory: packages/core
-        run: flutter test
+        run: dart test
 
   supabase-db:
     name: Supabase DB + RLS tests

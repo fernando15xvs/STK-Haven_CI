@@ -1,6 +1,6 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/todays_workout_status.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 WorkoutSession session({
   required DateTime at,

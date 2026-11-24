@@ -4,7 +4,7 @@ import 'package:core/features/faith/services/verse_background_service.dart';
 import 'package:core/features/faith/services/verse_widget_sync.dart';
 import 'package:core/features/profile/application/data_export_service.dart';
 import 'package:core/domain/models/workout_session.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 class _WidgetSpy implements VerseWidgetBackend {
   Map<String, String>? snapshot;

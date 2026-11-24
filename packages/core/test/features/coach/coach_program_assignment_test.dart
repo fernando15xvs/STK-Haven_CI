@@ -4,7 +4,7 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/coach/application/coach_program_payload_builder.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('CoachProgramPayloadBuilder', () {

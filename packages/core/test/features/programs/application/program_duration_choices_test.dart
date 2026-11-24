@@ -1,5 +1,5 @@
 import 'package:core/features/programs/application/program_duration_choices.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('recommended plan durations remain unique and ordered', () {

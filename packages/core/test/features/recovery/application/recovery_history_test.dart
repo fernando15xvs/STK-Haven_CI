@@ -1,6 +1,6 @@
 import 'package:core/features/recovery/application/recovery_history.dart';
 import 'package:core/features/recovery/application/recovery_provider.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   RecoveryCheckIn checkIn({

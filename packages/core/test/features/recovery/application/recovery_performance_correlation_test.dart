@@ -1,7 +1,7 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/recovery/application/recovery_performance_correlation.dart';
 import 'package:core/features/recovery/application/recovery_provider.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   RecoveryCheckIn recovery(

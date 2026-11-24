@@ -1,13 +1,14 @@
+import 'package:core/features/faith/data/bible_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:core/features/faith/data/bible_public_domain_source.dart';
 
-class BibleDatabase {
-  static final BibleDatabase instance = BibleDatabase._init();
+class MobileBibleDatabase implements BibleDatabaseBackend {
+  static final MobileBibleDatabase instance = MobileMobileBibleDatabase._init();
   static Database? _database;
 
-  BibleDatabase._init();
+  MobileBibleDatabase._init();
 
   Future<Database> get database async {
     if (_database != null) return _database!;

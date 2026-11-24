@@ -1,5 +1,5 @@
 name: core
-description: Lógica de negocio compartida de STK Haven
+description: Lógica de negocio y acceso a datos Dart puro de STK Haven
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,30 +9,15 @@ environment:
 resolution: workspace
 
 dependencies:
-  flutter:
-    sdk: flutter
   riverpod: ^3.3.2
   supabase: ^2.16.1
   hive: ^2.2.3
-  hive_flutter: ^1.1.0
   intl: ^0.20.2
   uuid: ^4.6.0
-  share_plus: ^13.3.0
-  file_picker: ^12.0.0
-  # Profile photo selection. Match the mobile app's Android API 23-safe pin.
-  image_picker: 1.1.2
-  sqflite: ^2.4.2+1
   path: ^1.9.1
-  path_provider: ^2.1.6
-  workmanager: ^0.10.7
   http: ^1.6.0
-  flutter_local_notifications: ^22.3.0
-  shared_preferences: ^2.5.5
-  timezone: ^0.11.1
   csv: ^8.0.0
-  supabase_flutter: ^2.17.2
 
 dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^6.0.0
+  test: ^1.26.3
+  lints: ^6.0.0

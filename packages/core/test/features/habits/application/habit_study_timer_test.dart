@@ -1,5 +1,5 @@
 import 'package:core/domain/models/habit_study_timer.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('HabitStudyTimerState', () {

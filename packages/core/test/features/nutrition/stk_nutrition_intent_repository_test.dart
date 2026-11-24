@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
 import 'package:core/features/nutrition/data/stk_nutrition_intent_repository.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

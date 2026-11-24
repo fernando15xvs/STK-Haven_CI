@@ -1,5 +1,5 @@
 import 'package:core/features/identity/domain/auth_form_validation.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('email validation', () {

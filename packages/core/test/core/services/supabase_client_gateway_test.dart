@@ -1,5 +1,5 @@
 import 'package:core/core/services/supabase_client_gateway.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:supabase/supabase.dart';
 
 void main() {

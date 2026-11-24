@@ -4,7 +4,7 @@ import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/profile/data/settings_repository.dart';
 import 'package:core/features/profile/data/user_experience_profile_repository.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

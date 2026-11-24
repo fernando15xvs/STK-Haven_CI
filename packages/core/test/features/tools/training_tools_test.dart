@@ -1,6 +1,6 @@
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/features/tools/application/training_tools.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('OneRmCalculator', () {

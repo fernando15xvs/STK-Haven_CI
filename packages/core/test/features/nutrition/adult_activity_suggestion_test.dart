@@ -2,7 +2,7 @@ import 'package:core/domain/models/daily_steps_state.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/nutrition/application/adult_activity_suggestion.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main(){
   final now=DateTime(2026,11,16,12);

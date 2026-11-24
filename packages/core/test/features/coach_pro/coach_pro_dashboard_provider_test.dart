@@ -8,8 +8,8 @@ import 'package:core/domain/models/coach_pro_portfolio_overview.dart';
 import 'package:core/features/coach_pro/application/coach_pro_dashboard_provider.dart';
 import 'package:core/features/coach_pro/data/coach_pro_dashboard_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:test/test.dart';
 
 class _Identity extends AppIdentityNotifier {
   @override

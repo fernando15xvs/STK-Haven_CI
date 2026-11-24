@@ -1,6 +1,6 @@
 import 'package:core/features/faith/application/bible_init_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('Faith OFF performs zero Bible initialization calls', () async {

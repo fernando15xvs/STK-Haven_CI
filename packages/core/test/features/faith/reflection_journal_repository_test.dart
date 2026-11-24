@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:core/features/faith/data/reflection_journal_repository.dart';
 import 'package:core/domain/models/verse.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

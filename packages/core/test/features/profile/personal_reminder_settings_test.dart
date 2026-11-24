@@ -1,5 +1,5 @@
 import 'package:core/features/profile/domain/personal_reminder_settings.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   const a = PersonalReminderMessage(

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:core/features/habits/application/study_resource_catalog.dart';
 import 'package:core/features/habits/data/study_resource_bookmark_repository.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

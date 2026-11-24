@@ -1,14 +1,15 @@
 import 'package:core/features/faith/domain/verse_notification_schedule.dart';
 import 'package:core/features/faith/data/verse_schedule_repository.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:test/test.dart';
+import 'package:core/core/services/core_preferences.dart';
+import '../../support/in_memory_core_preferences.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+
   test(
     'legacy users retain only 08:00 until explicitly changing hours',
     () async {
-      SharedPreferences.setMockInitialValues({});
+      installMemoryPreferences({});
       expect((await VerseScheduleRepository.read()).minutes, [480]);
     },
   );
@@ -62,14 +63,14 @@ void main() {
     );
   });
   test('hours persist without enabling notifications', () async {
-    SharedPreferences.setMockInitialValues({
+    installMemoryPreferences({
       'verse_notifications_enabled': false,
     });
     const schedule = VerseNotificationSchedule(times: [510, 900, 1260]);
     await VerseScheduleRepository.save(schedule);
     expect((await VerseScheduleRepository.read()).minutes, [510, 900, 1260]);
     expect(
-      (await SharedPreferences.getInstance()).getBool(
+      (await CorePreferences.getInstance()).getBool(
         'verse_notifications_enabled',
       ),
       false,

@@ -1,6 +1,6 @@
 import 'package:core/domain/models/habit_task.dart';
 import 'package:core/features/habits/application/habit_schedule_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('HabitTask', () {

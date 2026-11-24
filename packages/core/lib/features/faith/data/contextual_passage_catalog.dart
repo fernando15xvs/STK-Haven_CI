@@ -1,6 +1,6 @@
 import 'package:core/domain/models/verse.dart';
 import 'package:core/features/faith/data/bible_repository.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:core/core/services/core_preferences.dart';
 
 /// An editorial note is NOT a verse or a translation of Scripture.
 class ContextualPassage {
@@ -237,7 +237,7 @@ class ContextualPassageCatalog {
     required String sessionId,
     required String theme,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await CorePreferences.getInstance();
     final pool = forWorkoutTheme(theme);
     final existing = prefs.getString('workout_reflection_session_$sessionId');
     final recent = prefs.getStringList('workout_reflection_recent_v1') ?? <String>[];

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 import 'package:core/features/exercises/data/exercise_personal_settings_repository.dart';
 

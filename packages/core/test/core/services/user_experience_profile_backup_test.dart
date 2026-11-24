@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:core/core/services/backup_service.dart';
 import 'package:core/features/profile/data/user_experience_profile_repository.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Roadmap 3 profile backup compatibility', () {

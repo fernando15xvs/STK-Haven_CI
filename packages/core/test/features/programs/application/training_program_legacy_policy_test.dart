@@ -1,7 +1,7 @@
 import 'package:core/domain/models/active_program_state.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/training_program_legacy_policy.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   final at = DateTime(2026, 11, 13);

@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/personal_record.dart';

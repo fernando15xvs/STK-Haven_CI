@@ -5,7 +5,7 @@ import 'package:core/features/faith/domain/verse_notification_schedule.dart';
 import 'package:core/features/faith/services/verse_notification_service.dart';
 import 'package:core/features/profile/domain/personal_reminder_settings.dart';
 import 'package:core/features/progress/services/measurement_reminder_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 class _VerseSpy implements VerseNotificationBackend {
   final events = <String>[];

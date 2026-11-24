@@ -1,5 +1,5 @@
 import 'package:core/features/profile/application/unilateral_rest_choices.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('recommended rest choices stay unique', () {

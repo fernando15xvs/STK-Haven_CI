@@ -1,6 +1,6 @@
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/nutrition/application/latest_body_measurements.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('independent latest weight and height survive partial recent entries', () {

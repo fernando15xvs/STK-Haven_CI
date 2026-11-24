@@ -4,9 +4,10 @@ import 'package:core/features/faith/application/daily_verse_provider.dart';
 import 'package:core/features/faith/data/bible_database.dart';
 import 'package:core/features/faith/data/bible_repository.dart';
 import 'package:core/features/faith/data/contextual_passage_catalog.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:test/test.dart';
+import 'package:core/core/services/core_preferences.dart';
+import '../../support/in_memory_core_preferences.dart';
 
 /// No SQLite or internet dependency in the mood-selection tests.
 class _FakeBibleRepository extends BibleRepository {
@@ -41,7 +42,7 @@ class _ReadyBibleInit extends BibleInitNotifier {
 }
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+
 
   test('daily selection remains the same and every mood has a thematic pool',
       () {
@@ -67,7 +68,7 @@ void main() {
 
   test('changing mood updates reflection but not Home daily verse or cache',
       () async {
-    SharedPreferences.setMockInitialValues({});
+    installMemoryPreferences({});
     final container = ProviderContainer(overrides: [
       bibleInitProvider.overrideWith(_ReadyBibleInit.new),
       bibleRepositoryProvider.overrideWithValue(_FakeBibleRepository()),
@@ -77,7 +78,7 @@ void main() {
     final initial = await container.read(dailyVerseProvider.future);
     expect(initial.verse, isNotNull);
     final dailyId = initial.verse!.id;
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await CorePreferences.getInstance();
     final savedReference = prefs.getString('saved_reference');
     expect(savedReference, initial.verse!.reference);
 
@@ -104,7 +105,7 @@ void main() {
 
   test('selected mood persists across provider restarts independently of day',
       () async {
-    SharedPreferences.setMockInitialValues({});
+    installMemoryPreferences({});
     final first = ProviderContainer(overrides: [
       bibleInitProvider.overrideWith(_ReadyBibleInit.new),
       bibleRepositoryProvider.overrideWithValue(_FakeBibleRepository()),

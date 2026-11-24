@@ -1,6 +1,6 @@
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/routines/application/routine_schedule_coordinator.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   Routine routine(List<int> scheduledDays) {

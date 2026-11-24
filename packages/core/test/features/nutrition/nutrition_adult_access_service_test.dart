@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   Future<NutritionAdultCheck> inspect({

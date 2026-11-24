@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

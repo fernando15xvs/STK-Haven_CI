@@ -1,5 +1,5 @@
 import 'package:core/domain/models/training_program.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   final now = DateTime(2026, 9, 26, 10);

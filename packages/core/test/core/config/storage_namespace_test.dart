@@ -1,5 +1,5 @@
 import 'package:core/core/config/storage_namespace.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('empty namespace preserves stable storage names', () {

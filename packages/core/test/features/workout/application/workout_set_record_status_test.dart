@@ -1,6 +1,6 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/workout_set_record_status.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('historical unfinished sets remain pending, not skipped or failed', () {

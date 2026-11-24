@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:core/core/services/backup_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('schema v9 accepts detailed unilateral side performance', () {

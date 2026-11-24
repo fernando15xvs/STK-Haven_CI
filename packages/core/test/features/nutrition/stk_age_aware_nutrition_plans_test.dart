@@ -1,5 +1,5 @@
 import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('STK nutrition: correct declared-age boundaries', () {

@@ -1,6 +1,6 @@
 import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
 import 'package:core/features/onboarding/data/stk_legal_server_receipt_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   const docs = StkLegalDocumentSet(

@@ -1,5 +1,5 @@
 import 'package:core/features/coach_pro/domain/coach_pro_task_agenda.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 Map<String, dynamic> item({
   String? status,

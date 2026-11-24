@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/features/progress/domain/measurement_progress.dart';
 import 'package:core/features/progress/services/measurement_reminder_service.dart';

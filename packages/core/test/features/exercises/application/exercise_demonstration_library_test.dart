@@ -1,7 +1,7 @@
 import 'package:core/core/constants/preset_exercises.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/features/exercises/application/exercise_demonstration_library.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('guides are specific and available for common exercises', () {

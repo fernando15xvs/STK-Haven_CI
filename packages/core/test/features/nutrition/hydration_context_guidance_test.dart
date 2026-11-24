@@ -1,5 +1,5 @@
 import 'package:core/features/nutrition/application/hydration_context_guidance.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('unknown context never fabricates a target or a prescription',(){

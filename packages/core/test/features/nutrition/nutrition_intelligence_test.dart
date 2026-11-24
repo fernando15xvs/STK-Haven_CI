@@ -1,6 +1,6 @@
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   const planner = AdultEnergyPlanner();

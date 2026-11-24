@@ -1,7 +1,7 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:test/test.dart';
 
 class _ClockWorkout extends ActiveWorkoutNotifier {
   static late WorkoutSession initial;

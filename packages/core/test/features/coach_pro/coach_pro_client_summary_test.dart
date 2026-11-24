@@ -1,6 +1,6 @@
 import 'package:core/domain/models/coach_pro_client_summary.dart';
 import 'package:core/domain/models/coach_relationship.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('parses permitted dashboard aggregate without inventing hidden data', () {

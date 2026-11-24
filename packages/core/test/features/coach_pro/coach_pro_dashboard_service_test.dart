@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:core/features/coach_pro/data/coach_pro_dashboard_service.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_dashboard_query.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 void main() {
   test('sends the full typed query in one RPC and preserves redacted values', () async {

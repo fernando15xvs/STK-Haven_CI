@@ -2,7 +2,7 @@ import 'package:core/domain/models/training_program.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/coach/application/coach_progress_snapshot_builder.dart';
 import 'package:core/features/programs/application/program_rotation_coordinator.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   final start = DateTime(2026, 1, 1, 8);

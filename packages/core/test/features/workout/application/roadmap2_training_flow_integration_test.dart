@@ -6,7 +6,7 @@ import 'package:core/features/progress/application/exercise_progress_calculator.
 import 'package:core/features/workout/application/exercise_memory_actions.dart';
 import 'package:core/features/workout/application/exercise_performance_memory.dart';
 import 'package:core/features/workout/application/exercise_session_comparison.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 WorkoutSession _session({
   required String id,

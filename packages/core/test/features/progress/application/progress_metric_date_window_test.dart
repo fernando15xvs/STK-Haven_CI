@@ -1,6 +1,6 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/progress/application/progress_metrics_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   final now = DateTime(2026, 11, 2, 22);

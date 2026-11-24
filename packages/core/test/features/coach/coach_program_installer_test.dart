@@ -10,7 +10,7 @@ import 'package:core/features/coach/domain/coach_program_revision_acceptance.dar
 import 'package:core/features/exercises/data/exercise_repository.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
 import 'package:core/features/routines/data/routine_repository.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

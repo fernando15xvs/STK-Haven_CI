@@ -6,7 +6,7 @@ import 'package:core/features/exercises/application/canonical_muscle_projection.
 import 'package:core/features/programs/application/program_muscle_frequency_planner.dart';
 import 'package:core/features/programs/application/program_volume_planner.dart';
 import 'package:core/features/progress/application/muscle_balance_calculator.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('legacy aliases consolidate only at verified reporting group level', () {

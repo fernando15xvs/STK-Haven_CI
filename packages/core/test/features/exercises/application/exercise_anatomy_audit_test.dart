@@ -2,7 +2,7 @@ import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/exercises/application/exercise_anatomy_audit.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('audits stored labels independently without modifying snapshots', () {

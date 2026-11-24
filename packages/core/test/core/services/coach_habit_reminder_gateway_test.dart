@@ -3,7 +3,7 @@ import 'package:core/domain/models/habit_task.dart';
 import 'package:core/features/coach/application/coach_task_notification_service.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_reminder_consent.dart';
 import 'package:core/features/habits/application/habit_task_notification_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 class _CoachTaskSpy implements CoachTaskNotificationBackend {
   final calls = <String>[];

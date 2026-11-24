@@ -5,10 +5,10 @@ import 'package:core/domain/models/coach_exercise_progress.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/coach/application/coach_progress_snapshot_builder.dart';
 import 'package:core/features/coach/data/coach_progress_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase/supabase.dart';
 
 void main() {
   group('CoachProgressSnapshotBuilder', () {

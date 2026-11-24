@@ -1,6 +1,6 @@
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/features/exercises/application/exercise_library_filter.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   final exercises = <Exercise>[

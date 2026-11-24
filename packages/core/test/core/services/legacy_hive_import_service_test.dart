@@ -9,7 +9,7 @@ import 'package:core/database/hive/models/hive_personal_record.dart';
 import 'package:core/database/hive/models/hive_routine.dart';
 import 'package:core/database/hive/models/hive_workout_session.dart';
 import 'package:core/domain/models/hive_favorite_verse.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 HiveWorkoutSession oldWorkout(String id, String name) => HiveWorkoutSession(

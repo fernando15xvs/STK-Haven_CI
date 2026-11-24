@@ -4,7 +4,7 @@ import 'package:core/features/faith/data/bible_repository.dart';
 import 'package:core/features/faith/data/contextual_passage_catalog.dart';
 import 'package:core/features/faith/application/bible_init_provider.dart';
 import 'package:core/domain/models/verse.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:core/core/services/core_preferences.dart';
 
 final bibleRepositoryProvider = Provider<BibleRepository>((ref) {
   return BibleRepository(BibleDatabase.instance);
@@ -32,7 +32,7 @@ class DailyVerseNotifier extends AsyncNotifier<DailyVerseState> {
     // Read SharedPreferences FIRST, regardless of whether SQLite is ready.
     // This makes an existing verse visible immediately after the splash.
     final init = ref.watch(bibleInitProvider);
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await CorePreferences.getInstance();
     final text = prefs.getString('saved_verse');
     final reference = prefs.getString('saved_reference');
     final mood = prefs.getString('current_mood') ?? 'General';
@@ -95,7 +95,7 @@ class DailyVerseNotifier extends AsyncNotifier<DailyVerseState> {
     if (!ContextualPassageCatalog.moodOptions.contains(newMood)) return;
     final previous = state.value ?? DailyVerseState(isLoading: false);
     state = AsyncValue.data(previous.copyWith(mood: newMood));
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await CorePreferences.getInstance();
     await prefs.setString('current_mood', newMood);
   }
 
@@ -133,7 +133,7 @@ final randomVerseProvider = FutureProvider.autoDispose<Verse?>((ref) async {
   
   final repo = ref.read(bibleRepositoryProvider);
   // Get user's current mood to give a tailored message
-  final prefs = await SharedPreferences.getInstance();
+  final prefs = await CorePreferences.getInstance();
   final savedMood = prefs.getString('current_mood') ?? 'General';
   
   return repo.getRandomVerse(mood: savedMood);

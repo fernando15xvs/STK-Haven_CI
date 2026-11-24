@@ -1,5 +1,5 @@
 import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   final started = DateTime(2026, 10, 10, 10);

@@ -3,7 +3,7 @@ import 'package:core/core/constants/muscle_taxonomy_v1.dart';
 import 'package:core/core/constants/preset_exercises.dart';
 import 'package:core/features/exercises/application/exercise_library_filter.dart';
 import 'package:core/features/exercises/application/muscle_hierarchy_browser.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('preserves all 49 historical exercise IDs while reaching 180–250', () {

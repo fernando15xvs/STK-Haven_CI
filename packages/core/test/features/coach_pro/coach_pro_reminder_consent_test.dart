@@ -1,5 +1,5 @@
 import 'package:core/features/coach_pro/domain/coach_pro_reminder_consent.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   Map<String, dynamic> row({

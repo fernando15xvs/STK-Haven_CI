@@ -1,6 +1,6 @@
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('legacy profile does not invent an age or equation parameter', () {

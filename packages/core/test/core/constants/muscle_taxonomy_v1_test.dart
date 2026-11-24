@@ -1,6 +1,6 @@
 import 'package:core/core/constants/muscle_taxonomy_v1.dart';
 import 'package:core/core/constants/preset_exercises.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('taxonomy IDs, aliases, ancestry and cross-listing are well formed', () {

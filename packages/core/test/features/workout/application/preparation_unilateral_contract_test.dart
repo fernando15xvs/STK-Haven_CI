@@ -2,7 +2,7 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/unilateral_set_coordinator.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('unilateral exercise can keep preparation bilateral', () {

@@ -1,7 +1,7 @@
 import 'package:core/domain/models/active_program_state.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/home/application/home_dashboard_session_policy.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 WorkoutSession _session(
   String id,

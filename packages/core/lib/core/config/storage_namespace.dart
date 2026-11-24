@@ -1,4 +1,3 @@
-import 'package:shared_preferences/shared_preferences.dart';
 
 /// Compile-time namespace used by preview/test web builds.
 ///
@@ -9,6 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// This prevents a preview served from the same web origin from reading or
 /// overwriting the stable app's Hive/IndexedDB and SharedPreferences data.
 class StorageNamespace {
+  static void Function(String)? _setPreferencesPrefix;
+
+  static void installPreferencesPrefixSetter(void Function(String)? setter) {
+    _setPreferencesPrefix = setter;
+  }
+
   const StorageNamespace._();
 
   static const String _configured = String.fromEnvironment(
@@ -31,7 +36,7 @@ class StorageNamespace {
 
   static void configureSharedPreferences() {
     if (!enabled) return;
-    SharedPreferences.setPrefix('stk.${value}.');
+    _setPreferencesPrefix?.call('stk.${value}.');
   }
 
   static String normalize(String raw) {

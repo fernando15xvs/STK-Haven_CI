@@ -4,8 +4,8 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/profile/presentation/providers/settings_provider.dart';
 import 'package:core/features/profile/presentation/providers/user_experience_profile_provider.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

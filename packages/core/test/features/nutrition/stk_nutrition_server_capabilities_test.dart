@@ -1,5 +1,5 @@
 import 'package:core/features/nutrition/data/stk_nutrition_server_capabilities.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('no release, no receipt and no grant stay fail closed', () {

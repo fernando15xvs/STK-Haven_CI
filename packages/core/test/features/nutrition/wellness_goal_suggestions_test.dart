@@ -1,5 +1,5 @@
 import 'package:core/features/nutrition/application/wellness_goal_suggestions.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main(){
   test('seven recorded days required, never assumes missing days are zeros',(){

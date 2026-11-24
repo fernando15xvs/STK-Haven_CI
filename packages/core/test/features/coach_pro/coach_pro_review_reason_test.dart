@@ -1,6 +1,6 @@
 import 'package:core/domain/models/coach_pro_client_summary.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_review_reason.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 CoachProClientSummary client({
   bool consent = true,

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:core/domain/models/habit_task.dart';
 import 'package:core/features/habits/data/habit_task_repository.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

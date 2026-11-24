@@ -1,6 +1,6 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/coach/application/coach_exercise_progress_snapshot_builder.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('CoachExerciseProgressSnapshotBuilder', () {

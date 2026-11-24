@@ -1,6 +1,6 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/workout_history_date_policy.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   WorkoutSession sample(String id, DateTime start, DateTime finish) =>

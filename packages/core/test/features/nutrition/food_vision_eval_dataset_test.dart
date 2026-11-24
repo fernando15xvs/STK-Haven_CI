@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/application/food_vision_evaluation.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('Food Vision eval dataset covers all Roadmap 3 risk categories', () {

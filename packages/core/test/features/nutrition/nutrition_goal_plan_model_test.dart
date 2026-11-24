@@ -1,6 +1,6 @@
 import 'package:core/domain/models/nutrition_goal_plan.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main(){
   test('adult plan stores source dates and original ranges without recomputation',(){

@@ -1,6 +1,6 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/exercise_session_comparison.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 WorkoutSession _session({
   required String id,

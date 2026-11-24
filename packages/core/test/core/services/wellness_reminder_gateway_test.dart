@@ -1,7 +1,7 @@
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 class _WaterSpy implements HydrationReminderBackend {
   final calls = <String>[];

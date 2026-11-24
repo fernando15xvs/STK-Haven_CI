@@ -1,6 +1,6 @@
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/onboarding/application/onboarding_recommendation_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('OnboardingRecommendationService', () {

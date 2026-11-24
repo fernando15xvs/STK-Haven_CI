@@ -13,8 +13,8 @@ import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/data/active_workout_repository.dart';
 import 'package:core/features/workout/data/workout_repository.dart';
 import 'package:core/features/workout/application/workout_set_record_status.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

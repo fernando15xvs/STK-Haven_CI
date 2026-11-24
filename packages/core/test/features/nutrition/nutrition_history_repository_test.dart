@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:core/domain/models/nutrition_history_entry.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:hive/hive.dart';
 
 void main() {

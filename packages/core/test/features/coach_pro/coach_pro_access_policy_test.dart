@@ -1,6 +1,6 @@
 import 'package:core/domain/models/subscription_entitlement.dart';
 import 'package:core/features/coach_pro/application/coach_pro_access_policy.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   SubscriptionEntitlement entitlement({

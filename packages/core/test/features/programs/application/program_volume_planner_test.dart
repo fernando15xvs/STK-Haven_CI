@@ -2,7 +2,7 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_volume_planner.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('weekly planned sets follow repeated sessions in a 5-day rotation', () {

@@ -1,4 +1,5 @@
 import 'package:core/features/faith/services/verse_background_service.dart';
+import 'package:gym_tracker/platform/faith/mobile_bible_database.dart';
 import 'package:flutter/foundation.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:core/features/faith/data/bible_database.dart';
@@ -9,6 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    // Workmanager uses a separate Dart isolate; bootstrap injection does not carry over.
+    BibleDatabase.installBackend(MobileBibleDatabase.instance);
     if (task == dailyVerseTask) {
       try {
         final prefs = await SharedPreferences.getInstance();

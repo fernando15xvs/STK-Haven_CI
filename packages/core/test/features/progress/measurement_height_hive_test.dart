@@ -1,6 +1,6 @@
 import 'package:core/database/hive/models/hive_body_measurement.dart';
 import 'package:core/domain/models/body_measurement.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('height is optional for all existing historical Hive measurements', () {

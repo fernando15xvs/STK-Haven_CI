@@ -1,5 +1,5 @@
 import 'package:core/features/nutrition/application/nutrition_access_state.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main(){
   test('unknown age stays descriptive without verified backend grant',(){

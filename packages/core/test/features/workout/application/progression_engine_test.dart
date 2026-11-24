@@ -2,7 +2,7 @@ import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/progression_engine.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   const target = RoutineExercise(

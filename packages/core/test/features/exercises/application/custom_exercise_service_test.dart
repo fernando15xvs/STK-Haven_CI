@@ -2,7 +2,7 @@ import 'package:core/core/constants/preset_exercises.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/exercises/application/custom_exercise_service.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   const validDraft = CustomExerciseDraft(

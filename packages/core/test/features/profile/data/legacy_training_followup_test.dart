@@ -1,5 +1,5 @@
 import 'package:core/domain/models/user_experience_profile.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('legacy profiles receive only a voluntary training follow-up',(){

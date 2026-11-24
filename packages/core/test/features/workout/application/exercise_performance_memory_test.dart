@@ -1,7 +1,7 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/exercise_performance_memory.dart';
 import 'package:core/features/workout/application/workout_history_index.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 WorkoutSession _session({
   required String id,

@@ -1,7 +1,7 @@
 import 'package:core/domain/models/app_identity_state.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/identity/application/app_identity_rules.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('AppIdentityRules', () {

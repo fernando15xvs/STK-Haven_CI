@@ -1,7 +1,7 @@
 import 'package:core/domain/models/daily_steps_state.dart';
 import 'package:core/domain/models/hydration_preferences.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('hydration preferences restore safe configurable values', () {

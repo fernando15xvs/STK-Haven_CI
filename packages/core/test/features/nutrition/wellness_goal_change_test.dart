@@ -1,7 +1,7 @@
 import 'package:core/domain/models/hydration_preferences.dart';
 import 'package:core/domain/models/step_goal_preferences.dart';
 import 'package:core/domain/models/wellness_goal_change.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   WellnessGoalChange change(int from,int to, {

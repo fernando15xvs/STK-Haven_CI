@@ -1,4 +1,4 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:core/domain/models/settings_state.dart';
 

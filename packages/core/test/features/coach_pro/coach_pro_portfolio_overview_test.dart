@@ -1,5 +1,5 @@
 import 'package:core/domain/models/coach_pro_portfolio_overview.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('global overview parses independently of page size', () {

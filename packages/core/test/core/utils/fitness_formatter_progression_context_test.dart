@@ -1,6 +1,6 @@
 import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/domain/models/progression_suggestion.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('different rep context is explicit in progression copy', () {

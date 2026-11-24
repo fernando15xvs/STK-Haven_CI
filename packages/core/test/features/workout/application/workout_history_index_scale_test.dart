@@ -1,7 +1,7 @@
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/progress/application/exercise_progress_calculator.dart';
 import 'package:core/features/workout/application/workout_history_index.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:test/test.dart';
 
 void main() {
   group('Roadmap 2.0 synthetic history scale', () {
