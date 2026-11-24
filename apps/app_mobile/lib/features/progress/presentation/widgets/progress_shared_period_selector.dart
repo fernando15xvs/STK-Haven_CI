@@ -1,4 +1,4 @@
-import 'package:core/features/progress/presentation/widgets/compact_progress_period_selector.dart';
+import 'package:gym_tracker/features/progress/presentation/widgets/compact_progress_period_selector.dart';
 
 /// Compatibility alias for previous imports; new tabs use the core widget.
 @Deprecated('Use CompactProgressPeriodSelector')

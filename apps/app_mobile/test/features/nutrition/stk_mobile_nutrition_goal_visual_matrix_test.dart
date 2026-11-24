@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:core/core/theme/appearance_theme.dart';
+import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
-import 'package:core/features/nutrition/presentation/widgets/stk_mobile_nutrition_goal_selector.dart';
+import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_goal_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';

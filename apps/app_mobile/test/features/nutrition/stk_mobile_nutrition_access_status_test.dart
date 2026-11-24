@@ -1,6 +1,6 @@
 import 'package:core/features/nutrition/application/nutrition_access_state.dart';
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
-import 'package:core/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart';
+import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

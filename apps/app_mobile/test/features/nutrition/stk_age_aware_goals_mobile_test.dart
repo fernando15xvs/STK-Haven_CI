@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:core/features/nutrition/application/stk_age_aware_nutrition_plans.dart';
-import 'package:core/features/nutrition/presentation/widgets/stk_age_aware_nutrition_goals.dart';
+import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_age_aware_nutrition_goals.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
