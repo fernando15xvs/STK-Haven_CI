@@ -81,10 +81,10 @@ void main() {
             matching: find.byType(Text),
           )).toList(growable: false);
           expect(labels, hasLength(2));
-          expect(labels[0].style!.fontFamily, 'Outfit');
+          expect(labels[0].style!.fontFamily, isNull, reason: 'Selected font inherits from Material theme');
           expect(labels[0].style!.fontSize, AppTypography.labelSmall.fontSize);
           expect(labels[0].style!.color, sample.titleColor);
-          expect(labels[1].style!.fontFamily, 'Outfit');
+          expect(labels[1].style!.fontFamily, isNull, reason: 'Selected font inherits from Material theme');
           expect(labels[1].style!.fontSize, AppTypography.bodySmall.fontSize);
           expect(labels[1].style!.color, sample.valueColor);
           expect(labels[1].style!.fontFeatures,
