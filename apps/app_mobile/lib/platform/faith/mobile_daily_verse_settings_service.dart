@@ -1,11 +1,12 @@
+import 'package:core/core/services/daily_verse_settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../features/faith/services/verse_background_service.dart';
-import '../../features/faith/data/verse_schedule_repository.dart';
-import '../../features/faith/services/verse_notification_service.dart';
+import 'package:core/features/faith/services/verse_background_service.dart';
+import 'package:core/features/faith/data/verse_schedule_repository.dart';
+import 'package:core/features/faith/services/verse_notification_service.dart';
 
-Future<bool> configureDailyVerseNotifications(bool enable) async {
+Future<bool> configureMobileDailyVerseNotifications(bool enable) async {
   var effectiveValue = enable;
 
   if (enable) {
@@ -41,4 +42,12 @@ Future<bool> configureDailyVerseNotifications(bool enable) async {
 
   await prefs.setBool('verse_notifications_enabled', effectiveValue);
   return effectiveValue;
+}
+
+class MobileDailyVerseSettingsBackend implements DailyVerseSettingsBackend {
+  const MobileDailyVerseSettingsBackend();
+
+  @override
+  Future<bool> configure(bool enable) =>
+      configureMobileDailyVerseNotifications(enable);
 }

@@ -9,7 +9,7 @@ void main() {
       'nutrition_intelligence_page_mobile.dart',
     ).readAsStringSync();
     final core = File(
-      '../../packages/core/lib/features/nutrition/presentation/pages/'
+      'lib/features/nutrition/presentation/pages/'
       'nutrition_intelligence_page.dart',
     ).readAsStringSync();
     expect(mobile, contains('requestPhotoAnalysisConsent: _requestPhotoConsent'));

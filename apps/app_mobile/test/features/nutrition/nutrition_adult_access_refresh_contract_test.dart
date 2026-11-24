@@ -36,7 +36,7 @@ void main(){
       'lib/features/profile/presentation/pages/stk_mobile_privacy_page.dart',
     ).readAsStringSync();
     final panel = File(
-      '../../packages/core/lib/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart',
+      'lib/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart',
     ).readAsStringSync();
 
     expect(mobile, contains('Future<void> _openExistingUserLegalReview() async'));
@@ -56,7 +56,7 @@ void main(){
 
   test('revoked grant hides formerly numeric cached results',(){
     final core=File(
-      '../../packages/core/lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
+      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
     ).readAsStringSync();
     expect(core,contains('didUpdateWidget(covariant NutritionIntelligencePage'));
     expect(core,contains('oldWidget.verifiedAdultNutritionAccess'));

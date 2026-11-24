@@ -1,3 +1,4 @@
+import 'package:gym_tracker/platform/faith/mobile_verse_widget_backend.dart';
 import 'package:core/features/faith/services/verse_widget_sync.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ void main() {
   final calls = <MethodCall>[];
 
   setUp(() {
+    VerseWidgetSync.installBackend(const MobileVerseWidgetBackend());
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     calls.clear();
     messenger.setMockMethodCallHandler(channel, (call) async {
@@ -19,6 +21,7 @@ void main() {
   });
 
   tearDown(() {
+    VerseWidgetSync.installBackend(null);
     debugDefaultTargetPlatformOverride = null;
     messenger.setMockMethodCallHandler(channel, null);
   });

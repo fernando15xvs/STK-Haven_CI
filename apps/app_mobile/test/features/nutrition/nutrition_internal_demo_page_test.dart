@@ -73,7 +73,7 @@ void main() {
       'lib/features/nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart',
     ).readAsStringSync();
     final core = File(
-      '../../packages/core/lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
+      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
     ).readAsStringSync();
 
     expect(preview, contains("'STK_INTERNAL_NUTRITION_DEMO'"));

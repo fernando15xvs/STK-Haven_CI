@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
-class LocalNotificationTimezone {
+class MobileLocalNotificationTimezone {
   static const MethodChannel _channel =
       MethodChannel('stk_haven/timezone');
   static Future<void>? _initialization;
+
+  static void resetForTesting() { _initialization = null; }
 
   static Future<void> ensureInitialized() {
     return _initialization ??= _initialize();

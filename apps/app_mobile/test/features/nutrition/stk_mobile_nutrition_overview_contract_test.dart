@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final corePath =
-      '../../packages/core/lib/features/nutrition/presentation/pages/'
+      'lib/features/nutrition/presentation/pages/'
       'nutrition_intelligence_page.dart';
   final mobilePath = 'lib/features/nutrition/presentation/pages/'
       'nutrition_intelligence_page_mobile.dart';

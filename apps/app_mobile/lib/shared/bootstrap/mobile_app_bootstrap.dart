@@ -7,6 +7,11 @@ import 'package:core/core/services/workout_notification_service.dart';
 import 'package:core/core/services/hydration_reminder_service.dart';
 import 'package:core/core/services/step_goal_reminder_service.dart';
 import 'package:core/core/services/coach_pro_local_reminder_service.dart';
+import 'package:core/core/services/backup_file_service.dart';
+import 'package:core/features/profile/application/data_export_service.dart';
+import 'package:core/core/services/daily_verse_settings_service.dart';
+import 'package:core/features/faith/services/verse_background_service.dart';
+import 'package:core/features/faith/services/verse_widget_sync.dart';
 import 'package:core/core/services/personal_motivational_reminder_service.dart';
 import 'package:core/features/faith/services/verse_notification_service.dart';
 import 'package:core/features/progress/services/measurement_reminder_service.dart';
@@ -32,6 +37,11 @@ import '../../platform/reminders/mobile_habit_task_notification_service.dart';
 import '../../platform/reminders/mobile_verse_notification_service.dart';
 import '../../platform/reminders/mobile_personal_motivational_reminder_service.dart';
 import '../../platform/reminders/mobile_measurement_reminder_service.dart';
+import '../../platform/faith/mobile_verse_widget_backend.dart';
+import '../../platform/faith/mobile_verse_background_service.dart';
+import '../../platform/faith/mobile_daily_verse_settings_service.dart';
+import '../../platform/files/mobile_backup_file_service.dart';
+import '../../platform/files/mobile_data_export_service.dart';
 
 typedef PlatformServicesInitializer = Future<void> Function();
 
@@ -80,6 +90,11 @@ Future<void> bootstrapMobileApp({
     const MobilePersonalMotivationalReminderBackend(),
   );
   MeasurementReminderService.installBackend(const MobileMeasurementReminderBackend());
+  VerseWidgetSync.installBackend(const MobileVerseWidgetBackend());
+  VerseBackgroundService.installBackend(const MobileVerseBackgroundBackend());
+  DailyVerseSettingsService.installBackend(const MobileDailyVerseSettingsBackend());
+  BackupFileService.installBackend(const MobileBackupFileBackend());
+  DataExportService.installBackend(const MobileDataExportBackend());
 
   // Initialise OS lock-screen and notification controls before creating a player.
   try {

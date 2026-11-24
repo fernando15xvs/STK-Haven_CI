@@ -1,13 +1,20 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
+/// A Dart-only boundary for the signed home/lock-screen verse widget.
+abstract class VerseWidgetBackend {
+  bool get isSupportedPlatform;
+  Future<void> publish(Map<String, String> snapshot);
+  Future<Map<String, bool>?> diagnostics();
+  Future<void> clear();
+}
 
-/// One-way, opt-in native snapshot for lock-screen/home-screen widgets.
-/// The widget does not read Hive, the journal, the user's mood or account.
-class VerseWidgetSync {
-  VerseWidgetSync._();
+abstract final class VerseWidgetSync {
+  static VerseWidgetBackend? _backend;
 
-  static const MethodChannel _channel =
-      MethodChannel('stk_haven/verse_widget');
+  static void installBackend(VerseWidgetBackend? backend) {
+    _backend = backend;
+  }
+
+  static bool get isSupportedPlatform =>
+      _backend?.isSupportedPlatform ?? false;
 
   static String dateKey(DateTime value) =>
       '${value.year}-${value.month}-${value.day}';
@@ -17,12 +24,15 @@ class VerseWidgetSync {
     required String reference,
     required DateTime date,
   }) async {
-    if (kIsWeb || !isSupportedPlatform) return;
+    final backend = _backend;
+    if (backend == null || !backend.isSupportedPlatform) return;
     final cleanText = text.trim();
     final cleanReference = reference.trim();
     if (cleanText.isEmpty || cleanReference.isEmpty) return;
-    await _channel.invokeMethod<bool>('publish', <String, String>{
-      'text': cleanText.length <= 1200 ? cleanText : cleanText.substring(0, 1200),
+    await backend.publish(<String, String>{
+      'text': cleanText.length <= 1200
+          ? cleanText
+          : cleanText.substring(0, 1200),
       'reference': cleanReference.length <= 120
           ? cleanReference
           : cleanReference.substring(0, 120),
@@ -30,25 +40,9 @@ class VerseWidgetSync {
     });
   }
 
-  /// Reports the installed signed iOS bundle, not just the unsigned IPA in CI.
-  static Future<Map<String, bool>?> diagnostics() async {
-    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return null;
-    try {
-      final response = await _channel.invokeMapMethod<String, bool>(
-        'diagnostics',
-      );
-      return response;
-    } catch (_) {
-      return null;
-    }
-  }
+  static Future<Map<String, bool>?> diagnostics() =>
+      _backend?.diagnostics() ?? Future<Map<String, bool>?>.value();
 
-  static Future<void> clear() async {
-    if (kIsWeb || !isSupportedPlatform) return;
-    await _channel.invokeMethod<bool>('clear');
-  }
-
-  static bool get isSupportedPlatform =>
-      defaultTargetPlatform == TargetPlatform.android ||
-      defaultTargetPlatform == TargetPlatform.iOS;
+  static Future<void> clear() =>
+      _backend?.clear() ?? Future<void>.value();
 }

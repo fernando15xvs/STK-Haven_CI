@@ -1,10 +1,11 @@
+import 'package:core/core/services/backup_file_service.dart';
 import 'dart:io';
 
 import 'package:core/core/services/backup_activity_service.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
 
-class BackupFileService {
+class MobileBackupFileService {
   Future<void> exportFile(String jsonContent) async {
     final tempDir = Directory.systemTemp;
     final file = File('${tempDir.path}/stk_haven_backup.json');
@@ -35,4 +36,16 @@ class BackupFileService {
       return null;
     }
   }
+}
+
+class MobileBackupFileBackend implements BackupFileBackend {
+  const MobileBackupFileBackend();
+
+  @override
+  Future<void> exportFile(String jsonContent) =>
+      MobileBackupFileService().exportFile(jsonContent);
+
+  @override
+  Future<String?> pickBackupFile() =>
+      MobileBackupFileService().pickBackupFile();
 }

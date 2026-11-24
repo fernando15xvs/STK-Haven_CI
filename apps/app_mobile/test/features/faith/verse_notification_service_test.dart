@@ -1,10 +1,11 @@
+import 'package:gym_tracker/platform/reminders/mobile_verse_notification_service.dart';
+import 'package:gym_tracker/platform/reminders/mobile_personal_motivational_reminder_service.dart';
+import 'package:gym_tracker/platform/reminders/mobile_local_notification_timezone.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:core/core/services/personal_motivational_reminder_service.dart';
 import 'package:core/features/profile/domain/personal_reminder_settings.dart';
 import 'package:core/domain/models/verse.dart';
 import 'package:core/features/faith/domain/verse_notification_schedule.dart';
-import 'package:core/features/faith/services/verse_notification_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +27,7 @@ void main() {
   ];
 
   setUp(() {
+    MobileLocalNotificationTimezone.resetForTesting();
     IOSFlutterLocalNotificationsPlugin.registerWith();
     SharedPreferences.setMockInitialValues({});
     debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
@@ -74,7 +76,7 @@ void main() {
     () async {
       pending[1301] = {'id': 1301};
       pending[999] = {'id': 999};
-      await VerseNotificationService.schedule(
+      await MobileVerseNotificationService.schedule(
         const VerseNotificationSchedule(times: [480, 1200]),
         verses: content,
       );
@@ -92,7 +94,7 @@ void main() {
         contains('20:00:00'),
       );
       expect(pending.keys.toSet(), {999, 1310, 1311});
-      expect(await VerseNotificationService.pendingDailyReminderCount(), 2);
+      expect(await MobileVerseNotificationService.pendingDailyReminderCount(), 2);
       final now = tz.TZDateTime.now(tz.local);
       for (final slot in scheduled) {
         final local = DateTime.parse(slot['scheduledDateTime'] as String);
@@ -116,7 +118,7 @@ void main() {
       permission = false;
       pending[1301] = {'id': 1301};
       await expectLater(
-        VerseNotificationService.schedule(
+        MobileVerseNotificationService.schedule(
           const VerseNotificationSchedule(),
           verses: content.take(1).toList(),
         ),
@@ -134,7 +136,7 @@ void main() {
       }
       pending[1301] = {'id': 1301};
       await expectLater(
-        VerseNotificationService.schedule(
+        MobileVerseNotificationService.schedule(
           const VerseNotificationSchedule(times: [480, 1200]),
           verses: content,
         ),
@@ -149,7 +151,7 @@ void main() {
     () async {
       pending[1301] = {'id': 1301};
       await expectLater(
-        VerseNotificationService.schedule(
+        MobileVerseNotificationService.schedule(
           const VerseNotificationSchedule(),
           verses: [],
         ),
@@ -164,7 +166,7 @@ void main() {
       pending[999] = {'id': 999};
       failSecond = true;
       await expectLater(
-        VerseNotificationService.schedule(
+        MobileVerseNotificationService.schedule(
           const VerseNotificationSchedule(times: [480, 1200]),
           verses: content,
         ),
@@ -175,7 +177,7 @@ void main() {
   );
   test('preview is a one-off and does not replace recurring slots', () async {
     pending[1310] = {'id': 1310};
-    await VerseNotificationService.schedulePreview();
+    await MobileVerseNotificationService.schedulePreview();
     expect(pending.keys.toSet(), {1302, 1310});
     expect(scheduled.single['matchDateTimeComponents'], isNull);
   });
@@ -185,7 +187,7 @@ void main() {
       for (final id in [1301, 1302, 1310, 1357, 42910]) {
         pending[id] = {'id': id};
       }
-      await VerseNotificationService.cancelDailyReminder();
+      await MobileVerseNotificationService.cancelDailyReminder();
       expect(pending.keys, [42910]);
     },
   );
@@ -203,7 +205,7 @@ void main() {
         ],
       );
       await expectLater(
-        PersonalMotivationalReminderService.synchronize(personal),
+        MobilePersonalMotivationalReminderService.synchronize(personal),
         throwsStateError,
       );
       expect(pending.length, 13);
@@ -213,7 +215,7 @@ void main() {
   test(
     'background restoration cannot re-enable a revoked preference',
     () async {
-      await VerseNotificationService.schedule(
+      await MobileVerseNotificationService.schedule(
         const VerseNotificationSchedule(),
         verses: content.take(1).toList(),
         requireSavedConsent: true,

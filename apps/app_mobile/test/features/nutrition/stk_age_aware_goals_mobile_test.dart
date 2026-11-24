@@ -129,7 +129,7 @@ void main() {
       'lib/features/nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart',
     ).readAsStringSync();
     final core = File(
-      '../../packages/core/lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
+      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
     ).readAsStringSync();
     expect(mobile, contains('showAgeAwareGoals: true'));
     expect(mobile, contains('imageQuality: 78'));

@@ -1,3 +1,4 @@
+import 'package:core/features/profile/application/data_export_service.dart';
 import 'dart:io';
 
 import 'package:csv/csv.dart';
@@ -5,7 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:core/domain/models/workout_session.dart';
 
-class DataExportService {
+class MobileDataExportService {
   Future<void> exportWorkoutsToCSV(List<WorkoutSession> sessions) async {
     final csvWithBom = '\uFEFF${Csv().encode(_buildRows(sessions))}';
     final directory = await getTemporaryDirectory();
@@ -80,4 +81,12 @@ List<List<dynamic>> _buildRows(List<WorkoutSession> sessions) {
   }
 
   return rows;
+}
+
+class MobileDataExportBackend implements DataExportBackend {
+  const MobileDataExportBackend();
+
+  @override
+  Future<void> exportWorkoutsToCSV(List<WorkoutSession> sessions) =>
+      MobileDataExportService().exportWorkoutsToCSV(sessions);
 }

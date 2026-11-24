@@ -1,0 +1,94 @@
+import 'package:core/features/faith/services/verse_background_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:core/features/faith/data/bible_database.dart';
+import 'package:core/features/faith/data/bible_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    if (task == dailyVerseTask) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final isEnabled =
+            prefs.getBool('verse_notifications_enabled') ?? true;
+
+        if (!isEnabled) return true;
+
+        final repo = BibleRepository(BibleDatabase.instance);
+        final currentMood = prefs.getString('current_mood') ?? 'General';
+        final newVerse = await repo.getRandomVerse(mood: currentMood);
+
+        if (newVerse != null) {
+          final now = DateTime.now();
+          final today = '${now.year}-${now.month}-${now.day}';
+          await prefs.setString('saved_verse', newVerse.text);
+          await prefs.setString('saved_reference', newVerse.reference);
+          await prefs.setString('daily_verse_date', today);
+        }
+      } catch (_) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+class MobileVerseBackgroundService {
+  static Future<void> initialize() async {
+    if (kIsWeb) return;
+    await Workmanager().initialize(callbackDispatcher);
+  }
+
+  static Future<void> scheduleDailyVerse(int hour, int minute) async {
+    if (kIsWeb) return;
+    final now = DateTime.now();
+    var scheduledTime = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+
+    if (!scheduledTime.isAfter(now)) {
+      scheduledTime = scheduledTime.add(const Duration(days: 1));
+    }
+
+    final initialDelay = scheduledTime.difference(now);
+
+    await Workmanager().cancelByUniqueName(dailyVerseTask);
+    await Workmanager().registerPeriodicTask(
+      dailyVerseTask,
+      dailyVerseTask,
+      frequency: const Duration(days: 1),
+      initialDelay: initialDelay,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+      constraints: Constraints(
+        networkType: NetworkType.notRequired,
+      ),
+    );
+  }
+
+  static Future<void> cancelDailyVerse() async {
+    if (kIsWeb) return;
+    await Workmanager().cancelByUniqueName(dailyVerseTask);
+  }
+}
+
+class MobileVerseBackgroundBackend implements VerseBackgroundBackend {
+  const MobileVerseBackgroundBackend();
+
+  @override
+  Future<void> initialize() => MobileVerseBackgroundService.initialize();
+
+  @override
+  Future<void> scheduleDailyVerse(int hour, int minute) =>
+      MobileVerseBackgroundService.scheduleDailyVerse(hour, minute);
+
+  @override
+  Future<void> cancelDailyVerse() =>
+      MobileVerseBackgroundService.cancelDailyVerse();
+}
