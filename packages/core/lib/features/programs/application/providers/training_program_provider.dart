@@ -2,6 +2,8 @@ import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_rotation_coordinator.dart';
+import 'package:core/features/programs/application/program_routine_order_policy.dart';
+import 'package:core/features/programs/application/program_week_plan.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/training_program_legacy_policy.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
@@ -82,6 +84,7 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
       isActive: activate,
     );
 
+    ProgramRoutineOrderPolicy.validateWeeklyConfiguration(program);
     if (activate) {
       for (final existing in _repository.getAll()) {
         if (existing.isActive) {
@@ -95,7 +98,13 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
   }
 
   Future<void> save(TrainingProgram program) async {
-    await _repository.save(program);
+    final existing = _repository.getById(program.id);
+    final updated = existing == null ? program : ProgramRoutineOrderPolicy.applyScheduleEdit(
+      existing: ProgramRotationCoordinator.reconcile(existing, ref.read(workoutHistoryProvider)),
+      edited: program, now: DateTime.now(),
+    );
+    if (existing == null) ProgramRoutineOrderPolicy.validateWeeklyConfiguration(updated);
+    await _repository.save(updated);
     refresh();
   }
 
@@ -293,30 +302,9 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
   final routines = ref.watch(routineListProvider);
   ref.watch(trainingDayClockProvider);
   final now = DateTime.now().toLocal();
-  final today = DateTime(now.year, now.month, now.day);
-
-  final projected = ProgramScheduleProjector.project(
-    program: reconciled,
-    routines: routines,
-    from: today,
-    days: 21,
-    initialRotationIndex:
-        ProgramScheduleProjector.rotationIndexAt(reconciled, now),
-  );
-
-  String? nextRoutineId;
-  DateTime? scheduledDate;
-  final noFixedDays = reconciled.scheduleMode == ProgramScheduleMode.flexible ||
-      (reconciled.scheduleMode == ProgramScheduleMode.continuous &&
-          ProgramScheduleProjector.effectiveTrainingWeekdays(reconciled, routines).isEmpty);
-  if (noFixedDays) {
-    nextRoutineId = reconciled.nextRoutineIdAt(now);
-  } else if (projected.isNotEmpty) {
-    nextRoutineId = projected.first.routineId;
-    scheduledDate = projected.first.date;
-  } else {
-    nextRoutineId = reconciled.nextRoutineIdAt(now);
-  }
+  final plan = ProgramWeekPlan.calculate(program: reconciled, routines: routines, now: now);
+  final nextRoutineId = plan.nextSuggestion?.routineId;
+  final scheduledDate = plan.nextSuggestion?.date;
   if (nextRoutineId == null) return null;
 
   Routine? routine;

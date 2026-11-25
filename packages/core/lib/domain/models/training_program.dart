@@ -71,6 +71,10 @@ class TrainingProgram {
   final ProgramSequencePolicy sequencePolicy;
   final List<String> weeklySequenceRoutineIds;
 
+  /// Historical sessions before an explicit schedule edit cannot be replayed
+  /// against the new rules. Existing completions remain immutable.
+  final DateTime? sequenceEffectiveAt;
+
   /// User goal, independent from which weekdays are selected.
   ///
   /// A value of 0 is accepted only for migrated legacy data; callers should use
@@ -100,6 +104,7 @@ class TrainingProgram {
     this.scheduleMode = ProgramScheduleMode.continuous,
     this.sequencePolicy = ProgramSequencePolicy.rolling,
     this.weeklySequenceRoutineIds = const [],
+    this.sequenceEffectiveAt,
     this.targetSessionsPerWeek = 0,
     this.trainingWeekdays = const <int>{},
     this.fixedWeekdayRoutineIds = const <int, String>{},
@@ -362,6 +367,7 @@ class TrainingProgram {
     ProgramScheduleMode? scheduleMode,
     ProgramSequencePolicy? sequencePolicy,
     List<String>? weeklySequenceRoutineIds,
+    DateTime? sequenceEffectiveAt,
     int? targetSessionsPerWeek,
     Set<int>? trainingWeekdays,
     Map<int, String>? fixedWeekdayRoutineIds,
@@ -382,6 +388,7 @@ class TrainingProgram {
       scheduleMode: scheduleMode ?? this.scheduleMode,
       sequencePolicy: sequencePolicy ?? this.sequencePolicy,
       weeklySequenceRoutineIds: weeklySequenceRoutineIds ?? this.weeklySequenceRoutineIds,
+      sequenceEffectiveAt: sequenceEffectiveAt ?? this.sequenceEffectiveAt,
       targetSessionsPerWeek:
           targetSessionsPerWeek ?? this.targetSessionsPerWeek,
       trainingWeekdays: trainingWeekdays ?? this.trainingWeekdays,
@@ -406,6 +413,7 @@ class TrainingProgram {
         'scheduleMode': scheduleMode.name,
         'sequencePolicy': sequencePolicy.name,
         'weeklySequenceRoutineIds': weeklySequenceRoutineIds,
+        if (sequenceEffectiveAt != null) 'sequenceEffectiveAt': sequenceEffectiveAt!.toIso8601String(),
         'targetSessionsPerWeek': targetSessionsPerWeek,
         'trainingWeekdays': trainingWeekdays.toList()..sort(),
         'fixedWeekdayRoutineIds': {
@@ -475,6 +483,7 @@ class TrainingProgram {
       weeklySequenceRoutineIds: json['weeklySequenceRoutineIds'] is List
           ? List<String>.unmodifiable((json['weeklySequenceRoutineIds'] as List).whereType<String>())
           : const [],
+      sequenceEffectiveAt: DateTime.tryParse(json['sequenceEffectiveAt']?.toString() ?? ''),
       targetSessionsPerWeek: legacyTarget.clamp(0, 7).toInt(),
       trainingWeekdays: trainingWeekdays,
       fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,

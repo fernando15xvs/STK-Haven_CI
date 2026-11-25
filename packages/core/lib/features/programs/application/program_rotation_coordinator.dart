@@ -22,6 +22,8 @@ class ProgramRotationCoordinator {
     final candidates = history
         .where((session) =>
             !session.startedAt.isBefore(program.startedAt) &&
+            (program.sequenceEffectiveAt == null ||
+                !session.startedAt.isBefore(program.sequenceEffectiveAt!)) &&
             session.routineId != null &&
             _isCompletedEffectiveSession(session) &&
             !alreadyRecorded.contains(session.id))

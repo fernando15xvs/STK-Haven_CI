@@ -1,6 +1,7 @@
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
+import 'package:core/features/programs/application/program_week_plan.dart';
 
 class ProgramPlanInsights {
   final int plannedThisWeek;
@@ -16,6 +17,8 @@ class ProgramPlanInsights {
   final Set<int> trainingWeekdays;
   final ProgramScheduleMode scheduleMode;
   final int targetSessionsPerWeek;
+  final ProgramWeekPlan? weekPlan;
+  bool get weeklyGoalReached => plannedThisWeek > 0 && remainingThisWeek == 0;
 
   const ProgramPlanInsights({
     required this.plannedThisWeek,
@@ -31,6 +34,7 @@ class ProgramPlanInsights {
     required this.trainingWeekdays,
     required this.scheduleMode,
     required this.targetSessionsPerWeek,
+    this.weekPlan,
   });
 
   double? get weeklyCompletionRatio {
@@ -93,15 +97,8 @@ class ProgramPlanInsights {
                 .where((item) => !item.date.isAfter(today))
                 .length;
 
-    final nextSessions = ProgramScheduleProjector.project(
-      program: program,
-      routines: routines,
-      from: today,
-      days: 21,
-      initialRotationIndex:
-          ProgramScheduleProjector.rotationIndexAt(program, now),
-    );
-    final next = nextSessions.isEmpty ? null : nextSessions.first;
+    final weekPlan = ProgramWeekPlan.calculate(program: program, routines: routines, now: now);
+    final next = weekPlan.nextSuggestion;
 
     final next14 = ProgramScheduleProjector.project(
       program: program,
@@ -138,8 +135,8 @@ class ProgramPlanInsights {
           program.scheduleMode == ProgramScheduleMode.flexible
               ? null
               : next?.date,
-      nextScheduledRoutineId: program.scheduleMode == ProgramScheduleMode.flexible
-          ? program.nextRoutineIdAt(now) : next?.routineId,
+      nextScheduledRoutineId: next?.routineId,
+      weekPlan: weekPlan,
       estimatedEndDate: estimatedEndDate,
       next14RoutineCounts: Map<String, int>.unmodifiable(counts),
       next14SessionCount: next14.length,

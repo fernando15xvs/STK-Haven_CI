@@ -10,6 +10,8 @@ import 'package:core/database/hive/models/hive_routine.dart';
 import 'package:core/database/hive/models/hive_workout_session.dart';
 import 'package:core/domain/models/hive_favorite_verse.dart';
 import 'package:core/domain/models/settings_state.dart';
+import 'package:core/domain/models/training_program.dart';
+import 'package:core/features/programs/data/training_program_repository.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/profile/data/settings_repository.dart';
@@ -133,6 +135,40 @@ void main() {
     expect(restored.exercises.single.sets.first.weight, 50);
     expect(restored.exercises.single.sets.first.reps, 8);
     expect(restored.exercises.single.sets.last.recordedOutcome, 'skipped');
+  });
+
+  test('A: legacy and weekly programs survive Hive restart and actual backup restore', () async {
+    final box = await Hive.openBox<dynamic>(HiveBoxes.trainingPrograms);
+    final repository = TrainingProgramRepository(box);
+    final start = DateTime(2026, 11, 23);
+    final legacy = TrainingProgram(id: 'old', name: 'Stoker', routineIds: ['A','B','C','D'],
+      createdAt: start, startedAt: start, targetSessionsPerWeek: 5,
+      scheduleMode: ProgramScheduleMode.flexible, nextRotationIndex: 1,
+      completions: [ProgramCompletion(workoutSessionId: 'old-a', routineId: 'A',
+        completedAt: DateTime(2026,11,23,12), rotationIndex: 0, programWeek: 1)]);
+    final raw = legacy.toJson()..remove('sequencePolicy')..remove('weeklySequenceRoutineIds');
+    await Hive.box<dynamic>(HiveBoxes.metadata).put(TrainingProgramRepository.backupMetadataKey, [raw]);
+    expect(repository.getById('old')!.nextRoutineId, 'B');
+    final weekly = legacy.copyWith(id: 'weekly', isActive: false,
+      sequencePolicy: ProgramSequencePolicy.weekly,
+      weeklySequenceRoutineIds: ['A','B','C','D','A'],
+      sequenceEffectiveAt: DateTime(2026,11,24));
+    await repository.save(weekly);
+    await Hive.close();
+    Hive.init(tempDir.path);
+    await openRestoreBoxes();
+    final reopened = TrainingProgramRepository(await Hive.openBox<dynamic>(HiveBoxes.trainingPrograms));
+    expect(reopened.getById('old')!.sequencePolicy, ProgramSequencePolicy.rolling);
+    expect(reopened.getById('weekly')!.toJson(), weekly.toJson());
+    final backup = BackupService().validateBackup(BackupService().createBackup());
+    expect(backup.isValid, isTrue, reason: backup.errorMessage);
+    // Only disposable fixture boxes are overwritten.
+    await reopened.delete('weekly');
+    await BackupService().restoreBackup(backup.parsedData!, schemaVersion: backup.schemaVersion!);
+    await reopened.hydrateFromBackupMetadata();
+    expect(reopened.getById('weekly')!.toJson(), weekly.toJson());
+    expect(reopened.getById('old')!.nextRoutineId, 'B');
+    expect(reopened.getById('old')!.completions.single.workoutSessionId, 'old-a');
   });
 
   test('B1.8: interrupted Hive restore survives process restart', () async {
