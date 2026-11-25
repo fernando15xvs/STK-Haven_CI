@@ -124,7 +124,9 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
             SimpleDialogOption(onPressed: () => Navigator.pop(ctx,'swap'), child: const Text('Intercambiar sesión')),
           SimpleDialogOption(onPressed: () => Navigator.pop(ctx,'recover'), child: const Text('Recuperar hoy y desplazar pendientes')),
           SimpleDialogOption(onPressed: () => Navigator.pop(ctx,'omit'), child: const Text('Omitir sesión')),
-          if (!prepared.adaptation!.routinePausedAt(row.routineId, now))
+          if (!prepared.adaptation!.routinePausedAt(row.routineId, now) &&
+              !ProgramWeekPlan.calculate(program: prepared, routines: ref.read(routineListProvider), now: now).goalReached &&
+              ProgramAdaptationPolicy.availableDate(prepared, ref.read(routineListProvider), row, now) == ProgramAdaptationPolicy.day(now))
             SimpleDialogOption(onPressed: () => Navigator.pop(ctx,'start'), child: const Text('Entrenar esta sesión')),
         ],
       ]));
@@ -263,7 +265,7 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
               style:AppTypography.bodySmall)),
           ExpansionTile(key:const ValueKey('adaptive_next_week'),tilePadding:EdgeInsets.zero,
             initiallyExpanded:_nextWeek,onExpansionChanged:(v)=>_nextWeek=v,
-            title:const Text('Próxima semana'),subtitle:const Text('Estimación'),
+            title:const Text('Próxima semana'),subtitle:const Text('Estimación si completas las sesiones disponibles'),
             children:[for (final (i,id) in plan.nextWeekRoutineIds.indexed)
               ListTile(dense:true,contentPadding:EdgeInsets.zero,leading:Text('${i+1}'),
                 title:Text(byId[id]?.name??'Rutina no disponible'))]),

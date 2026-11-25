@@ -123,7 +123,9 @@ class ProgramAdaptationPolicy {
       final relevant = pauses.where((p) => (p.routineId == null ||
           p.routineId == occurrence.routineId) && p.activeAt(candidate == day(now) ? now : candidate));
       if (relevant.any((p) => p.endsAt == null)) return null;
-      if (relevant.isEmpty && (flexible || fixed ||
+      // A user-confirmed recovery can explicitly use a normally free day.
+      final explicitDay = occurrence.notBefore != null && candidate == day(occurrence.notBefore!);
+      if (relevant.isEmpty && (flexible || fixed || explicitDay ||
           ProgramScheduleProjector.isTrainingDay(program, routines, candidate))) {
         if (!program.repeatsWeekly || TrainingProgram.localWeekStart(candidate) == occurrence.week) {
           return candidate;
@@ -133,6 +135,35 @@ class ProgramAdaptationPolicy {
       candidate = TrainingProgram.shiftCalendarDays(candidate, 1);
     }
     return null;
+  }
+
+  /// Forecast the next week assuming the remaining available positions are
+  /// completed. Real rollover still retains genuinely uncompleted positions.
+  /// A paused or explicitly deferred position is not silently forecast as done.
+  static List<String> forecastNextWeek(TrainingProgram p, Iterable<Routine> routines,
+      DateTime now) {
+    final state = p.adaptation!;
+    final nextMonday = TrainingProgram.shiftCalendarDays(state.week, 7);
+    final rolling = p.scheduleMode != ProgramScheduleMode.fixed && !p.repeatsWeekly;
+    if (!rolling) {
+      return List.unmodifiable(current(prepare(p, routines, nextMonday)).map((o) => o.routineId));
+    }
+    final target = ProgramScheduleProjector.effectiveTargetSessionsPerWeek(p, routines);
+    final ids = p.routineIds;
+    if (ids.isEmpty) return const [];
+    final retained = <String>[];
+    for (final o in current(p).where(_pending)) {
+      if (!ids.contains(o.routineId)) continue;
+      final available = availableDate(p, routines, o, now);
+      if (available == null || !available.isBefore(nextMonday)) {
+        retained.add(o.routineId);
+      }
+    }
+    return List.unmodifiable([
+      ...retained.take(target),
+      for (var i = 0; i < target - retained.length; i++)
+        ids[(p.normalizedNextRotationIndex + i) % ids.length],
+    ]);
   }
 
   static PlanOccurrence? nextOccurrence(TrainingProgram program, Iterable<Routine> routines, DateTime now) {
@@ -222,6 +253,7 @@ class ProgramAdaptationPolicy {
       for (var i = 0; i < rows.length; i++) {
         final row = rows[i];
         if (row.week != p.adaptation!.week || !_pending(row) ||
+            p.adaptation!.bindings.containsValue(row.id) ||
             (row.date != null && row.date!.isBefore(today))) continue;
         do {
           nextDay = TrainingProgram.shiftCalendarDays(nextDay, 1);
@@ -306,6 +338,11 @@ class ProgramAdaptationPolicy {
     if (state.bindings.containsKey(workoutId)) return p;
     String binding = '';
     if (!independent) {
+      final target = ProgramScheduleProjector.effectiveTargetSessionsPerWeek(p, routines);
+      final completed = p.completionsInLocalWeek(now).where((c) => !c.completedAt.isAfter(now)).length;
+      if (target <= 0 || completed >= target) {
+        throw StateError('Objetivo semanal cumplido. Entrena de forma independiente.');
+      }
       final selected = slotId == null ? nextOccurrence(p, routines, now) :
           state.occurrences[_index(p, slotId)];
       if (selected == null || selected.routineId != routineId ||

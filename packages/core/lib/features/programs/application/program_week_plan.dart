@@ -62,11 +62,10 @@ class ProgramWeekPlan {
     final next = ProgramAdaptationPolicy.nextOccurrence(p, routines, now);
     final target = ProgramScheduleProjector.effectiveTargetSessionsPerWeek(p, routines);
     final completed = p.completionsInLocalWeek(now).where((c) => !c.completedAt.isAfter(now)).length;
-    final future = ProgramAdaptationPolicy.prepare(p, routines,
-        TrainingProgram.shiftCalendarDays(state.week, 7));
+    final future = ProgramAdaptationPolicy.forecastNextWeek(p, routines, now);
     return ProgramWeekPlan(weekStart: state.week, slots: List.unmodifiable(slots),
       target: target, completed: completed, isPaused: state.programPausedAt(now),
-      nextWeekRoutineIds: List.unmodifiable(ProgramAdaptationPolicy.current(future).map((o) => o.routineId)),
+      nextWeekRoutineIds: future,
       nextSuggestion: next == null || completed >= target ? null : ProgramNextSuggestion(
         next.routineId, occurrenceId: next.id,
         date: p.scheduleMode == ProgramScheduleMode.flexible && next.notBefore == null

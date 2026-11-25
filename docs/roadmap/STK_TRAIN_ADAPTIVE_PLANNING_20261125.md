@@ -66,7 +66,7 @@ Continuación de STK_TRAIN_DAILY_STATES_20261125.md. Base funcional privada 7188
 - [x] A Motor de planificación (CI #45633916378 7/7).
 - [x] B Excepciones Core (CI #45640731951 7/7; acciones UI y recuperación entre semanas según D).
 - [x] C Entrenar compacto (CI #45646554997 7/7).
-- [ ] D Editor y planificación.
+- [x] D Editor y planificación (CI #45707671809 7/7).
 - [ ] E Regresiones, QA física y artefactos.
 
 ## A.1 — Secuencia semanal y compatibilidad (implementación preparada)
@@ -97,3 +97,9 @@ CI #45644200522: 6/7; Mobile tests 73/74 en Entrenar, menú de 40 dp frente a m�
 - Editor: selector rotativo/semanal para flexible/continuo, posiciones repetibles, vista previa de dos semanas y guardado compatible. Fijo conserva mapa. Modal unificado desde calendario y menú destacado, progreso y estados, previa de siguiente semana, acciones de posposición/intercambio/omisión/recuperación y pausa/reanudación. Entrenamiento independiente explícito en descanso/completado y fuera de secuencia. Recuperación de ocurrencias históricas persistidas con sustitución explícita de una pendiente (sin deuda ilimitada). Pendiente CI y QA física. Los programas legacy sin ocurrencias persistidas anteriores no pueden reconstruir con certeza una deuda histórica; no se inventa.
 
 - D integración adicional: vista previa de secuencia calculada por Core, reportes de programas consumen slots reales en vez de calendario sintético, pausa desde gestión conserva duración, fuera de secuencia ofrece adaptar o independiente. Prueba interactiva confirma omitir/restaurar y evita completion ficticia. Pendiente CI completo y QA física.
+
+## E — Cierre de integración y regresiones
+- Base D verificada 7/7 en #45707671809. Se corrige la previsión de próxima semana en planes adaptados: si se completan posiciones disponibles, el cursor rotativo continúa; las bloqueadas o pospuestas se conservan. El rollover real conserva pendientes reales, no utiliza la estimación.
+- El inicio adicional después del objetivo semanal se reserva como independiente con confirmación; el motor rechaza un vínculo de programa si el objetivo ya se alcanzó. La recuperación explícita puede usar un día libre, sin modificar el calendario habitual. No se desplazan ocurrencias reservadas. El reloj compartido alimenta el provider, y si falla el inicio se libera la reserva.
+- Matriz Core de cinco combinaciones × frecuencia 1–7, slots, identidad, preview, rollover real, JSON y pausa. Pruebas de recuperación explícita y objetivo cumplido. Pendiente CI del nuevo SHA; no se afirma validación física ni firma.
+- QA física: actualizar sin desinstalar, probar programa existente, sesión finalizada, descanso, ausencias, secuencias repetidas, reinicio offline y accesibilidad en iPhone/Android. La firma de IPA requiere identidad compatible; no usar datos reales en fixtures. No merge sin autorización.

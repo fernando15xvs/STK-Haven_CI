@@ -8,6 +8,9 @@ import 'package:core/features/programs/application/providers/training_program_pr
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 import 'package:gym_tracker/features/programs/presentation/widgets/adaptive_planning_sheet.dart';
 import 'package:core/features/routines/application/providers/routine_provider.dart';
+import 'package:core/features/workout/application/workout_history_provider.dart';
+import 'package:core/features/workout/application/todays_workout_status.dart';
+import 'package:core/features/programs/application/training_day_decision.dart';
 
 class WorkoutLauncher {
   static Future<void> launch(
@@ -67,7 +70,25 @@ class WorkoutLauncher {
       }
     }
 
+    if (!context.mounted) return;
     final programSession = ref.read(nextProgramSessionProvider);
+    final currentProgram = ref.read(activeTrainingProgramProvider);
+    final now = DateTime.now();
+    final completedToday = TodaysWorkoutStatus.latestCompletedToday(ref.read(workoutHistoryProvider), now) != null;
+    final scheduledDate = programSession?.scheduledDate;
+    final future = scheduledDate != null && TrainingDayDecision.localDay(scheduledDate).isAfter(TrainingDayDecision.localDay(now));
+    if (!independent && currentProgram != null && (completedToday ||
+        (occurrenceId == null && (programSession == null || future)))) {
+      final proceed = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+        title: Text(completedToday ? 'Ya entrenaste hoy' : 'No hay sesión disponible hoy'),
+        content: const Text('Puedes realizar un entrenamiento independiente sin avanzar el programa.'),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Entrenar de forma independiente'))],
+      ));
+      if (proceed != true || !context.mounted) return;
+      independent = true;
+      occurrenceId = null;
+    }
     if (!independent && occurrenceId == null && programSession != null && programSession.routine.id != routine.id) {
       final proceed = await showDialog<String>(
         context: context,
@@ -110,11 +131,11 @@ class WorkoutLauncher {
     }
 
     final adapted = ref.read(activeTrainingProgramProvider)?.adaptation != null;
+    final programNotifier = ref.read(trainingProgramListProvider.notifier);
     final String? sessionId;
     try {
       sessionId = adapted || independent || occurrenceId != null
-          ? await ref.read(trainingProgramListProvider.notifier)
-              .bindWorkoutStart(routine.id, occurrenceId: occurrenceId, independent: independent)
+          ? await programNotifier.bindWorkoutStart(routine.id, occurrenceId: occurrenceId, independent: independent)
           : null;
     } catch (_) {
       if (context.mounted) {
@@ -125,11 +146,18 @@ class WorkoutLauncher {
     }
     if (!context.mounted) {
       if (sessionId != null) {
-        await ref.read(trainingProgramListProvider.notifier).releaseWorkoutBinding(sessionId);
+        await programNotifier.releaseWorkoutBinding(sessionId);
       }
       return;
     }
-    notifier.startWorkout(routine, exercises, sessionId: sessionId);
+    try {
+      notifier.startWorkout(routine, exercises, sessionId: sessionId);
+    } catch (_) {
+      if (sessionId != null) await programNotifier.releaseWorkoutBinding(sessionId);
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('No se pudo iniciar la sesión. Inténtalo de nuevo.')));
+      return;
+    }
     if (context.mounted) {
       Navigator.push(
         context,

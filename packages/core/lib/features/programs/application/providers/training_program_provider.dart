@@ -348,8 +348,7 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
   final history = ref.watch(workoutHistoryProvider);
   final reconciled = ProgramRotationCoordinator.reconcile(active, history);
   final routines = ref.watch(routineListProvider);
-  ref.watch(trainingDayClockProvider);
-  final now = DateTime.now().toLocal();
+  final now = ref.watch(trainingDayClockProvider).toLocal();
   final plan = ProgramWeekPlan.calculate(program: reconciled, routines: routines, now: now);
   final nextRoutineId = plan.nextSuggestion?.routineId;
   final scheduledDate = plan.nextSuggestion?.date;
