@@ -1,3 +1,5 @@
+import 'package:core/domain/models/program_adaptation.dart';
+
 enum ProgramSequencePolicy { rolling, weekly }
 
 enum ProgramScheduleMode {
@@ -74,6 +76,7 @@ class TrainingProgram {
   /// Historical sessions before an explicit schedule edit cannot be replayed
   /// against the new rules. Existing completions remain immutable.
   final DateTime? sequenceEffectiveAt;
+  final ProgramAdaptation? adaptation;
 
   /// User goal, independent from which weekdays are selected.
   ///
@@ -105,6 +108,7 @@ class TrainingProgram {
     this.sequencePolicy = ProgramSequencePolicy.rolling,
     this.weeklySequenceRoutineIds = const [],
     this.sequenceEffectiveAt,
+    this.adaptation,
     this.targetSessionsPerWeek = 0,
     this.trainingWeekdays = const <int>{},
     this.fixedWeekdayRoutineIds = const <int, String>{},
@@ -194,7 +198,8 @@ class TrainingProgram {
   }
 
   int weekAt(DateTime instant) {
-    final elapsedDays = instant.difference(startedAt).inDays;
+    final elapsedDays = (instant.difference(startedAt) -
+        (adaptation?.pausedDuration(startedAt, instant) ?? Duration.zero)).inDays;
     if (elapsedDays <= 0) return 1;
     return (elapsedDays ~/ 7) + 1;
   }
@@ -368,6 +373,8 @@ class TrainingProgram {
     ProgramSequencePolicy? sequencePolicy,
     List<String>? weeklySequenceRoutineIds,
     DateTime? sequenceEffectiveAt,
+    ProgramAdaptation? adaptation,
+    bool clearAdaptation = false,
     int? targetSessionsPerWeek,
     Set<int>? trainingWeekdays,
     Map<int, String>? fixedWeekdayRoutineIds,
@@ -389,6 +396,7 @@ class TrainingProgram {
       sequencePolicy: sequencePolicy ?? this.sequencePolicy,
       weeklySequenceRoutineIds: weeklySequenceRoutineIds ?? this.weeklySequenceRoutineIds,
       sequenceEffectiveAt: sequenceEffectiveAt ?? this.sequenceEffectiveAt,
+      adaptation: clearAdaptation ? null : adaptation ?? this.adaptation,
       targetSessionsPerWeek:
           targetSessionsPerWeek ?? this.targetSessionsPerWeek,
       trainingWeekdays: trainingWeekdays ?? this.trainingWeekdays,
@@ -414,6 +422,7 @@ class TrainingProgram {
         'sequencePolicy': sequencePolicy.name,
         'weeklySequenceRoutineIds': weeklySequenceRoutineIds,
         if (sequenceEffectiveAt != null) 'sequenceEffectiveAt': sequenceEffectiveAt!.toIso8601String(),
+        if (adaptation != null) 'adaptation': adaptation!.toJson(),
         'targetSessionsPerWeek': targetSessionsPerWeek,
         'trainingWeekdays': trainingWeekdays.toList()..sort(),
         'fixedWeekdayRoutineIds': {
@@ -484,6 +493,8 @@ class TrainingProgram {
           ? List<String>.unmodifiable((json['weeklySequenceRoutineIds'] as List).whereType<String>())
           : const [],
       sequenceEffectiveAt: DateTime.tryParse(json['sequenceEffectiveAt']?.toString() ?? ''),
+      adaptation: json['adaptation'] is Map
+          ? ProgramAdaptation.fromJson(Map<String,dynamic>.from(json['adaptation'] as Map)) : null,
       targetSessionsPerWeek: legacyTarget.clamp(0, 7).toInt(),
       trainingWeekdays: trainingWeekdays,
       fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,

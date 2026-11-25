@@ -11,6 +11,7 @@ import 'package:core/database/hive/models/hive_workout_session.dart';
 import 'package:core/domain/models/hive_favorite_verse.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/training_program.dart';
+import 'package:core/features/programs/application/program_adaptation_policy.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
@@ -153,20 +154,22 @@ void main() {
       sequencePolicy: ProgramSequencePolicy.weekly,
       weeklySequenceRoutineIds: ['A','B','C','D','A'],
       sequenceEffectiveAt: DateTime(2026,11,24));
-    await repository.save(weekly);
+    final adapted = ProgramAdaptationPolicy.pause(weekly, const [], DateTime(2026,11,25),
+        routineIds: {'B'}, until: DateTime(2026,11,27));
+    await repository.save(adapted);
     await Hive.close();
     Hive.init(tempDir.path);
     await openRestoreBoxes();
     final reopened = TrainingProgramRepository(await Hive.openBox<dynamic>(HiveBoxes.trainingPrograms));
     expect(reopened.getById('old')!.sequencePolicy, ProgramSequencePolicy.rolling);
-    expect(reopened.getById('weekly')!.toJson(), weekly.toJson());
+    expect(reopened.getById('weekly')!.toJson(), adapted.toJson());
     final backup = BackupService().validateBackup(BackupService().createBackup());
     expect(backup.isValid, isTrue, reason: backup.errorMessage);
     // Only disposable fixture boxes are overwritten.
     await reopened.delete('weekly');
     await BackupService().restoreBackup(backup.parsedData!, schemaVersion: backup.schemaVersion!);
     await reopened.hydrateFromBackupMetadata();
-    expect(reopened.getById('weekly')!.toJson(), weekly.toJson());
+    expect(reopened.getById('weekly')!.toJson(), adapted.toJson());
     expect(reopened.getById('old')!.nextRoutineId, 'B');
     expect(reopened.getById('old')!.completions.single.workoutSessionId, 'old-a');
   });

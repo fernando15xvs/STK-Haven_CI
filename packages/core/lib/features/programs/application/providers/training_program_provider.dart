@@ -4,6 +4,7 @@ import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_rotation_coordinator.dart';
 import 'package:core/features/programs/application/program_routine_order_policy.dart';
 import 'package:core/features/programs/application/program_week_plan.dart';
+import 'package:core/features/programs/application/program_adaptation_policy.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/training_program_legacy_policy.dart';
 import 'package:core/features/programs/data/training_program_repository.dart';
@@ -240,6 +241,50 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
     refresh();
   }
 
+  /// Apply an exception to the reconciled active plan and persist it before
+  /// reporting success. UI selects the command, Core owns the transition.
+  Future<TrainingProgram> adaptActive(TrainingProgram Function(
+      TrainingProgram, List<Routine>, DateTime) command) async {
+    final active = _repository.getActive();
+    if (active == null) throw StateError('No hay programa activo.');
+    final current = ProgramRotationCoordinator.reconcile(active, ref.read(workoutHistoryProvider));
+    final updated = command(current, ref.read(routineListProvider), DateTime.now());
+    if (updated.id != current.id) throw StateError('Programa incorrecto.');
+    await _repository.save(updated);
+    refresh();
+    return updated;
+  }
+
+  /// Reserve a workout identity before starting its draft. Legacy plans keep
+  /// their existing inference until an explicit adaptation is requested.
+  Future<String?> bindWorkoutStart(String routineId, {String? occurrenceId,
+      bool independent = false}) async {
+    final active = _repository.getActive();
+    if (active == null || (active.adaptation == null && !independent && occurrenceId == null)) return null;
+    final id = const Uuid().v4();
+    await adaptActive((p, routines, now) {
+      final prepared = ProgramAdaptationPolicy.prepare(p, routines, now);
+      final suggestion = ProgramAdaptationPolicy.nextOccurrence(prepared, routines, now);
+      return ProgramAdaptationPolicy.bind(prepared, routines, id, routineId, now,
+        slotId: occurrenceId,
+        independent: independent || (occurrenceId == null &&
+            (suggestion?.routineId != routineId ||
+              (suggestion != null && (ProgramAdaptationPolicy.availableDate(prepared, routines,
+                  suggestion, now)?.isAfter(ProgramAdaptationPolicy.day(now)) ?? true)))));
+    });
+    return id;
+  }
+
+  Future<void> releaseWorkoutBinding(String workoutId) async {
+    final active = _repository.getActive();
+    final state = active?.adaptation;
+    if (active == null || state == null || !state.bindings.containsKey(workoutId) ||
+        active.completions.any((c) => c.workoutSessionId == workoutId)) return;
+    final bindings = Map<String,String>.from(state.bindings)..remove(workoutId);
+    await _repository.save(active.copyWith(adaptation: state.copyWith(bindings: bindings)));
+    refresh();
+  }
+
   /// Persists any completions that can be deterministically inferred from
   /// workout history. Safe to call repeatedly; completion IDs are idempotent.
   Future<TrainingProgram?> reconcileActive() async {
@@ -277,6 +322,7 @@ class NextProgramSession {
   final Set<int> trainingWeekdays;
   final DateTime? scheduledDate;
   final int targetSessionsPerWeek;
+  final String? occurrenceId;
 
   const NextProgramSession({
     required this.program,
@@ -287,6 +333,7 @@ class NextProgramSession {
     required this.trainingWeekdays,
     required this.scheduledDate,
     required this.targetSessionsPerWeek,
+    this.occurrenceId,
   });
 }
 
@@ -332,6 +379,7 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
     ),
     trainingWeekdays: trainingWeekdays,
     scheduledDate: scheduledDate,
+    occurrenceId: plan.nextSuggestion?.occurrenceId,
     targetSessionsPerWeek:
         ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
       reconciled,

@@ -55,9 +55,15 @@ class ProgramRoutineOrderPolicy {
         ? edited.copyWith(weeklySequenceRoutineIds: edited.weeklySequence)
         : edited;
     if (changed) validateWeeklyConfiguration(normalized);
+    // Explicit schedule edits with outstanding exceptions must be resolved in
+    // the editor rather than silently dropping pauses or pending bindings.
+    if (changed && existing.adaptation != null) {
+      throw StateError('Resuelve la planificación adaptada antes de cambiar el calendario.');
+    }
     return normalized.copyWith(
       startedAt: existing.startedAt,
       completions: existing.completions,
+      adaptation: existing.adaptation,
       nextRotationIndex: nextIndexAfterEdit(existing: existing,
           updatedRoutineIds: normalized.routineIds),
       sequenceEffectiveAt: changed ? now : existing.sequenceEffectiveAt,

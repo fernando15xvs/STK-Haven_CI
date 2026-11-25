@@ -1,4 +1,6 @@
 import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/program_adaptation.dart';
+import 'package:core/features/programs/application/program_adaptation_policy.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 
@@ -7,17 +9,21 @@ import 'package:core/features/programs/application/program_schedule_projector.da
 /// will extend this projection in block B.
 class ProgramWeekSlot {
   const ProgramWeekSlot({required this.id, required this.routineId,
-    required this.ordinal, this.date, this.completion});
+    required this.ordinal, this.date, this.completion,
+    this.status = PlanOccurrenceStatus.pending, this.isPaused = false});
   final String id;
   final String routineId;
   final int ordinal;
   final DateTime? date;
   final ProgramCompletion? completion;
+  final PlanOccurrenceStatus status;
+  final bool isPaused;
   bool get isCompleted => completion != null;
 }
 
 class ProgramNextSuggestion {
-  const ProgramNextSuggestion(this.routineId, {this.date});
+  const ProgramNextSuggestion(this.routineId, {this.date, this.occurrenceId});
+  final String? occurrenceId;
   final String routineId;
   final DateTime? date;
 }
@@ -27,7 +33,8 @@ class ProgramNextSuggestion {
 class ProgramWeekPlan {
   const ProgramWeekPlan({required this.weekStart, required this.slots,
     required this.nextWeekRoutineIds, required this.nextSuggestion,
-    required this.target, required this.completed});
+    required this.target, required this.completed, this.isPaused = false});
+  final bool isPaused;
   final DateTime weekStart;
   final List<ProgramWeekSlot> slots;
   final List<String> nextWeekRoutineIds;
@@ -37,6 +44,36 @@ class ProgramWeekPlan {
   bool get goalReached => target > 0 && completed >= target;
 
   static ProgramWeekPlan calculate({required TrainingProgram program,
+      required Iterable<Routine> routines, required DateTime now}) {
+    if (program.adaptation == null) {
+      return calculateBase(program: program, routines: routines, now: now);
+    }
+    final p = ProgramAdaptationPolicy.prepare(program, routines, now);
+    final state = p.adaptation!;
+    final completions = {for (final c in p.completions) c.workoutSessionId: c};
+    final current = ProgramAdaptationPolicy.current(p);
+    final slots = <ProgramWeekSlot>[
+      for (final (index, o) in current.indexed)
+        ProgramWeekSlot(id: o.id, routineId: o.routineId, ordinal: index,
+          date: p.scheduleMode == ProgramScheduleMode.flexible ? null : o.date,
+          completion: completions[o.workoutId], status: o.status,
+          isPaused: state.routinePausedAt(o.routineId, now)),
+    ];
+    final next = ProgramAdaptationPolicy.nextOccurrence(p, routines, now);
+    final target = ProgramScheduleProjector.effectiveTargetSessionsPerWeek(p, routines);
+    final completed = p.completionsInLocalWeek(now).where((c) => !c.completedAt.isAfter(now)).length;
+    final future = ProgramAdaptationPolicy.prepare(p, routines,
+        TrainingProgram.shiftCalendarDays(state.week, 7));
+    return ProgramWeekPlan(weekStart: state.week, slots: List.unmodifiable(slots),
+      target: target, completed: completed, isPaused: state.programPausedAt(now),
+      nextWeekRoutineIds: List.unmodifiable(ProgramAdaptationPolicy.current(future).map((o) => o.routineId)),
+      nextSuggestion: next == null || completed >= target ? null : ProgramNextSuggestion(
+        next.routineId, occurrenceId: next.id,
+        date: p.scheduleMode == ProgramScheduleMode.flexible && next.notBefore == null
+          ? null : ProgramAdaptationPolicy.availableDate(p, routines, next, now)));
+  }
+
+  static ProgramWeekPlan calculateBase({required TrainingProgram program,
       required Iterable<Routine> routines, required DateTime now}) {
     final start = TrainingProgram.localWeekStart(now);
     final local = now.toLocal();

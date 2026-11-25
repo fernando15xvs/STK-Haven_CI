@@ -1,5 +1,6 @@
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/domain/models/workout_session.dart';
+import 'package:core/features/programs/application/program_adaptation_policy.dart';
 
 class ProgramRotationCoordinator {
   const ProgramRotationCoordinator._();
@@ -15,6 +16,7 @@ class ProgramRotationCoordinator {
     Iterable<WorkoutSession> history,
   ) {
     if (!program.isActive || program.routineIds.isEmpty) return program;
+    if (program.adaptation != null) return ProgramAdaptationPolicy.reconcile(program, history);
 
     final alreadyRecorded = program.completions
         .map((completion) => completion.workoutSessionId)

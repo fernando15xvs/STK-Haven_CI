@@ -113,13 +113,14 @@ class ProgramPlanInsights {
       counts[item.routineId] = (counts[item.routineId] ?? 0) + 1;
     }
 
+    final pauseDuration = program.adaptation?.pausedDuration(program.startedAt, now) ?? Duration.zero;
     final estimatedEndDate = DateTime(
       program.startedAt.year,
       program.startedAt.month,
       program.startedAt.day,
     ).add(
       Duration(
-        days: (program.durationWeeks * 7 - 1).clamp(0, 36500).toInt(),
+        days: (program.durationWeeks * 7 - 1 + pauseDuration.inDays).clamp(0, 36500).toInt(),
       ),
     );
 

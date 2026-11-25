@@ -63,7 +63,7 @@ Continuación de STK_TRAIN_DAILY_STATES_20261125.md. Base funcional privada 7188
 ## Estado
 - [x] Diseño y reglas aprobados por usuario.
 - [x] Baseline funcional CI #45619174450 7/7.
-- [ ] A Motor de planificación.
+- [x] A Motor de planificación (CI #45633916378 7/7).
 - [ ] B Excepciones.
 - [ ] C Entrenar compacto.
 - [ ] D Editor y planificación.
@@ -78,3 +78,8 @@ Continuación de STK_TRAIN_DAILY_STATES_20261125.md. Base funcional privada 7188
 - CI A.1 #45629921273 7/7. Se incorpora ProgramWeekPlan: slots por programa/semana local/ordinal, completadas reales, pendientes, estimación próxima semana, flexible sin fechas y sugerencia compartida por provider e insights. Se conserva la sugerencia legacy rotativa hasta que D exponga objetivo cumplido; las posiciones semanales no se sobreconsumen.
 - Validación de nuevas secuencias semanales (frecuencia, referencias, catálogo único); edición sobre progreso reconciliado, puntero preservado y frontera persistente sequenceEffectiveAt contra replay retroactivo. JSON/Hive/backup/restore real con datos sintéticos y pruebas de edición, ausencia, cinco slots, calendario, límites y referencias inválidas.
 - Implementación base A preparada para gate; pendientes de B: identidad persistente de ocurrencias/excepciones, atribución explícita, pausas y estados omitido/pausado. D conecta editor/planificación y estados de objetivo. Las proyecciones históricas de calendario son estimaciones; no se reescribe historial. CI nuevo pendiente, sin QA física.
+
+## B — Motor de excepciones (entrega de implementación)
+- Modelo persistente de ocurrencias, estados pending/completed/omitted/expired, pausas y vínculos explícitos workout→slot; serialización integrada en TrainingProgram/Hive/shadow y fixture backup real. Las copias/plantillas no heredan excepciones.
+- Política Core: posponer, intercambiar, omitir/restaurar, recuperar/desplazar, pausas de rutinas/programa y reanudación; duración efectiva descuenta pausas totales. Rotación adaptada conserva pendientes limitados al objetivo y no acumula semanas enteras; semanal/fijo expiran pendientes al cerrar semana. Vinculación independiente no cuenta como completada. Provider y proyección leen estados; puente Mobile de inicio reserva identidad antes del draft.
+- Pruebas de comandos, pausa, recuperación y atribución. Pendiente CI. UI de acciones en D; estados hero en C/D. Decisión provisional: edición estructural con adaptación activa se bloquea para no perder vínculos ni excepciones; falta resolución segura en D. Posposición intersemanal semanal/fija se limita a la semana actual; recuperar deuda entre semanas exige decisión explícita posterior. No se afirma QA física.

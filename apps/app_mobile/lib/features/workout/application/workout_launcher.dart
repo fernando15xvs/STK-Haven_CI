@@ -90,7 +90,10 @@ class WorkoutLauncher {
       if (proceed != true || !context.mounted) return;
     }
 
-    notifier.startWorkout(routine, exercises);
+    final sessionId = await ref.read(trainingProgramListProvider.notifier)
+        .bindWorkoutStart(routine.id);
+    if (!context.mounted) return;
+    notifier.startWorkout(routine, exercises, sessionId: sessionId);
     if (context.mounted) {
       Navigator.push(
         context,

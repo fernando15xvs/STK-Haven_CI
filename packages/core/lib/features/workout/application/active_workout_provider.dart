@@ -184,6 +184,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     Routine routine,
     List<Exercise> allExercises, {
     bool? prefillFromExerciseMemory,
+    String? sessionId,
   }) {
     _cancelTimers();
     _undoSession = null;
@@ -269,7 +270,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
         .toList(growable: false);
 
     var session = WorkoutSession(
-      id: const Uuid().v4(),
+      id: sessionId ?? const Uuid().v4(),
       routineId: routine.id,
       routineNameSnapshot: routine.name,
       startedAt: DateTime.now(),
