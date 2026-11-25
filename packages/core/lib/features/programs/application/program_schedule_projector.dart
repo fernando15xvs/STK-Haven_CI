@@ -171,6 +171,7 @@ class ProgramScheduleProjector {
     DateTime instant,
   ) {
     if (program.routineIds.isEmpty) return 0;
+    if (program.repeatsWeekly) return program.weeklySlotIndexAt(instant);
 
     final before = program.completions
         .where((item) => item.completedAt.isBefore(instant))
@@ -229,7 +230,7 @@ class ProgramScheduleProjector {
             ),
           );
         }
-        cursor = cursor.add(const Duration(days: 1));
+        cursor = TrainingProgram.shiftCalendarDays(cursor, 1);
       }
       return result;
     }
@@ -240,25 +241,34 @@ class ProgramScheduleProjector {
             effectiveTrainingWeekdays(program, routines).isEmpty &&
             program.targetSessionsPerWeek > 0);
 
-    var rotationIndex =
-        (initialRotationIndex ?? program.normalizedNextRotationIndex) %
-            program.routineIds.length;
+    final sequence = program.repeatsWeekly ? program.weeklySequence : program.routineIds;
+    if (sequence.isEmpty) return const [];
+    var rotationIndex = program.repeatsWeekly
+        ? (initialRotationIndex ?? program.weeklySlotIndexAt(from)).clamp(0, sequence.length).toInt()
+        : (initialRotationIndex ?? program.normalizedNextRotationIndex) % sequence.length;
+    var week = TrainingProgram.localWeekStart(cursor);
 
     for (var offset = 0; offset < days; offset++) {
       final isOpportunity =
           weekdays.isEmpty || weekdays.contains(cursor.weekday);
-      if (isOpportunity) {
+      final cursorWeek = TrainingProgram.localWeekStart(cursor);
+      if (program.repeatsWeekly && cursorWeek != week) {
+        rotationIndex = 0;
+        week = cursorWeek;
+      }
+      if (isOpportunity && rotationIndex < sequence.length) {
         result.add(
           ProgramScheduledSession(
             date: cursor,
-            routineId: program.routineIds[rotationIndex],
+            routineId: sequence[rotationIndex],
             rotationIndex: rotationIndex,
             isFlexibleEstimate: estimated,
           ),
         );
-        rotationIndex = (rotationIndex + 1) % program.routineIds.length;
+        rotationIndex = program.repeatsWeekly
+            ? rotationIndex + 1 : (rotationIndex + 1) % sequence.length;
       }
-      cursor = cursor.add(const Duration(days: 1));
+      cursor = TrainingProgram.shiftCalendarDays(cursor, 1);
     }
 
     return result;
@@ -275,7 +285,7 @@ class ProgramScheduleProjector {
 
     final normalizedWeekStart =
         DateTime(weekStart.year, weekStart.month, weekStart.day);
-    final weekEnd = normalizedWeekStart.add(const Duration(days: 7));
+    final weekEnd = TrainingProgram.shiftCalendarDays(normalizedWeekStart, 7);
     final programStart = DateTime(
       program.startedAt.year,
       program.startedAt.month,
@@ -293,8 +303,9 @@ class ProgramScheduleProjector {
       program: program,
       routines: routines,
       from: from,
-      days: weekEnd.difference(from).inDays,
-      initialRotationIndex: rotationIndexAt(program, from),
+      days: DateTime.utc(weekEnd.year, weekEnd.month, weekEnd.day)
+          .difference(DateTime.utc(from.year, from.month, from.day)).inDays,
+      initialRotationIndex: program.repeatsWeekly ? 0 : rotationIndexAt(program, from),
     );
   }
 }

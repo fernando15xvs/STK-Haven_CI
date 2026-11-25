@@ -46,6 +46,8 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
     required List<String> routineIds,
     int durationWeeks = 8,
     ProgramScheduleMode scheduleMode = ProgramScheduleMode.continuous,
+    ProgramSequencePolicy sequencePolicy = ProgramSequencePolicy.rolling,
+    List<String> weeklySequenceRoutineIds = const [],
     int targetSessionsPerWeek = 0,
     Set<int> trainingWeekdays = const {},
     Map<int, String> fixedWeekdayRoutineIds = const {},
@@ -69,6 +71,8 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
       startedAt: now,
       durationWeeks: durationWeeks,
       scheduleMode: scheduleMode,
+      sequencePolicy: sequencePolicy,
+      weeklySequenceRoutineIds: List<String>.unmodifiable(weeklySequenceRoutineIds),
       targetSessionsPerWeek: targetSessionsPerWeek.clamp(0, 7).toInt(),
       trainingWeekdays: Set<int>.from(trainingWeekdays),
       fixedWeekdayRoutineIds:
@@ -306,12 +310,12 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
       (reconciled.scheduleMode == ProgramScheduleMode.continuous &&
           ProgramScheduleProjector.effectiveTrainingWeekdays(reconciled, routines).isEmpty);
   if (noFixedDays) {
-    nextRoutineId = reconciled.nextRoutineId;
+    nextRoutineId = reconciled.nextRoutineIdAt(now);
   } else if (projected.isNotEmpty) {
     nextRoutineId = projected.first.routineId;
     scheduledDate = projected.first.date;
   } else {
-    nextRoutineId = reconciled.nextRoutineId;
+    nextRoutineId = reconciled.nextRoutineIdAt(now);
   }
   if (nextRoutineId == null) return null;
 

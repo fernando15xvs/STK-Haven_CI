@@ -81,6 +81,17 @@ class ProgramRotationCoordinator {
         continue;
       }
 
+      if (program.repeatsWeekly) {
+        final current = program.copyWith(completions: completions);
+        final updated = current.recordCompletion(workoutSessionId: session.id,
+            routineId: routineId, completedAt: session.finishedAt);
+        if (updated.completions.length == completions.length) continue;
+        completions.add(updated.completions.last);
+        latestSequenceCompletion = session.finishedAt;
+        changed = true;
+        continue;
+      }
+
       final expectedRoutine = program.routineIds[nextIndex];
       if (routineId != expectedRoutine) {
         // Off-sequence sessions remain valid workout history but do not advance
@@ -122,6 +133,6 @@ class ProgramRotationCoordinator {
     TrainingProgram program,
     Iterable<WorkoutSession> history,
   ) {
-    return reconcile(program, history).nextRoutineId;
+    return reconcile(program, history).nextRoutineIdAt(DateTime.now());
   }
 }

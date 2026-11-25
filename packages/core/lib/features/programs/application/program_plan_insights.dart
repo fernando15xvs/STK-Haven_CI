@@ -64,10 +64,9 @@ class ProgramPlanInsights {
     required Iterable<Routine> routines,
     required DateTime now,
   }) {
-    final today = DateTime(now.year, now.month, now.day);
-    final weekStart =
-        today.subtract(Duration(days: today.weekday - DateTime.monday));
-    final weekEnd = weekStart.add(const Duration(days: 7));
+    final local = now.toLocal();
+    final today = DateTime(local.year, local.month, local.day);
+    final weekStart = TrainingProgram.localWeekStart(local);
 
     final plannedWeek = ProgramScheduleProjector.projectWeek(
       program: program,
@@ -75,10 +74,8 @@ class ProgramPlanInsights {
       weekStart: weekStart,
     );
 
-    final rawCompletedThisWeek = program.completions.where((item) {
-      final completed = item.completedAt.toLocal();
-      return !completed.isBefore(weekStart) && completed.isBefore(weekEnd);
-    }).length;
+    final rawCompletedThisWeek = program.completionsInLocalWeek(local)
+        .where((item) => !item.completedAt.isAfter(now)).length;
     final targetFrequency = ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
       program,
       routines,
@@ -141,7 +138,8 @@ class ProgramPlanInsights {
           program.scheduleMode == ProgramScheduleMode.flexible
               ? null
               : next?.date,
-      nextScheduledRoutineId: next?.routineId,
+      nextScheduledRoutineId: program.scheduleMode == ProgramScheduleMode.flexible
+          ? program.nextRoutineIdAt(now) : next?.routineId,
       estimatedEndDate: estimatedEndDate,
       next14RoutineCounts: Map<String, int>.unmodifiable(counts),
       next14SessionCount: next14.length,

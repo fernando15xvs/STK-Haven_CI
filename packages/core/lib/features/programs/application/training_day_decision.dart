@@ -62,7 +62,12 @@ class TrainingDayDecision {
 
   /// One cycle, in the saved order starting at the reconciled next slot.
   /// No synthetic calendar dates or rest days are assigned in flexible mode.
-  static List<String> rotationOrder(TrainingProgram program) {
+  static List<String> rotationOrder(TrainingProgram program, {DateTime? now}) {
+    if (program.repeatsWeekly) {
+      final sequence = program.weeklySequence;
+      final start = program.weeklySlotIndexAt(now ?? DateTime.now());
+      return List<String>.unmodifiable(sequence.skip(start));
+    }
     final ids = program.routineIds;
     if (ids.isEmpty) return const [];
     final start = program.normalizedNextRotationIndex;
