@@ -200,6 +200,9 @@ class _NextTrainingSessionHeroState
         ? IconButton(
             key: const ValueKey('train_start_next_session'),
             tooltip: 'Iniciar sesión', onPressed: _opening ? null : () => _open(routine),
+            style: IconButton.styleFrom(minimumSize: const Size(48, 48),
+              fixedSize: const Size(48, 48), visualDensity: VisualDensity.standard,
+              tapTargetSize: MaterialTapTargetSize.padded),
             color: tint, icon: const Icon(Icons.arrow_forward_rounded))
         : null;
     final items = <Widget>[];

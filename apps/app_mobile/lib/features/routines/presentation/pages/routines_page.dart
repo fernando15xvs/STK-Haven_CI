@@ -263,6 +263,12 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
 
   Widget _routineMenu(BuildContext context, WidgetRef ref, Routine routine) =>
     PopupMenuButton<String>(
+      style: IconButton.styleFrom(
+        minimumSize: const Size(48, 48),
+        fixedSize: const Size(48, 48),
+        visualDensity: VisualDensity.standard,
+        tapTargetSize: MaterialTapTargetSize.padded,
+      ),
       tooltip: 'Opciones de ${routine.name}',
       onSelected: (action) {
         switch (action) {
@@ -892,6 +898,9 @@ class _RoutineCard extends StatelessWidget {
       menu,
       if (allowStart)
         IconButton(tooltip: 'Iniciar ${routine.name}', onPressed: onStart,
+          style: IconButton.styleFrom(minimumSize: const Size(48, 48),
+            fixedSize: const Size(48, 48), visualDensity: VisualDensity.standard,
+            tapTargetSize: MaterialTapTargetSize.padded),
           icon: Icon(Icons.play_circle_outline_rounded, color: colors.primary)),
     ];
     return PremiumCard(

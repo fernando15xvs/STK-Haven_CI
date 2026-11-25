@@ -89,3 +89,6 @@ Continuación de STK_TRAIN_DAILY_STATES_20261125.md. Base funcional privada 7188
 - Descanso: solo anuncio próximo día/rutina, sin menú/inicio ni exclusión en Mis rutinas. Core featuredRoutineId distingue anuncio de sesión destacada; pausa, objetivo cumplido y ausencia de sesión no activan fallback legacy. Prioridad activo > completado > descanso permanece.
 - Mis rutinas: menú y play juntos, padding compacto y espacio entre cards reducido, fallback accesible; nombres/músculos/duración intactos. Gestión, biblioteca, barra inferior e Inicio sin cambios.
 - Regresiones Core y Mobile: identidad destacada, descanso expandido, geometría de acciones, targets 48dp, anchos 320/390/430, escala, claro/oscuro/OLED, combinaciones de estilo/fuente. Pendiente CI y QA física. D seguirá con editor/modal/acciones y resolverá recuperación intersemanal.
+
+### Corrección gate C
+CI #45644200522: 6/7; Mobile tests 73/74 en Entrenar, menú de 40 dp frente a mínimo 48 dp. Se fijan targets de menú, iniciar y play en 48×48 con densidad estándar, conservando alineación horizontal y padding compacto. Regresión comprueba ambos ejes en los cuatro controles; no se desactiva ni relaja ninguna prueba. Nuevo CI pendiente.

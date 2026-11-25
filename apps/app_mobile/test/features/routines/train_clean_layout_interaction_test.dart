@@ -203,8 +203,10 @@ void main() {
     final cardMenu = find.descendant(of: card, matching: find.byTooltip('Opciones de Rutina 1'));
     final play = find.descendant(of: card, matching: find.byTooltip('Iniciar Rutina 1'));
     expect(tester.getCenter(cardMenu).dy, closeTo(tester.getCenter(play).dy, 1));
-    expect(tester.getSize(cardMenu).height, greaterThanOrEqualTo(48));
-    expect(tester.getSize(play).height, greaterThanOrEqualTo(48));
+    for (final control in [menu, start, cardMenu, play]) {
+      expect(tester.getSize(control).height, greaterThanOrEqualTo(48));
+      expect(tester.getSize(control).width, greaterThanOrEqualTo(48));
+    }
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
