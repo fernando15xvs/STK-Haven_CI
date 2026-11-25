@@ -53,6 +53,7 @@ void main() {
       id: id, routineId: routine, routineNameSnapshot: routine,
       startedAt: date, finishedAt: date.add(const Duration(hours: 1)),
       exercises: [WorkoutExercise(exerciseId: 'exercise',
+        exerciseNameSnapshot: 'Fixture', muscleGroupSnapshot: 'Torso',
         sets: [WorkoutSet(weight: 10, reps: 8, completed: true)])],
       durationSeconds: 3600,
     );
