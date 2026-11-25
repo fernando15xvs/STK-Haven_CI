@@ -33,7 +33,8 @@ final legacyTodaySessionProvider = Provider<LegacyTodaySession?>((ref) {
     legacy: ref.watch(settingsProvider).activeProgram,
   );
   if (legacy == null) return null;
-  final weekday = ref.watch(trainingDayClockProvider).toLocal().weekday;
+  ref.watch(trainingDayClockProvider);
+  final weekday = DateTime.now().weekday;
   for (final routine in ref.watch(routineListProvider)) {
     if (legacy.generatedRoutineIds.contains(routine.id) &&
         routine.scheduledDays.contains(weekday)) {
@@ -132,7 +133,8 @@ class _NextTrainingSessionHeroState
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final now = ref.watch(trainingDayClockProvider);
+    ref.watch(trainingDayClockProvider);
+    final now = DateTime.now();
     final active = ref.watch(activeWorkoutProvider);
     final next = ref.watch(nextProgramSessionProvider);
     final currentProgram = ref.watch(activeTrainingProgramProvider);
@@ -248,7 +250,6 @@ class _NextTrainingSessionHeroState
                     style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
             ])),
             if (action != null) action,
-            if (menu != null && !running) menu,
           ]),
           if (stale) ...[
             const SizedBox(height: AppSpacing.xs),
@@ -264,6 +265,9 @@ class _NextTrainingSessionHeroState
               Text('Próximo día: ${_dateLabel(day.date!, now)} · ${routine.name}',
                   style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
             ],
+          ],
+          if (menu != null && !running) ...[
+            Align(alignment: Alignment.centerRight, child: menu),
           ],
           if (items.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),

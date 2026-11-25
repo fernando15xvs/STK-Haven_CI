@@ -11,7 +11,7 @@ void main() {
     expect(source, contains('final activeProgram = ref.watch(activeTrainingProgramProvider)'));
     expect(source, contains('RoutineCardEvidence.fromHistory('));
     expect(source, contains('muscleGroups.join('));
-    expect(source, contains("tooltip: 'Iniciar ${routine.name}'"));
+    expect(source, contains(r"tooltip: 'Iniciar ${routine.name}'"));
     // Optional days remain in the weekly editor, not on each routine card.
     final card = source.split('class _RoutineCard extends StatelessWidget')[1]
         .split('class _EmptyState extends StatelessWidget')[0];

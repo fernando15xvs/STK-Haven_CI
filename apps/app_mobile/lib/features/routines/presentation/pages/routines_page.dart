@@ -85,7 +85,8 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
       activeWorkoutProvider.select((state) => state.isActive),
     );
     final history = ref.watch(workoutHistoryProvider);
-    final now = ref.watch(trainingDayClockProvider);
+    ref.watch(trainingDayClockProvider);
+    final now = DateTime.now();
     final day = TrainingDayDecision.resolve(
       now: now,
       active: workoutActive ? ref.watch(activeWorkoutProvider).session : null,
@@ -543,7 +544,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
     final rawPlan = ref.read(activeTrainingProgramProvider);
     final activePlan = rawPlan == null ? null : ProgramRotationCoordinator.reconcile(
         rawPlan, ref.read(workoutHistoryProvider));
-    final today = ref.read(trainingDayClockProvider).toLocal();
+    final today = DateTime.now().toLocal();
     if (activePlan != null && activePlan.scheduleMode == ProgramScheduleMode.flexible) {
       await _showFlexiblePlan(context, activePlan, routines, today);
       return;
@@ -823,7 +824,8 @@ class _ProgramOrganizerCard extends ConsumerWidget {
     final active = ref.watch(activeTrainingProgramProvider);
     final programs = ref.watch(trainingProgramListProvider);
     final history = ref.watch(workoutHistoryProvider);
-    final now = ref.watch(trainingDayClockProvider);
+    ref.watch(trainingDayClockProvider);
+    final now = DateTime.now();
     final plan = active == null ? null : ProgramRotationCoordinator.reconcile(active, history);
     final insights = plan == null ? null : ProgramPlanInsights.calculate(
       program: plan, routines: routines, now: now);

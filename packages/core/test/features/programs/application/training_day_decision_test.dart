@@ -12,7 +12,8 @@ void main() {
       startedAt: now.subtract(const Duration(hours: 2)),
       finishedAt: now.subtract(const Duration(hours: 1)), durationSeconds: 3600,
       exercises: [
-        WorkoutExercise(exerciseId: 'press', sets: const [
+        WorkoutExercise(exerciseId: 'press', exerciseNameSnapshot: 'Press',
+          muscleGroupSnapshot: 'Pecho', sets: const [
           WorkoutSet(weight: 50, reps: 8, completed: true),
         ]),
       ]);

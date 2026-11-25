@@ -63,6 +63,22 @@ class _History extends WorkoutHistoryNotifier {
   List<WorkoutSession> build() => const [];
 }
 
+class _CompletedHistory extends WorkoutHistoryNotifier {
+  @override
+  List<WorkoutSession> build() {
+    final now = DateTime.now();
+    return [WorkoutSession(id: 'completed-today', routineId: 'r0',
+      routineNameSnapshot: 'Rutina 0', startedAt: now.subtract(const Duration(hours: 1)),
+      finishedAt: now.subtract(const Duration(minutes: 1)), durationSeconds: 3540,
+      exercises: const [
+        WorkoutExercise(exerciseId: 'press', exerciseNameSnapshot: 'Press',
+          muscleGroupSnapshot: 'Pecho', sets: [
+            WorkoutSet(weight: 50, reps: 8, completed: true),
+          ]),
+      ])];
+  }
+}
+
 class _Programs extends TrainingProgramListNotifier {
   @override
   List<TrainingProgram> build() => [_program];
@@ -100,6 +116,7 @@ Future<void> _pumpTrain(
   Brightness brightness = Brightness.dark,
   bool active = false,
   bool hasProgram = true,
+  bool completed = false,
 }) async {
   tester.view.physicalSize = Size(width, 1280);
   tester.view.devicePixelRatio = 1;
@@ -111,7 +128,7 @@ Future<void> _pumpTrain(
       overrides: [
         routineListProvider.overrideWith(_Routines.new),
         exerciseListProvider.overrideWith(_Exercises.new),
-        workoutHistoryProvider.overrideWith(_History.new),
+        workoutHistoryProvider.overrideWith(completed ? _CompletedHistory.new : _History.new),
         trainingProgramListProvider.overrideWith(
           hasProgram ? _Programs.new : _NoPrograms.new,
         ),
@@ -142,7 +159,7 @@ Future<void> _pumpTrain(
     ),
   );
   await tester.pumpAndSettle();
-  addTearDown(() async { await tester.pumpWidget(const SizedBox.shrink()); });
+
 }
 
 void main() {
@@ -162,6 +179,7 @@ void main() {
           expect(find.byKey(const ValueKey('train_open_manage')), findsOneWidget);
           expect(find.byKey(const ValueKey('train_open_library')), findsOneWidget);
           expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
         },
       );
     }
@@ -188,6 +206,7 @@ void main() {
     expect(find.byKey(const ValueKey('train_routine_r0')), findsNothing);
     expect(find.byKey(const ValueKey('train_show_all_routines')), findsNothing);
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('an active workout is the only primary action; other starts stay hidden',
@@ -199,6 +218,17 @@ void main() {
     expect(find.text('Iniciar'), findsNothing);
     expect(find.byKey(const ValueKey('train_routine_r0')), findsNothing);
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('completed today stays featured without suggesting another start', (tester) async {
+    await _pumpTrain(tester, completed: true);
+    expect(find.text('FINALIZADO HOY'), findsOneWidget);
+    expect(find.byKey(const ValueKey('train_view_completed')), findsOneWidget);
+    expect(find.byKey(const ValueKey('train_start_next_session')), findsNothing);
+    expect(find.byKey(const ValueKey('train_routine_r0')), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('flexible planning uses rotation without named weekdays', (tester) async {
@@ -210,6 +240,7 @@ void main() {
     expect(find.text('Lunes'), findsNothing);
     expect(find.text('Descanso'), findsNothing);
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('Gestionar keeps all three routes and hides Crear plan for active plan',
@@ -222,6 +253,7 @@ void main() {
     expect(find.byKey(const ValueKey('train_manage_program_templates')), findsOneWidget);
     expect(find.byKey(const ValueKey('train_create_plan')), findsNothing);
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('Gestionar offers Crear plan when saved routines have no program',
@@ -232,5 +264,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('train_create_plan')), findsOneWidget);
     expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }

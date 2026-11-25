@@ -66,7 +66,7 @@ class TrainingDayDecision {
     final ids = program.routineIds;
     if (ids.isEmpty) return const [];
     final start = program.normalizedNextRotationIndex;
-    return List.unmodifiable([
+    return List<String>.unmodifiable([
       for (var i = 0; i < ids.length; i++) ids[(start + i) % ids.length],
     ]);
   }

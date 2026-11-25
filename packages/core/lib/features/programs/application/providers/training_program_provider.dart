@@ -287,7 +287,8 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
   final history = ref.watch(workoutHistoryProvider);
   final reconciled = ProgramRotationCoordinator.reconcile(active, history);
   final routines = ref.watch(routineListProvider);
-  final now = ref.watch(trainingDayClockProvider).toLocal();
+  ref.watch(trainingDayClockProvider);
+  final now = DateTime.now().toLocal();
   final today = DateTime(now.year, now.month, now.day);
 
   final projected = ProgramScheduleProjector.project(
