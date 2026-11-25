@@ -106,6 +106,15 @@ void main() {
     expect(edited.adaptation!.occurrences.where((o) => o.archived).length, 5);
   });
 
+  test('template preview repeats positions or rolls and normalizes removed routines', () {
+    const catalog = ['A','B','C','D'];
+    expect(ProgramRoutineOrderPolicy.previewWeeks(catalog, ['A','B','C','D','A'], 5, ProgramSequencePolicy.weekly),
+      [['A','B','C','D','A'],['A','B','C','D','A']]);
+    expect(ProgramRoutineOrderPolicy.previewWeeks(catalog, [], 5, ProgramSequencePolicy.rolling),
+      [['A','B','C','D','A'],['B','C','D','A','B']]);
+    expect(ProgramRoutineOrderPolicy.normalizeWeeklySlots(['A','B'], ['A','deleted','A'], 4), ['A','A','A','B']);
+  });
+
   test('explicit previous-week recovery replaces a pending slot without fake completion', () {
     final first = prepared(plan(sequence: ProgramSequencePolicy.weekly));
     final nextMonday = DateTime(2026,11,30,9);

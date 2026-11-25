@@ -69,6 +69,14 @@ class ProgramAdaptationPolicy {
         }
       }
     }
+    // Rebuild the dated opportunity labels after rollover for continuous plans.
+    if (old != null && program.scheduleMode == ProgramScheduleMode.continuous) {
+      final dates = ProgramScheduleProjector.projectWeek(program: program, routines: routines,
+        weekStart: week).map((o) => o.date).toList();
+      for (var i = 0; i < current.length && i < dates.length; i++) {
+        if (current[i].notBefore == null) current[i] = current[i].copyWith(date: dates[i]);
+      }
+    }
     final adaptation = (old ?? ProgramAdaptation(week: week)).copyWith(
       week: week, occurrences: [...records, ...current], nextSerial: serial);
     return program.copyWith(adaptation: adaptation, nextRotationIndex: cursor);
@@ -244,7 +252,6 @@ class ProgramAdaptationPolicy {
     final restored = rows[old].copyWith(week: p.adaptation!.week,
         status: PlanOccurrenceStatus.pending, date: replaced.date,
         clearDate: replaced.date == null, notBefore: day(now));
-    rows[old] = rows[old].copyWith(archived: true);
     rows[index] = replaced.copyWith(status: PlanOccurrenceStatus.omitted);
     // Retain unique occurrence identity; move rather than clone.
     rows.removeAt(old);

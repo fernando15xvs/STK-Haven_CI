@@ -11,6 +11,31 @@ import 'package:core/features/programs/application/program_adaptation_policy.dar
 class ProgramRoutineOrderPolicy {
   const ProgramRoutineOrderPolicy._();
 
+  static List<String> normalizeWeeklySlots(List<String> routineIds,
+      List<String> slots, int target) {
+    final count = target.clamp(0, 7).toInt();
+    final valid = slots.where(routineIds.contains).take(count).toList();
+    return List.unmodifiable([
+      ...valid,
+      if (routineIds.isNotEmpty)
+        for (var i = valid.length; i < count; i++) routineIds[i % routineIds.length],
+    ]);
+  }
+
+  /// Template preview, not a forecast of a user's completed history.
+  static List<List<String>> previewWeeks(List<String> routineIds,
+      List<String> weeklySlots, int target, ProgramSequencePolicy policy) {
+    if (routineIds.isEmpty || target <= 0) return const [];
+    final count = target.clamp(1, 7).toInt();
+    return [
+      for (var week = 0; week < 2; week++)
+        if (policy == ProgramSequencePolicy.weekly)
+          normalizeWeeklySlots(routineIds, weeklySlots, count)
+        else
+          List.generate(count, (i) => routineIds[(week * count + i) % routineIds.length]),
+    ];
+  }
+
   static bool scheduleChanged(TrainingProgram a, TrainingProgram b) {
     bool sameList(List<String> x, List<String> y) =>
         x.length == y.length && x.indexed.every((entry) => y[entry.$1] == entry.$2);

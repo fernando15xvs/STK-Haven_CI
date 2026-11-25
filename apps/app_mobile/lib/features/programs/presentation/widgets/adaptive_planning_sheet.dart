@@ -48,9 +48,13 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
 
   Future<void> _apply(String title, String description, _PlanCommand command) async {
     if (_busy || !await _confirm(title, description) || !mounted) return;
+    final expected = ref.read(activeTrainingProgramProvider)?.id;
     setState(() { _busy = true; _error = null; });
     try {
-      await ref.read(trainingProgramListProvider.notifier).adaptActive(command);
+      await ref.read(trainingProgramListProvider.notifier).adaptActive((p,r,n) {
+        if (p.id != expected) throw StateError('El programa activo cambió.');
+        return command(p,r,n);
+      });
     } catch (_) {
       if (mounted) setState(() => _error = 'No se pudo aplicar el cambio. Revisa las sesiones pendientes.');
     } finally {
@@ -212,8 +216,8 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
           ]),
           Text('$mode$policy', style:AppTypography.bodySmall.copyWith(color:colors.textSecondary)),
           const SizedBox(height:AppSpacing.sm),
-          Row(children:[
-            Expanded(child: Text('Semana ${active.weekAt(now)}',style:AppTypography.headlineSmall)),
+          Wrap(alignment: WrapAlignment.spaceBetween, spacing: AppSpacing.sm, runSpacing: AppSpacing.xxs, children:[
+            Text('Semana ${active.weekAt(now)}',style:AppTypography.headlineSmall),
             Text('${plan.completed}/${plan.target} sesiones',style:AppTypography.bodyMedium),
           ]),
           const SizedBox(height:AppSpacing.xs),
@@ -255,7 +259,7 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
           ],
           if (rows.isEmpty) const Text('No hay sesiones previstas.'),
           if (!flexible && active.trainingWeekdays.isNotEmpty && active.scheduleMode == ProgramScheduleMode.continuous)
-            Padding(padding:const EdgeInsets.only(top:8),child:Text('Días habituales: ${active.trainingWeekdays.toList()..sort()}',
+            Padding(padding:const EdgeInsets.only(top:8),child:Text('Días habituales: ${[for (var day = 1; day <= 7; day++) if (active.trainingWeekdays.contains(day)) const ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][day-1]].join(' · ')}',
               style:AppTypography.bodySmall)),
           ExpansionTile(key:const ValueKey('adaptive_next_week'),tilePadding:EdgeInsets.zero,
             initiallyExpanded:_nextWeek,onExpansionChanged:(v)=>_nextWeek=v,

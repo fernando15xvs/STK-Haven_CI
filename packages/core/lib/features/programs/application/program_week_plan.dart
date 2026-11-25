@@ -119,7 +119,8 @@ class ProgramWeekPlan {
           routines: routines, weekStart: nextStart).map((item) => item.routineId));
     } else if (ids.isNotEmpty) {
       for (final c in completed) {
-        add(c.routineId, completion: c);
+        final date = c.completedAt.toLocal();
+        add(c.routineId, completion: c, date: hasDates ? DateTime(date.year,date.month,date.day) : null);
       }
       final weekly = program.weeklySequence;
       for (var i = 0; i < remaining; i++) {
@@ -154,7 +155,7 @@ class ProgramWeekPlan {
       }
     }
     return ProgramWeekPlan(weekStart: start, slots: List.unmodifiable(slots),
-      nextWeekRoutineIds: List.unmodifiable(nextWeek), nextSuggestion: next,
+      nextWeekRoutineIds: List.unmodifiable(nextWeek), nextSuggestion: completed.length >= target ? null : next,
       target: target, completed: completed.length);
   }
 }

@@ -1,4 +1,5 @@
 import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/program_adaptation.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_week_plan.dart';
@@ -84,7 +85,7 @@ class ProgramPlanInsights {
       program,
       routines,
     );
-    final plannedThisWeek = program.scheduleMode == ProgramScheduleMode.flexible
+    final plannedThisWeek = program.adaptation != null || program.scheduleMode == ProgramScheduleMode.flexible
         ? targetFrequency
         : plannedWeek.length;
     final completedThisWeek =
@@ -108,9 +109,14 @@ class ProgramPlanInsights {
       initialRotationIndex:
           ProgramScheduleProjector.rotationIndexAt(program, now),
     );
+    final futureIds = program.adaptation == null ? next14.map((item) => item.routineId) : [
+      ...weekPlan.slots.where((item) => !item.isCompleted && !item.isPaused &&
+        item.status == PlanOccurrenceStatus.pending).map((item) => item.routineId),
+      ...weekPlan.nextWeekRoutineIds,
+    ];
     final counts = <String, int>{};
-    for (final item in next14) {
-      counts[item.routineId] = (counts[item.routineId] ?? 0) + 1;
+    for (final id in futureIds) {
+      counts[id] = (counts[id] ?? 0) + 1;
     }
 
     final pauseDuration = program.adaptation?.pausedDuration(program.startedAt, now) ?? Duration.zero;
@@ -132,15 +138,12 @@ class ProgramPlanInsights {
           (dueThroughToday - completedThisWeek).clamp(0, 999).toInt(),
       remainingThisWeek:
           (plannedThisWeek - completedThisWeek).clamp(0, 999).toInt(),
-      nextScheduledDate:
-          program.scheduleMode == ProgramScheduleMode.flexible
-              ? null
-              : next?.date,
+      nextScheduledDate: next?.date,
       nextScheduledRoutineId: next?.routineId,
       weekPlan: weekPlan,
       estimatedEndDate: estimatedEndDate,
       next14RoutineCounts: Map<String, int>.unmodifiable(counts),
-      next14SessionCount: next14.length,
+      next14SessionCount: futureIds.length,
       trainingWeekdays:
           ProgramScheduleProjector.effectiveTrainingWeekdays(
         program,

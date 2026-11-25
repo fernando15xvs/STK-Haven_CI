@@ -95,3 +95,5 @@ CI #45644200522: 6/7; Mobile tests 73/74 en Entrenar, menú de 40 dp frente a m�
 
 ## D — Editor y planificación adaptable
 - Editor: selector rotativo/semanal para flexible/continuo, posiciones repetibles, vista previa de dos semanas y guardado compatible. Fijo conserva mapa. Modal unificado desde calendario y menú destacado, progreso y estados, previa de siguiente semana, acciones de posposición/intercambio/omisión/recuperación y pausa/reanudación. Entrenamiento independiente explícito en descanso/completado y fuera de secuencia. Recuperación de ocurrencias históricas persistidas con sustitución explícita de una pendiente (sin deuda ilimitada). Pendiente CI y QA física. Los programas legacy sin ocurrencias persistidas anteriores no pueden reconstruir con certeza una deuda histórica; no se inventa.
+
+- D integración adicional: vista previa de secuencia calculada por Core, reportes de programas consumen slots reales en vez de calendario sintético, pausa desde gestión conserva duración, fuera de secuencia ofrece adaptar o independiente. Prueba interactiva confirma omitir/restaurar y evita completion ficticia. Pendiente CI completo y QA física.

@@ -6,6 +6,8 @@ import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/exercises/application/providers/exercise_provider.dart';
 import 'package:core/features/programs/application/providers/training_program_provider.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
+import 'package:gym_tracker/features/programs/presentation/widgets/adaptive_planning_sheet.dart';
+import 'package:core/features/routines/application/providers/routine_provider.dart';
 
 class WorkoutLauncher {
   static Future<void> launch(
@@ -67,7 +69,7 @@ class WorkoutLauncher {
 
     final programSession = ref.read(nextProgramSessionProvider);
     if (!independent && occurrenceId == null && programSession != null && programSession.routine.id != routine.id) {
-      final proceed = await showDialog<bool>(
+      final proceed = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Rutina fuera de la secuencia'),
@@ -79,17 +81,31 @@ class WorkoutLauncher {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
+              onPressed: () => Navigator.pop(dialogContext, 'cancel'),
               child: const Text('Cancelar'),
             ),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, 'adapt'),
+              child: const Text('Adaptar planificación')),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Entrenar de todos modos'),
+              onPressed: () => Navigator.pop(dialogContext, 'independent'),
+              child: const Text('Entrenamiento independiente'),
             ),
           ],
         ),
       );
-      if (proceed != true || !context.mounted) return;
+      if (!context.mounted || proceed == null || proceed == 'cancel') return;
+      if (proceed == 'adapt') {
+        final selection = await AdaptivePlanningSheet.show(context);
+        if (selection != null && context.mounted) {
+          for (final selected in ref.read(routineListProvider)) {
+            if (selected.id == selection.routineId) {
+              await launch(context, ref, selected, occurrenceId: selection.occurrenceId);
+              break;
+            }
+          }
+        }
+        return;
+      }
       independent = true;
     }
 

@@ -2,6 +2,8 @@ import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/program_adaptation.dart';
+import 'package:core/features/programs/application/program_adaptation_policy.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/exercises/application/providers/exercise_provider.dart';
@@ -82,6 +84,12 @@ class _CompletedHistory extends WorkoutHistoryNotifier {
 class _Programs extends TrainingProgramListNotifier {
   @override
   List<TrainingProgram> build() => [_program];
+  @override
+  Future<TrainingProgram> adaptActive(TrainingProgram Function(TrainingProgram, List<Routine>, DateTime) command) async {
+    final updated = command(state.single, _routines, ref.read(trainingDayClockProvider));
+    state = [updated];
+    return updated;
+  }
 }
 
 class _NoPrograms extends TrainingProgramListNotifier {
@@ -137,7 +145,7 @@ Future<void> _pumpTrain(
           hasProgram ? _Programs.new : _NoPrograms.new,
         ),
         activeTrainingProgramProvider.overrideWith(
-          (ref) => hasProgram ? _program : null,
+          (ref) => hasProgram ? ref.watch(trainingProgramListProvider).first : null,
         ),
         nextProgramSessionProvider.overrideWith(
           (ref) => !hasProgram ? null : rest ? NextProgramSession(
@@ -294,6 +302,33 @@ void main() {
     expect(find.text('Adaptar planificación'), findsOneWidget);
     expect(find.text('Lunes'), findsNothing);
     expect(find.text('Descanso'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('planning omission persists only after confirmation and can be restored', (tester) async {
+    await _pumpTrain(tester);
+    await tester.tap(find.byKey(const ValueKey('train_open_planning')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Adaptar sesión 1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Omitir sesión'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Omitida'), findsOneWidget);
+    final container = ProviderScope.containerOf(tester.element(find.byType(RoutinesPage)));
+    final program = container.read(activeTrainingProgramProvider)!;
+    expect(program.completions, isEmpty);
+    expect(ProgramAdaptationPolicy.current(program).first.status, PlanOccurrenceStatus.omitted);
+    await tester.tap(find.byTooltip('Adaptar sesión 1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Restaurar sesión'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Omitida'), findsNothing);
+    expect(container.read(activeTrainingProgramProvider)!.completions, isEmpty);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });

@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_plan_insights.dart';
+import 'package:core/features/programs/application/program_week_plan.dart';
+import 'package:core/features/programs/application/program_adaptation_policy.dart';
+import 'package:core/domain/models/program_adaptation.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_routine_order_policy.dart';
 import 'package:core/features/programs/application/program_duration_choices.dart';
@@ -149,12 +152,6 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
               itemCount: programs.length,
               itemBuilder: (context, index) {
                 final program = programs[index];
-                final weekStart = _startOfWeek(DateTime.now());
-                final plannedSessions = ProgramScheduleProjector.projectWeek(
-                  program: program,
-                  routines: routines,
-                  weekStart: weekStart,
-                );
                 final insights = ProgramPlanInsights.calculate(
                   program: program,
                   routines: routines,
@@ -165,7 +162,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                   child: _ProgramCard(
                     program: program,
                     routineById: routineById,
-                    plannedSessions: plannedSessions,
+                    plannedSessions: insights.weekPlan?.slots ?? const [],
                     insights: insights,
                     onActivate: () => ref
                         .read(trainingProgramListProvider.notifier)
@@ -185,15 +182,12 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                             .read(trainingProgramListProvider.notifier)
                             .createFromTemplate(program.id)
                         : null,
-                    onPause: program.isActive && !program.isTemplate
-                        ? () => ref
-                            .read(trainingProgramListProvider.notifier)
-                            .pause(program.id)
-                        : null,
-                    onResume: !program.isActive && !program.isTemplate
-                        ? () => ref
-                            .read(trainingProgramListProvider.notifier)
-                            .resume(program.id)
+                    onPause: program.isActive && !program.isTemplate && insights.weekPlan?.isPaused != true
+                        ? () => _changeProgramPause(context, ref, program.id, true) : null,
+                    onResume: !program.isTemplate && (!program.isActive || insights.weekPlan?.isPaused == true)
+                        ? () => program.isActive
+                            ? _changeProgramPause(context, ref, program.id, false)
+                            : ref.read(trainingProgramListProvider.notifier).resume(program.id)
                         : null,
                     onDelete: () => _confirmDelete(context, ref, program),
                   ),
@@ -205,10 +199,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
     );
   }
 
-  static DateTime _startOfWeek(DateTime now) {
-    final day = DateTime(now.year, now.month, now.day);
-    return day.subtract(Duration(days: day.weekday - DateTime.monday));
-  }
+
 
   static Future<void> _showEditor(
     BuildContext context,
@@ -292,15 +283,10 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
               sequencePolicy == ProgramSequencePolicy.weekly;
           final slotCount = scheduleMode == ProgramScheduleMode.continuous
               ? trainingWeekdays.length : targetSessionsPerWeek.clamp(1, 7).toInt();
-          if (repeats) {
-            final valid = weeklySlots.where(routineIds.contains).take(slotCount).toList();
-            weeklySlots = [
-              ...valid,
-              if (routineIds.isNotEmpty)
-                for (var i = valid.length; i < slotCount; i++)
-                  routineIds[i % routineIds.length],
-            ];
-          }
+          if (repeats) weeklySlots = ProgramRoutineOrderPolicy.normalizeWeeklySlots(
+              routineIds, weeklySlots, slotCount);
+          final preview = ProgramRoutineOrderPolicy.previewWeeks(
+              routineIds, weeklySlots, slotCount, sequencePolicy);
           final scheduleIsValid = switch (scheduleMode) {
             ProgramScheduleMode.continuous => trainingWeekdays.isNotEmpty,
             ProgramScheduleMode.fixed => fixedWeekdayRoutineIds.isNotEmpty,
@@ -765,12 +751,11 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                     ],
                     if (scheduleMode != ProgramScheduleMode.fixed && routineIds.isNotEmpty && slotCount > 0) ...[
                       const SizedBox(height: 12),
-                      Text('Vista previa · dos semanas', style: Theme.of(context).textTheme.titleSmall),
-                      for (var week = 0; week < 2; week++)
+                      Text('Vista previa de la secuencia · dos semanas', style: Theme.of(context).textTheme.titleSmall),
+                      for (var week = 0; week < preview.length; week++)
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
-                          child: Text('Semana ${week + 1}: ${(repeats ? weeklySlots :
-                            List.generate(slotCount, (i) => routineIds[(week * slotCount + i) % routineIds.length]))
+                          child: Text('Semana ${week + 1}: ${preview[week]
                             .map((id) => byId[id]?.name ?? 'Rutina').join(' → ')}'),
                         ),
                       if (existing != null)
@@ -878,6 +863,25 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
     }
   }
 
+  static Future<void> _changeProgramPause(BuildContext context, WidgetRef ref,
+      String id, bool pause) async {
+    final confirmed = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(pause ? 'Pausar programa' : 'Reanudar programa'),
+      content: const Text('Tu historial y progreso se conservan.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx,false), child: const Text('Cancelar')),
+        FilledButton(onPressed: () => Navigator.pop(ctx,true), child: const Text('Confirmar'))],
+    ));
+    if (confirmed != true || !context.mounted) return;
+    try {
+      await ref.read(trainingProgramListProvider.notifier).adaptActive((p,r,n) {
+        if (p.id != id) throw StateError('El programa activo cambió.');
+        return pause ? ProgramAdaptationPolicy.pause(p,r,n) : ProgramAdaptationPolicy.resume(p,n);
+      });
+    } catch (_) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo cambiar la pausa.')));
+    }
+  }
+
   static Future<void> _confirmDelete(
     BuildContext context,
     WidgetRef ref,
@@ -928,7 +932,7 @@ class _ProgramCard extends StatelessWidget {
 
   final TrainingProgram program;
   final Map<String, Routine> routineById;
-  final List<ProgramScheduledSession> plannedSessions;
+  final List<ProgramWeekSlot> plannedSessions;
   final ProgramPlanInsights insights;
   final VoidCallback onActivate;
   final VoidCallback onEdit;
@@ -943,9 +947,7 @@ class _ProgramCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final week = program.weekAt(now);
-    final nextRoutine = program.nextRoutineId == null
-        ? null
-        : routineById[program.nextRoutineId!];
+    final nextRoutine = routineById[insights.nextScheduledRoutineId];
     final progress = program.durationWeeks <= 0
         ? 0.0
         : (week / program.durationWeeks).clamp(0.0, 1.0).toDouble();
@@ -1088,7 +1090,7 @@ class _ProgramCard extends StatelessWidget {
                     .join(' → '),
               ),
             ),
-            if (plannedSessions.isNotEmpty && program.scheduleMode != ProgramScheduleMode.flexible)
+            if (plannedSessions.isNotEmpty && !program.isTemplate)
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 title: Text(
@@ -1115,9 +1117,11 @@ class _ProgramCard extends StatelessWidget {
                               'Rutina eliminada',
                         ),
                         subtitle: Text(
-                          item.isFlexibleEstimate
-                              ? 'Orden estimado según tu frecuencia objetivo'
-                              : _weekdayAndDate(item.date),
+                          [if (item.date != null) _weekdayAndDate(item.date!),
+                            if (item.isCompleted) 'Completada'
+                            else if (item.status == PlanOccurrenceStatus.omitted) 'Omitida'
+                            else if (item.isPaused) 'Pausada'
+                            else 'Pendiente'].join(' · '),
                         ),
                       ),
                     )
@@ -1246,11 +1250,10 @@ class _PlanOverview extends StatelessWidget {
               _InsightMetric(
                 icon: Icons.skip_next_rounded,
                 label: 'Próxima',
-                value: nextDate == null
-                    ? program.scheduleMode == ProgramScheduleMode.flexible
-                        ? 'Flexible · ${nextName ?? 'Rutina'}'
-                        : 'Sin fecha'
-                    : '${_shortDate(nextDate)} · ${nextName ?? 'Rutina'}',
+                value: insights.weekPlan?.isPaused == true ? 'Programa en pausa'
+                    : insights.weeklyGoalReached ? 'Objetivo cumplido'
+                    : nextName == null ? 'Sin sesión disponible'
+                    : nextDate == null ? nextName : '${_shortDate(nextDate)} · $nextName',
               ),
               _InsightMetric(
                 icon: Icons.flag_outlined,
