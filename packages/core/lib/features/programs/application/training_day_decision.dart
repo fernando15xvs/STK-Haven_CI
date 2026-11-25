@@ -4,17 +4,25 @@ import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/workout/application/todays_workout_status.dart';
 
 enum TrainingDayKind { ready, active, completed, rest, none }
+enum TrainingRestReason { scheduled, paused, goalReached, unavailable }
 
 /// Daily presentation is independent of the persisted rotation pointer.
 /// Completion advances rotation normally, but today's hero stays completed.
 class TrainingDayDecision {
-  const TrainingDayDecision(this.kind, {this.routine, this.session, this.date});
+  const TrainingDayDecision(this.kind, {this.routine, this.session, this.date,
+    this.restReason = TrainingRestReason.scheduled});
+  final TrainingRestReason restReason;
   final TrainingDayKind kind;
   final Routine? routine;
   final WorkoutSession? session;
   final DateTime? date;
 
-  String? get featuredRoutineId => session?.routineId ?? routine?.id;
+  // Announcing tomorrow is not featuring a routine: it stays in the list.
+  String? get featuredRoutineId => switch (kind) {
+    TrainingDayKind.ready => routine?.id,
+    TrainingDayKind.active || TrainingDayKind.completed => session?.routineId,
+    TrainingDayKind.rest || TrainingDayKind.none => null,
+  };
 
   bool get allowsSuggestedStart => kind == TrainingDayKind.ready;
 
@@ -32,6 +40,9 @@ class TrainingDayDecision {
     required DateTime? scheduledDate,
     required bool isTrainingDay,
     Routine? legacyToday,
+    bool hasProgram = false,
+    bool programPaused = false,
+    bool goalReached = false,
   }) {
     if (active != null) {
       return TrainingDayDecision(TrainingDayKind.active, session: active);
@@ -40,7 +51,15 @@ class TrainingDayDecision {
     if (completed != null) {
       return TrainingDayDecision(TrainingDayKind.completed, session: completed);
     }
+    if (programPaused) {
+      return const TrainingDayDecision(TrainingDayKind.rest, restReason: TrainingRestReason.paused);
+    }
+    if (goalReached) {
+      return const TrainingDayDecision(TrainingDayKind.rest, restReason: TrainingRestReason.goalReached);
+    }
     if (next == null) {
+      if (hasProgram) return const TrainingDayDecision(TrainingDayKind.rest,
+          restReason: TrainingRestReason.unavailable);
       return legacyToday == null
           ? const TrainingDayDecision(TrainingDayKind.none)
           : TrainingDayDecision(TrainingDayKind.ready, routine: legacyToday);

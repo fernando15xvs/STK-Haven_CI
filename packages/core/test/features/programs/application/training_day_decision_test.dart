@@ -40,9 +40,28 @@ void main() {
     final rest = resolve(mode: ProgramScheduleMode.fixed, date: DateTime(2026, 11, 27));
     expect(rest.kind, TrainingDayKind.rest);
     expect(rest.allowsSuggestedStart, isFalse);
+    expect(rest.featuredRoutineId, isNull);
+    expect(rest.routine?.id, 'b');
     expect(resolve(date: DateTime(2026, 11, 27)).kind, TrainingDayKind.rest);
     expect(resolve(mode: ProgramScheduleMode.continuous, date: now).kind,
         TrainingDayKind.ready);
+  });
+  test('paused, goal reached and unavailable plans never feature a routine', () {
+    for (final reason in [TrainingRestReason.paused, TrainingRestReason.goalReached, TrainingRestReason.unavailable]) {
+      final result = TrainingDayDecision.resolve(now: now, active: null, history: [],
+        next: null, mode: ProgramScheduleMode.flexible, scheduledDate: null,
+        isTrainingDay: true, hasProgram: true, legacyToday: next,
+        programPaused: reason == TrainingRestReason.paused,
+        goalReached: reason == TrainingRestReason.goalReached);
+      expect(result.kind, TrainingDayKind.rest);
+      expect(result.restReason, reason);
+      expect(result.featuredRoutineId, isNull);
+      expect(result.allowsSuggestedStart, isFalse);
+    }
+    final result = TrainingDayDecision.resolve(now: now, active: done, history: [done],
+      next: next, mode: ProgramScheduleMode.flexible, scheduledDate: null,
+      isTrainingDay: true, programPaused: true, goalReached: true);
+    expect(result.kind, TrainingDayKind.active);
   });
   test('rotation uses saved pointer, without assigning weekdays', () {
     final program = TrainingProgram(id: 'p', name: 'STK', routineIds: const ['a','b','c'],

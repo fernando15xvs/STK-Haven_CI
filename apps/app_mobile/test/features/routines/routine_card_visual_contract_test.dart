@@ -16,7 +16,9 @@ void main() {
     final card = source.split('class _RoutineCard extends StatelessWidget')[1]
         .split('class _EmptyState extends StatelessWidget')[0];
     expect(card, isNot(contains('scheduledDays')));
-    expect(card, contains('Expanded(child: InkWell('));
+    expect(card, contains('final labels = InkWell('));
+    expect(card, contains('Expanded(child: labels), ...actions'));
+    expect(card, contains('LayoutBuilder('));
     expect(card, contains('Icons.play_circle_outline_rounded'));
     expect(card, isNot(contains('Última vez:')));
   });

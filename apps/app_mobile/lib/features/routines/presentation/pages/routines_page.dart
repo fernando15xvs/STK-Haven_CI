@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:core/features/programs/application/training_day_decision.dart';
 import 'package:core/features/programs/application/program_plan_insights.dart';
+import 'package:core/features/programs/application/program_week_plan.dart';
 import 'package:core/features/programs/application/program_rotation_coordinator.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_library_page.dart';
 import 'package:core/domain/models/routine.dart';
@@ -87,6 +88,8 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
     final history = ref.watch(workoutHistoryProvider);
     ref.watch(trainingDayClockProvider);
     final now = DateTime.now();
+    final plan = activeProgram == null ? null : ProgramWeekPlan.calculate(
+      program: ProgramRotationCoordinator.reconcile(activeProgram, history), routines: routines, now: now);
     final day = TrainingDayDecision.resolve(
       now: now,
       active: workoutActive ? ref.watch(activeWorkoutProvider).session : null,
@@ -96,6 +99,8 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
       scheduledDate: nextProgramSession?.scheduledDate,
       isTrainingDay: nextProgramSession?.isTrainingDay ?? false,
       legacyToday: legacyTodaySession?.routine,
+      hasProgram: activeProgram != null, programPaused: plan?.isPaused ?? false,
+      goalReached: plan?.goalReached ?? false,
     );
     final featuredRoutineId = day.featuredRoutineId;
     final eligibleRoutines = routines
@@ -218,7 +223,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
                 final routine = visibleRoutines[index - 1];
                 final muscleGroups = musclesFor(routine);
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: _RoutineCard(
                     key: ValueKey('train_routine_${routine.id}'),
                     routine: routine,
@@ -882,9 +887,18 @@ class _RoutineCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     final minutes = evidence?.typicalMinutes;
+    final ui = AppUiTokens.of(context);
+    final actions = <Widget>[
+      menu,
+      if (allowStart)
+        IconButton(tooltip: 'Iniciar ${routine.name}', onPressed: onStart,
+          icon: Icon(Icons.play_circle_outline_rounded, color: colors.primary)),
+    ];
     return PremiumCard(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-        Expanded(child: InkWell(
+      padding: EdgeInsets.symmetric(horizontal: ui.cardPadding,
+          vertical: ui.cardPadding - AppSpacing.xxs),
+      child: LayoutBuilder(builder: (context, constraints) {
+        final labels = InkWell(
           onTap: onEdit,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(routine.name, style: AppTypography.headlineSmall),
@@ -897,14 +911,17 @@ class _RoutineCard extends StatelessWidget {
             Text('${routine.exercises.length} ejercicios${minutes == null ? '' : ' · ~$minutes min'}',
                 style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
           ]),
-        )),
-        Column(mainAxisSize: MainAxisSize.min, children: [
-          menu,
-          if (allowStart)
-            IconButton(tooltip: 'Iniciar ${routine.name}', onPressed: onStart,
-                icon: Icon(Icons.play_circle_outline_rounded, color: colors.primary)),
-        ]),
-      ]),
+        );
+        if (constraints.maxWidth < 230 || MediaQuery.textScalerOf(context).scale(14) > 21) {
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            labels,
+            Align(alignment: Alignment.centerRight, child: Wrap(children: actions)),
+          ]);
+        }
+        return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Expanded(child: labels), ...actions,
+        ]);
+      }),
     );
   }
 }

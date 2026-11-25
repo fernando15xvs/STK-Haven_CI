@@ -117,6 +117,10 @@ Future<void> _pumpTrain(
   bool active = false,
   bool hasProgram = true,
   bool completed = false,
+  bool rest = false,
+  bool oled = false,
+  AppUiStyle style = AppUiStyle.classic,
+  AppFontFamily font = AppFontFamily.outfit,
 }) async {
   tester.view.physicalSize = Size(width, 1280);
   tester.view.devicePixelRatio = 1;
@@ -136,7 +140,11 @@ Future<void> _pumpTrain(
           (ref) => hasProgram ? _program : null,
         ),
         nextProgramSessionProvider.overrideWith(
-          (ref) => hasProgram ? _suggested : null,
+          (ref) => !hasProgram ? null : rest ? NextProgramSession(
+            program: _program, routine: _routines.first, week: 1,
+            isDeloadWeek: false, isTrainingDay: false, trainingWeekdays: const {},
+            scheduledDate: DateTime.now().add(const Duration(days: 1)),
+            targetSessionsPerWeek: 4) : _suggested,
         ),
         legacyTodaySessionProvider.overrideWith((ref) => null),
         activeWorkoutProvider.overrideWith(
@@ -148,7 +156,7 @@ Future<void> _pumpTrain(
       ],
       child: MaterialApp(
         theme: AppearanceTheme.build(
-          const AppearanceSettings(),
+          AppearanceSettings(oledBlack: oled, uiStyle: style, fontFamily: font),
           brightness,
         ),
         home: MediaQuery(
@@ -182,6 +190,48 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
         },
       );
+    }
+  }
+
+  testWidgets('ready hero and routine actions share one horizontal row', (tester) async {
+    await _pumpTrain(tester);
+    final hero = find.byKey(const ValueKey('train_next_session_hero'));
+    final menu = find.descendant(of: hero, matching: find.byTooltip('Opciones de Rutina 0'));
+    final start = find.byKey(const ValueKey('train_start_next_session'));
+    expect(tester.getCenter(menu).dy, closeTo(tester.getCenter(start).dy, 1));
+    final card = find.byKey(const ValueKey('train_routine_r1'));
+    final cardMenu = find.descendant(of: card, matching: find.byTooltip('Opciones de Rutina 1'));
+    final play = find.descendant(of: card, matching: find.byTooltip('Iniciar Rutina 1'));
+    expect(tester.getCenter(cardMenu).dy, closeTo(tester.getCenter(play).dy, 1));
+    expect(tester.getSize(cardMenu).height, greaterThanOrEqualTo(48));
+    expect(tester.getSize(play).height, greaterThanOrEqualTo(48));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('rest hero only announces tomorrow; routine remains in full list', (tester) async {
+    await _pumpTrain(tester, rest: true);
+    final hero = find.byKey(const ValueKey('train_next_session_hero'));
+    expect(find.text('Día de descanso'), findsOneWidget);
+    expect(find.descendant(of: hero, matching: find.byType(PopupMenuButton<String>)), findsNothing);
+    expect(find.byKey(const ValueKey('train_start_next_session')), findsNothing);
+    expect(find.byKey(const ValueKey('train_routine_r0')), findsOneWidget);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('train_show_all_routines')), 160);
+    await tester.tap(find.byKey(const ValueKey('train_show_all_routines')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('train_routine_r0')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  for (final style in AppUiStyle.values) {
+    for (final font in AppFontFamily.values) {
+      testWidgets('compact layout supports $style / $font with enlarged text and OLED', (tester) async {
+        await _pumpTrain(tester, width: 320, scale: 1.6, oled: true, style: style, font: font);
+        expect(find.byKey(const ValueKey('train_start_next_session')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      });
     }
   }
 

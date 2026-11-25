@@ -2,6 +2,8 @@ import 'package:core/domain/models/routine.dart';
 import 'package:core/features/programs/application/training_program_legacy_policy.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/programs/application/training_day_decision.dart';
+import 'package:core/features/programs/application/program_week_plan.dart';
+import 'package:core/features/programs/application/program_rotation_coordinator.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/recent_workout_details.dart';
 import 'package:intl/intl.dart';
@@ -139,12 +141,17 @@ class _NextTrainingSessionHeroState
     final next = ref.watch(nextProgramSessionProvider);
     final currentProgram = ref.watch(activeTrainingProgramProvider);
     final legacyToday = ref.watch(legacyTodaySessionProvider);
+    final history = ref.watch(workoutHistoryProvider);
+    final plan = widget.decision != null || currentProgram == null ? null : ProgramWeekPlan.calculate(
+        program: ProgramRotationCoordinator.reconcile(currentProgram, history),
+        routines: widget.routines, now: now);
     final day = widget.decision ?? TrainingDayDecision.resolve(
       now: now, active: active.isActive ? active.session : null,
-      history: ref.watch(workoutHistoryProvider),
+      history: history,
       next: next?.routine, mode: next?.program.scheduleMode,
       scheduledDate: next?.scheduledDate, isTrainingDay: next?.isTrainingDay ?? false,
-      legacyToday: legacyToday?.routine,
+      legacyToday: legacyToday?.routine, hasProgram: currentProgram != null,
+      programPaused: plan?.isPaused ?? false, goalReached: plan?.goalReached ?? false,
     );
     final routine = day.routine;
     if (day.kind == TrainingDayKind.none ||
@@ -170,19 +177,25 @@ class _NextTrainingSessionHeroState
     final stale = running && session != null &&
         UnfinishedWorkoutReminderPolicy.isStale(
           ref.watch(activeWorkoutLastActivityProvider) ?? session.startedAt, now);
-    final name = rest ? 'Día de descanso'
+    final restName = switch (day.restReason) {
+      TrainingRestReason.paused => 'Programa en pausa',
+      TrainingRestReason.goalReached => 'Objetivo semanal cumplido',
+      TrainingRestReason.unavailable => 'Sin sesión disponible',
+      TrainingRestReason.scheduled => 'Día de descanso',
+    };
+    final name = rest ? restName
         : running ? active.routineDisplayName
         : completed ? (session!.routineNameSnapshot.isEmpty
             ? 'Entrenamiento libre' : session.routineNameSnapshot)
         : routine!.name;
-    final title = rest ? 'RECUPERACIÓN' : completed ? 'FINALIZADO HOY'
+    final title = rest ? (day.restReason == TrainingRestReason.goalReached ? 'SEMANA COMPLETADA' : 'RECUPERACIÓN') : completed ? 'FINALIZADO HOY'
         : running ? (stale ? 'PENDIENTE DE REVISAR' : 'SESIÓN EN CURSO')
         : 'INICIAR SESIÓN';
     Routine? managed;
     for (final item in widget.routines) {
       if (item.id == day.featuredRoutineId) { managed = item; break; }
     }
-    final menu = managed == null ? null : widget.routineMenu?.call(managed);
+    final menu = managed == null || rest || running ? null : widget.routineMenu?.call(managed);
     final action = day.allowsSuggestedStart
         ? IconButton(
             key: const ValueKey('train_start_next_session'),
@@ -222,15 +235,21 @@ class _NextTrainingSessionHeroState
         label: const Text('Editar nota')));
     }
 
+    final ui = AppUiTokens.of(context);
     return SizedBox(
       width: double.infinity,
       child: PremiumCard(
         key: const ValueKey('train_next_session_hero'),
         backgroundColor: background,
         borderColor: tint.withValues(alpha: 0.38),
+        padding: EdgeInsets.symmetric(horizontal: ui.cardPadding,
+          vertical: ui.cardPadding - AppSpacing.xxs),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            Container(
+          LayoutBuilder(builder: (context, constraints) {
+            final actions = <Widget>[if (menu != null) menu, if (action != null) action];
+            final compactHeader = constraints.maxWidth >= 260 &&
+                MediaQuery.textScalerOf(context).scale(14) <= 21;
+            final leading = Container(
               width: 48, height: 48,
               decoration: BoxDecoration(
                 color: rest ? colors.surfaceHigh : tint,
@@ -239,35 +258,47 @@ class _NextTrainingSessionHeroState
                   ? Icons.check_rounded : Icons.fitness_center_rounded,
                 color: rest ? tint : ThemeData.estimateBrightnessForColor(tint) == Brightness.dark
                     ? Colors.white : Colors.black),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            );
+            final labels = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: AppTypography.labelMedium.copyWith(color: tint)),
               const SizedBox(height: AppSpacing.xxs),
               Text(name, style: AppTypography.headlineMedium),
               if (completed && session != null)
                 Text('Completado · ${(session.durationSeconds / 60).round()} min',
                     style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
-            ])),
-            if (action != null) action,
-          ]),
+            ]);
+            return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              leading, const SizedBox(width: AppSpacing.sm),
+              Expanded(child: compactHeader || actions.isEmpty ? labels : Column(
+                crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  labels,
+                  Align(alignment: Alignment.centerRight,
+                    child: Wrap(children: actions)),
+                ])),
+              if (compactHeader) ...actions,
+            ]);
+          }),
           if (stale) ...[
             const SizedBox(height: AppSpacing.xs),
             Text('Revisa la sesión antes de continuar o finalizar.',
                 style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
           ],
           if (rest) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text('No tienes entrenamientos programados hoy.',
-                style: AppTypography.bodyMedium.copyWith(color: colors.textSecondary)),
-            if (routine != null && day.date != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text('Próximo día: ${_dateLabel(day.date!, now)} · ${routine.name}',
-                  style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
-            ],
-          ],
-          if (menu != null && !running) ...[
-            Align(alignment: Alignment.centerRight, child: menu),
+            const SizedBox(height: AppSpacing.xs),
+            if (routine != null && day.date != null)
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Icon(Icons.calendar_today_outlined, size: 18, color: colors.textSecondary),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(child: Text('Próximo día: ${_dateLabel(day.date!, now)} · ${routine.name}',
+                    style: AppTypography.bodySmall.copyWith(color: colors.textSecondary))),
+              ])
+            else
+              Text(switch (day.restReason) {
+                TrainingRestReason.paused => 'Tu progreso se conserva durante la pausa.',
+                TrainingRestReason.goalReached => 'Puedes descansar o entrenar por decisión propia.',
+                TrainingRestReason.unavailable => 'Consulta tu planificación o elige una rutina.',
+                TrainingRestReason.scheduled => 'No tienes entrenamientos programados hoy.',
+              }, style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
           ],
           if (items.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),

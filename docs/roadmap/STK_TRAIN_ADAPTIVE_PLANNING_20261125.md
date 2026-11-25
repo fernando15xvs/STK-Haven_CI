@@ -64,7 +64,7 @@ Continuación de STK_TRAIN_DAILY_STATES_20261125.md. Base funcional privada 7188
 - [x] Diseño y reglas aprobados por usuario.
 - [x] Baseline funcional CI #45619174450 7/7.
 - [x] A Motor de planificación (CI #45633916378 7/7).
-- [ ] B Excepciones.
+- [x] B Excepciones Core (CI #45640731951 7/7; acciones UI y recuperación entre semanas según D).
 - [ ] C Entrenar compacto.
 - [ ] D Editor y planificación.
 - [ ] E Regresiones, QA física y artefactos.
@@ -83,3 +83,9 @@ Continuación de STK_TRAIN_DAILY_STATES_20261125.md. Base funcional privada 7188
 - Modelo persistente de ocurrencias, estados pending/completed/omitted/expired, pausas y vínculos explícitos workout→slot; serialización integrada en TrainingProgram/Hive/shadow y fixture backup real. Las copias/plantillas no heredan excepciones.
 - Política Core: posponer, intercambiar, omitir/restaurar, recuperar/desplazar, pausas de rutinas/programa y reanudación; duración efectiva descuenta pausas totales. Rotación adaptada conserva pendientes limitados al objetivo y no acumula semanas enteras; semanal/fijo expiran pendientes al cerrar semana. Vinculación independiente no cuenta como completada. Provider y proyección leen estados; puente Mobile de inicio reserva identidad antes del draft.
 - Pruebas de comandos, pausa, recuperación y atribución. Pendiente CI. UI de acciones en D; estados hero en C/D. Edición estructural: rebase de pendientes conserva pausas, historial, vínculos e identidades archivadas; se bloquea únicamente mientras exista un entrenamiento vinculado pendiente. Se libera reserva al descartar y se respeta fecha explícita de posposición flexible. D expondrá estos comandos. Posposición intersemanal semanal/fija se limita a la semana actual; recuperar deuda entre semanas exige decisión explícita posterior. No se afirma QA física.
+
+## C — Entrenar compacto (implementación)
+- Hero disponible: menú y flecha horizontales junto al nombre, sin fila Align aislada; fallback accesible para ancho pequeño/texto ampliado. Hero activo/finalizado conserva acciones y resumen; paddings verticales compactos derivados de AppUiTokens.
+- Descanso: solo anuncio próximo día/rutina, sin menú/inicio ni exclusión en Mis rutinas. Core featuredRoutineId distingue anuncio de sesión destacada; pausa, objetivo cumplido y ausencia de sesión no activan fallback legacy. Prioridad activo > completado > descanso permanece.
+- Mis rutinas: menú y play juntos, padding compacto y espacio entre cards reducido, fallback accesible; nombres/músculos/duración intactos. Gestión, biblioteca, barra inferior e Inicio sin cambios.
+- Regresiones Core y Mobile: identidad destacada, descanso expandido, geometría de acciones, targets 48dp, anchos 320/390/430, escala, claro/oscuro/OLED, combinaciones de estilo/fuente. Pendiente CI y QA física. D seguirá con editor/modal/acciones y resolverá recuperación intersemanal.

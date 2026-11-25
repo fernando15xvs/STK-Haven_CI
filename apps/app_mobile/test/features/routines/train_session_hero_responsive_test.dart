@@ -102,6 +102,10 @@ void main() {
                     routines: [routine],
                     historyByRoutine: const {},
                     musclesFor: (_) => const ['Hombros', 'Espalda'],
+                    routineMenu: (_) => PopupMenuButton<String>(
+                      tooltip: 'Opciones', itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Editar')),
+                      ]),
                   ),
                 ),
               ),
