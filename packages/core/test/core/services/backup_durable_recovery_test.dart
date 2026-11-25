@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:core/core/services/backup_service.dart';
+import 'package:core/features/recovery/application/sleep_diary.dart';
 import 'package:core/database/hive/hive_adapters.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/database/hive/models/hive_body_measurement.dart';
@@ -172,6 +173,25 @@ void main() {
     expect(reopened.getById('weekly')!.toJson(), adapted.toJson());
     expect(reopened.getById('old')!.nextRoutineId, 'B');
     expect(reopened.getById('old')!.completions.single.workoutSessionId, 'old-a');
+  });
+
+  test('Home sleep duration and personal goal survive restart and real backup restore', () async {
+    final now = DateTime(2026,11,25);
+    final repository = SleepDiaryRepository(Hive.box<dynamic>(HiveBoxes.metadata));
+    await repository.save(SleepDiary.empty().withEntry(now, 450).withGoal(510));
+    await Hive.close();
+    Hive.init(tempDir.path);
+    await openRestoreBoxes();
+    final reopened = SleepDiaryRepository(Hive.box<dynamic>(HiveBoxes.metadata));
+    expect(reopened.read().minutesFor(now), 450);
+    expect(reopened.read().goalMinutes, 510);
+    final service = BackupService();
+    final backup = service.validateBackup(service.createBackup());
+    expect(backup.isValid, isTrue, reason: backup.errorMessage);
+    await reopened.save(SleepDiary.empty());
+    await service.restoreBackup(backup.parsedData!, schemaVersion: backup.schemaVersion!);
+    expect(reopened.read().minutesFor(now), 450);
+    expect(reopened.read().goalMinutes, 510);
   });
 
   test('B1.8: interrupted Hive restore survives process restart', () async {

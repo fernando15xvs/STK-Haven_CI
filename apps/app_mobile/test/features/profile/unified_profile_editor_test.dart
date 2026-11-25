@@ -13,7 +13,7 @@ class _Profile extends UserExperienceProfileNotifier {
     trainingDaysPerWeek:5, faithPreference:FaithContentPreference.disabled);
   @override
   Future<UserExperienceProfile> saveProfileEdit({required UserExperienceProfile original,
-    required UserExperienceProfile draft}) async {
+    required UserExperienceProfile draft, bool? showDailyVerse}) async {
     saves++;
     final updated=ProfileEditPolicy.merge(original:original,draft:draft,current:state.value!,now:DateTime(2026));
     state=AsyncData(updated);

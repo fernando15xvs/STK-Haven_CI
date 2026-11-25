@@ -20,7 +20,7 @@ class ProfileEditPolicy {
       ['displayName'], ['avatarEmoji','avatarPhotoBase64'], ['trainingGoal'],
       ['trainingExperience'], ['trainingDaysPerWeek'], ['sessionDuration'],
       ['trainingEnvironment'], ['planningPreference'], ['capabilities'],
-      ['faithPreference'], ['showWorkoutReflections'],
+      ['faithPreference'], ['showWorkoutReflections'], ['habitsEnabled'], ['showSleepOnHome'],
       ['dateOfBirth','genderIdentity','equationSexForEnergy',
         'optionalDemographicsConsented','optionalDemographicsConsentedAt'],
     ];

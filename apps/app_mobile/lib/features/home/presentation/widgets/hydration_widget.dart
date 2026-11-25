@@ -225,6 +225,10 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget>
 
     return PremiumCard(
       key: const ValueKey('home_hydration_card'),
+      padding: widget.compact ? EdgeInsets.symmetric(
+        horizontal: AppUiTokens.of(context).cardPadding,
+        vertical: AppUiTokens.of(context).cardPadding - AppSpacing.xxs,
+      ) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -260,7 +264,7 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget>
               color: colors.textSecondary,
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: widget.compact ? AppSpacing.xs : AppSpacing.sm),
           ClipRRect(
             borderRadius: AppRadius.sm_,
             child: LinearProgressIndicator(
@@ -291,7 +295,7 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget>
               ),
             ],
           ],
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: widget.compact ? AppSpacing.xs : AppSpacing.sm),
           if (widget.compact)
             Wrap(
               spacing: 4,

@@ -4,6 +4,7 @@ import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:gym_tracker/features/profile/presentation/widgets/profile_avatar.dart';
 import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
+import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -31,6 +32,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
   bool _saving = false;
   bool _pickingPhoto = false;
   bool _allowPop = false;
+  bool? _verseDraft;
 
   static const _avatars = <String>['💪', '🌱', '🏋️', '🏃', '⭐', '🧘', '🔥', '🦁'];
 
@@ -82,7 +84,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
   bool get _hasUnsavedChanges {
     final draft = _draft, original = _original;
     if (draft == null || original == null) return false;
-    return _name.text.trim() != original.displayName ||
+    return _verseDraft != null || _name.text.trim() != original.displayName ||
         jsonEncode(draft.toJson()) != jsonEncode(original.toJson());
   }
 
@@ -162,6 +164,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
     if (discard != true || !mounted) return;
     setState(() {
       _draft = _original;
+      _verseDraft = null;
       _name.text = _original?.displayName ?? '';
       _allowPop = true;
     });
@@ -383,6 +386,16 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                 _section(context, key: 'profile_faith_section', icon: Icons.menu_book_outlined,
                   title: 'Contenido de Fe', subtitle: 'Contenido y reflexiones',
                   children: _faithFields(draft)),
+                _section(context, key: 'profile_home_section', icon: Icons.home_outlined,
+                  title: 'Bienestar en Inicio', subtitle: 'Sueño y hábitos diarios', children: [
+                    SwitchListTile.adaptive(contentPadding: EdgeInsets.zero,
+                      title: const Text('Mostrar sueño'), value: draft.showSleepOnHome,
+                      onChanged: (value) => setState(() => _draft = draft.copyWith(showSleepOnHome: value))),
+                    SwitchListTile.adaptive(contentPadding: EdgeInsets.zero,
+                      title: const Text('Mostrar Mis hábitos'), value: draft.habitsEnabled,
+                      subtitle: const Text('Tus tareas diarias, sin borrar registros al ocultarlas.'),
+                      onChanged: (value) => setState(() => _draft = draft.copyWith(habitsEnabled: value))),
+                  ]),
                 _section(context, key: 'profile_privacy_section', icon: Icons.shield_outlined,
                   title: 'Privacidad de tus datos', subtitle: 'Consultar o quitar datos personales',
                   children: [
@@ -415,11 +428,13 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     setState(() => _saving = true);
                     try {
                       final updated = await ref.read(userExperienceProfileProvider.notifier)
-                          .saveProfileEdit(original: _original!, draft: _draft!.copyWith(displayName: _name.text.trim()));
+                          .saveProfileEdit(original: _original!, draft: _draft!.copyWith(displayName: _name.text.trim()),
+                            showDailyVerse: _verseDraft);
                       if (!mounted) return;
                       setState(() {
                         _draft = updated;
                         _original = updated;
+                        _verseDraft = null;
                         _saving = false;
                         _allowPop = true;
                       });
@@ -618,6 +633,17 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                 'Se mantiene oculto hasta que elijas activarlo.',
               ),
 
+    if (draft.faithEnabled)
+      Consumer(builder: (context, ref, _) {
+        final saved = ref.watch(settingsProvider.select((s) => s.showDailyVerse));
+        return SwitchListTile.adaptive(
+          key: const ValueKey('profile_show_verse'), contentPadding: EdgeInsets.zero,
+          title: const Text('Versículo en Inicio'),
+          subtitle: const Text('Mostrar el mensaje diario sin desactivar la Biblia.'),
+          value: _verseDraft ?? saved,
+          onChanged: (value) => setState(() => _verseDraft = value == saved ? null : value),
+        );
+      }),
     if (draft.faithEnabled)
       SwitchListTile.adaptive(
         contentPadding: EdgeInsets.zero,

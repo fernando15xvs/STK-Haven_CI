@@ -378,6 +378,10 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
 
     return PremiumCard(
       key: const ValueKey('home_steps_card'),
+      padding: widget.compact ? EdgeInsets.symmetric(
+        horizontal: AppUiTokens.of(context).cardPadding,
+        vertical: AppUiTokens.of(context).cardPadding - AppSpacing.xxs,
+      ) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -408,7 +412,7 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
               color: colors.textSecondary,
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: widget.compact ? AppSpacing.xs : AppSpacing.sm),
           ClipRRect(
             borderRadius: AppRadius.sm_,
             child: LinearProgressIndicator(
@@ -419,7 +423,7 @@ class _DailyStepsWidgetState extends ConsumerState<DailyStepsWidget>
               semanticsLabel: 'Progreso de pasos',
             ),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: widget.compact ? AppSpacing.xs : AppSpacing.sm),
           Tooltip(
             key:const ValueKey('home_steps_reading_provenance'),
             message:deviceTooltip,

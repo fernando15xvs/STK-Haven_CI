@@ -25,15 +25,10 @@ void main() {
     expect(source, isNot(contains('_TodayRoutineCard(')));
     expect(source, isNot(contains('_ActiveWorkoutHero(')));
     expect(source, isNot(contains('SIGUIENTE SESIÓN')));
-    // The existing note editor and today's completion access are preserved
-    // below the Activity block instead of another large hero.
-    expect(source, contains('_CompletedTodayCard('));
-    expect(source, contains("value: 'summary', child: Text('Ver resumen')"));
-    expect(source, contains('RecentWorkoutDetails.show(context, session, weightUnit)'));
-    expect(source, contains("value: 'notes', child: Text('Editar nota')"));
-    expect(source, contains('id: session.id'));
-    expect(source, contains('exercises: session.exercises'));
-    expect(source, contains('durationSeconds: session.durationSeconds'));
+    expect(source, isNot(contains('_CompletedTodayCard(')));
+    expect(source, isNot(contains('WeeklyActivityCard(')));
+    expect(source, contains('completedToday: null'));
+    expect(source, contains('RecentWorkoutDetails.show(context, lastWorkout, weightUnit)'));
   });
 
   test('H02-H03 reflection respects faith controls and uses one real navigation', () {
@@ -86,7 +81,11 @@ void main() {
     expect(s, contains('HydrationWidget('));
     expect(s, contains('DailyStepsWidget('));
     expect(s, contains("ValueKey('home_open_nutrition_plan')"));
-    expect(s, contains("'ACTIVIDAD SEMANAL'"));
+    expect(s, isNot(contains("'ACTIVIDAD SEMANAL'")));
+    expect(s, contains('HomeSleepCard(now: _observedAt)'));
+    expect(s, contains('HomeHabitsCard(now: _observedAt)'));
+    expect(s, contains('homePreferences?.habitsEnabled == true'));
+    expect(s, isNot(contains('            120,')));
     expect(s, contains("label:const Text('Nutrición')"));
   });
 }

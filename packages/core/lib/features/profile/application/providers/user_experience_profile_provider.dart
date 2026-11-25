@@ -42,7 +42,7 @@ class UserExperienceProfileNotifier
   /// Single editor save. Merge only changed editor-owned fields; do not
   /// overwrite settings, eligibility or concurrent unrelated updates.
   Future<UserExperienceProfile> saveProfileEdit({required UserExperienceProfile original,
-      required UserExperienceProfile draft}) async {
+      required UserExperienceProfile draft, bool? showDailyVerse}) async {
     final current = state.value ?? await future;
     final updated = ProfileEditPolicy.merge(original: original, draft: draft,
         current: current, now: DateTime.now());
@@ -50,11 +50,12 @@ class UserExperienceProfileNotifier
     if (changedFaith && !updated.faithEnabled) {
       final settings = ref.read(settingsProvider.notifier);
       await settings.setDailyVerseNotifications(false);
-      await settings.persistProfileDailyVerseVisibility(false);
     }
     await updateProfile(updated);
-    if (changedFaith && updated.faithEnabled) {
-      await ref.read(settingsProvider.notifier).persistProfileDailyVerseVisibility(true);
+    // The master Faith opt-in gates rendering, but never erases the user's
+    // independent Home preference. Explicit editor changes are persisted.
+    if (showDailyVerse != null) {
+      await ref.read(settingsProvider.notifier).persistProfileDailyVerseVisibility(showDailyVerse);
     }
     return updated;
   }

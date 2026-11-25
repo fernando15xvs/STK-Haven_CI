@@ -62,6 +62,7 @@ class UserExperienceProfile {
   final bool workoutRemindersWanted;
   final FaithContentPreference faithPreference;
   final bool habitsEnabled;
+  final bool showSleepOnHome;
   /// Legacy optional DOB for demographic equations. Never proof of adulthood.
   final DateTime? dateOfBirth;
   /// Separately declared DOB for the proposed 15+ eligibility flow.
@@ -96,6 +97,7 @@ class UserExperienceProfile {
     this.workoutRemindersWanted = false,
     this.faithPreference = FaithContentPreference.undecided,
     this.habitsEnabled = false,
+    this.showSleepOnHome = true,
     this.dateOfBirth,
     this.eligibilityBirthDate,
     this.genderIdentity,
@@ -163,6 +165,7 @@ class UserExperienceProfile {
     bool? workoutRemindersWanted,
     FaithContentPreference? faithPreference,
     bool? habitsEnabled,
+    bool? showSleepOnHome,
     DateTime? dateOfBirth,
     bool clearDateOfBirth = false,
     DateTime? eligibilityBirthDate,
@@ -204,6 +207,7 @@ class UserExperienceProfile {
           workoutRemindersWanted ?? this.workoutRemindersWanted,
       faithPreference: faithPreference ?? this.faithPreference,
       habitsEnabled: habitsEnabled ?? this.habitsEnabled,
+      showSleepOnHome: showSleepOnHome ?? this.showSleepOnHome,
       dateOfBirth: clearDateOfBirth ? null : (dateOfBirth ?? this.dateOfBirth),
       eligibilityBirthDate: clearEligibilityBirthDate
           ? null : (eligibilityBirthDate ?? this.eligibilityBirthDate),
@@ -244,6 +248,7 @@ class UserExperienceProfile {
       // source of truth because onboarding supports a third "decide later" state.
       'faithEnabled': faithEnabled,
       'habitsEnabled': habitsEnabled,
+      'showSleepOnHome': showSleepOnHome,
       'dateOfBirth': dateOfBirth == null
           ? null : '${dateOfBirth!.year.toString().padLeft(4, '0')}-'
               '${dateOfBirth!.month.toString().padLeft(2, '0')}-'
@@ -341,6 +346,7 @@ class UserExperienceProfile {
           json['workoutRemindersWanted'] as bool? ?? false,
       faithPreference: faithPreference,
       habitsEnabled: json['habitsEnabled'] as bool? ?? false,
+      showSleepOnHome: json['showSleepOnHome'] as bool? ?? true,
       dateOfBirth: _parseBirthDate(json['dateOfBirth']),
       eligibilityBirthDate: _parseBirthDate(json['eligibilityBirthDate']),
       genderIdentity: _enumByName(

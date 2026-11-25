@@ -30,8 +30,8 @@ import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/features/faith/presentation/pages/daily_verse_page.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/hydration_widget.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/home_wellness_layout.dart';
-import 'package:gym_tracker/features/home/presentation/widgets/weekly_activity_card.dart';
-import 'package:gym_tracker/features/progress/presentation/pages/progress_page.dart';
+import 'package:gym_tracker/features/home/presentation/widgets/home_sleep_card.dart';
+import 'package:gym_tracker/features/home/presentation/widgets/home_habits_card.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/daily_steps_widget.dart';
 import 'package:gym_tracker/features/nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart';
 import 'package:gym_tracker/features/home/presentation/widgets/recovery_check_in_card.dart';
@@ -146,6 +146,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
         (profile) => profile.value?.faithEnabled ?? false,
       ),
     );
+    final homePreferences = ref.watch(userExperienceProfileProvider).value;
     final activeWorkout = ref.watch(activeWorkoutProvider);
 
     final completedToday = TodaysWorkoutStatus.latestCompletedToday(
@@ -154,7 +155,8 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
     );
     final recentWorkout = HomeDashboardSessionPolicy.recentWorkout(
       history: history,
-      completedToday: completedToday,
+      // Today is displayed only in Novedades, not in a second completion card.
+      completedToday: null,
       activeSessionId: activeWorkout.isActive ? activeWorkout.session?.id : null,
     );
     final allPRs = prRepo.getAllPRs()
@@ -170,7 +172,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
             AppUiTokens.of(context).pageHorizontalPadding,
             AppSpacing.xl,
             AppUiTokens.of(context).pageHorizontalPadding,
-            120,
+            AppSpacing.xl,
           ),
           children: [
             _GreetingHeader(now: _observedAt),
@@ -205,6 +207,10 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                       ? RecoveryCheckInTiming.completed
                       : RecoveryCheckInTiming.planned,
             ),
+            if (homePreferences?.showSleepOnHome ?? true) ...[
+              const SizedBox(height: AppSpacing.sm),
+              HomeSleepCard(now: _observedAt),
+            ],
             const SizedBox(height: AppSpacing.lg),
             Row(
               children: [
@@ -215,6 +221,12 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                 )),
                 TextButton.icon(
                   key:const ValueKey('home_open_nutrition_plan'),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                    minimumSize: const Size(48, 48),
+                    visualDensity: VisualDensity.standard,
+                    tapTargetSize: MaterialTapTargetSize.padded,
+                  ),
                   onPressed:()=>Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder:(_)=>const NutritionIntelligencePageMobile(),
@@ -225,7 +237,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.sm),
+            // The nutrition action already supplies 48dp of header height.
+            // Align its visual baseline without adding a second full gap.
+            const SizedBox(height: AppSpacing.xxs),
             HomeWellnessLayout(
               hydration: HydrationWidget(
                 compact: true,
@@ -236,29 +250,9 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                 isVisible: widget.isVisible,
               ),
             ),
-            const SizedBox(height: AppSpacing.xxl),
-            Text(
-              'ACTIVIDAD SEMANAL',
-              style: AppTypography.labelLarge.copyWith(
-                color: AppColors.of(context).textSecondary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            WeeklyActivityCard(
-              history: history,
-              onOpenProgress: widget.onOpenProgress ??
-                  () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const ProgressPage(),
-                        ),
-                      ),
-            ),
-            if (completedToday != null) ...[
-              const SizedBox(height: AppSpacing.sm),
-              _CompletedTodayCard(
-                session: completedToday,
-                weightUnit: settings.weightUnit,
-              ),
+            if (homePreferences?.habitsEnabled == true) ...[
+              const SizedBox(height: AppSpacing.lg),
+              HomeHabitsCard(now: _observedAt),
             ],
             if (recentWorkout != null || recentPR != null) ...[
               const SizedBox(height: AppSpacing.lg),
@@ -268,7 +262,7 @@ class _DashboardPageState extends ConsumerState<DashboardPage>
                   color: AppColors.of(context).textSecondary,
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
               _RecentGrid(
                 lastWorkout: recentWorkout,
                 recentPR: recentPR,
@@ -450,108 +444,6 @@ class _CompactActiveWorkoutAccess extends StatelessWidget {
 
 }
 
-class _CompletedTodayCard extends ConsumerWidget {
-  final WorkoutSession session;
-  final WeightUnit weightUnit;
-
-  const _CompletedTodayCard({required this.session, required this.weightUnit});
-
-  Future<void> _editNotes(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController(text: session.notes);
-    try {
-      final notes = await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Editar nota del entrenamiento'),
-          content: TextField(
-            controller: controller,
-            maxLines: 4,
-            maxLength: 1000,
-            decoration: const InputDecoration(hintText: '¿Cómo te fue hoy?'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, controller.text.trim()),
-              child: const Text('Guardar'),
-            ),
-          ],
-        ),
-      );
-      if (notes == null) return;
-      // Preserve original session ID, exercises, working sets, duration and
-      // progress history. Never re-award completed workouts when editing notes.
-      final edited = WorkoutSession(
-        id: session.id,
-        routineId: session.routineId,
-        routineNameSnapshot: session.routineNameSnapshot,
-        startedAt: session.startedAt,
-        finishedAt: session.finishedAt,
-        exercises: session.exercises,
-        durationSeconds: session.durationSeconds,
-        notes: notes,
-        currentRestEndsAt: session.currentRestEndsAt,
-      );
-      await ref.read(workoutRepositoryProvider).saveWorkoutSession(edited);
-      ref.read(workoutHistoryProvider.notifier).refresh();
-    } finally {
-      controller.dispose();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = AppColors.of(context);
-    return Padding(
-      key: const ValueKey('home_completed_today_compact'),
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-      child: Row(
-        children: [
-          Icon(Icons.check_circle_outline_rounded, color: colors.success),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Finalizado hoy', style: AppTypography.labelSmall.copyWith(
-                  color: colors.success,
-                )),
-                Text(
-                  session.routineNameSnapshot.isEmpty
-                      ? 'Entrenamiento libre'
-                      : session.routineNameSnapshot,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.bodyMedium,
-                ),
-              ],
-            ),
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Opciones del entrenamiento finalizado',
-            onSelected: (action) {
-              if (action == 'summary') {
-                RecentWorkoutDetails.show(context, session, weightUnit);
-              } else if (action == 'notes') {
-                _editNotes(context, ref);
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'summary', child: Text('Ver resumen')),
-              PopupMenuItem(value: 'notes', child: Text('Editar nota')),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-}
-
 class _RecentGrid extends StatelessWidget {
   final WorkoutSession? lastWorkout;
   final PersonalRecordEvent? recentPR;
@@ -601,6 +493,8 @@ class _LastWorkoutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
     return PremiumCard(
+      padding: EdgeInsets.symmetric(horizontal: AppUiTokens.of(context).cardPadding,
+        vertical: AppUiTokens.of(context).cardPadding - AppSpacing.xxs),
       onTap: () => RecentWorkoutDetails.show(context, lastWorkout, weightUnit),
       child: Row(
         children: [
@@ -652,6 +546,8 @@ class _RecentPRCard extends ConsumerWidget {
         .firstOrNull;
     final colors = AppColors.of(context);
     return PremiumCard(
+      padding: EdgeInsets.symmetric(horizontal: AppUiTokens.of(context).cardPadding,
+        vertical: AppUiTokens.of(context).cardPadding - AppSpacing.xxs),
       onTap: exercise == null
           ? null
           : () => Navigator.of(context).push(
@@ -667,7 +563,7 @@ class _RecentPRCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('RÉCORD RECIENTE',
+                Text('Récord reciente',
                     style: AppTypography.labelMedium.copyWith(
                         color: colors.textSecondary)),
                 const SizedBox(height: AppSpacing.xs),

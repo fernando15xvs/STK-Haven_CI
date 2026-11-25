@@ -147,16 +147,6 @@ class ProfileSettingsPage extends ConsumerWidget {
                 padding: EdgeInsets.zero,
                 child: Column(
                   children: [
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.symmetric(
-                          horizontal: tokens.cardPadding),
-                      title: const Text('Mostrar tarjeta en Inicio'),
-                      subtitle: const Text('Versículo diario de Fortaleza'),
-                      value: settings.showDailyVerse,
-                      onChanged: ref.read(settingsProvider.notifier)
-                          .setShowDailyVerse,
-                    ),
-                    Divider(height: 1, color: colors.surfaceBorder),
                     _SettingsLink(
                       icon: Icons.bookmark_border_rounded,
                       title: 'Versículos favoritos',

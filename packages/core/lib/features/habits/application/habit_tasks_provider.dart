@@ -187,6 +187,42 @@ class HabitTasksNotifier extends Notifier<HabitTasksState> {
     return completion;
   }
 
+  final Set<String> _homeWrites = {};
+
+  /// Quick checklist uses existing task/completion storage. Timed tasks are
+  /// opened in the dedicated screen; a checkbox must never invent minutes.
+  Future<void> setHomeChecklist(String taskId, bool completed, DateTime now) async {
+    if (!_homeWrites.add(taskId)) return;
+    try {
+      final task = _repository.getTask(taskId);
+      final profile = ref.read(userExperienceProfileProvider).value;
+      if (task == null || task.archived || task.type != HabitTaskType.checklist ||
+          task.targetMinutes != 0 || task.source == HabitTaskSource.coach ||
+          profile?.habitsEnabled != true || (task.faithSpecific && profile?.faithEnabled != true) ||
+          !HabitScheduleService.isDueOn(task, now)) {
+        throw StateError('Este hábito se gestiona en Hábitos y lectura.');
+      }
+      final today = DateTime(now.year, now.month, now.day);
+      final matches = _repository.getCompletions(taskId: taskId).where((c) {
+        final date = c.completedAt.toLocal();
+        return DateTime(date.year, date.month, date.day) == today;
+      }).toList();
+      if (matches.any((c) => c.status == HabitTaskCompletionStatus.skipped)) {
+        throw StateError('Revisa esta tarea desde Hábitos y lectura.');
+      }
+      if (completed && matches.isEmpty) {
+        await completeTask(taskId: taskId, completedAt: now);
+      } else if (!completed) {
+        for (final completion in matches) {
+          await _repository.deleteCompletion(completion.id);
+        }
+        refresh();
+      }
+    } finally {
+      _homeWrites.remove(taskId);
+    }
+  }
+
   Future<void> undoCompletion(String completionId) async {
     await _repository.deleteCompletion(completionId);
     refresh();
