@@ -65,7 +65,7 @@ Continuación de STK_TRAIN_DAILY_STATES_20261125.md. Base funcional privada 7188
 - [x] Baseline funcional CI #45619174450 7/7.
 - [x] A Motor de planificación (CI #45633916378 7/7).
 - [x] B Excepciones Core (CI #45640731951 7/7; acciones UI y recuperación entre semanas según D).
-- [ ] C Entrenar compacto.
+- [x] C Entrenar compacto (CI #45646554997 7/7).
 - [ ] D Editor y planificación.
 - [ ] E Regresiones, QA física y artefactos.
 
@@ -92,3 +92,6 @@ Continuación de STK_TRAIN_DAILY_STATES_20261125.md. Base funcional privada 7188
 
 ### Corrección gate C
 CI #45644200522: 6/7; Mobile tests 73/74 en Entrenar, menú de 40 dp frente a mínimo 48 dp. Se fijan targets de menú, iniciar y play en 48×48 con densidad estándar, conservando alineación horizontal y padding compacto. Regresión comprueba ambos ejes en los cuatro controles; no se desactiva ni relaja ninguna prueba. Nuevo CI pendiente.
+
+## D — Editor y planificación adaptable
+- Editor: selector rotativo/semanal para flexible/continuo, posiciones repetibles, vista previa de dos semanas y guardado compatible. Fijo conserva mapa. Modal unificado desde calendario y menú destacado, progreso y estados, previa de siguiente semana, acciones de posposición/intercambio/omisión/recuperación y pausa/reanudación. Entrenamiento independiente explícito en descanso/completado y fuera de secuencia. Recuperación de ocurrencias históricas persistidas con sustitución explícita de una pendiente (sin deuda ilimitada). Pendiente CI y QA física. Los programas legacy sin ocurrencias persistidas anteriores no pueden reconstruir con certeza una deuda histórica; no se inventa.

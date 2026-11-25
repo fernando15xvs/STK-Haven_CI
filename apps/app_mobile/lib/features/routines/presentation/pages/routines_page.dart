@@ -2,12 +2,12 @@ import 'dart:async';
 import 'package:core/features/programs/application/training_day_decision.dart';
 import 'package:core/features/programs/application/program_plan_insights.dart';
 import 'package:core/features/programs/application/program_week_plan.dart';
+import 'package:gym_tracker/features/programs/presentation/widgets/adaptive_planning_sheet.dart';
 import 'package:core/features/programs/application/program_rotation_coordinator.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_library_page.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/exercises/application/providers/exercise_provider.dart';
 import 'package:core/features/routines/application/providers/routine_provider.dart';
-import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/providers/training_program_provider.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:flutter/material.dart';
@@ -154,7 +154,8 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
                         historyByRoutine: usageByRoutine,
                         musclesFor: musclesFor,
                         decision: day,
-                        routineMenu: (routine) => _routineMenu(context, ref, routine),
+                        routineMenu: (routine) => _routineMenu(context, ref, routine,
+                          includeAdapt: activeProgram != null),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       _ProgramOrganizerCard(routines: routines,
@@ -258,10 +259,15 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
         ));
       if (confirmed != true || !context.mounted) return;
     }
-    await WorkoutLauncher.launch(context, ref, routine);
+    if (day.kind == TrainingDayKind.completed || day.kind == TrainingDayKind.rest) {
+      await WorkoutLauncher.launch(context, ref, routine, independent: true);
+    } else {
+      await WorkoutLauncher.launch(context, ref, routine);
+    }
   }
 
-  Widget _routineMenu(BuildContext context, WidgetRef ref, Routine routine) =>
+  Widget _routineMenu(BuildContext context, WidgetRef ref, Routine routine,
+      {bool includeAdapt = false}) =>
     PopupMenuButton<String>(
       style: IconButton.styleFrom(
         minimumSize: const Size(48, 48),
@@ -276,16 +282,18 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
             Navigator.push(context, MaterialPageRoute(
               builder: (_) => CreateRoutinePage(editingRoutine: routine)));
             break;
+          case 'adapt': _showWeeklyPlan(context, ref, ref.read(routineListProvider)); break;
           case 'notes': _editRoutineNotes(context, ref, routine); break;
           case 'duplicate': _duplicateRoutine(context, ref, routine); break;
           case 'delete': _confirmDelete(context, ref, routine); break;
         }
       },
-      itemBuilder: (_) => const [
-        PopupMenuItem(value: 'edit', child: Text('Editar')),
-        PopupMenuItem(value: 'notes', child: Text('Nota')),
-        PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
-        PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+      itemBuilder: (_) => [
+        if (includeAdapt) const PopupMenuItem(value: 'adapt', child: Text('Adaptar planificación')),
+        const PopupMenuItem(value: 'edit', child: Text('Editar')),
+        const PopupMenuItem(value: 'notes', child: Text('Nota')),
+        const PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
+        const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
       ],
     );
 
@@ -506,38 +514,6 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
     }
   }
 
-  Future<void> _showFlexiblePlan(BuildContext context, TrainingProgram program,
-      List<Routine> routines, DateTime now) async {
-    final byId = {for (final routine in routines) routine.id: routine};
-    final order = TrainingDayDecision.rotationOrder(program);
-    final insights = ProgramPlanInsights.calculate(program: program, routines: routines, now: now);
-    await showModalBottomSheet<void>(context: context, useSafeArea: true,
-      isScrollControlled: true,
-      builder: (ctx) => FractionallySizedBox(heightFactor: 0.78,
-        child: ListView(padding: EdgeInsets.all(AppUiTokens.of(ctx).cardPadding), children: [
-          Text('Planificación flexible', style: AppTypography.headlineLarge),
-          const SizedBox(height: AppSpacing.xs),
-          Text('Sin días fijos · ${insights.targetSessionsPerWeek} sesiones/sem',
-              style: AppTypography.bodyMedium),
-          const SizedBox(height: AppSpacing.md),
-          Text('${insights.completedThisWeek}/${insights.plannedThisWeek} sesiones esta semana',
-              style: AppTypography.headlineSmall),
-          const SizedBox(height: AppSpacing.xs),
-          LinearProgressIndicator(value: insights.weeklyCompletionRatio ?? 0),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Orden de rotación', style: AppTypography.headlineSmall),
-          const SizedBox(height: AppSpacing.sm),
-          for (var i = 0; i < order.length; i++)
-            ListTile(
-              leading: CircleAvatar(child: Text('${i + 1}')),
-              title: Text(byId[order[i]]?.name ?? 'Rutina no disponible'),
-              subtitle: i == 0 ? const Text('Siguiente en la rotación') : null,
-            ),
-          const SizedBox(height: AppSpacing.sm),
-          const Text('La rotación avanza al completar sesiones. No se asignan días de descanso obligatorios.'),
-        ])));
-  }
-
   Future<void> _showWeeklyPlan(
     BuildContext context,
     WidgetRef ref,
@@ -555,21 +531,20 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
     final rawPlan = ref.read(activeTrainingProgramProvider);
     final activePlan = rawPlan == null ? null : ProgramRotationCoordinator.reconcile(
         rawPlan, ref.read(workoutHistoryProvider));
-    final today = DateTime.now().toLocal();
-    if (activePlan != null && activePlan.scheduleMode == ProgramScheduleMode.flexible) {
-      await _showFlexiblePlan(context, activePlan, routines, today);
+    if (activePlan != null) {
+      final selection = await AdaptivePlanningSheet.show(context);
+      if (selection != null && context.mounted) {
+        final latest = ref.read(routineListProvider);
+        for (final routine in latest) {
+          if (routine.id == selection.routineId) {
+            await WorkoutLauncher.launch(context, ref, routine,
+                occurrenceId: selection.occurrenceId);
+            break;
+          }
+        }
+      }
       return;
     }
-    final monday = DateTime(today.year, today.month, today.day)
-        .subtract(Duration(days: today.weekday - DateTime.monday));
-    final projections = activePlan == null
-        ? const <ProgramScheduledSession>[]
-        : ProgramScheduleProjector.projectWeek(
-            program: activePlan, routines: routines, weekStart: monday,
-          );
-    final routineById = <String, Routine>{
-      for (final routine in routines) routine.id: routine,
-    };
     await showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
@@ -588,14 +563,12 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
           padding: const EdgeInsets.all(AppSpacing.lg),
           children: [
             Text(
-              activePlan == null ? 'Días opcionales de rutinas' : 'Semana del programa',
+              'Días opcionales de rutinas',
               style: AppTypography.headlineLarge,
             ),
             const SizedBox(height: 4),
             Text(
-              activePlan == null
-                  ? 'Días opcionales cuando no hay un programa activo. Puedes mover tus rutinas.'
-                  : 'Calendario de “${activePlan.name}”. El plan prevalece sobre los días opcionales de cada rutina.',
+              'Días opcionales cuando no hay un programa activo. Puedes mover tus rutinas.',
               style: AppTypography.bodyMedium.copyWith(
                 color: AppColors.of(context).textSecondary,
               ),
@@ -603,15 +576,9 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
             const SizedBox(height: AppSpacing.lg),
             ...List.generate(7, (index) {
               final weekday = index + 1;
-              final dayRoutines = activePlan == null
-                  ? routines
-                      .where((routine) => routine.scheduledDays.contains(weekday))
-                      .toList(growable: false)
-                  : projections
-                      .where((item) => item.date.weekday == weekday)
-                      .map((item) => routineById[item.routineId])
-                      .whereType<Routine>()
-                      .toList(growable: false);
+              final dayRoutines = routines
+                  .where((routine) => routine.scheduledDays.contains(weekday))
+                  .toList(growable: false);
               final today = DateTime.now().weekday == weekday;
               return Container(
                 margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -660,8 +627,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
                                             style: AppTypography.headlineSmall,
                                           ),
                                         ),
-                                        if (activePlan == null)
-                                          IconButton(
+                                        IconButton(
                                             tooltip: 'Mover a otro día',
                                             visualDensity: VisualDensity.compact,
                                             onPressed: () => _moveRoutineToDay(
@@ -858,7 +824,7 @@ class _ProgramOrganizerCard extends ConsumerWidget {
                 ? 'Programa pausado' : 'Sin programa activo') : 'Programa ${plan.name}',
                 style: AppTypography.headlineSmall),
             Text(plan == null ? 'Tus rutinas siguen disponibles.'
-                : '$mode · ${insights!.targetSessionsPerWeek} sesiones/sem',
+                : '$mode · ${plan.scheduleMode == ProgramScheduleMode.fixed ? '' : plan.repeatsWeekly ? 'Semanal · ' : 'Rotativo · '}${insights!.targetSessionsPerWeek} sesiones/sem',
                 style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
           ])),
           IconButton(key: const ValueKey('train_open_planning'), tooltip: 'Planificación',

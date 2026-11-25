@@ -226,6 +226,33 @@ class ProgramAdaptationPolicy {
     return _replace(p, rows);
   }
 
+  /// A previous week's expired/omitted position may be explicitly recovered.
+  /// Replace one unbound pending position in the current week; the displaced
+  /// occurrence is omitted, never falsely completed. No unbounded debt.
+  static TrainingProgram recoverPrevious(TrainingProgram program, Iterable<Routine> routines,
+      String previousId, String replaceId, DateTime now) {
+    final p = prepare(program, routines, now);
+    final rows = p.adaptation!.occurrences.toList();
+    final old = rows.indexWhere((o) => o.id == previousId && !o.archived &&
+        o.week.isBefore(p.adaptation!.week) &&
+        (o.status == PlanOccurrenceStatus.expired || o.status == PlanOccurrenceStatus.omitted));
+    if (old < 0 || !p.routineIds.contains(rows[old].routineId)) {
+      throw StateError('La sesión anterior ya no se puede recuperar.');
+    }
+    final index = _index(p, replaceId);
+    final replaced = rows[index];
+    final restored = rows[old].copyWith(week: p.adaptation!.week,
+        status: PlanOccurrenceStatus.pending, date: replaced.date,
+        clearDate: replaced.date == null, notBefore: day(now));
+    rows[old] = rows[old].copyWith(archived: true);
+    rows[index] = replaced.copyWith(status: PlanOccurrenceStatus.omitted);
+    // Retain unique occurrence identity; move rather than clone.
+    rows.removeAt(old);
+    final at = rows.indexWhere((o) => o.id == replaceId);
+    rows.insert(at, restored);
+    return _replace(p, rows);
+  }
+
   static TrainingProgram pause(TrainingProgram program, Iterable<Routine> routines,
       DateTime now, {Set<String>? routineIds, DateTime? until}) {
     if (until != null && !until.isAfter(now)) throw ArgumentError('La pausa debe terminar después de ahora.');

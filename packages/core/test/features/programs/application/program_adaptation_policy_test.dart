@@ -106,6 +106,21 @@ void main() {
     expect(edited.adaptation!.occurrences.where((o) => o.archived).length, 5);
   });
 
+  test('explicit previous-week recovery replaces a pending slot without fake completion', () {
+    final first = prepared(plan(sequence: ProgramSequencePolicy.weekly));
+    final nextMonday = DateTime(2026,11,30,9);
+    final second = ProgramAdaptationPolicy.prepare(first, const [], nextMonday);
+    final old = slots(first)[1];
+    final replace = slots(second).first;
+    final recovered = ProgramAdaptationPolicy.recoverPrevious(second, const [], old.id, replace.id, nextMonday);
+    expect(recovered.completions, isEmpty);
+    expect(slots(recovered).first.id, old.id);
+    expect(slots(recovered).first.routineId, 'B');
+    expect(slots(recovered).firstWhere((o) => o.id == replace.id).status, PlanOccurrenceStatus.omitted);
+    expect(recovered.adaptation!.occurrences.map((o) => o.id).toSet().length,
+        recovered.adaptation!.occurrences.length);
+  });
+
   test('rollover retains only bounded rolling debt and weekly starts again', () {
     final nextMonday = DateTime(2026,11,30,9);
     final rolling = prepared(plan());

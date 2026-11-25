@@ -289,6 +289,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Planificación flexible'), findsOneWidget);
     expect(find.text('Orden de rotación'), findsOneWidget);
+    expect(find.byKey(const ValueKey('adaptive_week_progress')), findsOneWidget);
+    expect(find.byKey(const ValueKey('adaptive_next_week')), findsOneWidget);
+    expect(find.text('Adaptar planificación'), findsOneWidget);
     expect(find.text('Lunes'), findsNothing);
     expect(find.text('Descanso'), findsNothing);
     expect(tester.takeException(), isNull);

@@ -18,7 +18,7 @@ class ProgramWeekSlot {
   final ProgramCompletion? completion;
   final PlanOccurrenceStatus status;
   final bool isPaused;
-  bool get isCompleted => completion != null;
+  bool get isCompleted => completion != null || status == PlanOccurrenceStatus.completed;
 }
 
 class ProgramNextSuggestion {

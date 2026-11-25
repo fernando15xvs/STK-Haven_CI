@@ -226,6 +226,11 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
     var routineIds = List<String>.from(existing?.routineIds ?? const []);
     var scheduleMode =
         existing?.scheduleMode ?? ProgramScheduleMode.continuous;
+    var sequencePolicy = existing?.sequencePolicy ?? ProgramSequencePolicy.rolling;
+    var weeklySlots = List<String>.from(existing?.weeklySequence ?? const []);
+    if (existing != null && !existing.repeatsWeekly) {
+      weeklySlots = List<String>.from(existing.weeklySequenceRoutineIds);
+    }
     var targetSessionsPerWeek =
         existing == null
             ? 3
@@ -283,6 +288,19 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
             });
           }
 
+          final repeats = scheduleMode != ProgramScheduleMode.fixed &&
+              sequencePolicy == ProgramSequencePolicy.weekly;
+          final slotCount = scheduleMode == ProgramScheduleMode.continuous
+              ? trainingWeekdays.length : targetSessionsPerWeek.clamp(1, 7).toInt();
+          if (repeats) {
+            final valid = weeklySlots.where(routineIds.contains).take(slotCount).toList();
+            weeklySlots = [
+              ...valid,
+              if (routineIds.isNotEmpty)
+                for (var i = valid.length; i < slotCount; i++)
+                  routineIds[i % routineIds.length],
+            ];
+          }
           final scheduleIsValid = switch (scheduleMode) {
             ProgramScheduleMode.continuous => trainingWeekdays.isNotEmpty,
             ProgramScheduleMode.fixed => fixedWeekdayRoutineIds.isNotEmpty,
@@ -506,7 +524,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Aquí no eliges días concretos. Solo indicas cuántas veces quieres entrenar por semana y la rotación continúa cuando tú entrenes.',
+                        'Elige cuántas sesiones quieres completar sin días obligatorios.',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const SizedBox(height: 10),
@@ -533,6 +551,29 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                           });
                         },
                       ),
+                    ],
+                    if (scheduleMode != ProgramScheduleMode.fixed) ...[
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<ProgramSequencePolicy>(
+                        key: const ValueKey('program_sequence_policy'),
+                        value: sequencePolicy,
+                        isExpanded: true,
+                        decoration: const InputDecoration(labelText: 'Secuencia'),
+                        items: const [
+                          DropdownMenuItem(value: ProgramSequencePolicy.rolling,
+                            child: Text('Rotación por sesiones')),
+                          DropdownMenuItem(value: ProgramSequencePolicy.weekly,
+                            child: Text('Repetir cada semana')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) setDialogState(() => sequencePolicy = value);
+                        },
+                      ),
+                      const SizedBox(height: 4),
+                      Text(repeats
+                        ? 'Cada semana vuelve a la primera posición.'
+                        : 'La próxima semana continúa donde terminaste.',
+                        style: Theme.of(context).textTheme.bodySmall),
                     ],
                     const SizedBox(height: 12),
                     SwitchListTile.adaptive(
@@ -565,7 +606,8 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                     Text(
                       scheduleMode == ProgramScheduleMode.fixed
                           ? 'Estas son las rutinas disponibles para asignar a la semana fija. El orden se conserva por si luego cambias a rotación continua o flexible.'
-                          : 'La secuencia continúa entre semanas: por ejemplo Upper A → Lower A → Upper B → Lower B → Upper A…',
+                          : repeats ? 'Estas son las rutinas que podrás asignar a las posiciones semanales.'
+                            : 'La secuencia continúa entre semanas según el orden de las rutinas.',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     const SizedBox(height: 8),
@@ -696,6 +738,44 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                           )
                           .toList(),
                     ),
+                    if (repeats && weeklySlots.isNotEmpty) ...[
+                      const Divider(),
+                      Text('Secuencia semanal', style: Theme.of(context).textTheme.titleMedium),
+                      const Text('Puedes utilizar una misma rutina en varias posiciones.'),
+                      for (var i = 0; i < weeklySlots.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: DropdownButtonFormField<String>(
+                            key: ValueKey('weekly_slot_$i:${weeklySlots[i]}'),
+                            isExpanded: true,
+                            value: weeklySlots[i],
+                            decoration: InputDecoration(labelText: 'Sesión ${i + 1}'),
+                            items: [
+                              for (final id in routineIds)
+                                DropdownMenuItem(value: id,
+                                  child: Text(byId[id]?.name ?? 'Rutina no disponible')),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) setDialogState(() {
+                                weeklySlots = List<String>.from(weeklySlots)..[i] = value;
+                              });
+                            },
+                          ),
+                        ),
+                    ],
+                    if (scheduleMode != ProgramScheduleMode.fixed && routineIds.isNotEmpty && slotCount > 0) ...[
+                      const SizedBox(height: 12),
+                      Text('Vista previa · dos semanas', style: Theme.of(context).textTheme.titleSmall),
+                      for (var week = 0; week < 2; week++)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text('Semana ${week + 1}: ${(repeats ? weeklySlots :
+                            List.generate(slotCount, (i) => routineIds[(week * slotCount + i) % routineIds.length]))
+                            .map((id) => byId[id]?.name ?? 'Rutina').join(' → ')}'),
+                        ),
+                      if (existing != null)
+                        const Text('Los cambios se aplican a sesiones futuras; se conserva tu historial.'),
+                    ],
                     if (existing != null)
                       Align(
                         alignment: Alignment.centerLeft,
@@ -735,7 +815,8 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
       ),
     );
 
-    if (save == true) {
+    try {
+    if (save == true && context.mounted) {
       final normalizedTargetSessions = switch (scheduleMode) {
         ProgramScheduleMode.continuous => trainingWeekdays.length,
         ProgramScheduleMode.fixed => fixedWeekdayRoutineIds.length,
@@ -749,6 +830,8 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
               routineIds: routineIds,
               durationWeeks: durationWeeks,
               scheduleMode: scheduleMode,
+              sequencePolicy: sequencePolicy,
+              weeklySequenceRoutineIds: weeklySlots,
               targetSessionsPerWeek: normalizedTargetSessions,
               trainingWeekdays: trainingWeekdays,
               fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,
@@ -772,6 +855,8 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                 durationWeeks: durationWeeks,
                 routineIds: routineIds,
                 scheduleMode: scheduleMode,
+                sequencePolicy: sequencePolicy,
+                weeklySequenceRoutineIds: weeklySlots,
                 targetSessionsPerWeek: normalizedTargetSessions,
                 trainingWeekdays: trainingWeekdays,
                 fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,
@@ -782,8 +867,15 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
       }
     }
 
-    name.dispose();
-    notes.dispose();
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No se guardó el plan. Revisa la secuencia o finaliza la sesión activa.')));
+      }
+    } finally {
+      name.dispose();
+      notes.dispose();
+    }
   }
 
   static Future<void> _confirmDelete(
@@ -991,7 +1083,7 @@ class _ProgramCard extends StatelessWidget {
                     : 'Rotación del programa',
               ),
               subtitle: Text(
-                program.routineIds
+                (program.repeatsWeekly ? program.weeklySequence : program.routineIds)
                     .map((id) => routineById[id]?.name ?? 'Eliminada')
                     .join(' → '),
               ),

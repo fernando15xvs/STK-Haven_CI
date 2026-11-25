@@ -11,8 +11,10 @@ class WorkoutLauncher {
   static Future<void> launch(
     BuildContext context,
     WidgetRef ref,
-    Routine routine,
-  ) async {
+    Routine routine, {
+    bool independent = false,
+    String? occurrenceId,
+  }) async {
     final activeState = ref.read(activeWorkoutProvider);
     final notifier = ref.read(activeWorkoutProvider.notifier);
     final exercises = ref.read(exerciseListProvider);
@@ -64,7 +66,7 @@ class WorkoutLauncher {
     }
 
     final programSession = ref.read(nextProgramSessionProvider);
-    if (programSession != null && programSession.routine.id != routine.id) {
+    if (!independent && occurrenceId == null && programSession != null && programSession.routine.id != routine.id) {
       final proceed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
@@ -88,13 +90,16 @@ class WorkoutLauncher {
         ),
       );
       if (proceed != true || !context.mounted) return;
+      independent = true;
     }
 
     final adapted = ref.read(activeTrainingProgramProvider)?.adaptation != null;
     final String? sessionId;
     try {
-      sessionId = adapted ? await ref.read(trainingProgramListProvider.notifier)
-          .bindWorkoutStart(routine.id) : null;
+      sessionId = adapted || independent || occurrenceId != null
+          ? await ref.read(trainingProgramListProvider.notifier)
+              .bindWorkoutStart(routine.id, occurrenceId: occurrenceId, independent: independent)
+          : null;
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
