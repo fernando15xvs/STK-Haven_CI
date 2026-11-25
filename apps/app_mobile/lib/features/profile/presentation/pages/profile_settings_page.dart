@@ -10,7 +10,6 @@ import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/coach/presentation/pages/coach_connections_page.dart';
 import 'package:gym_tracker/features/faith/presentation/pages/favorites_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/appearance_settings_page.dart';
-import 'package:gym_tracker/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/notifications_settings_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/training_preferences_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/stk_mobile_privacy_page.dart';
@@ -103,12 +102,6 @@ class ProfileSettingsPage extends ConsumerWidget {
                 title: 'Aspecto',
                 subtitle: 'Estilos, tipografía, tamaño, claro, oscuro y OLED',
                 onTap: () => _open(context, const AppearanceSettingsPage()),
-              ),
-              _SettingsLink(
-                icon: Icons.tune_rounded,
-                title: 'Tu experiencia',
-                subtitle: 'Objetivos, recomendaciones y contenido de Fe',
-                onTap: () => _open(context, const ExperiencePreferencesPage()),
               ),
               _SettingsLink(
                 icon: Icons.fitness_center_outlined,

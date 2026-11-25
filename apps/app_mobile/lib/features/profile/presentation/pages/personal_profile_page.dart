@@ -7,14 +7,17 @@ import 'package:core/features/profile/application/providers/user_experience_prof
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:core/features/programs/application/youth_training_guidance.dart';
+import 'package:gym_tracker/core/theme/app_ui_styles.dart';
+import 'package:gym_tracker/core/theme/components/premium_card.dart';
 
 /// Personal identity stays local. Coach access is managed separately through
 /// explicit relationship permissions; editing this page does not share data.
 class PersonalProfilePage extends ConsumerStatefulWidget {
-  const PersonalProfilePage({super.key, this.mobileCompactLayout = false});
+  const PersonalProfilePage({super.key, this.openTraining = false});
 
-  /// Keeps the shared web page unchanged; only mobile enables disclosure UX.
-  final bool mobileCompactLayout;
+  /// Legacy follow-up opens the same editor with training expanded.
+  final bool openTraining;
 
   @override
   ConsumerState<PersonalProfilePage> createState() => _PersonalProfilePageState();
@@ -27,6 +30,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
   UserExperienceProfile? _original;
   bool _saving = false;
   bool _pickingPhoto = false;
+  bool _allowPop = false;
 
   static const _avatars = <String>['💪', '🌱', '🏋️', '🏃', '⭐', '🧘', '🔥', '🦁'];
 
@@ -137,7 +141,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
   }
 
   Future<void> _requestDiscard(bool didPop) async {
-    if (didPop || !_hasUnsavedChanges || _saving) return;
+    if (didPop || _allowPop || !_hasUnsavedChanges || _saving || _pickingPhoto) return;
     final discard = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -159,6 +163,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
     setState(() {
       _draft = _original;
       _name.text = _original?.displayName ?? '';
+      _allowPop = true;
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) Navigator.of(context).pop();
@@ -245,7 +250,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
   Widget build(BuildContext context) {
     final profile = ref.watch(userExperienceProfileProvider);
     return PopScope(
-      canPop: !_hasUnsavedChanges && !_saving && !_pickingPhoto,
+      canPop: _allowPop || (!_hasUnsavedChanges && !_saving && !_pickingPhoto),
       onPopInvokedWithResult: (didPop, _) => _requestDiscard(didPop),
       child: Scaffold(
       appBar: AppBar(title: const Text('Editar perfil')),
@@ -262,10 +267,16 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
           return Form(
             key: _formKey,
             child: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.fromLTRB(AppUiTokens.of(context).pageHorizontalPadding, 8,
+                AppUiTokens.of(context).pageHorizontalPadding, 24),
               children: [
-                Text(widget.mobileCompactLayout ? 'Datos personales' : 'Cómo quieres aparecer',
-                  style: Theme.of(context).textTheme.titleLarge),
+                Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  ProfileAvatar(profile: draft, radius: 44),
+                  const SizedBox(height: 6),
+                  TextButton(key: const ValueKey('profile_change_avatar'),
+                    onPressed: _saving || _pickingPhoto ? null : _chooseAvatar,
+                    child: const Text('Cambiar foto o avatar')),
+                ])),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _name,
@@ -275,7 +286,6 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                   decoration: const InputDecoration(
                     labelText: 'Nombre o apodo',
                     hintText: '¿Cómo quieres que te llamemos?',
-                    border: OutlineInputBorder(),
                   ),
                   validator: (text) {
                     if ((text ?? '').trim().length > 40) return 'Máximo 40 caracteres.';
@@ -285,76 +295,16 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     return null; // El nombre es opcional.
                   },
                 ),
-                const SizedBox(height: 14),
-                Text('Foto de perfil (opcional)', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    ProfileAvatar(profile: draft, radius: 27),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: _pickingPhoto ? null : _selectPhoto,
-                        icon: const Icon(Icons.photo_library_outlined),
-                        label: Text(_pickingPhoto ? 'Abriendo fotos...' : 'Elegir foto'),
-                      ),
-                    ),
-                    if (draft.avatarPhotoBase64 != null)
-                      IconButton(
-                        tooltip: 'Quitar foto',
-                        onPressed: () => setState(
-                          () => _draft = draft.copyWith(clearAvatarPhoto: true),
-                        ),
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                  ],
-                ),
                 const SizedBox(height: 12),
-                Text('O elige un avatar', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                _section(context, key: 'profile_personal_section', icon: Icons.person_outline,
+                  title: 'Datos personales', subtitle: 'Nacimiento, género y cálculo energético',
                   children: [
-                    ChoiceChip(
-                      label: const Text('Sin avatar'),
-                      selected: draft.avatarEmoji == null && draft.avatarPhotoBase64 == null,
-                      onSelected: (_) => setState(() => _draft = draft.copyWith(clearAvatar: true, clearAvatarPhoto: true)),
-                    ),
-                    for (final avatar in _avatars)
-                      ChoiceChip(
-                        label: Text(avatar, style: const TextStyle(fontSize: 24)),
-                        selected: draft.avatarEmoji == avatar,
-                        onSelected: (_) => setState(() => _draft = draft.copyWith(avatarEmoji: avatar, clearAvatarPhoto: true)),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(widget.mobileCompactLayout
-                    ? 'Información opcional para cálculos'
-                    : 'Datos personales opcionales',
-                  style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text(
-                  widget.mobileCompactLayout
-                      ? 'Tu fecha y preferencias son opcionales. No verifican la edad.'
-                      : 'Sirven para adaptar la experiencia y la calculadora adulta. '
-                        'Una fecha declarada no sustituye la verificación de edad.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 10),
+                    const Text('Tu fecha y preferencias son opcionales. No verifican la edad.'),
                 SwitchListTile.adaptive(
                   key:const ValueKey('profile_optional_demographics_consent'),
                   contentPadding:EdgeInsets.zero,
                   title:const Text('Autorizar datos demográficos opcionales'),
-                  subtitle:widget.mobileCompactLayout
-                    ? const Text('Solo con tu permiso. Puedes retirarlo.')
-                    : const Text('Se guardan en tu dispositivo '
-                        'para adaptar la experiencia y cálculos adultos '
-                        'opcionales. Si exportas o subes una copia de seguridad, '
-                        'estos datos pueden incluirse en ella. '
-                        'No verifican tu edad ni se comparten automáticamente '
-                        'con un entrenador. Puedes verlos o borrarlos aquí.'),
+                  subtitle: const Text('Solo con tu permiso. Puedes retirarlo.'),
                   value:draft.optionalDemographicsConsented,
                   onChanged:(enabled)async{
                     if(!enabled &&
@@ -393,16 +343,14 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     });
                   },
                 ),
-                if(widget.mobileCompactLayout)
-                  const ExpansionTile(
+                const ExpansionTile(
                     key:ValueKey('profile_optional_consent_information'),
                     title:Text('Más información sobre tus datos'),
                     tilePadding:EdgeInsets.zero,
                     childrenPadding:EdgeInsets.only(bottom:12),
-                    children:[Text('Se guardan en el dispositivo; una copia de '
-                      'seguridad puede incluirlos. Nunca verifican tu edad '
-                      'ni se comparten automáticamente con entrenadores. '
-                      'Puedes consultar, retirar o borrar estos datos aquí.')],
+                    children:[Text('Se guardan en tu dispositivo. Si exportas o subes una copia de seguridad, '
+                      'estos datos pueden incluirse en ella. No verifican tu edad '
+                      'ni se comparten automáticamente con entrenadores.')],
                   ),
                 if(!draft.optionalDemographicsConsented &&
                    (draft.dateOfBirth!=null ||
@@ -412,8 +360,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     'suponer tu autorización. Puedes revisarlos o '
                     'quitarlos, o autorizarlos expresamente.',
                     style:Theme.of(context).textTheme.bodySmall),
-                if(widget.mobileCompactLayout)
-                  ExpansionTile(
+                ExpansionTile(
                     key:const ValueKey('profile_mobile_demographic_editor'),
                     tilePadding:EdgeInsets.zero,
                     title:const Text('Editar fecha, género y cálculo'),
@@ -423,16 +370,22 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                         '${draft.dateOfBirth!.month.toString().padLeft(2,'0')}/'
                         '${draft.dateOfBirth!.year}'),
                     children:_buildDemographicFields(draft),
-                  )
-                else ..._buildDemographicFields(draft),
-                if(widget.mobileCompactLayout) ...[
-                  const SizedBox(height:18),
-                  Text('Privacidad y mis datos',
-                    style:Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height:4),
-                  Text('Consulta o quita tus datos opcionales en cualquier momento.',
-                    style:Theme.of(context).textTheme.bodySmall),
-                ],
+                  ),
+
+                  ]),
+                _section(context, key: 'profile_training_section', icon: Icons.fitness_center_outlined,
+                  title: 'Preferencias de entrenamiento', subtitle: 'Objetivo, experiencia y frecuencia',
+                  initiallyExpanded: widget.openTraining, children: _trainingFields(draft)),
+                _section(context, key: 'profile_mode_section', icon: Icons.group_outlined,
+                  title: 'Modo de uso', subtitle: 'Atleta y entrenador',
+                  children: _modeFields(draft)),
+                _section(context, key: 'profile_faith_section', icon: Icons.menu_book_outlined,
+                  title: 'Contenido de Fe', subtitle: 'Contenido y reflexiones',
+                  children: _faithFields(draft)),
+                _section(context, key: 'profile_privacy_section', icon: Icons.shield_outlined,
+                  title: 'Privacidad de tus datos', subtitle: 'Consultar o quitar datos personales',
+                  children: [
+                    const Text('Tu nombre y avatar permanecen personales. Los permisos para entrenadores se administran en Mi Coach.'),
                 const SizedBox(height:12),
                 Wrap(spacing:8,runSpacing:8,children:[
                   OutlinedButton.icon(
@@ -448,58 +401,26 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                     label:const Text('Quitar datos demográficos'),
                   ),
                 ]),
-                const SizedBox(height: 24),
-                SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Reflexiones al terminar de entrenar'),
-                  subtitle: const Text('Aparecen solo en el resumen final si activaste el contenido de Fe. Puedes desactivarlas aquí.'),
-                  value: draft.showWorkoutReflections,
-                  onChanged: (value) => setState(() => _draft = draft.copyWith(showWorkoutReflections: value)),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  widget.mobileCompactLayout
-                    ? 'Tu nombre y avatar permanecen personales. Los permisos '
-                      'para entrenadores se administran en Mis entrenadores.'
-                    : 'Privacidad: el nombre y avatar son personales y no se comparten automáticamente con el entrenador. '
-                      'Los permisos de entrenamientos, progreso y medidas se eligen en Mis entrenadores.',
-                ),
+
+                  ]),
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   icon: _saving
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.save_outlined),
-                  label: const Text('Guardar perfil'),
-                  onPressed: _saving ? null : () async {
+                  label: Text(_saving ? 'Guardando…' : 'Guardar perfil'),
+                  onPressed: _saving || _pickingPhoto ? null : () async {
                     if (!_formKey.currentState!.validate()) return;
                     setState(() => _saving = true);
                     try {
-                      final draft=_draft!;
-                      final prior=_original!;
-                      final changedDemographics=
-                        draft.dateOfBirth!=prior.dateOfBirth ||
-                        draft.genderIdentity!=prior.genderIdentity ||
-                        draft.equationSexForEnergy!=prior.equationSexForEnergy;
-                      final hasOptionalData=draft.dateOfBirth!=null ||
-                        draft.genderIdentity!=null ||
-                        draft.equationSexForEnergy!=null;
-                      if(changedDemographics && hasOptionalData &&
-                         !draft.optionalDemographicsConsented){
-                        throw const FormatException(
-                          'Autoriza los datos opcionales antes de guardarlos.');
-                      }
-                      final updated = draft.copyWith(
-                        displayName: _name.text.trim(),
-                        optionalDemographicsUpdatedAt:changedDemographics
-                          ?DateTime.now():null,
-                      );
-                      await ref.read(userExperienceProfileProvider.notifier)
-                          .updateProfile(updated);
+                      final updated = await ref.read(userExperienceProfileProvider.notifier)
+                          .saveProfileEdit(original: _original!, draft: _draft!.copyWith(displayName: _name.text.trim()));
                       if (!mounted) return;
                       setState(() {
                         _draft = updated;
                         _original = updated;
                         _saving = false;
+                        _allowPop = true;
                       });
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         if (mounted) Navigator.of(context).pop();
@@ -523,4 +444,318 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
       ),
     );
   }
+
+  Widget _section(BuildContext context, {required String key, required IconData icon,
+      required String title, required String subtitle, required List<Widget> children,
+      bool initiallyExpanded = false}) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: PremiumCard(padding: EdgeInsets.zero, child: ExpansionTile(
+      key: ValueKey(key), initiallyExpanded: initiallyExpanded, maintainState: true,
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      title: Text(title), subtitle: Text(subtitle),
+      childrenPadding: EdgeInsets.fromLTRB(14, 0, 14, 14), children: children,
+    )),
+  );
+
+  Future<void> _chooseAvatar() async {
+    final draft = _draft!;
+    final result = await showModalBottomSheet<String>(context: context, useSafeArea: true,
+      isScrollControlled: true, showDragHandle: true, builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(16), child: SingleChildScrollView(child: Column(
+          mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('Foto o avatar', style: Theme.of(ctx).textTheme.titleLarge),
+            ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Elegir foto'),
+              onTap: () => Navigator.pop(ctx, 'photo')),
+            if (draft.avatarPhotoBase64 != null || draft.avatarEmoji != null)
+              ListTile(leading: const Icon(Icons.delete_outline), title: const Text('Quitar foto o avatar'),
+                onTap: () => Navigator.pop(ctx, 'clear')),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final avatar in _avatars)
+                ChoiceChip(label: Text(avatar, style: const TextStyle(fontSize: 24)),
+                  selected: draft.avatarEmoji == avatar,
+                  onSelected: (_) => Navigator.pop(ctx, avatar)),
+            ]),
+          ],
+        )),
+      ));
+    if (!mounted || result == null) return;
+    if (result == 'photo') { await _selectPhoto(); return; }
+    setState(() => _draft = result == 'clear'
+      ? _draft!.copyWith(clearAvatar: true, clearAvatarPhoto: true)
+      : _draft!.copyWith(avatarEmoji: result, clearAvatarPhoto: true));
+  }
+
+  List<Widget> _trainingFields(UserExperienceProfile draft) => [
+              _dropdown<TrainingGoal>(
+                label: 'Objetivo principal',
+                value: draft.trainingGoal,
+                values: TrainingGoal.values,
+                labelFor: _goalLabel,
+                onChanged: (value) =>
+                    setState(() => _draft = draft.copyWith(
+                          trainingGoal: value,
+                          clearTrainingGoal: value == null,
+                        )),
+              ),
+              const SizedBox(height: 12),
+              _dropdown<TrainingExperience>(
+                label: 'Experiencia',
+                value: draft.trainingExperience,
+                values: TrainingExperience.values,
+                labelFor: _experienceLabel,
+                onChanged: (value) =>
+                    setState(() => _draft = draft.copyWith(
+                          trainingExperience: value,
+                          clearTrainingExperience: value == null,
+                        )),
+              ),
+              const SizedBox(height: 12),
+              _daysSelector(draft),
+              if(YouthTrainingGuidance.forProfile(draft,DateTime.now())
+                  case final guidance?) ...[
+                const SizedBox(height:8),
+                Text(guidance,
+                  key:const ValueKey('experience_youth_rest_guidance'),
+                  style:Theme.of(context).textTheme.bodySmall),
+              ],
+              const SizedBox(height: 12),
+              _dropdown<SessionDurationPreference>(
+                label: 'Duración habitual',
+                value: draft.sessionDuration,
+                values: SessionDurationPreference.values,
+                labelFor: _durationLabel,
+                allowNull: false,
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _draft = draft.copyWith(
+                        sessionDuration: value,
+                      ));
+                },
+              ),
+              const SizedBox(height: 12),
+              _dropdown<TrainingEnvironment>(
+                label: 'Lugar / equipamiento',
+                value: draft.trainingEnvironment,
+                values: TrainingEnvironment.values,
+                labelFor: _environmentLabel,
+                onChanged: (value) =>
+                    setState(() => _draft = draft.copyWith(
+                          trainingEnvironment: value,
+                          clearTrainingEnvironment: value == null,
+                        )),
+              ),
+              const SizedBox(height: 12),
+              _dropdown<PlanningPreference>(
+                label: 'Planificación',
+                value: draft.planningPreference,
+                values: PlanningPreference.values,
+                labelFor: _planningLabel,
+                allowNull: false,
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _draft = draft.copyWith(
+                        planningPreference: value,
+                      ));
+                },
+              ),
+
+  ];
+
+  List<Widget> _modeFields(UserExperienceProfile draft) => [
+              Text(
+                'Puedes usar STK Haven para ti, como entrenador, o en ambos modos. '
+                'El modo entrenador no da acceso a ningún cliente por sí solo.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilterChip(
+                    label: const Text('Atleta'),
+                    selected:
+                        draft.capabilities.contains(UserCapability.athlete),
+                    onSelected: (selected) => _toggleCapability(
+                      draft,
+                      UserCapability.athlete,
+                      selected,
+                    ),
+                  ),
+                  FilterChip(
+                    label: const Text('Entrenador'),
+                    selected:
+                        draft.capabilities.contains(UserCapability.coach),
+                    onSelected: (selected) => _toggleCapability(
+                      draft,
+                      UserCapability.coach,
+                      selected,
+                    ),
+                  ),
+                ],
+              ),
+
+  ];
+
+  List<Widget> _faithFields(UserExperienceProfile draft) => [
+              _faithChoice(
+                draft,
+                FaithContentPreference.enabled,
+                'Sí, incluirlo',
+                'Biblia, versículo diario, Haven Faith y estudio.',
+              ),
+              _faithChoice(
+                draft,
+                FaithContentPreference.disabled,
+                'No, mantenerlo oculto',
+                'No se cargarán módulos de Fe.',
+              ),
+              _faithChoice(
+                draft,
+                FaithContentPreference.undecided,
+                'Decidir después',
+                'Se mantiene oculto hasta que elijas activarlo.',
+              ),
+
+    if (draft.faithEnabled)
+      SwitchListTile.adaptive(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('Reflexiones al terminar de entrenar'),
+        subtitle: const Text('Mostrar en el resumen final.'),
+        value: draft.showWorkoutReflections,
+        onChanged: (value) => setState(() => _draft = draft.copyWith(showWorkoutReflections: value)),
+      ),
+  ];
+
+  void _toggleCapability(
+    UserExperienceProfile draft,
+    UserCapability capability,
+    bool selected,
+  ) {
+    final next = Set<UserCapability>.from(draft.capabilities);
+    if (selected) {
+      next.add(capability);
+    } else {
+      next.remove(capability);
+    }
+    if (next.isEmpty) {
+      next.add(UserCapability.athlete);
+    }
+    setState(() => _draft = draft.copyWith(capabilities: next));
+  }
+
+
+  Widget _daysSelector(UserExperienceProfile draft) {
+    return InputDecorator(
+      decoration: const InputDecoration(
+        labelText: 'Frecuencia preferida',
+        helperText: 'El plan activo se edita en Entrenar.',
+        helperMaxLines: 3,
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final day in [2, 3, 4, 5, 6])
+            ChoiceChip(
+              label: Text('$day'),
+              selected: draft.trainingDaysPerWeek == day,
+              onSelected: (_) => setState(
+                () => _draft = draft.copyWith(trainingDaysPerWeek: day),
+              ),
+            ),
+          ChoiceChip(
+            label: const Text('No lo sé'),
+            selected: draft.trainingDaysPerWeek == null,
+            onSelected: (_) =>
+                setState(() => _draft = draft.copyWith(clearTrainingDays: true)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _faithChoice(
+    UserExperienceProfile draft,
+    FaithContentPreference value,
+    String title,
+    String subtitle,
+  ) {
+    return RadioListTile<FaithContentPreference>(
+      contentPadding: EdgeInsets.zero,
+      value: value,
+      groupValue: draft.faithPreference,
+      onChanged: (next) {
+        if (next == null) return;
+        setState(() => _draft = draft.copyWith(faithPreference: next));
+      },
+      title: Text(title),
+      subtitle: Text(subtitle),
+    );
+  }
+
+  Widget _dropdown<T>({
+    required String label,
+    required T? value,
+    required List<T> values,
+    required String Function(T) labelFor,
+    required ValueChanged<T?> onChanged,
+    bool allowNull = true,
+  }) {
+    return DropdownButtonFormField<T?>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: label),
+      items: [
+        if (allowNull)
+          DropdownMenuItem<T?>(
+            value: null,
+            child: const Text('Por decidir'),
+          ),
+        ...values.map(
+          (item) => DropdownMenuItem<T?>(
+            value: item,
+            child: Text(labelFor(item)),
+          ),
+        ),
+      ],
+      onChanged: onChanged,
+    );
+  }
+
+  String _goalLabel(TrainingGoal value) => switch (value) {
+        TrainingGoal.hypertrophy => 'Ganar masa muscular',
+        TrainingGoal.strength => 'Ganar fuerza',
+        TrainingGoal.activeLifestyle => 'Mantenerme activo',
+        TrainingGoal.conditioning => 'Mejorar condición física',
+        TrainingGoal.selfDirected => 'Crear mis propias rutinas',
+      };
+
+  String _experienceLabel(TrainingExperience value) => switch (value) {
+        TrainingExperience.beginner => 'Principiante',
+        TrainingExperience.intermediate => 'Intermedio',
+        TrainingExperience.advanced => 'Avanzado',
+      };
+
+  String _durationLabel(SessionDurationPreference value) => switch (value) {
+        SessionDurationPreference.minutes30 => '30 min',
+        SessionDurationPreference.minutes45 => '45 min',
+        SessionDurationPreference.minutes60 => '60 min',
+        SessionDurationPreference.minutes75Plus => '75+ min',
+        SessionDurationPreference.variable => 'Variable',
+      };
+
+  String _environmentLabel(TrainingEnvironment value) => switch (value) {
+        TrainingEnvironment.fullGym => 'Gimnasio completo',
+        TrainingEnvironment.homeWeights => 'Casa con pesas',
+        TrainingEnvironment.minimalEquipment => 'Equipamiento mínimo',
+        TrainingEnvironment.mixed => 'Mixto',
+      };
+
+  String _planningLabel(PlanningPreference value) => switch (value) {
+        PlanningPreference.recommendation => 'Quiero una recomendación',
+        PlanningPreference.selfDirected => 'Crear mis propias rutinas',
+        PlanningPreference.decideLater => 'Decidir después',
+      };
+
 }

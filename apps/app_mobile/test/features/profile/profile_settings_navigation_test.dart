@@ -76,6 +76,10 @@ void main() {
     expect(find.text('Perfil de prueba'), findsOneWidget);
     expect(tester.widget<ProfileAvatar>(find.byType(ProfileAvatar)).radius, 54);
     expect(find.text('Editar perfil'), findsOneWidget);
+    expect(find.text('Perfil'), findsNothing);
+    expect(tester.getCenter(find.byType(ProfileAvatar)).dx,
+      closeTo(tester.getCenter(find.text('Editar perfil')).dx, 1));
+    expect(tester.getCenter(find.byType(ProfileAvatar)).dy, lessThan(tester.getCenter(find.text('Perfil de prueba')).dy));
     expect(find.text('Ganar músculo'), findsWidgets);
     expect(find.text('Intermedio'), findsWidgets);
     expect(find.text('4 días'), findsWidgets);
@@ -88,6 +92,7 @@ void main() {
     expect(find.byType(ProfileSettingsPage), findsOneWidget);
     expect(find.text('Ajustes'), findsOneWidget);
     expect(find.text('PREFERENCIAS'), findsOneWidget);
+    expect(find.text('Tu experiencia'), findsNothing);
     expect(find.byKey(const ValueKey('settings_quick_light')), findsOneWidget);
     expect(find.byKey(const ValueKey('settings_quick_dark')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('settings_quick_light')));
@@ -131,6 +136,7 @@ void main() {
         expect(find.text('Fecha de nacimiento'), findsOneWidget);
         await tester.scrollUntilVisible(find.text('Género'), 150);
         expect(find.text('Género'), findsOneWidget);
+        expect(find.text('12/05/1995'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await tester.tap(find.byKey(const ValueKey('profile_open_settings')));
         await tester.pumpAndSettle();

@@ -66,7 +66,7 @@ void main(){
       'lib/features/programs/presentation/pages/training_programs_page.dart',
     ).readAsStringSync();
     final preferences=File(
-      'lib/features/profile/presentation/pages/experience_preferences_page.dart',
+      'lib/features/profile/presentation/pages/personal_profile_page.dart',
     ).readAsStringSync();
     expect(programs,contains('YouthTrainingGuidance.forProfile('));
     expect(preferences,contains('YouthTrainingGuidance.forProfile('));

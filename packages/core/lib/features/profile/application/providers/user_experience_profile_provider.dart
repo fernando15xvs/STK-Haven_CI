@@ -1,4 +1,5 @@
 import 'package:core/database/hive/hive_boxes.dart';
+import 'package:core/features/profile/application/profile_edit_policy.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/profile/data/user_experience_profile_repository.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
@@ -36,6 +37,26 @@ class UserExperienceProfileNotifier
   Future<void> updateProfile(UserExperienceProfile profile) async {
     await _repository.saveProfile(profile);
     state = AsyncValue.data(profile);
+  }
+
+  /// Single editor save. Merge only changed editor-owned fields; do not
+  /// overwrite settings, eligibility or concurrent unrelated updates.
+  Future<UserExperienceProfile> saveProfileEdit({required UserExperienceProfile original,
+      required UserExperienceProfile draft}) async {
+    final current = state.value ?? await future;
+    final updated = ProfileEditPolicy.merge(original: original, draft: draft,
+        current: current, now: DateTime.now());
+    final changedFaith = current.faithEnabled != updated.faithEnabled;
+    if (changedFaith && !updated.faithEnabled) {
+      final settings = ref.read(settingsProvider.notifier);
+      await settings.setDailyVerseNotifications(false);
+      await settings.persistProfileDailyVerseVisibility(false);
+    }
+    await updateProfile(updated);
+    if (changedFaith && updated.faithEnabled) {
+      await ref.read(settingsProvider.notifier).persistProfileDailyVerseVisibility(true);
+    }
+    return updated;
   }
 
   Future<void> setFaithPreference(FaithContentPreference preference) async {

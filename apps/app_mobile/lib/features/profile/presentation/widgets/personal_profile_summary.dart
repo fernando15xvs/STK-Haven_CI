@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 
-/// Immediate identity view: large local photo, name and secondary edit action.
-/// No duplicate metrics, workout history, goal or XP.
+/// Identity stays centered at every width and text scale.
 class PersonalProfileSummary extends ConsumerWidget {
   final VoidCallback onEdit;
   const PersonalProfileSummary({super.key, required this.onEdit});
@@ -13,45 +12,18 @@ class PersonalProfileSummary extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userExperienceProfileProvider).value;
-    final identity = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          profile?.preferredName ?? 'Tu perfil',
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        OutlinedButton(
-          onPressed: onEdit,
-          child: const Text('Editar perfil'),
-        ),
-      ],
-    );
-    final avatar = ProfileAvatar(profile: profile, radius: 54);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final largeText = MediaQuery.textScalerOf(context).scale(16) > 24;
-          if (constraints.maxWidth < 340 || largeText) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                avatar,
-                const SizedBox(height: AppSpacing.md),
-                identity,
-              ],
-            );
-          }
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              avatar,
-              const SizedBox(width: AppSpacing.md),
-              Expanded(child: identity),
-            ],
-          );
-        },
+    return Center(
+      child: Column(
+        key: const ValueKey('profile_centered_identity'),
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ProfileAvatar(profile: profile, radius: 54),
+          const SizedBox(height: AppSpacing.sm),
+          Text(profile?.preferredName ?? 'Tu perfil', textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: AppSpacing.xs),
+          OutlinedButton(onPressed: onEdit, child: const Text('Editar perfil')),
+        ],
       ),
     );
   }

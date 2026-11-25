@@ -126,6 +126,13 @@ class SettingsNotifier extends Notifier<SettingsState> {
     updateSettings(state.copyWith(showDailyVerse: show));
   }
 
+  /// Await persistence for the unified profile editor.
+  Future<void> persistProfileDailyVerseVisibility(bool show) async {
+    final next = state.copyWith(showDailyVerse: show);
+    await _repository.saveSettings(next);
+    state = state.copyWith(showDailyVerse: show);
+  }
+
   Future<void> setDailyVerseNotifications(bool enable) async {
     final effectiveValue = await configureDailyVerseNotifications(enable);
     final newState = state.copyWith(dailyVerseNotifications: effectiveValue);

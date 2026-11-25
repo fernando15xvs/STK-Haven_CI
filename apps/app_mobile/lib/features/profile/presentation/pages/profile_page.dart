@@ -1,7 +1,5 @@
-import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/domain/models/gamification_state.dart';
-import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:core/features/profile/application/gamification_provider.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +9,6 @@ import 'package:gym_tracker/core/theme/app_ui_styles.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/section_heading.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/personal_profile_page.dart';
-import 'package:gym_tracker/features/profile/presentation/pages/experience_preferences_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/achievements_page.dart';
 import 'package:gym_tracker/features/profile/presentation/pages/profile_settings_page.dart';
 import 'package:gym_tracker/features/profile/presentation/widgets/personal_profile_summary.dart';
@@ -28,13 +25,12 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(userExperienceProfileProvider).value;
-    final settings = ref.watch(settingsProvider);
     final gamification = ref.watch(gamificationProvider);
-    final colors = AppColors.of(context);
     final tokens = AppUiTokens.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Perfil'),
+        toolbarHeight: 48,
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             key: const ValueKey('profile_open_settings'),
@@ -53,7 +49,7 @@ class ProfilePage extends ConsumerWidget {
             PersonalProfileSummary(
               onEdit: () => _open(
                 context,
-                const PersonalProfilePage(mobileCompactLayout: true),
+                const PersonalProfilePage(),
               ),
             ),
             if (profile?.needsOptionalTrainingFollowup == true) ...[
@@ -76,7 +72,7 @@ class ProfilePage extends ConsumerWidget {
                         FilledButton.tonal(
                           key: const ValueKey('profile_complete_legacy_training'),
                           onPressed: () => _open(
-                            context, const ExperiencePreferencesPage()),
+                            context, const PersonalProfilePage(openTraining: true)),
                           child: const Text('Revisar mis ajustes'),
                         ),
                         TextButton(
@@ -104,11 +100,15 @@ class ProfilePage extends ConsumerWidget {
               ),
             ],
             SizedBox(height: tokens.sectionGap),
-            const SectionHeading(title: 'TUS DATOS'),
-            const SizedBox(height: 10),
-            PremiumCard(
-              child: _ProfileFacts(profile: profile, unit: settings.weightUnit),
-            ),
+            if (profile?.optionalDemographicsConsented == true) ...[
+              const SectionHeading(title: 'DATOS PERSONALES'),
+              const SizedBox(height: 8),
+              PremiumCard(child: _ProfileFacts(profile: profile, personalOnly: true)),
+              SizedBox(height: tokens.sectionGap),
+            ],
+            const SectionHeading(title: 'PREFERENCIAS DE ENTRENAMIENTO'),
+            const SizedBox(height: 8),
+            PremiumCard(child: _ProfileFacts(profile: profile)),
             SizedBox(height: tokens.sectionGap),
             const SectionHeading(title: 'RECONOCIMIENTOS'),
             const SizedBox(height: 10),
@@ -116,14 +116,7 @@ class ProfilePage extends ConsumerWidget {
               onTap: () => _open(context, const AchievementsPage()),
               child: _LevelSummary(gamification: gamification),
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Solo mostramos aquí tus preferencias guardadas. '
-              'Puedes editarlas sin volver a iniciar el onboarding.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
+
             SizedBox(height: tokens.sectionGap + 24),
           ],
         ),
@@ -133,9 +126,9 @@ class ProfilePage extends ConsumerWidget {
 }
 
 class _ProfileFacts extends StatelessWidget {
-  const _ProfileFacts({required this.profile, required this.unit});
+  const _ProfileFacts({required this.profile, this.personalOnly = false});
   final UserExperienceProfile? profile;
-  final WeightUnit unit;
+  final bool personalOnly;
 
   String get goal => switch (profile?.trainingGoal) {
     TrainingGoal.hypertrophy => 'Ganar músculo',
@@ -163,7 +156,7 @@ class _ProfileFacts extends StatelessWidget {
     SessionDurationPreference.minutes45 => '45 minutos',
     SessionDurationPreference.minutes60 => '60 minutos',
     SessionDurationPreference.minutes75Plus => '75 minutos o más',
-    SessionDurationPreference.variable => 'Flexible',
+    SessionDurationPreference.variable => 'Variable',
     null => 'Sin definir',
   };
 
@@ -180,29 +173,30 @@ class _ProfileFacts extends StatelessWidget {
       null => 'Sin definir',
     };
     final items = <(String, String)>[
-      if (personal?.optionalDemographicsConsented == true) ...[
+      if (personalOnly && personal?.optionalDemographicsConsented == true) ...[
         ('Fecha de nacimiento', birthDate == null ? 'Sin definir' :
-          MaterialLocalizations.of(context).formatCompactDate(birthDate)),
+          '${birthDate.day.toString().padLeft(2, '0')}/${birthDate.month.toString().padLeft(2, '0')}/${birthDate.year}'),
         ('Género', gender),
       ],
+      if (!personalOnly) ...[
       ('Objetivo', goal),
       ('Experiencia', experience),
-      ('Días por semana',
+      ('Frecuencia preferida',
        profile?.trainingDaysPerWeek == null
            ? 'Sin definir'
            : '${profile!.trainingDaysPerWeek} días'),
       ('Dónde entrenas', environment),
-      ('Duración', duration),
-      ('Unidad de peso', unit.label),
+      ('Duración habitual', duration),
+      ],
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (var i = 0; i < items.length; i++) ...[
           if (i > 0) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Divider(height: 1, color: colors.surfaceBorder),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
           ],
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,

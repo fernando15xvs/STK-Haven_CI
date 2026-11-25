@@ -13,7 +13,7 @@ void main(){
     expect(profile,contains("ValueKey('profile_skip_legacy_training')"));
     expect(profile,contains("child: const Text('Ahora no')"));
     expect(profile,contains('legacyTrainingFollowupDismissed: true'));
-    expect(profile,contains('const ExperiencePreferencesPage()'));
+    expect(profile,contains('const PersonalProfilePage(openTraining: true)'));
     expect(profile,contains('Tus rutinas, '));
     expect(profile,contains('respuestas anteriores y cuenta se conservan.'));
     // It only links to an existing editing route. No forced onboarding,

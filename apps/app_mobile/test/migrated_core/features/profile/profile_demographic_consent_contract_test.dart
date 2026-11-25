@@ -25,8 +25,10 @@ void main(){
     expect(profile,contains('clearGenderIdentity:true'));
     expect(profile,contains('clearEquationSexForEnergy:true'));
     expect(profile,contains('onPressed:!draft.optionalDemographicsConsented?null:'));
-    expect(profile,contains('changedDemographics'));
-    expect(profile,contains('optionalDemographicsUpdatedAt:changedDemographics'));
+    final policy=File('../../packages/core/lib/features/profile/application/profile_edit_policy.dart').readAsStringSync();
+    expect(profile,contains('saveProfileEdit('));
+    expect(policy,contains('changedDemographics'));
+    expect(policy,contains('optionalDemographicsUpdatedAt'));
     expect(profile,contains("ValueKey('profile_view_optional_data')"));
     expect(profile,contains("ValueKey('profile_clear_optional_data')"));
     expect(profile,contains('SelectableText(data)'));

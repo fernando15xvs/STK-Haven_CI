@@ -16,7 +16,7 @@ void main() {
     expect(settings, contains("SectionHeading(title: 'SERVICIOS Y PRIVACIDAD')"));
     expect(screen, contains("ValueKey('profile_open_settings')"));
     expect(screen, isNot(contains("SectionHeading(title: 'PREFERENCIAS')")));
-    expect(screen, contains("SectionHeading(title: 'TUS DATOS')"));
+    expect(screen, contains("SectionHeading(title: 'DATOS PERSONALES')"));
     expect(screen, contains("SectionHeading(title: 'RECONOCIMIENTOS')"));
     expect(screen, contains('PremiumCard('));
     expect(screen, isNot(contains('STK MOTIVATION')));
@@ -32,14 +32,16 @@ void main() {
     final experience = File(
       'lib/features/profile/presentation/pages/experience_preferences_page.dart',
     ).readAsStringSync();
-    for (final editor in [personal, experience]) {
+    for (final editor in [personal]) {
       expect(editor, contains('PopScope('));
       expect(editor, contains('_hasUnsavedChanges'));
       expect(editor, contains('Descartar cambios'));
       expect(editor, contains('addPostFrameCallback'));
     }
     expect(personal, isNot(contains("Text('Mi entrenamiento'")));
-    expect(experience, isNot(contains('setWeightUnit(draft.weightUnit)')));
+    expect(experience, contains('PersonalProfilePage(openTraining: true)'));
+    expect(experience, isNot(contains('updateProfile(')));
+    expect(personal, contains('saveProfileEdit('));
   });
 
   test('Achievements use semantic theme colors and flexible list layout', () {

@@ -17,7 +17,7 @@ class _PreviewProfile extends UserExperienceProfileNotifier {
 
 void main() {
   Future<void> pumpProfile(WidgetTester tester,
-      {required bool compact, required double width, required double scale}) async {
+      {required double width, required double scale, bool openTraining = false}) async {
     tester.view.physicalSize = Size(width, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(() {
@@ -34,7 +34,7 @@ void main() {
             size: Size(width, 1000),
             textScaler: TextScaler.linear(scale),
           ),
-          child: PersonalProfilePage(mobileCompactLayout: compact),
+          child: PersonalProfilePage(openTraining: openTraining),
         ),
       ),
     ));
@@ -45,8 +45,11 @@ void main() {
     testWidgets('mobile demographics stay available at ${scenario.$1}dp '
         'and ${scenario.$2}x text', (tester) async {
       await pumpProfile(tester,
-          compact: true, width: scenario.$1, scale: scenario.$2);
+          width: scenario.$1, scale: scenario.$2);
       expect(find.text('Datos personales'), findsOneWidget);
+      await tester.ensureVisible(find.text('Datos personales'));
+      await tester.tap(find.text('Datos personales'));
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('profile_mobile_demographic_editor')),
         180,
@@ -66,18 +69,12 @@ void main() {
     });
   }
 
-  testWidgets('web-compatible default retains expanded original editing',
-      (tester) async {
-    await pumpProfile(tester, compact: false, width: 430, scale: 1);
-    expect(find.text('Cómo quieres aparecer'), findsOneWidget);
-    expect(find.byKey(const ValueKey('profile_mobile_demographic_editor')),
-        findsNothing);
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('profile_birth_date')),
-      180,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(find.byKey(const ValueKey('profile_birth_date')), findsOneWidget);
+  testWidgets('legacy follow-up opens the same editor with training expanded', (tester) async {
+    await pumpProfile(tester, width: 430, scale: 1, openTraining: true);
+    expect(find.text('Editar perfil'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Objetivo principal'), 150);
+    expect(find.text('Objetivo principal'), findsOneWidget);
+    expect(find.text('Personalización'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }
