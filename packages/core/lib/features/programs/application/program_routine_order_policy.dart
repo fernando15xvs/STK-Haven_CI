@@ -1,4 +1,7 @@
 import 'package:core/domain/models/training_program.dart';
+import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/program_adaptation.dart';
+import 'package:core/features/programs/application/program_adaptation_policy.dart';
 
 /// Non-destructive edit rules for a program's ordered routine IDs.
 ///
@@ -44,6 +47,7 @@ class ProgramRoutineOrderPolicy {
     required TrainingProgram existing,
     required TrainingProgram edited,
     required DateTime now,
+    Iterable<Routine> routines = const [],
   }) {
     final changed = scheduleChanged(existing, edited);
     final normalized = edited.repeatsWeekly &&
@@ -55,19 +59,28 @@ class ProgramRoutineOrderPolicy {
         ? edited.copyWith(weeklySequenceRoutineIds: edited.weeklySequence)
         : edited;
     if (changed) validateWeeklyConfiguration(normalized);
-    // Explicit schedule edits with outstanding exceptions must be resolved in
-    // the editor rather than silently dropping pauses or pending bindings.
+    var pointer = nextIndexAfterEdit(existing: existing,
+        updatedRoutineIds: normalized.routineIds);
     if (changed && existing.adaptation != null) {
-      throw StateError('Resuelve la planificación adaptada antes de cambiar el calendario.');
+      // The adapted pointer reserves future slots. Anchor an edit at the first
+      // unresolved surviving occurrence, not at that reservation cursor.
+      for (final o in existing.adaptation!.occurrences) {
+        if (!o.archived && o.week == existing.adaptation!.week &&
+            o.status == PlanOccurrenceStatus.pending) {
+          final index = normalized.routineIds.indexOf(o.routineId);
+          if (index >= 0) { pointer = index; break; }
+        }
+      }
     }
-    return normalized.copyWith(
+    final result = normalized.copyWith(
       startedAt: existing.startedAt,
       completions: existing.completions,
       adaptation: existing.adaptation,
-      nextRotationIndex: nextIndexAfterEdit(existing: existing,
-          updatedRoutineIds: normalized.routineIds),
+      nextRotationIndex: pointer,
       sequenceEffectiveAt: changed ? now : existing.sequenceEffectiveAt,
     );
+    return changed && existing.adaptation != null
+        ? ProgramAdaptationPolicy.rebase(existing, result, routines, now) : result;
   }
 
   static int nextIndexAfterEdit({

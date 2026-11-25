@@ -90,9 +90,24 @@ class WorkoutLauncher {
       if (proceed != true || !context.mounted) return;
     }
 
-    final sessionId = await ref.read(trainingProgramListProvider.notifier)
-        .bindWorkoutStart(routine.id);
-    if (!context.mounted) return;
+    final adapted = ref.read(activeTrainingProgramProvider)?.adaptation != null;
+    final String? sessionId;
+    try {
+      sessionId = adapted ? await ref.read(trainingProgramListProvider.notifier)
+          .bindWorkoutStart(routine.id) : null;
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No se pudo reservar la sesión. Inténtalo de nuevo.')));
+      }
+      return;
+    }
+    if (!context.mounted) {
+      if (sessionId != null) {
+        await ref.read(trainingProgramListProvider.notifier).releaseWorkoutBinding(sessionId);
+      }
+      return;
+    }
     notifier.startWorkout(routine, exercises, sessionId: sessionId);
     if (context.mounted) {
       Navigator.push(

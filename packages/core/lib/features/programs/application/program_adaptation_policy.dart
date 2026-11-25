@@ -13,7 +13,7 @@ class ProgramAdaptationPolicy {
     return DateTime(local.year, local.month, local.day);
   }
 
-  static bool _pending(PlanOccurrence o) => o.status == PlanOccurrenceStatus.pending;
+  static bool _pending(PlanOccurrence o) => !o.archived && o.status == PlanOccurrenceStatus.pending;
 
   static TrainingProgram prepare(TrainingProgram program, Iterable<Routine> routines, DateTime now) {
     final week = TrainingProgram.localWeekStart(now);
@@ -75,7 +75,31 @@ class ProgramAdaptationPolicy {
   }
 
   static List<PlanOccurrence> current(TrainingProgram program) =>
-    program.adaptation!.occurrences.where((o) => o.week == program.adaptation!.week).toList();
+    program.adaptation!.occurrences.where((o) => !o.archived && o.week == program.adaptation!.week).toList();
+
+  /// Replace only future, unbound occurrences when the template changes.
+  /// Retain pauses, history, old bindings and archived identities.
+  static TrainingProgram rebase(TrainingProgram existing, TrainingProgram edited,
+      Iterable<Routine> routines, DateTime now) {
+    final old = existing.adaptation!;
+    final bound = old.bindings.values.toSet();
+    if (old.occurrences.any((o) => _pending(o) && bound.contains(o.id))) {
+      throw StateError('Finaliza o descarta el entrenamiento vinculado antes de editar.');
+    }
+    final next = prepare(edited.copyWith(clearAdaptation: true), routines, now);
+    final fresh = next.adaptation!;
+    var serial = old.nextSerial;
+    final rows = <PlanOccurrence>[
+      for (final o in old.occurrences)
+        o.copyWith(archived: true, status: _pending(o) ? PlanOccurrenceStatus.expired : o.status),
+      for (final o in fresh.occurrences)
+        PlanOccurrence(id: '${edited.id}:occ:${serial++}', week: o.week,
+          routineId: o.routineId, date: o.date, notBefore: o.notBefore,
+          status: o.status, workoutId: o.workoutId),
+    ];
+    return next.copyWith(adaptation: old.copyWith(week: fresh.week,
+      occurrences: rows, nextSerial: serial));
+  }
 
   static DateTime? availableDate(TrainingProgram program, Iterable<Routine> routines,
       PlanOccurrence occurrence, DateTime now) {
@@ -107,7 +131,8 @@ class ProgramAdaptationPolicy {
     if (program.adaptation!.programPausedAt(now)) return null;
     final candidates = current(program).where((o) => _pending(o) &&
       program.routineIds.contains(o.routineId) &&
-      !program.adaptation!.routinePausedAt(o.routineId, now)).toList();
+      !program.adaptation!.routinePausedAt(o.routineId, now) &&
+      !program.adaptation!.bindings.containsValue(o.id)).toList();
     PlanOccurrence? result;
     DateTime? earliest;
     for (final occurrence in candidates) {
@@ -233,7 +258,7 @@ class ProgramAdaptationPolicy {
       String slotId, DateTime now) {
     final p = prepare(program, routines, now);
     final rows = p.adaptation!.occurrences.toList();
-    final i = rows.indexWhere((o) => o.id == slotId && o.week == p.adaptation!.week &&
+    final i = rows.indexWhere((o) => o.id == slotId && o.week == p.adaptation!.week && !o.archived &&
         o.status == PlanOccurrenceStatus.omitted);
     if (i < 0) throw StateError('La sesión no se puede recuperar.');
     rows[i] = rows[i].copyWith(status: PlanOccurrenceStatus.pending);

@@ -1032,6 +1032,10 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
           .deleteIncompleteWorkoutSession(discardedSessionId);
       if (deleted) ref.read(workoutHistoryProvider.notifier).refresh();
     }
+    if (discardedSessionId != null && Hive.isBoxOpen(HiveBoxes.trainingPrograms) &&
+        Hive.isBoxOpen(HiveBoxes.metadata)) {
+      await ref.read(trainingProgramListProvider.notifier).releaseWorkoutBinding(discardedSessionId);
+    }
     state = const ActiveWorkoutState();
     unawaited(_cancelUnfinishedReminder());
   }

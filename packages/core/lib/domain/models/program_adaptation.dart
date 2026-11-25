@@ -4,7 +4,7 @@ enum PlanOccurrenceStatus { pending, completed, omitted, expired }
 class PlanOccurrence {
   const PlanOccurrence({required this.id, required this.week, required this.routineId,
     this.date, this.notBefore, this.status = PlanOccurrenceStatus.pending,
-    this.workoutId});
+    this.workoutId, this.archived = false});
   final String id;
   final DateTime week;
   final String routineId;
@@ -12,19 +12,22 @@ class PlanOccurrence {
   final DateTime? notBefore;
   final PlanOccurrenceStatus status;
   final String? workoutId;
+  final bool archived;
 
   PlanOccurrence copyWith({DateTime? week, DateTime? date, bool clearDate = false,
       DateTime? notBefore, bool clearNotBefore = false,
-      PlanOccurrenceStatus? status, String? workoutId}) => PlanOccurrence(
+      PlanOccurrenceStatus? status, String? workoutId, bool? archived}) => PlanOccurrence(
     id: id, week: week ?? this.week, routineId: routineId,
     date: clearDate ? null : date ?? this.date,
     notBefore: clearNotBefore ? null : notBefore ?? this.notBefore,
-    status: status ?? this.status, workoutId: workoutId ?? this.workoutId);
+    status: status ?? this.status, workoutId: workoutId ?? this.workoutId,
+    archived: archived ?? this.archived);
   Map<String, dynamic> toJson() => {
     'id': id, 'week': week.toIso8601String(), 'routineId': routineId,
     if (date != null) 'date': date!.toIso8601String(),
     if (notBefore != null) 'notBefore': notBefore!.toIso8601String(),
     'status': status.name, if (workoutId != null) 'workoutId': workoutId,
+    if (archived) 'archived': true,
   };
   factory PlanOccurrence.fromJson(Map<String, dynamic> json) => PlanOccurrence(
     id: json['id'] as String, week: DateTime.parse(json['week'] as String),
@@ -32,7 +35,8 @@ class PlanOccurrence {
     date: DateTime.tryParse(json['date']?.toString() ?? ''),
     notBefore: DateTime.tryParse(json['notBefore']?.toString() ?? ''),
     status: PlanOccurrenceStatus.values.firstWhere((s) => s.name == json['status'],
-        orElse: () => PlanOccurrenceStatus.pending), workoutId: json['workoutId'] as String?);
+        orElse: () => PlanOccurrenceStatus.pending), workoutId: json['workoutId'] as String?,
+    archived: json['archived'] == true);
 }
 
 class PlanPause {

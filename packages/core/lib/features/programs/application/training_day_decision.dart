@@ -45,13 +45,13 @@ class TrainingDayDecision {
           ? const TrainingDayDecision(TrainingDayKind.none)
           : TrainingDayDecision(TrainingDayKind.ready, routine: legacyToday);
     }
-    if (mode == ProgramScheduleMode.flexible) {
-      return TrainingDayDecision(TrainingDayKind.ready, routine: next);
-    }
     final date = scheduledDate == null ? null : localDay(scheduledDate);
     final today = localDay(now);
     if (date != null && date.isAfter(today)) {
       return TrainingDayDecision(TrainingDayKind.rest, routine: next, date: date);
+    }
+    if (mode == ProgramScheduleMode.flexible) {
+      return TrainingDayDecision(TrainingDayKind.ready, routine: next);
     }
     if (date == today || (date == null && isTrainingDay &&
         mode != ProgramScheduleMode.fixed)) {

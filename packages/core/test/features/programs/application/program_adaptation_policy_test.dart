@@ -3,6 +3,7 @@ import 'package:core/domain/models/training_program.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/programs/application/program_adaptation_policy.dart';
 import 'package:core/features/programs/application/program_rotation_coordinator.dart';
+import 'package:core/features/programs/application/program_routine_order_policy.dart';
 import 'package:core/features/programs/application/program_week_plan.dart';
 import 'package:test/test.dart';
 
@@ -92,6 +93,17 @@ void main() {
     expect(restored.adaptation!.bindings['free'], '');
     expect(restored.adaptation!.occurrences.first.workoutId, 'bound');
     expect(restored.duplicate(newId:'copy',newName:'Copy',now:now).adaptation,isNull);
+  });
+
+  test('change mode during pause preserves restrictions and archives future slots', () {
+    final paused = ProgramAdaptationPolicy.pause(plan(), const [], now, routineIds: {'A'});
+    final edited = ProgramRoutineOrderPolicy.applyScheduleEdit(existing: paused,
+      edited: paused.copyWith(sequencePolicy: ProgramSequencePolicy.weekly), now: now);
+    expect(edited.adaptation!.routinePausedAt('A', now), isTrue);
+    expect(slots(edited).length, 5);
+    expect(slots(edited).map((o) => o.id).toSet().intersection(slots(paused).map((o) => o.id).toSet()), isEmpty);
+    expect(view(edited, now).nextSuggestion!.routineId, 'B');
+    expect(edited.adaptation!.occurrences.where((o) => o.archived).length, 5);
   });
 
   test('rollover retains only bounded rolling debt and weekly starts again', () {

@@ -102,7 +102,7 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
     final existing = _repository.getById(program.id);
     final updated = existing == null ? program : ProgramRoutineOrderPolicy.applyScheduleEdit(
       existing: ProgramRotationCoordinator.reconcile(existing, ref.read(workoutHistoryProvider)),
-      edited: program, now: DateTime.now(),
+      edited: program, now: DateTime.now(), routines: ref.read(routineListProvider),
     );
     if (existing == null) ProgramRoutineOrderPolicy.validateWeeklyConfiguration(updated);
     await _repository.save(updated);
@@ -276,12 +276,13 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
   }
 
   Future<void> releaseWorkoutBinding(String workoutId) async {
-    final active = _repository.getActive();
-    final state = active?.adaptation;
-    if (active == null || state == null || !state.bindings.containsKey(workoutId) ||
-        active.completions.any((c) => c.workoutSessionId == workoutId)) return;
-    final bindings = Map<String,String>.from(state.bindings)..remove(workoutId);
-    await _repository.save(active.copyWith(adaptation: state.copyWith(bindings: bindings)));
+    for (final program in _repository.getAll()) {
+      final state = program.adaptation;
+      if (state == null || !state.bindings.containsKey(workoutId) ||
+          program.completions.any((c) => c.workoutSessionId == workoutId)) continue;
+      final bindings = Map<String,String>.from(state.bindings)..remove(workoutId);
+      await _repository.save(program.copyWith(adaptation: state.copyWith(bindings: bindings)));
+    }
     refresh();
   }
 

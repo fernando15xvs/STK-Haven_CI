@@ -40,6 +40,7 @@ void main() {
     final rest = resolve(mode: ProgramScheduleMode.fixed, date: DateTime(2026, 11, 27));
     expect(rest.kind, TrainingDayKind.rest);
     expect(rest.allowsSuggestedStart, isFalse);
+    expect(resolve(date: DateTime(2026, 11, 27)).kind, TrainingDayKind.rest);
     expect(resolve(mode: ProgramScheduleMode.continuous, date: now).kind,
         TrainingDayKind.ready);
   });
