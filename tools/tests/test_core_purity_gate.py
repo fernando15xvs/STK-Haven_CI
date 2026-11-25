@@ -57,6 +57,26 @@ class CorePurityGateTest(unittest.TestCase):
                    "name: core\ndependencies:\n  hive:\n    path: ../mobile_hive\n")
         self.assertEqual(inspect(self.root)["status"], "fail")
 
+    def test_inline_dependency_mapping_is_rejected(self):
+        self.write("packages/core/pubspec.yaml",
+                   "name: core\ndependencies: {hive: ^2.2.3, flutter: any}\n")
+        self.assertEqual(inspect(self.root)["status"], "fail")
+
+    def test_top_level_dependency_overrides_are_rejected(self):
+        self.write("packages/core/pubspec.yaml",
+                   "name: core\ndependency_overrides:\n  hive: ^2.2.3\n")
+        self.assertEqual(inspect(self.root)["status"], "fail")
+
+    def test_unexpected_dependency_indentation_is_rejected(self):
+        self.write("packages/core/pubspec.yaml",
+                   "name: core\ndependencies:\n    flutter: any\n")
+        self.assertEqual(inspect(self.root)["status"], "fail")
+
+    def test_quoted_version_constraint_and_comment_are_accepted(self):
+        self.write("packages/core/pubspec.yaml",
+                   'name: core\ndependencies:\n  hive: ">=2.2.0 <3.0.0" # valid\n')
+        self.assertEqual(inspect(self.root)["status"], "pass")
+
 
 if __name__ == "__main__":
     unittest.main()

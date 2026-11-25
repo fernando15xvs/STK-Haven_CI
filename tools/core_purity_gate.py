@@ -41,23 +41,31 @@ def manifest_violations(root: Path) -> list[str]:
         line = raw.split("#", 1)[0].rstrip()
         if not line.strip():
             continue
-        top = re.match(r"^([\\w]+):", line)
+        # Deliberately use explicit ASCII classes: no double escaping in
+        # Python raw strings. Accept the reviewed block-form YAML only.
+        top = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_]*):[ ]*(.*)", line)
         if top:
-            section = top.group(1)
+            section, value = top.groups()
             if section in {"flutter", "dependency_overrides"}:
                 violations.append(f"forbidden Core manifest section: {section}")
+            if section in {"dependencies", "dev_dependencies"} and value not in {"", "{}"}:
+                violations.append(f"unsupported inline Core dependency section: {section}")
+            continue
         if section not in {"dependencies", "dev_dependencies"}:
             continue
-        dep = re.match(r"^  ([\\w]+):\\s*(.*)$", line)
-        if dep:
-            name, version = dep.groups()
-            if name not in PURE_CORE_DEPENDENCIES:
-                violations.append(f"unreviewed Core dependency: {name}")
-            # Current pure dependencies are version constraints, not
-            # local/path/git/SDK overrides of an otherwise approved name.
-            if not version or not re.fullmatch(
-                    r"[\\^~<>=0-9.*+\\- \\'\\\"]+", version):
-                violations.append(f"non-version Core dependency: {name}")
+        dep = re.fullmatch(r"  ([A-Za-z_][A-Za-z0-9_]*):[ ]*(.*)", line)
+        if not dep:
+            violations.append(f"unsupported Core dependency declaration: {line.strip()}")
+            continue
+        name, version = dep.groups()
+        if name not in PURE_CORE_DEPENDENCIES:
+            violations.append(f"unreviewed Core dependency: {name}")
+        # Only simple version constraints are accepted, not SDK/path/git
+        # mappings or inline dependency objects.
+        if len(version) >= 2 and version[0] in ('"', "'") and version[-1] == version[0]:
+            version = version[1:-1]
+        if not re.fullmatch(r"[0-9.^~<>=*+ -]+", version):
+            violations.append(f"non-version Core dependency: {name}")
     return violations
 
 

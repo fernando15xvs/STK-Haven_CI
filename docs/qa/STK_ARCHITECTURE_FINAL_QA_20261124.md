@@ -32,3 +32,7 @@ Registrar modelo, OS, versión de app, SHA, resultado y evidencia sin datos pers
 - [ ] Firma y provisión iOS válida y compatible con la app instalada; no hay evidencia de credenciales disponibles.
 - [ ] Android: verificar firma de actualización y no distribuir debug como release.
 - [ ] Autorización explícita para merge/publicación; ninguna modificación de Supabase remoto o flags legales como parte de F.
+
+## Corrección F.1 — CI del 24/11
+- [CI #45493869383](https://github.com/fernando15xvs/STK-Haven_CI/actions/runs/45493869383): 6/7, falló únicamente el paso Python de arquitectura por escapes duplicados en regex de pubspec. Los tests de plugin desconocido y dependencia path detectaron correctamente el defecto; Analyze/Dart tests no llegaron a ejecutarse.
+- Parser corregido con clases ASCII explícitas, rechazo de formatos no admitidos, y cuatro regresiones adicionales. No se relaja ninguna regla ni se cambia la app. Pendiente nuevo CI completo.
