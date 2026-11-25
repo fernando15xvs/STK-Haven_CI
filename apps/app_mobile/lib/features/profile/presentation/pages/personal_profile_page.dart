@@ -267,6 +267,7 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
           return Form(
             key: _formKey,
             child: ListView(
+              key: const ValueKey('profile_editor_scroll'),
               padding: EdgeInsets.fromLTRB(AppUiTokens.of(context).pageHorizontalPadding, 8,
                 AppUiTokens.of(context).pageHorizontalPadding, 24),
               children: [

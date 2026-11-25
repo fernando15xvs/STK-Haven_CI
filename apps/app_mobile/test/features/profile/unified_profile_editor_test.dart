@@ -37,13 +37,27 @@ void main(){
     await tester.tap(find.text('🌱'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first,'Nuevo');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
+    final editorScroll = find.descendant(
+      of: find.byKey(const ValueKey('profile_editor_scroll')),
+      matching: find.byWidgetPredicate((widget) =>
+        widget is Scrollable && widget.axisDirection == AxisDirection.down),
+    );
+    expect(editorScroll, findsOneWidget);
     await tester.ensureVisible(find.text('Preferencias de entrenamiento'));
     await tester.tap(find.text('Preferencias de entrenamiento'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.widgetWithText(ChoiceChip,'4'),120);
+    await tester.scrollUntilVisible(find.widgetWithText(ChoiceChip,'4'),120,
+      scrollable: editorScroll);
+    await tester.ensureVisible(find.widgetWithText(ChoiceChip,'4'));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip,'4'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Guardar perfil'),180);
+    await tester.scrollUntilVisible(find.text('Guardar perfil'),180,
+      scrollable: editorScroll);
+    await tester.ensureVisible(find.text('Guardar perfil'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar perfil'));
     await tester.pumpAndSettle();
     expect(fixture.saves,1);

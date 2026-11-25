@@ -15,6 +15,12 @@ class _PreviewProfile extends UserExperienceProfileNotifier {
       );
 }
 
+Finder editorScroll() => find.descendant(
+  of: find.byKey(const ValueKey('profile_editor_scroll')),
+  matching: find.byWidgetPredicate((widget) =>
+    widget is Scrollable && widget.axisDirection == AxisDirection.down),
+);
+
 void main() {
   Future<void> pumpProfile(WidgetTester tester,
       {required double width, required double scale, bool openTraining = false}) async {
@@ -53,7 +59,7 @@ void main() {
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('profile_mobile_demographic_editor')),
         180,
-        scrollable: find.byType(Scrollable).first,
+        scrollable: editorScroll(),
       );
       expect(find.text('Editar fecha, género y cálculo'), findsOneWidget);
       // Demographic DOB is independent of the separate eligibility DOB.
@@ -72,7 +78,8 @@ void main() {
   testWidgets('legacy follow-up opens the same editor with training expanded', (tester) async {
     await pumpProfile(tester, width: 430, scale: 1, openTraining: true);
     expect(find.text('Editar perfil'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Objetivo principal'), 150);
+    await tester.scrollUntilVisible(find.text('Objetivo principal'), 150,
+      scrollable: editorScroll());
     expect(find.text('Objetivo principal'), findsOneWidget);
     expect(find.text('Personalización'), findsNothing);
     expect(tester.takeException(), isNull);
