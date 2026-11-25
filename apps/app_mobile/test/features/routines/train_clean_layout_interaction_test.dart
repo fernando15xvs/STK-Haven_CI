@@ -142,6 +142,7 @@ Future<void> _pumpTrain(
     ),
   );
   await tester.pumpAndSettle();
+  addTearDown(() async { await tester.pumpWidget(const SizedBox.shrink()); });
 }
 
 void main() {
@@ -159,13 +160,14 @@ void main() {
           expect(find.byKey(const ValueKey('train_routine_r0')), findsNothing);
           expect(find.byKey(const ValueKey('train_open_planning')), findsOneWidget);
           expect(find.byKey(const ValueKey('train_open_manage')), findsOneWidget);
+          expect(find.byKey(const ValueKey('train_open_library')), findsOneWidget);
           expect(tester.takeException(), isNull);
         },
       );
     }
   }
 
-  testWidgets('Ver todas reveals the highlighted routine and all saved routines',
+  testWidgets('Ver todas reveals remaining routines without duplicating the highlighted routine',
       (tester) async {
     await _pumpTrain(tester);
     expect(find.byKey(const ValueKey('train_routine_r0')), findsNothing);
@@ -183,11 +185,7 @@ void main() {
       180,
     );
     expect(find.byKey(const ValueKey('train_routine_r4')), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('train_routine_r0')),
-      -180,
-    );
-    expect(find.byKey(const ValueKey('train_routine_r0')), findsOneWidget);
+    expect(find.byKey(const ValueKey('train_routine_r0')), findsNothing);
     expect(find.byKey(const ValueKey('train_show_all_routines')), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -200,6 +198,17 @@ void main() {
     expect(find.text('Continuar'), findsOneWidget);
     expect(find.text('Iniciar'), findsNothing);
     expect(find.byKey(const ValueKey('train_routine_r0')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('flexible planning uses rotation without named weekdays', (tester) async {
+    await _pumpTrain(tester);
+    await tester.tap(find.byKey(const ValueKey('train_open_planning')));
+    await tester.pumpAndSettle();
+    expect(find.text('Planificación flexible'), findsOneWidget);
+    expect(find.text('Orden de rotación'), findsOneWidget);
+    expect(find.text('Lunes'), findsNothing);
+    expect(find.text('Descanso'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

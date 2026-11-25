@@ -1,3 +1,8 @@
+import 'dart:async';
+import 'package:core/features/programs/application/training_day_decision.dart';
+import 'package:core/features/programs/application/program_plan_insights.dart';
+import 'package:core/features/programs/application/program_rotation_coordinator.dart';
+import 'package:gym_tracker/features/exercises/presentation/pages/exercise_library_page.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/exercises/application/providers/exercise_provider.dart';
 import 'package:core/features/routines/application/providers/routine_provider.dart';
@@ -18,7 +23,6 @@ import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:gym_tracker/features/routines/presentation/widgets/next_training_session_hero.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:gym_tracker/features/routines/application/routine_card_evidence.dart';
-import 'package:intl/intl.dart';
 
 class RoutinesPage extends ConsumerStatefulWidget {
   const RoutinesPage({super.key});
@@ -27,8 +31,44 @@ class RoutinesPage extends ConsumerStatefulWidget {
   ConsumerState<RoutinesPage> createState() => _RoutinesPageState();
 }
 
-class _RoutinesPageState extends ConsumerState<RoutinesPage> {
+class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBindingObserver {
   bool _showAllRoutines = false;
+  Timer? _clockTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scheduleClock();
+  }
+
+  void _scheduleClock() {
+    _clockTimer?.cancel();
+    final now = DateTime.now();
+    final nextMinute = DateTime(now.year, now.month, now.day, now.hour, now.minute + 1);
+    _clockTimer = Timer(nextMinute.difference(now), () {
+      if (!mounted) return;
+      ref.invalidate(trainingDayClockProvider);
+      _scheduleClock();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref.invalidate(trainingDayClockProvider);
+      _scheduleClock();
+    } else {
+      _clockTimer?.cancel();
+    }
+  }
+
+  @override
+  void dispose() {
+    _clockTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,30 +84,26 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
     final workoutActive = ref.watch(
       activeWorkoutProvider.select((state) => state.isActive),
     );
-    final activeRoutineId = ref.watch(
-      activeWorkoutProvider.select((state) => state.session?.routineId),
+    final history = ref.watch(workoutHistoryProvider);
+    final now = ref.watch(trainingDayClockProvider);
+    final day = TrainingDayDecision.resolve(
+      now: now,
+      active: workoutActive ? ref.watch(activeWorkoutProvider).session : null,
+      history: history,
+      next: nextProgramSession?.routine,
+      mode: nextProgramSession?.program.scheduleMode,
+      scheduledDate: nextProgramSession?.scheduledDate,
+      isTrainingDay: nextProgramSession?.isTrainingDay ?? false,
+      legacyToday: legacyTodaySession?.routine,
     );
-    final suggestedRoutineId =
-        nextProgramSession?.routine.id ?? legacyTodaySession?.routine.id;
-    // Keep the highlighted routine accessible, but do not duplicate its
-    // name and metadata immediately in the visible list.
-    final featuredRoutineId = workoutActive
-        ? activeRoutineId
-        : suggestedRoutineId;
-    final hasFeaturedRoutine = featuredRoutineId != null &&
-        routines.any((routine) => routine.id == featuredRoutineId);
-    final hideFeatured = hasFeaturedRoutine && !_showAllRoutines;
-    final eligibleRoutines = hideFeatured
-        ? routines
-            .where((routine) => routine.id != featuredRoutineId)
-            .toList(growable: false)
-        : routines;
-    // Keep the home surface short; expanding reveals the complete saved list.
+    final featuredRoutineId = day.featuredRoutineId;
+    final eligibleRoutines = routines
+        .where((routine) => routine.id != featuredRoutineId)
+        .toList(growable: false);
     final visibleRoutines = !_showAllRoutines && eligibleRoutines.length > 3
-        ? eligibleRoutines.take(3).toList(growable: false)
-        : eligibleRoutines;
+        ? eligibleRoutines.take(3).toList(growable: false) : eligibleRoutines;
     final hasHiddenRoutines = !_showAllRoutines &&
-        (hideFeatured || eligibleRoutines.length != visibleRoutines.length);
+        eligibleRoutines.length != visibleRoutines.length;
     List<String> musclesFor(Routine routine) {
       final unique = <String>{};
       for (final item in routine.exercises) {
@@ -79,7 +115,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
     }
     // A single pass over history replaces repeated per-card calculations.
     final usageByRoutine = RoutineCardEvidence.fromHistory(
-      ref.watch(workoutHistoryProvider),
+      history, asOf: now,
     );
 
     void createRoutine() {
@@ -111,32 +147,38 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
                         routines: routines,
                         historyByRoutine: usageByRoutine,
                         musclesFor: musclesFor,
+                        decision: day,
+                        routineMenu: (routine) => _routineMenu(context, ref, routine),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      _ProgramOrganizerCard(routines: routines),
+                      _ProgramOrganizerCard(routines: routines,
+                        onPlanning: () => _showWeeklyPlan(context, ref, routines)),
                       const SizedBox(height: AppSpacing.sm),
-                      Wrap(
-                        spacing: AppSpacing.xs,
-                        runSpacing: AppSpacing.xs,
-                        children: [
-                          _TrainingQuickLink(
-                            key: const ValueKey('train_open_planning'),
-                            label: 'Planificación',
-                            icon: Icons.calendar_month_outlined,
-                            onTap: () => _showWeeklyPlan(context, ref, routines),
-                          ),
+                      LayoutBuilder(builder: (context, constraints) {
+                        final links = [
                           _TrainingQuickLink(
                             key: const ValueKey('train_open_manage'),
-                            label: 'Gestionar',
-                            icon: Icons.tune_rounded,
-                            onTap: () => _showTrainingManagement(
-                              context,
-                              canCreatePlan:
-                                  activeProgram == null && routines.isNotEmpty,
-                            ),
+                            label: 'Gestionar programa', icon: Icons.tune_rounded,
+                            onTap: () => _showTrainingManagement(context,
+                              canCreatePlan: activeProgram == null && routines.isNotEmpty),
                           ),
-                        ],
-                      ),
+                          _TrainingQuickLink(
+                            key: const ValueKey('train_open_library'),
+                            label: 'Biblioteca de ejercicios', icon: Icons.fitness_center_rounded,
+                            onTap: () => Navigator.push(context, MaterialPageRoute(
+                                builder: (_) => const ExerciseLibraryPage())),
+                          ),
+                        ];
+                        if (constraints.maxWidth < 300 ||
+                            MediaQuery.textScalerOf(context).scale(14) > 21) {
+                          return Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [links[0], const SizedBox(height: AppSpacing.xs), links[1]]);
+                        }
+                        return Row(children: [
+                          Expanded(child: links[0]), const SizedBox(width: AppSpacing.sm),
+                          Expanded(child: links[1]),
+                        ]);
+                      }),
                       const SizedBox(height: AppSpacing.md),
                       Row(
                         children: [
@@ -174,30 +216,19 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
 
                 final routine = visibleRoutines[index - 1];
                 final muscleGroups = musclesFor(routine);
-                final linkedToActiveProgram =
-                    activeProgram?.routineIds.contains(routine.id) ?? false;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: _RoutineCard(
                     key: ValueKey('train_routine_${routine.id}'),
                     routine: routine,
                     muscleGroups: muscleGroups,
-                    isSuggested:
-                        !workoutActive && suggestedRoutineId == routine.id,
                     allowStart: !workoutActive,
-                    programName:
-                        linkedToActiveProgram ? activeProgram!.name : null,
                     evidence: usageByRoutine[routine.id],
-                    onStart: () => WorkoutLauncher.launch(context, ref, routine),
-                    onEdit: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => CreateRoutinePage(editingRoutine: routine),
-                      ),
-                    ),
-                    onNotes: () => _editRoutineNotes(context, ref, routine),
-                    onDuplicate: () => _duplicateRoutine(context, ref, routine),
-                    onDelete: () => _confirmDelete(context, ref, routine),
+                    onStart: () => _startRoutine(context, ref, routine, day),
+                    onEdit: () => Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => CreateRoutinePage(editingRoutine: routine))),
+                    menu: _routineMenu(context, ref, routine),
+
                   ),
                 );
               },
@@ -205,6 +236,46 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
       ),
     );
   }
+
+  Future<void> _startRoutine(BuildContext context, WidgetRef ref, Routine routine,
+      TrainingDayDecision day) async {
+    if (day.kind == TrainingDayKind.completed || day.kind == TrainingDayKind.rest) {
+      final confirmed = await showDialog<bool>(context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(day.kind == TrainingDayKind.completed
+              ? 'Ya entrenaste hoy' : 'Día de descanso'),
+          content: const Text('¿Quieres iniciar otro entrenamiento por decisión propia?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Entrenar de todos modos')),
+          ],
+        ));
+      if (confirmed != true || !context.mounted) return;
+    }
+    await WorkoutLauncher.launch(context, ref, routine);
+  }
+
+  Widget _routineMenu(BuildContext context, WidgetRef ref, Routine routine) =>
+    PopupMenuButton<String>(
+      tooltip: 'Opciones de ${routine.name}',
+      onSelected: (action) {
+        switch (action) {
+          case 'edit':
+            Navigator.push(context, MaterialPageRoute(
+              builder: (_) => CreateRoutinePage(editingRoutine: routine)));
+            break;
+          case 'notes': _editRoutineNotes(context, ref, routine); break;
+          case 'duplicate': _duplicateRoutine(context, ref, routine); break;
+          case 'delete': _confirmDelete(context, ref, routine); break;
+        }
+      },
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: 'edit', child: Text('Editar')),
+        PopupMenuItem(value: 'notes', child: Text('Nota')),
+        PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
+        PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+      ],
+    );
 
   Future<void> _showTrainingManagement(
     BuildContext context, {
@@ -423,6 +494,38 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
     }
   }
 
+  Future<void> _showFlexiblePlan(BuildContext context, TrainingProgram program,
+      List<Routine> routines, DateTime now) async {
+    final byId = {for (final routine in routines) routine.id: routine};
+    final order = TrainingDayDecision.rotationOrder(program);
+    final insights = ProgramPlanInsights.calculate(program: program, routines: routines, now: now);
+    await showModalBottomSheet<void>(context: context, useSafeArea: true,
+      isScrollControlled: true,
+      builder: (ctx) => FractionallySizedBox(heightFactor: 0.78,
+        child: ListView(padding: EdgeInsets.all(AppUiTokens.of(ctx).cardPadding), children: [
+          Text('Planificación flexible', style: AppTypography.headlineLarge),
+          const SizedBox(height: AppSpacing.xs),
+          Text('Sin días fijos · ${insights.targetSessionsPerWeek} sesiones/sem',
+              style: AppTypography.bodyMedium),
+          const SizedBox(height: AppSpacing.md),
+          Text('${insights.completedThisWeek}/${insights.plannedThisWeek} sesiones esta semana',
+              style: AppTypography.headlineSmall),
+          const SizedBox(height: AppSpacing.xs),
+          LinearProgressIndicator(value: insights.weeklyCompletionRatio ?? 0),
+          const SizedBox(height: AppSpacing.lg),
+          Text('Orden de rotación', style: AppTypography.headlineSmall),
+          const SizedBox(height: AppSpacing.sm),
+          for (var i = 0; i < order.length; i++)
+            ListTile(
+              leading: CircleAvatar(child: Text('${i + 1}')),
+              title: Text(byId[order[i]]?.name ?? 'Rutina no disponible'),
+              subtitle: i == 0 ? const Text('Siguiente en la rotación') : null,
+            ),
+          const SizedBox(height: AppSpacing.sm),
+          const Text('La rotación avanza al completar sesiones. No se asignan días de descanso obligatorios.'),
+        ])));
+  }
+
   Future<void> _showWeeklyPlan(
     BuildContext context,
     WidgetRef ref,
@@ -437,8 +540,14 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
       'Sábado',
       'Domingo',
     ];
-    final activePlan = ref.read(activeTrainingProgramProvider);
-    final today = DateTime.now();
+    final rawPlan = ref.read(activeTrainingProgramProvider);
+    final activePlan = rawPlan == null ? null : ProgramRotationCoordinator.reconcile(
+        rawPlan, ref.read(workoutHistoryProvider));
+    final today = ref.read(trainingDayClockProvider).toLocal();
+    if (activePlan != null && activePlan.scheduleMode == ProgramScheduleMode.flexible) {
+      await _showFlexiblePlan(context, activePlan, routines, today);
+      return;
+    }
     final monday = DateTime(today.year, today.month, today.day)
         .subtract(Duration(days: today.weekday - DateTime.monday));
     final projections = activePlan == null
@@ -474,9 +583,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> {
             Text(
               activePlan == null
                   ? 'Días opcionales cuando no hay un programa activo. Puedes mover tus rutinas.'
-                  : activePlan.scheduleMode == ProgramScheduleMode.flexible
-                      ? 'Distribución orientativa: los días no son obligatorios en un plan flexible.'
-                      : 'Calendario de “${activePlan.name}”. El plan prevalece sobre los días opcionales de cada rutina.',
+                  : 'Calendario de “${activePlan.name}”. El plan prevalece sobre los días opcionales de cada rutina.',
               style: AppTypography.bodyMedium.copyWith(
                 color: AppColors.of(context).textSecondary,
               ),
@@ -694,274 +801,108 @@ class _TrainingQuickLink extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          shape: const StadiumBorder(),
-          minimumSize: const Size(0, 44),
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-        ),
-        onPressed: onTap,
-        icon: Icon(icon, size: 18),
-        label: Text(label, maxLines: 2),
-      );
+  Widget build(BuildContext context) => PremiumCard(
+    onTap: onTap,
+    child: Row(children: [
+      Icon(icon, color: AppColors.of(context).primary),
+      const SizedBox(width: AppSpacing.sm),
+      Expanded(child: Text(label, style: AppTypography.bodyMedium)),
+    ]),
+  );
 }
 
 /// A compact context indicator. Full planning and settings live one tap away.
 /// Program context without a second heavy card competing with the workout.
 class _ProgramOrganizerCard extends ConsumerWidget {
-  const _ProgramOrganizerCard({required this.routines});
-
+  const _ProgramOrganizerCard({required this.routines, required this.onPlanning});
   final List<Routine> routines;
+  final VoidCallback onPlanning;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final active = ref.watch(activeTrainingProgramProvider);
     final programs = ref.watch(trainingProgramListProvider);
-    final hasExisting = programs.any((program) => !program.isTemplate);
+    final history = ref.watch(workoutHistoryProvider);
+    final now = ref.watch(trainingDayClockProvider);
+    final plan = active == null ? null : ProgramRotationCoordinator.reconcile(active, history);
+    final insights = plan == null ? null : ProgramPlanInsights.calculate(
+      program: plan, routines: routines, now: now);
     final colors = AppColors.of(context);
-    final week = active?.weekAt(DateTime.now()) ?? 0;
-    final target = active == null
-        ? 0
-        : ProgramScheduleProjector.effectiveTargetSessionsPerWeek(
-            active, routines,
-          );
-    final name = active?.name ??
-        (hasExisting ? 'Programa pausado' : 'Sin programa activo');
-
-    return Padding(
+    final mode = switch (plan?.scheduleMode) {
+      ProgramScheduleMode.flexible => 'Flexible',
+      ProgramScheduleMode.continuous => 'Continuo',
+      ProgramScheduleMode.fixed => 'Fijo',
+      null => '',
+    };
+    return PremiumCard(
       key: const ValueKey('train_compact_program'),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xs,
-        vertical: AppSpacing.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.layers_outlined, color: colors.primary, size: 20),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: AppTypography.headlineMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      active == null
-                          ? (hasExisting
-                              ? 'Gestiona tu programa para reanudarlo.'
-                              : 'Tus rutinas funcionan sin plan.')
-                          : 'Semana $week/${active.durationWeeks} · $target sesiones/sem',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: colors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (active != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            LinearProgressIndicator(
-              value: (week / active.durationWeeks.clamp(1, 9999))
-                  .clamp(0.0, 1.0).toDouble(),
-              minHeight: 4,
-              borderRadius: BorderRadius.circular(99),
-              backgroundColor: colors.surfaceHigh,
-            ),
-          ],
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(Icons.layers_outlined, color: colors.primary, size: 24),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(plan == null ? (programs.any((p) => !p.isTemplate)
+                ? 'Programa pausado' : 'Sin programa activo') : 'Programa ${plan.name}',
+                style: AppTypography.headlineSmall),
+            Text(plan == null ? 'Tus rutinas siguen disponibles.'
+                : '$mode · ${insights!.targetSessionsPerWeek} sesiones/sem',
+                style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
+          ])),
+          IconButton(key: const ValueKey('train_open_planning'), tooltip: 'Planificación',
+              onPressed: onPlanning, icon: Icon(Icons.calendar_month_outlined, color: colors.primary)),
+        ]),
+        if (plan != null && insights != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          LinearProgressIndicator(value: insights.weeklyCompletionRatio ?? 0,
+              minHeight: 5, borderRadius: BorderRadius.circular(AppRadius.full)),
+          const SizedBox(height: AppSpacing.xs),
+          Text('Semana ${plan.weekAt(now)}/${plan.durationWeeks} · ${insights.completedThisWeek}/${insights.plannedThisWeek} sesiones',
+              style: AppTypography.bodySmall),
         ],
-      ),
+      ]),
     );
   }
 }
 
 class _RoutineCard extends StatelessWidget {
+  const _RoutineCard({super.key, required this.routine, required this.muscleGroups,
+    required this.evidence, required this.allowStart, required this.onStart,
+    required this.onEdit, required this.menu});
   final Routine routine;
   final List<String> muscleGroups;
-  final String? programName;
   final RoutineCardEvidence? evidence;
-  final bool isSuggested;
   final bool allowStart;
   final VoidCallback onStart;
   final VoidCallback onEdit;
-  final VoidCallback onNotes;
-  final VoidCallback onDuplicate;
-  final VoidCallback onDelete;
-
-  const _RoutineCard({
-    super.key,
-    required this.routine,
-    required this.muscleGroups,
-    required this.programName,
-    required this.evidence,
-    this.isSuggested = false,
-    this.allowStart = true,
-    required this.onStart,
-    required this.onEdit,
-    required this.onNotes,
-    required this.onDuplicate,
-    required this.onDelete,
-  });
+  final Widget menu;
 
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final lastFinishedAt = evidence?.lastFinishedAt;
-    final typicalMinutes = evidence?.typicalMinutes;
-
+    final minutes = evidence?.typicalMinutes;
     return PremiumCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  routine.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.headlineMedium,
-                ),
-              ),
-              PopupMenuButton<String>(
-                tooltip: 'Opciones de ${routine.name}',
-                color: colors.surfaceHigh,
-                padding: EdgeInsets.zero,
-                onSelected: (value) {
-                  switch (value) {
-                    case 'edit':
-                      onEdit();
-                      break;
-                    case 'notes':
-                      onNotes();
-                      break;
-                    case 'duplicate':
-                      onDuplicate();
-                      break;
-                    case 'delete':
-                      onDelete();
-                      break;
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit',
-                    child: ListTile(dense: true,
-                      leading: Icon(Icons.edit_outlined),
-                      title: Text('Editar'))),
-                  const PopupMenuItem(value: 'notes',
-                    child: ListTile(dense: true,
-                      leading: Icon(Icons.sticky_note_2_outlined),
-                      title: Text('Nota'))),
-                  const PopupMenuItem(value: 'duplicate',
-                    child: ListTile(dense: true,
-                      leading: Icon(Icons.copy_all_outlined),
-                      title: Text('Duplicar'))),
-                  PopupMenuItem(value: 'delete',
-                    child: ListTile(dense: true,
-                      leading: Icon(Icons.delete_outline,
-                        color: colors.error),
-                      title: const Text('Eliminar'))),
-                ],
-              ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+        Expanded(child: InkWell(
+          onTap: onEdit,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(routine.name, style: AppTypography.headlineSmall),
+            if (muscleGroups.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xxs),
+              Text(muscleGroups.join(' · '),
+                  style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
             ],
-          ),
-          const SizedBox(height: AppSpacing.xxs),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.xxs,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text('${routine.exercises.length} ejercicios',
-                style: AppTypography.bodyMedium),
-              if (muscleGroups.isNotEmpty)
-                Text(muscleGroups.join(' · '),
-                  style: AppTypography.bodySmall.copyWith(
-                    color: colors.textSecondary)),
-            ],
-          ),
-          if (routine.hasNotes)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: onNotes,
-                icon: const Icon(Icons.sticky_note_2_outlined, size: 17),
-                label: const Text('Ver nota'),
-              ),
-            ),
-          const SizedBox(height: AppSpacing.sm),
-          LayoutBuilder(
-            builder: (context, available) {
-              final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-              final sideBySide = available.maxWidth >= 290 && scale <= 1.3;
-              final metadata = Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.xxs,
-                crossAxisAlignment: WrapCrossAlignment.start,
-                children: [
-                  Text(
-                    programName == null
-                        ? 'Rutina guardada' : 'En: $programName',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: programName == null
-                          ? colors.textSecondary : colors.primary),
-                  ),
-                  if (lastFinishedAt != null)
-                    Text(
-                      'Última vez: ${DateFormat('d MMM yyyy', 'es').format(lastFinishedAt.toLocal())}',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: colors.textSecondary),
-                    ),
-                  if (typicalMinutes != null)
-                    Text(
-                      '~$typicalMinutes min',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: colors.textSecondary),
-                    ),
-                ],
-              );
-              // Suggested workout owns the hero CTA above this list.
-              final Widget? start = isSuggested || !allowStart
-                  ? null
-                  : TextButton.icon(
-                      onPressed: onStart,
-                      icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                      label: const Text('Iniciar'),
-                    );
-              if (!sideBySide) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    metadata,
-                    if (start != null) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      start,
-                    ],
-                  ],
-                );
-              }
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(child: metadata),
-                  if (start != null) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    start,
-                  ],
-                ],
-              );
-            },
-          ),
-        ],
-      ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text('${routine.exercises.length} ejercicios${minutes == null ? '' : ' · ~$minutes min'}',
+                style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
+          ]),
+        )),
+        Column(mainAxisSize: MainAxisSize.min, children: [
+          menu,
+          if (allowStart)
+            IconButton(tooltip: 'Iniciar ${routine.name}', onPressed: onStart,
+                icon: Icon(Icons.play_circle_outline_rounded, color: colors.primary)),
+        ]),
+      ]),
     );
   }
 }

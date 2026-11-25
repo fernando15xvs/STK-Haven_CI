@@ -996,7 +996,7 @@ class _ProgramCard extends StatelessWidget {
                     .join(' → '),
               ),
             ),
-            if (plannedSessions.isNotEmpty)
+            if (plannedSessions.isNotEmpty && program.scheduleMode != ProgramScheduleMode.flexible)
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 title: Text(

@@ -20,14 +20,15 @@ void main() {
     expect(routines, contains('nextProgramSessionProvider'));
     expect(routines, contains("Text('Mis rutinas'"));
     expect(routines, isNot(contains("Text('Entrenar'")));
-    expect(routines, contains("label: 'Planificación'"));
-    expect(routines, contains("label: 'Gestionar'"));
+    expect(routines, contains("tooltip: 'Planificación'"));
+    expect(routines, contains("label: 'Gestionar programa'"));
+    expect(routines, contains("label: 'Biblioteca de ejercicios'"));
     expect(routines, contains("title: const Text('Administrar')"));
     expect(routines, contains("title: const Text('Plantillas de rutinas')"));
     expect(routines, contains("title: const Text('Plantillas de programas')"));
     expect(routines, contains('QuickTrainingPlanSheet.show(context)'));
     expect(routines, contains('WorkoutLauncher.launch(context, ref, routine)'));
-    expect(hero, contains('SIGUIENTE SESIÓN'));
+    expect(hero, contains('INICIAR SESIÓN'));
     expect(hero, contains('activeWorkoutProvider'));
     expect(hero, contains('activeWorkoutProvider.select((state) => state.session)'));
     expect(hero, contains('activeWorkoutLastActivityProvider'));
@@ -37,7 +38,7 @@ void main() {
     final scheduleLabel = File(
       'lib/features/routines/application/next_training_session_label.dart',
     ).readAsStringSync();
-    expect(hero, contains('NextTrainingSessionLabel.forSchedule('));
+    expect(hero, contains('TrainingDayDecision.resolve('));
     expect(scheduleLabel, contains('Rotación flexible · sin día obligatorio'));
     final homeShortcut = File(
       'lib/features/home/presentation/widgets/home_training_shortcut.dart',
@@ -56,18 +57,14 @@ void main() {
     final source = File(
       'lib/features/routines/presentation/pages/routines_page.dart',
     ).readAsStringSync();
-    expect(source, contains('final featuredRoutineId = workoutActive'));
+    expect(source, contains('final featuredRoutineId = day.featuredRoutineId'));
     expect(source, contains('routine.id != featuredRoutineId'));
-    expect(source, contains('final hideFeatured ='));
     expect(source, contains('eligibleRoutines.take(3)'));
     expect(source, contains('final hasHiddenRoutines ='));
     expect(source, contains('_showAllRoutines'));
     expect(source, contains("ValueKey('train_show_all_routines')"));
-    expect(source, contains('isSuggested:'));
-    expect(source, contains('suggestedRoutineId == routine.id'));
     expect(source, contains('allowStart: !workoutActive'));
-    expect(source, contains('final Widget? start = isSuggested || !allowStart'));
-    expect(source, contains('if (start != null)'));
+    expect(source, contains('if (allowStart)'));
     expect(source, isNot(contains("Text('Plantillas', style: AppTypography.headlineMedium)")));
   });
 

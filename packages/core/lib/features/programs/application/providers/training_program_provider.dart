@@ -277,6 +277,9 @@ class NextProgramSession {
   });
 }
 
+/// Invalidated by Mobile at local midnight and on foreground resume.
+final trainingDayClockProvider = Provider<DateTime>((ref) => DateTime.now());
+
 final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
   final active = ref.watch(activeTrainingProgramProvider);
   if (active == null || active.routineIds.isEmpty) return null;
@@ -284,7 +287,7 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
   final history = ref.watch(workoutHistoryProvider);
   final reconciled = ProgramRotationCoordinator.reconcile(active, history);
   final routines = ref.watch(routineListProvider);
-  final now = DateTime.now();
+  final now = ref.watch(trainingDayClockProvider).toLocal();
   final today = DateTime(now.year, now.month, now.day);
 
   final projected = ProgramScheduleProjector.project(
@@ -298,11 +301,14 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
 
   String? nextRoutineId;
   DateTime? scheduledDate;
-  if (projected.isNotEmpty) {
+  final noFixedDays = reconciled.scheduleMode == ProgramScheduleMode.flexible ||
+      (reconciled.scheduleMode == ProgramScheduleMode.continuous &&
+          ProgramScheduleProjector.effectiveTrainingWeekdays(reconciled, routines).isEmpty);
+  if (noFixedDays) {
+    nextRoutineId = reconciled.nextRoutineId;
+  } else if (projected.isNotEmpty) {
     nextRoutineId = projected.first.routineId;
-    scheduledDate = reconciled.scheduleMode == ProgramScheduleMode.flexible
-        ? null
-        : projected.first.date;
+    scheduledDate = projected.first.date;
   } else {
     nextRoutineId = reconciled.nextRoutineId;
   }

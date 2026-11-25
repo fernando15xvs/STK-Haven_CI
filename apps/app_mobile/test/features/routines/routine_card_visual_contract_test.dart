@@ -11,13 +11,13 @@ void main() {
     expect(source, contains('final activeProgram = ref.watch(activeTrainingProgramProvider)'));
     expect(source, contains('RoutineCardEvidence.fromHistory('));
     expect(source, contains('muscleGroups.join('));
-    expect(source, contains("label: const Text('Iniciar')"));
+    expect(source, contains("tooltip: 'Iniciar ${routine.name}'"));
     // Optional days remain in the weekly editor, not on each routine card.
     final card = source.split('class _RoutineCard extends StatelessWidget')[1]
         .split('class _EmptyState extends StatelessWidget')[0];
     expect(card, isNot(contains('scheduledDays')));
-    expect(card, contains('final sideBySide = available.maxWidth >= 290'));
-    expect(card, contains('Expanded(child: metadata)'));
-    expect(card, contains('scale <= 1.3'));
+    expect(card, contains('Expanded(child: InkWell('));
+    expect(card, contains('Icons.play_circle_outline_rounded'));
+    expect(card, isNot(contains('Última vez:')));
   });
 }

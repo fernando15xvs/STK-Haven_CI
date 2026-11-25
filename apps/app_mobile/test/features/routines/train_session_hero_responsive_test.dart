@@ -1,3 +1,4 @@
+import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/domain/models/training_program.dart';
@@ -8,6 +9,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:gym_tracker/features/routines/presentation/widgets/next_training_session_hero.dart';
+
+class _NoHistory extends WorkoutHistoryNotifier {
+  @override
+  List<WorkoutSession> build() => const [];
+}
 
 class _NoActiveWorkout extends ActiveWorkoutNotifier {
   @override
@@ -80,6 +86,7 @@ void main() {
         addTearDown(tester.view.resetDevicePixelRatio);
         await tester.pumpWidget(ProviderScope(
           overrides: [
+            workoutHistoryProvider.overrideWith(_NoHistory.new),
             activeWorkoutProvider.overrideWith(_NoActiveWorkout.new),
             nextProgramSessionProvider.overrideWith((ref) => suggested),
             activeTrainingProgramProvider.overrideWith((ref) => program),
@@ -111,7 +118,7 @@ void main() {
           tester.getSize(find.byKey(const ValueKey('train_next_session_hero'))).width,
           closeTo(width, 0.1),
         );
-        expect(find.text('Rotación flexible · sin día obligatorio'),
+        expect(find.text('INICIAR SESIÓN'),
             findsOneWidget);
         expect(tester.takeException(), isNull);
       });
@@ -123,6 +130,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
+            workoutHistoryProvider.overrideWith(_NoHistory.new),
         activeWorkoutProvider.overrideWith(_WithActiveWorkout.new),
         activeWorkoutLastActivityProvider.overrideWith(
           (ref) => DateTime.now(),
@@ -176,6 +184,7 @@ void main() {
     );
     await tester.pumpWidget(ProviderScope(
       overrides: [
+            workoutHistoryProvider.overrideWith(_NoHistory.new),
         activeWorkoutProvider.overrideWith(_NoActiveWorkout.new),
         nextProgramSessionProvider.overrideWith((ref) => futureSession),
         activeTrainingProgramProvider.overrideWith((ref) => fixedProgram),
@@ -192,6 +201,8 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
+    expect(find.text('Día de descanso'), findsOneWidget);
+    expect(find.byKey(const ValueKey('train_start_next_session')), findsNothing);
     expect(find.textContaining('Próximo día:'), findsOneWidget);
     expect(find.text('Sesión programada para hoy'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -200,6 +211,7 @@ void main() {
   testWidgets('paused plan is not recommended as active workout', (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
+            workoutHistoryProvider.overrideWith(_NoHistory.new),
         activeWorkoutProvider.overrideWith(_NoActiveWorkout.new),
         nextProgramSessionProvider.overrideWith((ref) => null),
         activeTrainingProgramProvider.overrideWith((ref) => null),
@@ -227,6 +239,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
+            workoutHistoryProvider.overrideWith(_NoHistory.new),
         activeWorkoutProvider.overrideWith(_NoActiveWorkout.new),
         nextProgramSessionProvider.overrideWith((ref) => null),
         activeTrainingProgramProvider.overrideWith((ref) => null),

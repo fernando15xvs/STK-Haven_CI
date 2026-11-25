@@ -1,6 +1,10 @@
 import 'package:core/domain/models/routine.dart';
 import 'package:core/features/programs/application/training_program_legacy_policy.dart';
-import 'package:core/domain/models/training_program.dart';
+import 'package:core/domain/models/workout_session.dart';
+import 'package:core/features/programs/application/training_day_decision.dart';
+import 'package:core/features/workout/application/workout_history_provider.dart';
+import 'package:gym_tracker/features/workout/presentation/widgets/recent_workout_details.dart';
+import 'package:intl/intl.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/routines/application/providers/routine_provider.dart';
 import 'package:core/features/programs/application/providers/training_program_provider.dart';
@@ -11,7 +15,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/features/routines/application/routine_card_evidence.dart';
-import 'package:gym_tracker/features/routines/application/next_training_session_label.dart';
 import 'package:gym_tracker/features/workout/application/workout_launcher.dart';
 import 'package:gym_tracker/features/workout/presentation/active_workout_page.dart';
 
@@ -30,7 +33,7 @@ final legacyTodaySessionProvider = Provider<LegacyTodaySession?>((ref) {
     legacy: ref.watch(settingsProvider).activeProgram,
   );
   if (legacy == null) return null;
-  final weekday = DateTime.now().weekday;
+  final weekday = ref.watch(trainingDayClockProvider).toLocal().weekday;
   for (final routine in ref.watch(routineListProvider)) {
     if (legacy.generatedRoutineIds.contains(routine.id) &&
         routine.scheduledDays.contains(weekday)) {
@@ -60,11 +63,15 @@ class NextTrainingSessionHero extends ConsumerStatefulWidget {
     required this.routines,
     required this.historyByRoutine,
     required this.musclesFor,
+    this.decision,
+    this.routineMenu,
   });
 
   final List<Routine> routines;
   final Map<String, RoutineCardEvidence> historyByRoutine;
   final List<String> Function(Routine routine) musclesFor;
+  final TrainingDayDecision? decision;
+  final Widget Function(Routine routine)? routineMenu;
 
   @override
   ConsumerState<NextTrainingSessionHero> createState() =>
@@ -91,195 +98,201 @@ class _NextTrainingSessionHeroState
     }
   }
 
+  Future<void> _editNotes(WorkoutSession session) async {
+    final controller = TextEditingController(text: session.notes);
+    try {
+      final value = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Editar nota del entrenamiento'),
+          content: TextField(controller: controller, maxLines: 4, maxLength: 1000),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+                child: const Text('Guardar')),
+          ],
+        ),
+      );
+      if (value == null || !mounted) return;
+      await ref.read(workoutRepositoryProvider).saveWorkoutSession(
+        WorkoutSession(
+          id: session.id, routineId: session.routineId,
+          routineNameSnapshot: session.routineNameSnapshot,
+          startedAt: session.startedAt, finishedAt: session.finishedAt,
+          exercises: session.exercises, durationSeconds: session.durationSeconds,
+          notes: value, currentRestEndsAt: session.currentRestEndsAt,
+        ),
+      );
+      if (mounted) ref.read(workoutHistoryProvider.notifier).refresh();
+    } finally {
+      controller.dispose();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final active = ref.watch(
-      activeWorkoutProvider.select((state) => state.isActive),
-    );
-    final activeName = ref.watch(
-      activeWorkoutProvider.select((state) => state.routineDisplayName),
-    );
+    final now = ref.watch(trainingDayClockProvider);
+    final active = ref.watch(activeWorkoutProvider);
     final next = ref.watch(nextProgramSessionProvider);
     final currentProgram = ref.watch(activeTrainingProgramProvider);
     final legacyToday = ref.watch(legacyTodaySessionProvider);
-
-    // Reuse the active workout; never start a second one automatically.
-    if (active) {
-      final lastActivityAt = ref.watch(activeWorkoutLastActivityProvider);
-      final sessionStart = ref.read(activeWorkoutProvider).session?.startedAt;
-      final stale = sessionStart != null &&
-          UnfinishedWorkoutReminderPolicy.isStale(
-            lastActivityAt ?? sessionStart,
-            DateTime.now(),
-          );
-      return SizedBox(
-        width: double.infinity,
-        child: PremiumCard(
-          key: const ValueKey('train_next_session_hero'),
-          backgroundColor: colors.primaryFaded,
-          borderColor: colors.primary.withValues(alpha: 0.4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.fitness_center_rounded,
-                      size: 18, color: colors.primary),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      stale ? 'PENDIENTE DE REVISAR' : 'EN CURSO',
-                      style: AppTypography.labelMedium.copyWith(
-                        color: colors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                activeName,
-                style: AppTypography.headlineMedium,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (stale) ...[
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  'Revisa la sesión antes de continuar o finalizar.',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-              ],
-              const SizedBox(height: AppSpacing.xs),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  key: const ValueKey('train_resume_workout'),
-                  onPressed: _opening ? null : () => _open(null),
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Continuar'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // A paused program must not masquerade as the active next workout.
-    // A person without a plan can still start any saved routine below.
-    final suggested = next?.routine ?? legacyToday?.routine;
-    if (suggested == null) {
+    final day = widget.decision ?? TrainingDayDecision.resolve(
+      now: now, active: active.isActive ? active.session : null,
+      history: ref.watch(workoutHistoryProvider),
+      next: next?.routine, mode: next?.program.scheduleMode,
+      scheduledDate: next?.scheduledDate, isTrainingDay: next?.isTrainingDay ?? false,
+      legacyToday: legacyToday?.routine,
+    );
+    final routine = day.routine;
+    if (day.kind == TrainingDayKind.none ||
+        (routine != null && !widget.routines.any((r) => r.id == routine.id))) {
       if (widget.routines.isEmpty) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-        child: Text(
-          currentProgram == null
-              ? 'Elige una rutina de tu lista para comenzar.'
-              : 'No hay una próxima sesión disponible en este programa.',
+        child: Text(currentProgram == null
+            ? 'Elige una rutina de tu lista para comenzar.'
+            : 'No hay una próxima sesión disponible en este programa.',
           key: const ValueKey('train_choose_routine'),
-          style: AppTypography.bodyMedium.copyWith(
-            color: colors.textSecondary,
-          ),
-        ),
+          style: AppTypography.bodyMedium.copyWith(color: colors.textSecondary)),
       );
     }
 
-    final routine = suggested;
-    final validRoutine =
-        widget.routines.any((candidate) => candidate.id == routine.id);
-    if (!validRoutine) {
-      return Text(
-        'La próxima rutina ya no está disponible. Revisa tu programa.',
-        style: AppTypography.bodyMedium.copyWith(color: colors.textSecondary),
-      );
+    final completed = day.kind == TrainingDayKind.completed;
+    final rest = day.kind == TrainingDayKind.rest;
+    final running = day.kind == TrainingDayKind.active;
+    final session = day.session;
+    final tint = completed ? colors.success : rest ? colors.textSecondary : colors.primary;
+    final background = completed ? colors.success.withValues(alpha: 0.10)
+        : rest ? colors.surface : colors.primaryFaded;
+    final stale = running && session != null &&
+        UnfinishedWorkoutReminderPolicy.isStale(
+          ref.watch(activeWorkoutLastActivityProvider) ?? session.startedAt, now);
+    final name = rest ? 'Día de descanso'
+        : running ? active.routineDisplayName
+        : completed ? (session!.routineNameSnapshot.isEmpty
+            ? 'Entrenamiento libre' : session.routineNameSnapshot)
+        : routine!.name;
+    final title = rest ? 'RECUPERACIÓN' : completed ? 'FINALIZADO HOY'
+        : running ? (stale ? 'PENDIENTE DE REVISAR' : 'SESIÓN EN CURSO')
+        : 'INICIAR SESIÓN';
+    Routine? managed;
+    for (final item in widget.routines) {
+      if (item.id == day.featuredRoutineId) { managed = item; break; }
     }
-
-    final muscles = widget.musclesFor(routine);
-    final typicalMinutes =
-        widget.historyByRoutine[routine.id]?.typicalMinutes;
-    final schedule = next == null
-        ? 'Programada para hoy · ${legacyToday!.programName}'
-        : NextTrainingSessionLabel.forSchedule(
-            scheduledDate: next.scheduledDate,
-            isFlexible: next.program.scheduleMode ==
-                ProgramScheduleMode.flexible,
-            now: DateTime.now(),
-          );
-    final detailItems = <String>[
-      '${routine.exercises.length} ejercicios',
-      if (muscles.isNotEmpty) muscles.join(' · '),
-      if (typicalMinutes != null) '~$typicalMinutes min habituales',
-    ];
+    final menu = managed == null ? null : widget.routineMenu?.call(managed);
+    final action = day.allowsSuggestedStart
+        ? IconButton(
+            key: const ValueKey('train_start_next_session'),
+            tooltip: 'Iniciar sesión', onPressed: _opening ? null : () => _open(routine),
+            color: tint, icon: const Icon(Icons.arrow_forward_rounded))
+        : null;
+    final items = <Widget>[];
+    if (day.allowsSuggestedStart && routine != null) {
+      items.add(_metric(context, Icons.format_list_numbered, '${routine.exercises.length} ejercicios'));
+      final minutes = widget.historyByRoutine[routine.id]?.typicalMinutes;
+      if (minutes != null) items.add(_metric(context, Icons.schedule, '~$minutes min'));
+    }
+    if (running && session != null) {
+      final finished = session.exercises.where((exercise) {
+        final sets = exercise.sets.where((s) => s.setType == WorkoutSetType.working).toList();
+        return sets.isNotEmpty && sets.every((s) => s.completed);
+      }).length;
+      items.add(_metric(context, Icons.format_list_numbered,
+          '$finished de ${session.exercises.length} ejercicios'));
+      final minutes = now.difference(session.startedAt).inMinutes.clamp(0, 99999);
+      items.add(_metric(context, Icons.schedule, '$minutes min'));
+      items.add(FilledButton(
+        key: const ValueKey('train_resume_workout'),
+        onPressed: _opening ? null : () => _open(null),
+        child: const Text('Continuar')));
+    }
+    if (completed && session != null) {
+      items.add(FilledButton(
+        key: const ValueKey('train_view_completed'),
+        style: FilledButton.styleFrom(backgroundColor: tint,
+            foregroundColor: ThemeData.estimateBrightnessForColor(tint) == Brightness.dark
+                ? Colors.white : Colors.black),
+        onPressed: () => RecentWorkoutDetails.show(context, session, ref.read(settingsProvider).weightUnit),
+        child: const Text('Ver entrenamiento')));
+      items.add(OutlinedButton.icon(
+        onPressed: () => _editNotes(session), icon: const Icon(Icons.edit_outlined),
+        label: const Text('Editar nota')));
+    }
 
     return SizedBox(
       width: double.infinity,
       child: PremiumCard(
         key: const ValueKey('train_next_session_hero'),
-        backgroundColor: colors.primaryFaded,
-        borderColor: colors.primary.withValues(alpha: 0.38),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.fitness_center_rounded,
-                    size: 19, color: colors.primary),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    'SIGUIENTE SESIÓN',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: colors.primary,
-                    ),
-                  ),
-                ),
-              ],
+        backgroundColor: background,
+        borderColor: tint.withValues(alpha: 0.38),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(
+                color: rest ? colors.surfaceHigh : tint,
+                borderRadius: BorderRadius.circular(AppUiTokens.of(context).buttonRadius)),
+              child: Icon(rest ? Icons.nightlight_round : completed
+                  ? Icons.check_rounded : Icons.fitness_center_rounded,
+                color: rest ? tint : ThemeData.estimateBrightnessForColor(tint) == Brightness.dark
+                    ? Colors.white : Colors.black),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              routine.name,
-              style: AppTypography.headlineMedium,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              schedule,
-              style: AppTypography.bodySmall.copyWith(
-                color: colors.textSecondary,
-              ),
-            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: AppTypography.labelMedium.copyWith(color: tint)),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(name, style: AppTypography.headlineMedium),
+              if (completed && session != null)
+                Text('Completado · ${(session.durationSeconds / 60).round()} min',
+                    style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
+            ])),
+            if (action != null) action,
+            if (menu != null && !running) menu,
+          ]),
+          if (stale) ...[
             const SizedBox(height: AppSpacing.xs),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.xxs,
-              children: [
-                for (final item in detailItems)
-                  Text(
-                    item,
-                    style: AppTypography.labelSmall.copyWith(
-                      color: colors.textSecondary,
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.icon(
-                key: const ValueKey('train_start_next_session'),
-                onPressed: _opening ? null : () => _open(routine),
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: const Text('Iniciar'),
-              ),
-            ),
+            Text('Revisa la sesión antes de continuar o finalizar.',
+                style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
           ],
-        ),
+          if (rest) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text('No tienes entrenamientos programados hoy.',
+                style: AppTypography.bodyMedium.copyWith(color: colors.textSecondary)),
+            if (routine != null && day.date != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text('Próximo día: ${_dateLabel(day.date!, now)} · ${routine.name}',
+                  style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
+            ],
+          ],
+          if (items.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center, children: items),
+          ],
+        ]),
       ),
+    );
+  }
+
+  String _dateLabel(DateTime date, DateTime now) {
+    final today = TrainingDayDecision.localDay(now);
+    final tomorrow = DateTime(today.year, today.month, today.day + 1);
+    return date == tomorrow ? 'Mañana' : DateFormat('EEEE d MMM', 'es').format(date);
+  }
+
+  Widget _metric(BuildContext context, IconData icon, String label) {
+    final colors = AppColors.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      decoration: BoxDecoration(color: colors.surfaceHigh,
+        borderRadius: BorderRadius.circular(AppRadius.full),
+        border: Border.all(color: colors.surfaceBorder)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 16, color: colors.textSecondary),
+        const SizedBox(width: AppSpacing.xs),
+        Flexible(child: Text(label, style: AppTypography.bodySmall.copyWith(color: colors.textSecondary))),
+      ]),
     );
   }
 }
