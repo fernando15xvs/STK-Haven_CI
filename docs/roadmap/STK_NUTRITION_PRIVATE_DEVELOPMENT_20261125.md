@@ -12,4 +12,12 @@ F: pgTAP y tests Core/contratos; un único CI espejo pendiente. IPA personal se 
 - [x] Restaurar el workflow de #45729597528, incluyendo análisis Core/Mobile separados, guard de arquitectura, QA anatómica v10, pruebas focalizadas, Supabase aislado y 3D histórico manual. Web sigue congelada, sin tests, análisis ni builds Web ni web-push en el gate.
 - [x] Mantener STK_DEVELOPMENT_NUTRITION únicamente en el APK debug y la IPA de QA sin firma; release Android y profile mantienen OFF. Sin cambiar autorización de backend ni activar usuarios.
 - [x] Corregir el scroll del test de Aspecto y ejecutarlo también en el gate de Perfil.
-- [ ] Confirmar los siete jobs obligatorios del nuevo CI y QA física. No merge ni publicación.
+- [x] CI #45732535734: siete jobs obligatorios en verde, 3D histórico manual omitido.
+- [ ] QA física. No merge ni publicación.
+
+## Reconciliación de historial y verificación remota (25/11/2026)
+- [x] STK-Haven: 41 migraciones remotas. Las 38 anteriores coinciden por versión/nombre; las tres últimas se compararon contra `schema_migrations.statements` y sus cuerpos SQL son exactamente iguales a Git. Renombrar únicamente los dos archivos con las versiones remotas `20261126004841` y `20261126004844`, conservando sus nombres registrados y orden anterior a `20261126004951`. No ejecutar `db push`, repair ni reaplicar SQL.
+- [x] Incorporar seis comprobaciones pgTAP de historial y acceso denegado para cuenta desconocida.
+- [x] Backend: RPC presente, config OFF, cero testers activos, cero releases legales publicados, cuenta ficticia denegada. Food Vision v2 ACTIVE con verify_jwt=true; lectura del fuente desplegado falló en el conector, paridad de código y foto real aún no verificadas.
+- [x] IPA del CI #45732535734 extraída e íntegra: 26681776 bytes, SHA-256 da31394b2fe463b0e304f155be57d6d01fc97bc657b6392a7080e3e500014139, incluye WidgetKit; sin firma. El nuevo commit solo modifica historial fuente, pruebas SQL y documentación.
+- [ ] Nuevo CI de reconciliación; probar DB limpia y upgrade. Pendiente confirmar cuenta adulta específica, autorización temporal, firma/instalación y QA física. No activar el flag remoto ni crear grants hasta revisión de identidad y elegibilidad.
