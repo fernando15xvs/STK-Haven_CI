@@ -1,6 +1,13 @@
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_task_agenda_page.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_task_page.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
+import 'package:core/features/coach/domain/smart_coach_engine.dart';
+import 'package:gym_tracker/features/coach/presentation/widgets/smart_coach_insights.dart';
+import 'package:gym_tracker/features/coach/presentation/pages/coach_measurement_page.dart';
+import 'package:gym_tracker/features/coach/presentation/pages/coach_program_assignments_page.dart';
+import 'package:gym_tracker/features/coach/presentation/pages/coach_tasks_page.dart';
+import 'package:gym_tracker/features/coach/presentation/pages/coach_checkins_page.dart';
+import 'package:gym_tracker/features/nutrition/presentation/pages/coach_nutrition_guidance_page.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_nutrition_page.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_program_page.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_checkin_cadence_page.dart';
@@ -58,6 +65,7 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed && mounted) _refresh();
   }
   void _refresh() => ref.invalidate(coachProClientDetailProvider(_query));
+  Future<void> _openWorkspace(Widget page)async{await Navigator.of(context).push<void>(MaterialPageRoute(builder:(_)=>page));if(mounted)_refresh();}
 
   @override
   Widget build(BuildContext context) {
@@ -96,6 +104,8 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                   ? 'Relación activa' : 'Relación pausada'),
               const SizedBox(height: 16),
               if (_section == CoachProClientSection.summary) ...[
+                if(detail.canView(CoachPermission.viewMeasurements))
+                  OutlinedButton.icon(icon:const Icon(Icons.monitor_weight_outlined),label:const Text('Medidas compartidas'),onPressed:()=>_openWorkspace(CoachMeasurementPage(relationshipId:widget.relationshipId,clientUserId:summary.clientUserId,viewerUserId:ref.read(appIdentityProvider).userId!))),
                 Text('Entrenos 7 días: ${metric(summary.workouts7d)}'),
                 Text('Entrenos 30 días: ${metric(summary.workouts30d)}'),
                 Text('RIR medio 7 días: ${metric(summary.averageRir7d)}'),
@@ -107,6 +117,7 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                 if (!detail.canViewNutrition)
                   const Text('Orientación alimentaria: no compartida en esta relación.')
                 else ...[
+                  FilledButton.tonal(onPressed:()=>_openWorkspace(CoachNutritionGuidancePage(clientUserId:summary.clientUserId,clientDisplayName:summary.displayName,relationshipId:widget.relationshipId,canEdit:true)),child:const Text('Gestionar guías')),
                   const Text(NutritionGuidancePlan.defaultScopeNotice),
                   if (detail.nutrition!.items.isEmpty)
                     Text(_offset == 0 ? 'No hay orientaciones alimentarias compartidas.'
@@ -131,6 +142,7 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                 else if (detail.progress == null)
                   const Text('Todavía no hay una instantánea de progreso compartida.')
                 else ...[
+                  SmartCoachInsights(insights:SmartCoachEngine.progress(detail.progress,now:DateTime.now())),
                   Text('Instantánea generada: ${_date(context, detail.progress!.generatedAt)}'),
                   const Text('Los periodos de 7 y 30 días corresponden a esa instantánea. Actualizar consulta lo último compartido; no recalcula la actividad del cliente.'),
                   Text('Entrenos en 7 días: ${detail.progress!.workouts7d}'),
@@ -242,6 +254,7 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                               item.exerciseName,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
+                            SmartCoachInsights(insights:SmartCoachEngine.exercise(item,now:DateTime.now())),
                             if (item.muscleGroup.isNotEmpty)
                               Text(item.muscleGroup),
                             Text(
@@ -340,6 +353,7 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                       },
                     ),
                   ),
+                  FilledButton.tonal(onPressed:()=>_openWorkspace(CoachProgramAssignmentsPage(clientUserId:summary.clientUserId,clientDisplayName:summary.displayName,relationshipId:widget.relationshipId,canAssign:true)),child:const Text('Asignar programa local')),
                   if (detail.programs!.items.isEmpty)
                     Text(_offset == 0 ? 'No hay programas asignados en esta relación.'
                         : 'Esta página ya no tiene programas. Vuelve a la anterior.'),
@@ -378,6 +392,7 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                       },
                     ),
                   ),
+                  FilledButton.tonal(onPressed:()=>_openWorkspace(CoachTasksPage(clientUserId:summary.clientUserId,clientDisplayName:summary.displayName,relationshipId:widget.relationshipId,canAssign:true,canComment:summary.permissions.contains(CoachPermission.comment))),child:const Text('Gestionar tareas')),
                   if (detail.tasks!.items.isEmpty)
                     Text(_offset == 0 ? 'No hay tareas asignadas en esta relación.'
                         : 'Esta página ya no tiene tareas. Vuelve a la anterior.'),
@@ -414,6 +429,7 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                       },
                     ),
                   ),
+                FilledButton.tonal(onPressed:()=>_openWorkspace(CoachCheckinsPage(relationshipId:widget.relationshipId,clientUserId:summary.clientUserId,clientDisplayName:summary.displayName,isClient:false,canCreate:false,canComment:summary.permissions.contains(CoachPermission.comment))),child:const Text('Ver check-ins y comentarios')),
                 if (detail.checkins!.items.isEmpty)
                   Text(_offset == 0 ? 'Todavía no hay check-ins compartidos.'
                       : 'Esta página ya no tiene check-ins. Vuelve a la anterior.'),
@@ -422,6 +438,7 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(_date(context, item.createdAt)),
                       Text('Energía: ${item.energy} · Recuperación: ${item.recovery}'),
+                      SmartCoachInsights(insights:SmartCoachEngine.recovery(item,now:DateTime.now())),
                       if (item.note.isNotEmpty) Text(item.note),
                     ]),
                   )),

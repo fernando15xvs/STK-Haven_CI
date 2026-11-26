@@ -69,35 +69,42 @@ final coachTaskProvider =
 );
 
 final coachTaskLazySyncProvider = FutureProvider<void>((ref) async {
-  final signedIn = ref.watch(
-    appIdentityProvider.select((identity) => identity.signedIn),
-  );
-  if (!signedIn) return;
+  final identity = ref.watch(appIdentityProvider.select((identity) => (identity.signedIn, identity.userId)));
+  if (!identity.$1 || identity.$2 == null) return;
   await ref.read(coachTaskProvider.notifier).refresh();
 });
 
 class CoachTaskNotifier extends Notifier<CoachTaskState> {
-  late final CoachTaskService _service;
+  late CoachTaskService _service;
+  int _epoch = 0;
+  bool _current(int epoch) => ref.mounted && epoch == _epoch;
 
   @override
   CoachTaskState build() {
+    ref.watch(appIdentityProvider.select((value) => (value.signedIn, value.userId)));
+    _epoch++;
+    ref.onDispose(() => _epoch++);
     _service = ref.watch(coachTaskServiceProvider);
     return const CoachTaskState();
   }
 
   Future<void> refresh({String? clientUserId}) async {
+    final epoch = _epoch;
     final identity = ref.read(appIdentityProvider);
     if (!identity.signedIn || state.busy) return;
 
     state = state.copyWith(
       operation: CoachTaskOperation.loading,
+      tasks: const [], occurrences: const [], commentsByTask: const {}, adherenceByClient: const {},
       clearMessage: true,
       isError: false,
     );
 
     try {
       final tasks = await _service.listTasks(clientUserId: clientUserId);
+      if (!_current(epoch)) return;
       final occurrences = await _service.listOccurrences();
+      if (!_current(epoch)) return;
 
       state = state.copyWith(
         tasks: List.unmodifiable(tasks),
@@ -111,9 +118,12 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
         occurrences: occurrences,
         currentUserId: identity.userId,
       );
+      if (!_current(epoch)) return;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return;
       _fail(_databaseMessage(error));
     } catch (_) {
+      if (!_current(epoch)) return;
       _fail('No se pudieron cargar las tareas asignadas.');
     }
   }
@@ -131,6 +141,7 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
     DateTime? endsOn,
     String instructions = '',
   }) async {
+    final epoch = _epoch;
     if (!ref.read(appIdentityProvider).signedIn || state.busy) return false;
 
     state = state.copyWith(
@@ -156,17 +167,21 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
           'coach_instructions': instructions.trim(),
         },
       );
+      if (!_current(epoch)) return false;
       state = state.copyWith(
         operation: CoachTaskOperation.idle,
         message: 'Tarea asignada.',
         isError: false,
       );
       await refresh(clientUserId: clientUserId);
+      if (!_current(epoch)) return false;
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (_) {
+      if (!_current(epoch)) return false;
       _fail('No se pudo asignar la tarea.');
       return false;
     }
@@ -178,6 +193,7 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
     required CoachTaskOccurrenceStatus status,
     int minutesSpent = 0,
   }) async {
+    final epoch = _epoch;
     if (!task.isClient(ref.read(appIdentityProvider).userId) || state.busy) {
       return false;
     }
@@ -195,6 +211,7 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
         status: status,
         minutesSpent: minutesSpent.clamp(0, 1440).toInt(),
       );
+      if (!_current(epoch)) return false;
       state = state.copyWith(
         operation: CoachTaskOperation.idle,
         message: status == CoachTaskOccurrenceStatus.completed
@@ -203,11 +220,14 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
         isError: false,
       );
       await refresh();
+      if (!_current(epoch)) return false;
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (_) {
+      if (!_current(epoch)) return false;
       _fail('No se pudo actualizar la tarea.');
       return false;
     }
@@ -218,6 +238,7 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
     DateTime? occurrenceDate,
     required String body,
   }) async {
+    final epoch = _epoch;
     if (!ref.read(appIdentityProvider).signedIn || state.busy) return false;
     if (body.trim().isEmpty) return false;
 
@@ -233,7 +254,9 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
         occurrenceDate: occurrenceDate,
         body: body,
       );
+      if (!_current(epoch)) return false;
       final comments = await _service.listComments(taskId);
+      if (!_current(epoch)) return false;
       final next =
           Map<String, List<CoachTaskComment>>.from(state.commentsByTask)
             ..[taskId] = List.unmodifiable(comments);
@@ -245,26 +268,35 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
       );
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (_) {
+      if (!_current(epoch)) return false;
       _fail('No se pudo añadir el comentario.');
       return false;
     }
   }
 
   Future<List<CoachTaskComment>> loadComments(String taskId) async {
+    final epoch = _epoch;
+    if (!ref.read(appIdentityProvider).signedIn) return const [];
+    final remaining = Map<String, List<CoachTaskComment>>.from(state.commentsByTask)..remove(taskId);
+    state = state.copyWith(commentsByTask: Map.unmodifiable(remaining));
     try {
       final comments = await _service.listComments(taskId);
+      if (!_current(epoch)) return const <CoachTaskComment>[];
       final next =
           Map<String, List<CoachTaskComment>>.from(state.commentsByTask)
             ..[taskId] = List.unmodifiable(comments);
       state = state.copyWith(commentsByTask: Map.unmodifiable(next));
       return comments;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return const <CoachTaskComment>[];
       _fail(_databaseMessage(error));
       return const <CoachTaskComment>[];
     } catch (_) {
+      if (!_current(epoch)) return const <CoachTaskComment>[];
       _fail('No se pudieron cargar los comentarios.');
       return const <CoachTaskComment>[];
     }
@@ -273,28 +305,38 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
   Future<CoachTaskAdherence?> loadAdherence(
     String clientUserId, {
     int days = 30,
+    String? relationshipId,
   }) async {
+    final epoch = _epoch;
+    final cacheKey=relationshipId??clientUserId;
     if (!ref.read(appIdentityProvider).signedIn) return null;
+    final remaining = Map<String, CoachTaskAdherence>.from(state.adherenceByClient)..remove(cacheKey);
+    state = state.copyWith(adherenceByClient: Map.unmodifiable(remaining));
     try {
       final adherence = await _service.getAdherence(
         clientUserId: clientUserId,
         days: days,
+        relationshipId:relationshipId,
       );
+      if (!_current(epoch)) return null;
       final next =
           Map<String, CoachTaskAdherence>.from(state.adherenceByClient)
-            ..[clientUserId] = adherence;
+            ..[cacheKey] = adherence;
       state = state.copyWith(adherenceByClient: Map.unmodifiable(next));
       return adherence;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return null;
       _fail(_databaseMessage(error));
       return null;
     } catch (_) {
+      if (!_current(epoch)) return null;
       _fail('No se pudo calcular la adherencia.');
       return null;
     }
   }
 
   Future<bool> archiveTask(CoachAssignedTask task) async {
+    final epoch = _epoch;
     if (!task.isCoach(ref.read(appIdentityProvider).userId) || state.busy) {
       return false;
     }
@@ -305,23 +347,28 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
     );
     try {
       await _service.archiveTask(task.id);
+      if (!_current(epoch)) return false;
       state = state.copyWith(
         operation: CoachTaskOperation.idle,
         message: 'Tarea archivada.',
         isError: false,
       );
       await refresh(clientUserId: task.clientUserId);
+      if (!_current(epoch)) return false;
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (_) {
+      if (!_current(epoch)) return false;
       _fail('No se pudo archivar la tarea.');
       return false;
     }
   }
 
   void clearClient(String clientUserId) {
+    _epoch++;
     final removedTaskIds = state.tasks
         .where((task) => task.clientUserId == clientUserId)
         .map((task) => task.id)
@@ -348,6 +395,7 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
       occurrences: List.unmodifiable(occurrences),
       commentsByTask: Map.unmodifiable(comments),
       adherenceByClient: Map.unmodifiable(adherence),
+      operation: CoachTaskOperation.idle,
     );
   }
 
@@ -362,7 +410,8 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
     required List<CoachTaskOccurrence> occurrences,
     required String? currentUserId,
   }) async {
-    if (currentUserId == null) return;
+    final epoch = _epoch;
+    if (currentUserId == null || ref.read(appIdentityProvider).userId != currentUserId) return;
     final own = tasks
         .where((task) => task.clientUserId == currentUserId)
         .toList(growable: false);
@@ -372,6 +421,7 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
     final localTasks = repository.getTasks(includeArchived: true);
 
     for (final task in own) {
+      if (!_current(epoch)) return;
       HabitTask? existing;
       for (final local in localTasks) {
         if (local.source == HabitTaskSource.coach &&
@@ -385,9 +435,11 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
         reminderEnabled: existing?.reminderEnabled ?? false,
       );
       await repository.saveTask(localTask);
+      if (!_current(epoch)) return;
 
       for (final occurrence
           in occurrences.where((item) => item.taskId == task.id)) {
+        if (!_current(epoch)) return;
         await repository.saveCompletion(
           HabitTaskCompletion(
             id: 'coach::${occurrence.id}',
@@ -409,15 +461,11 @@ class CoachTaskNotifier extends Notifier<CoachTaskState> {
       }
     }
 
-    ref.read(habitTasksProvider.notifier).refresh();
+    if (_current(epoch)) ref.read(habitTasksProvider.notifier).refresh();
   }
 
   void _fail(String message) {
-    state = state.copyWith(
-      operation: CoachTaskOperation.idle,
-      message: message,
-      isError: true,
-    );
+    state = CoachTaskState(message: message, isError: true);
   }
 
   String _databaseMessage(PostgrestException error) {

@@ -1,406 +1,145 @@
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/features/coach/application/coach_client_provider.dart';
+import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:gym_tracker/features/coach/presentation/pages/coach_client_progress_page.dart';
 import 'package:gym_tracker/features/coach/presentation/pages/coach_checkins_page.dart';
 import 'package:gym_tracker/features/coach/presentation/pages/coach_program_assignments_page.dart';
 import 'package:gym_tracker/features/coach/presentation/pages/coach_tasks_page.dart';
-import 'package:core/features/identity/application/app_identity_provider.dart';
+import 'package:gym_tracker/features/coach/presentation/pages/coach_measurement_page.dart';
 import 'package:gym_tracker/features/nutrition/presentation/pages/coach_nutrition_guidance_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class CoachClientDetailPage extends ConsumerWidget {
+/// One compact relationship workspace. All data pages still authorize via RPC.
+class CoachClientDetailPage extends ConsumerStatefulWidget {
   final String relationshipId;
-
-  const CoachClientDetailPage({
-    super.key,
-    required this.relationshipId,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(coachClientProvider);
-    final userId = ref.watch(appIdentityProvider).userId;
-
-    CoachClientRelationship? relationship;
-    for (final item in state.relationships) {
-      if (item.id == relationshipId) {
-        relationship = item;
-        break;
-      }
-    }
-
-    if (relationship == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Cliente')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.link_off_rounded, size: 42),
-                const SizedBox(height: 12),
-                const Text(
-                  'La relación ya no está disponible en esta sesión.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => ref
-                      .read(coachClientProvider.notifier)
-                      .refreshRelationships(),
-                  child: const Text('Actualizar'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    final asCoach = relationship.isCoach(userId);
-    final counterpart = relationship.counterpartDisplayName?.trim();
-    final displayName = counterpart?.isNotEmpty == true
-        ? counterpart!
-        : (asCoach ? 'Cliente vinculado' : 'Entrenador vinculado');
-
-    return Scaffold(
-      appBar: AppBar(title: Text(displayName)),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 820),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
-              children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 30,
-                          child: Icon(
-                            asCoach
-                                ? Icons.person_outline
-                                : Icons.sports_outlined,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                displayName,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(fontWeight: FontWeight.w800),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                asCoach
-                                    ? 'Relación como entrenador'
-                                    : 'Relación como cliente',
-                              ),
-                            ],
-                          ),
-                        ),
-                        Chip(label: Text(_statusLabel(relationship.status))),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _Section(
-                  title: 'Permisos vigentes',
-                  child: relationship.permissions.isEmpty
-                      ? const Text('No hay permisos de datos concedidos.')
-                      : Column(
-                          children: [
-                            for (final permission
-                                in CoachPermission.values)
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: Icon(
-                                  relationship.permissions
-                                          .contains(permission)
-                                      ? Icons.check_circle_outline
-                                      : Icons.block_outlined,
-                                ),
-                                title: Text(_permissionLabel(permission)),
-                                subtitle: Text(
-                                  relationship.permissions
-                                          .contains(permission)
-                                      ? 'Permitido'
-                                      : 'No permitido',
-                                ),
-                              ),
-                          ],
-                        ),
-                ),
-                const SizedBox(height: 20),
-                _Section(
-                  title: asCoach ? 'Cliente' : 'Entrenador',
-                  child: Column(
-                    children: [
-                      _CapabilityTile(
-                        icon: Icons.fitness_center_outlined,
-                        title: 'Programas asignados',
-                        subtitle: asCoach
-                            ? relationship.allows(
-                                    CoachPermission.assignPrograms,
-                                  )
-                                ? 'Enviar una copia versionada de un programa local.'
-                                : 'El cliente no concedió permiso para asignar programas.'
-                            : 'Revisar, aceptar e instalar programas recibidos.',
-                        enabled: !asCoach ||
-                            relationship.allows(
-                              CoachPermission.assignPrograms,
-                            ),
-                        onTap: !asCoach ||
-                                relationship.allows(
-                                  CoachPermission.assignPrograms,
-                                )
-                            ? () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        CoachProgramAssignmentsPage(
-                                      clientUserId:
-                                          relationship!.clientUserId,
-                                      clientDisplayName: displayName,
-                                    ),
-                                  ),
-                                )
-                            : null,
-                      ),
-                      const Divider(height: 1),
-                      _CapabilityTile(
-                        icon: Icons.insights_outlined,
-                        title: 'Progreso compartido',
-                        subtitle: asCoach
-                            ? relationship.allows(
-                                    CoachPermission.viewProgress,
-                                  )
-                                ? 'Ver frecuencia, minutos, volumen, RIR y resúmenes permitidos.'
-                                : 'El cliente no compartió progreso.'
-                            : 'Revisa la misma vista resumida que puede consultar tu entrenador.',
-                        enabled: !asCoach ||
-                            relationship.allows(
-                              CoachPermission.viewProgress,
-                            ),
-                        onTap: !asCoach ||
-                                relationship.allows(
-                                  CoachPermission.viewProgress,
-                                )
-                            ? () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        CoachClientProgressPage(
-                                      clientUserId:
-                                          relationship!.clientUserId,
-                                      clientDisplayName: displayName,
-                                    ),
-                                  ),
-                                )
-                            : null,
-                      ),
-                      const Divider(height: 1),
-                      _CapabilityTile(
-                        icon: Icons.task_alt_outlined,
-                        title: 'Tareas asignadas',
-                        subtitle: asCoach
-                            ? relationship.allows(
-                                    CoachPermission.assignTasks,
-                                  )
-                                ? 'Asignar tareas, revisar adherencia y comentarios.'
-                                : 'El cliente no concedió permiso para asignar tareas.'
-                            : 'Completar tareas, revisar historial y activar recordatorios locales.',
-                        enabled: !asCoach ||
-                            relationship.allows(
-                              CoachPermission.assignTasks,
-                            ),
-                        onTap: !asCoach ||
-                                relationship.allows(
-                                  CoachPermission.assignTasks,
-                                )
-                            ? () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => CoachTasksPage(
-                                      clientUserId:
-                                          relationship!.clientUserId,
-                                      clientDisplayName: displayName,
-                                      canAssign: asCoach &&
-                                          relationship.allows(
-                                            CoachPermission.assignTasks,
-                                          ),
-                                      canComment: !asCoach ||
-                                          relationship.allows(
-                                            CoachPermission.comment,
-                                          ),
-                                    ),
-                                  ),
-                                )
-                            : null,
-                      ),
-                      const Divider(height: 1),
-                      _CapabilityTile(
-                        icon: Icons.fact_check_outlined,
-                        title: 'Check-ins',
-                        subtitle: relationship.allows(CoachPermission.viewCheckins)
-                            ? (asCoach
-                                ? 'Revisar energía/recuperación percibidas y comentar.'
-                                : 'Registrar un check-in breve y compartirlo con tu entrenador.')
-                            : 'Sin permiso para compartir check-ins.',
-                        enabled: relationship.allows(CoachPermission.viewCheckins),
-                        onTap: relationship.allows(CoachPermission.viewCheckins)
-                            ? () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => CoachCheckinsPage(
-                                      relationshipId: relationship!.id,
-                                      clientUserId: relationship.clientUserId,
-                                      clientDisplayName: displayName,
-                                      isClient: !asCoach,
-                                      canComment: asCoach &&
-                                          relationship.allows(CoachPermission.comment),
-                                    ),
-                                  ),
-                                )
-                            : null,
-                      ),
-                      const Divider(height: 1),
-                      _CapabilityTile(
-                        icon: Icons.restaurant_menu_outlined,
-                        title: 'Orientación alimentaria',
-                        subtitle: relationship.allows(
-                                CoachPermission.viewNutrition)
-                            ? (asCoach
-                                ? 'Crear guías no clínicas versionadas y revisar historial.'
-                                : 'Revisar la guía compartida y sus versiones.')
-                            : 'Sin permiso para compartir alimentación.',
-                        enabled: relationship.allows(
-                          CoachPermission.viewNutrition,
-                        ),
-                        onTap: relationship.allows(
-                                CoachPermission.viewNutrition)
-                            ? () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        CoachNutritionGuidancePage(
-                                      clientUserId:
-                                          relationship!.clientUserId,
-                                      clientDisplayName: displayName,
-                                      canEdit: asCoach,
-                                    ),
-                                  ),
-                                )
-                            : null,
-                      ),
-                      const Divider(height: 1),
-                      _CapabilityTile(
-                        icon: Icons.monitor_weight_outlined,
-                        title: 'Medidas',
-                        subtitle: relationship.allows(
-                                CoachPermission.viewMeasurements)
-                            ? 'Permiso concedido; lectura remota aún no activada.'
-                            : 'Sin permiso.',
-                        enabled: false,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Este detalle no consulta datos de entrenamiento de otros usuarios '
-                  'hasta que cada módulo tenga su propio contrato cloud y RLS. '
-                  'La relación por sí sola no permite acceder a datos no autorizados.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  const CoachClientDetailPage({super.key,required this.relationshipId});
+  @override ConsumerState<CoachClientDetailPage> createState()=>_CoachClientDetailPageState();
 }
-
-class _Section extends StatelessWidget {
-  final String title;
-  final Widget child;
-
-  const _Section({
-    required this.title,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 10),
-            child,
+class _CoachClientDetailPageState extends ConsumerState<CoachClientDetailPage> with WidgetsBindingObserver {
+  late final String? _viewerId;
+  @override void initState(){
+    super.initState();
+    _viewerId=ref.read(appIdentityProvider).userId;
+    WidgetsBinding.instance.addObserver(this);
+  }
+  @override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}
+  @override void didChangeAppLifecycleState(AppLifecycleState state){
+    if(state==AppLifecycleState.resumed&&mounted)_refresh();
+  }
+  Future<void> _refresh() async {
+    if(ref.read(appIdentityProvider).userId==_viewerId)
+      await ref.read(coachClientProvider.notifier).refreshRelationships();
+  }
+  Future<void> _open(Widget page) async {
+    await Navigator.of(context).push<void>(MaterialPageRoute(builder:(_)=>page));
+    if(mounted)await _refresh();
+  }
+  @override Widget build(BuildContext context){
+    final identity=ref.watch(appIdentityProvider);
+    final state=ref.watch(coachClientProvider);
+    CoachClientRelationship? current;
+    for(final item in state.relationships){
+      if(item.id==widget.relationshipId&&(item.isClient(identity.userId)||item.isCoach(identity.userId))){current=item;break;}
+    }
+    if(!identity.signedIn||identity.userId==null||identity.userId!=_viewerId||current==null){
+      return Scaffold(appBar:AppBar(title:const Text('Mi Coach')),body:Center(child:Padding(
+        padding:const EdgeInsets.all(24),child:Column(mainAxisSize:MainAxisSize.min,children:[
+          if(state.busy)const CircularProgressIndicator() else ...[
+            const Text('La relación no está disponible en esta sesión.',textAlign:TextAlign.center),
+            TextButton(onPressed:_refresh,child:const Text('Actualizar')),
           ],
-        ),
-      ),
-    );
+        ]))));
+    }
+    final relationship=current;
+    final userId=identity.userId!;
+    final asCoach=relationship.isCoach(userId);
+    final name=relationship.counterpartDisplayName?.trim();
+    final displayName=name!=null&&name.isNotEmpty?name:(asCoach?'Cliente vinculado':'Entrenador vinculado');
+    bool can(CoachPermission p)=>relationship.allows(p);
+    return Scaffold(appBar:AppBar(title:Text(asCoach?'Cliente':'Mi entrenador'),actions:[
+      IconButton(tooltip:'Actualizar',onPressed:state.busy?null:_refresh,icon:const Icon(Icons.refresh)),
+    ]),body:SafeArea(child:Center(child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:820),
+      child:RefreshIndicator(onRefresh:_refresh,child:ListView(physics:const AlwaysScrollableScrollPhysics(),
+        padding:const EdgeInsets.fromLTRB(20,20,20,80),children:[
+          Card(child:Padding(padding:const EdgeInsets.all(16),child:Row(children:[
+            CircleAvatar(radius:27,child:Icon(asCoach?Icons.person_outline:Icons.sports_outlined)),
+            const SizedBox(width:12),
+            Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Text(displayName,style:Theme.of(context).textTheme.titleLarge),
+              Text(switch(relationship.status){CoachRelationshipStatus.active=>'Relación activa',CoachRelationshipStatus.paused=>'Relación pausada',CoachRelationshipStatus.revoked=>'Acceso revocado'}),
+            ])),
+          ]))),
+          const SizedBox(height:20),
+          Text(asCoach?'Herramientas del cliente':'Tu plan y seguimiento',style:Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height:10),
+          Card(child:Column(children:[
+            _tile(Icons.fitness_center_outlined,'Programas asignados',asCoach?'Asignar y revisar programas':'Recibidos, revisiones e instalación',
+              !asCoach||can(CoachPermission.assignPrograms),()=>_open(CoachProgramAssignmentsPage(clientUserId:relationship.clientUserId,clientDisplayName:displayName,
+                relationshipId:relationship.id,canAssign:asCoach&&can(CoachPermission.assignPrograms)))),
+            const Divider(height:1),
+            _tile(Icons.task_alt_outlined,'Tareas',asCoach?'Asignaciones y adherencia':'Pendientes, historial y comentarios',
+              !asCoach||can(CoachPermission.assignTasks),()=>_open(CoachTasksPage(clientUserId:relationship.clientUserId,clientDisplayName:displayName,
+                relationshipId:relationship.id,canAssign:asCoach&&can(CoachPermission.assignTasks),canComment:relationship.isActive&&(!asCoach||can(CoachPermission.comment))))),
+            const Divider(height:1),
+            _tile(Icons.fact_check_outlined,'Check-ins','Energía y recuperación percibidas',!asCoach||can(CoachPermission.viewCheckins),
+              ()=>_open(CoachCheckinsPage(relationshipId:relationship.id,clientUserId:relationship.clientUserId,clientDisplayName:displayName,
+                isClient:!asCoach,canCreate:!asCoach&&can(CoachPermission.viewCheckins),canComment:relationship.isActive&&(!asCoach||can(CoachPermission.comment))))),
+            const Divider(height:1),
+            _tile(Icons.restaurant_menu_outlined,'Orientación alimentaria','Guías y versiones compartidas',!asCoach||can(CoachPermission.viewNutrition),
+              ()=>_open(CoachNutritionGuidancePage(clientUserId:relationship.clientUserId,clientDisplayName:displayName,relationshipId:relationship.id,canEdit:asCoach&&can(CoachPermission.viewNutrition)))),
+            const Divider(height:1),
+            _tile(Icons.insights_outlined,'Progreso compartido','Resumen sincronizado y sugerencias STK',!asCoach||can(CoachPermission.viewProgress),
+              ()=>_open(CoachClientProgressPage(clientUserId:relationship.clientUserId,clientDisplayName:displayName))),
+            const Divider(height:1),
+            _tile(Icons.monitor_weight_outlined,'Medidas compartidas',asCoach?'Solo campos autorizados':'Elige qué campos compartir o retirar',can(CoachPermission.viewMeasurements),
+              ()=>_open(CoachMeasurementPage(relationshipId:relationship.id,clientUserId:relationship.clientUserId,viewerUserId:userId))),
+          ])),
+          const SizedBox(height:16),
+          Card(child:ExpansionTile(leading:const Icon(Icons.shield_outlined),title:const Text('Permisos y privacidad'),
+            subtitle:Text('${relationship.isActive?relationship.permissions.length:0} permisos vigentes'),
+            children:[
+              for(final permission in CoachPermission.values)ListTile(
+                dense:true,title:Text(_permissionLabel(permission)),
+                leading:Icon(can(permission)?Icons.check_circle_outline:Icons.lock_outline),
+                subtitle:Text(can(permission)?'Permitido':'No permitido')),
+              if(!asCoach&&relationship.isActive)Padding(padding:const EdgeInsets.all(12),
+                child:FilledButton.tonal(onPressed:state.busy?null:()=>_edit(relationship),child:const Text('Editar permisos'))),
+              if(relationship.isActive)Padding(padding:const EdgeInsets.all(12),
+                child:TextButton(onPressed:state.busy?null:()=>_revoke(relationship),child:const Text('Revocar relación'))),
+            ],
+          )),
+          const SizedBox(height:12),
+          Text('Los permisos los controla el cliente. Los programas y registros personales no se borran al desvincular.',style:Theme.of(context).textTheme.bodySmall),
+        ]))))));
+  }
+  Widget _tile(IconData icon,String title,String subtitle,bool allowed,VoidCallback open)=>ListTile(
+    enabled:allowed,leading:Icon(icon),title:Text(title),subtitle:Text(allowed?subtitle:'Sin permiso vigente'),
+    trailing:Icon(allowed?Icons.chevron_right:Icons.lock_outline),onTap:allowed?open:null);
+  Future<void> _edit(CoachClientRelationship relationship)async{
+    final selected=relationship.permissions.toSet();
+    final result=await showDialog<bool>(context:context,builder:(context)=>StatefulBuilder(builder:(context,update)=>AlertDialog(
+      title:const Text('Qué puede ver mi entrenador'),
+      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        for(final p in CoachPermission.values)CheckboxListTile(title:Text(_permissionLabel(p)),value:selected.contains(p),
+          onChanged:(value)=>update((){if(value==true){selected.add(p);}else{selected.remove(p);}})),
+      ])),actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancelar')),
+        FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Guardar permisos'))])));
+    if(!mounted||result!=true||ref.read(appIdentityProvider).userId!=_viewerId)return;
+    await ref.read(coachClientProvider.notifier).setPermissions(relationshipId:relationship.id,permissions:selected);
+  }
+  Future<void> _revoke(CoachClientRelationship relationship)async{
+    final result=await showDialog<bool>(context:context,builder:(context)=>AlertDialog(
+      title:const Text('Revocar acceso'),content:const Text('El entrenador perderá acceso a los datos de esta relación. Se conserva el historial personal.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(context,false),child:const Text('Cancelar')),
+        FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('Revocar'))]));
+    if(!mounted||result!=true||ref.read(appIdentityProvider).userId!=_viewerId)return;
+    await ref.read(coachClientProvider.notifier).revokeRelationship(relationship.id);
   }
 }
-
-class _CapabilityTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  const _CapabilityTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.enabled,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      enabled: enabled,
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: enabled ? const Icon(Icons.chevron_right) : null,
-      onTap: enabled ? onTap : null,
-    );
-  }
-}
-
-String _permissionLabel(CoachPermission permission) => switch (permission) {
-      CoachPermission.viewWorkouts => 'Ver entrenamientos',
-      CoachPermission.viewProgress => 'Ver progreso',
-      CoachPermission.viewMeasurements => 'Ver medidas',
-      CoachPermission.assignPrograms => 'Asignar programas',
-      CoachPermission.assignTasks => 'Asignar tareas',
-      CoachPermission.viewCheckins => 'Ver check-ins',
-      CoachPermission.viewNutrition => 'Ver alimentación',
-      CoachPermission.comment => 'Comentar',
-    };
-
-String _statusLabel(CoachRelationshipStatus status) => switch (status) {
-      CoachRelationshipStatus.active => 'Activa',
-      CoachRelationshipStatus.paused => 'Pausada',
-      CoachRelationshipStatus.revoked => 'Revocada',
-    };
+String _permissionLabel(CoachPermission p)=>switch(p){
+  CoachPermission.viewWorkouts=>'Ver entrenamientos',CoachPermission.viewProgress=>'Ver progreso',
+  CoachPermission.viewMeasurements=>'Ver medidas',CoachPermission.assignPrograms=>'Asignar programas',
+  CoachPermission.assignTasks=>'Asignar tareas',CoachPermission.viewCheckins=>'Ver check-ins',
+  CoachPermission.viewNutrition=>'Ver alimentación',CoachPermission.comment=>'Comentar',
+};

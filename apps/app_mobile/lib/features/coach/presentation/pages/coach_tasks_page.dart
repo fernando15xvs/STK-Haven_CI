@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class CoachTasksPage extends ConsumerStatefulWidget {
   final String clientUserId;
   final String clientDisplayName;
+  final String? relationshipId;
   final bool canAssign;
   final bool canComment;
 
@@ -21,14 +22,19 @@ class CoachTasksPage extends ConsumerStatefulWidget {
     required this.clientDisplayName,
     required this.canAssign,
     required this.canComment,
+    this.relationshipId,
   });
 
   @override
   ConsumerState<CoachTasksPage> createState() => _CoachTasksPageState();
 }
 
-class _CoachTasksPageState extends ConsumerState<CoachTasksPage> {
+class _CoachTasksPageState extends ConsumerState<CoachTasksPage> with WidgetsBindingObserver {
   bool _requested = false;
+  late final String? _viewerId;
+  @override void initState(){super.initState();_viewerId=ref.read(appIdentityProvider).userId;WidgetsBinding.instance.addObserver(this);}
+  @override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}
+  @override void didChangeAppLifecycleState(AppLifecycleState state){if(mounted&&state==AppLifecycleState.resumed&&ModalRoute.of(context)?.isCurrent==true&&ref.read(appIdentityProvider).userId==_viewerId){_refresh();}}
 
   @override
   void didChangeDependencies() {
@@ -46,7 +52,7 @@ class _CoachTasksPageState extends ConsumerState<CoachTasksPage> {
     if (!mounted) return;
     await ref
         .read(coachTaskProvider.notifier)
-        .loadAdherence(widget.clientUserId);
+        .loadAdherence(widget.clientUserId,relationshipId:widget.relationshipId);
   }
 
   @override
@@ -54,13 +60,12 @@ class _CoachTasksPageState extends ConsumerState<CoachTasksPage> {
     final identity = ref.watch(appIdentityProvider);
     final state = ref.watch(coachTaskProvider);
     final userId = identity.userId;
+    if(!identity.signedIn||userId!=_viewerId)return Scaffold(appBar:AppBar(title:const Text('Tareas')),body:const Center(child:Text('La sesión cambió. Vuelve a Coach.')));
     final tasks = state.tasks
-        .where((task) => task.clientUserId == widget.clientUserId)
+        .where((task) => task.clientUserId == widget.clientUserId && (widget.relationshipId==null||task.relationshipId==widget.relationshipId))
         .toList(growable: false);
-    final asCoach = tasks.isNotEmpty
-        ? tasks.first.isCoach(userId)
-        : userId != widget.clientUserId;
-    final adherence = state.adherenceByClient[widget.clientUserId];
+    final asCoach = userId != widget.clientUserId;
+    final adherence = state.adherenceByClient[widget.relationshipId??widget.clientUserId];
 
     ref.listen(coachTaskProvider, (previous, next) {
       if (next.message == null || next.message == previous?.message) return;
@@ -137,7 +142,7 @@ class _CoachTasksPageState extends ConsumerState<CoachTasksPage> {
                             ref.read(coachTaskProvider.notifier).occurrencesFor(
                                   task.id,
                                 ),
-                        canComment: widget.canComment || task.isClient(userId),
+                        canComment: widget.canComment,
                         busy: state.busy,
                         onComplete: () => _resolve(
                           task,
@@ -240,6 +245,7 @@ class _CoachTasksPageState extends ConsumerState<CoachTasksPage> {
       if (confirmed != true) return;
     }
 
+    if(!mounted||ref.read(appIdentityProvider).userId!=_viewerId)return;
     final success = await ref.read(coachTaskProvider.notifier).resolveOccurrence(
           task: task,
           occurrenceDate: today,
@@ -525,7 +531,7 @@ class _CoachTasksPageState extends ConsumerState<CoachTasksPage> {
     minutesController.dispose();
     instructionsController.dispose();
 
-    if (payload == null || !mounted) return;
+    if (payload == null || !mounted || ref.read(appIdentityProvider).userId!=_viewerId) return;
     await ref.read(coachTaskProvider.notifier).assignTask(
           clientUserId: widget.clientUserId,
           title: payload.title,
@@ -542,13 +548,13 @@ class _CoachTasksPageState extends ConsumerState<CoachTasksPage> {
     if (mounted) {
       await ref
           .read(coachTaskProvider.notifier)
-          .loadAdherence(widget.clientUserId);
+          .loadAdherence(widget.clientUserId,relationshipId:widget.relationshipId);
     }
   }
 
   Future<void> _showComments(CoachAssignedTask task) async {
     await ref.read(coachTaskProvider.notifier).loadComments(task.id);
-    if (!mounted) return;
+    if (!mounted || ref.read(appIdentityProvider).userId!=_viewerId) return;
 
     final controller = TextEditingController();
     await showDialog<void>(
@@ -592,7 +598,7 @@ class _CoachTasksPageState extends ConsumerState<CoachTasksPage> {
                             },
                           ),
                   ),
-                  if (widget.canComment || task.isClient(userId)) ...[
+                  if (widget.canComment) ...[
                     const SizedBox(height: 12),
                     TextField(
                       controller: controller,

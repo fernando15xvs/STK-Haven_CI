@@ -137,11 +137,12 @@ class CoachTaskService {
   Future<CoachTaskAdherence> getAdherence({
     required String clientUserId,
     int days = 30,
+    String? relationshipId,
   }) async {
     final response = await client.rpc(
-      'stk_get_task_adherence',
+      relationshipId==null?'stk_get_task_adherence':'stk_get_coach_relationship_task_adherence',
       params: <String, dynamic>{
-        'p_client_user_id': clientUserId,
+        if(relationshipId==null)'p_client_user_id': clientUserId else 'p_relationship_id':relationshipId,
         'p_days': days,
       },
     );

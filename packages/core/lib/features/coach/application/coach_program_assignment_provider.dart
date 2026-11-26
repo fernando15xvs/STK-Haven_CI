@@ -96,24 +96,32 @@ final coachProgramAssignmentsProvider = NotifierProvider<
 
 class CoachProgramAssignmentsNotifier
     extends Notifier<CoachProgramAssignmentsState> {
-  late final CoachProgramAssignmentService _service;
+  late CoachProgramAssignmentService _service;
+  int _epoch = 0;
+  bool _current(int epoch) => ref.mounted && epoch == _epoch;
 
   @override
   CoachProgramAssignmentsState build() {
+    ref.watch(appIdentityProvider.select((value) => (value.signedIn, value.userId)));
+    _epoch++;
+    ref.onDispose(() => _epoch++);
     _service = ref.watch(coachProgramAssignmentServiceProvider);
     return const CoachProgramAssignmentsState();
   }
 
   Future<bool> refresh() async {
+    final epoch = _epoch;
     if (!_requirePermanentAccount() || state.busy) return false;
 
     state = state.copyWith(
       operation: CoachProgramAssignmentOperation.loading,
+      assignments: const [], clearSelected: true,
       clearMessage: true,
       isError: false,
     );
     try {
       final assignments = await _service.listAssignments();
+      if (!_current(epoch)) return false;
       state = state.copyWith(
         assignments: assignments,
         operation: CoachProgramAssignmentOperation.idle,
@@ -121,9 +129,11 @@ class CoachProgramAssignmentsNotifier
       );
       return true;
     } on PostgrestException {
+      if (!_current(epoch)) return false;
       _fail('Las asignaciones de programas aún no están disponibles.');
       return false;
     } catch (_) {
+      if (!_current(epoch)) return false;
       _fail('No se pudieron cargar los programas asignados.');
       return false;
     }
@@ -134,6 +144,7 @@ class CoachProgramAssignmentsNotifier
     required String programId,
     required DateTime startsOn,
   }) async {
+    final epoch = _epoch;
     if (!_requirePermanentAccount() || state.busy) return null;
 
     TrainingProgram? program;
@@ -157,6 +168,7 @@ class CoachProgramAssignmentsNotifier
         startsOn: startsOn,
       );
     } catch (error) {
+      if (!_current(epoch)) return null;
       _fail(error.toString().replaceFirst('Bad state: ', ''));
       return null;
     }
@@ -172,7 +184,9 @@ class CoachProgramAssignmentsNotifier
         clientUserId: clientUserId,
         programPayload: payload,
       );
+      if (!_current(epoch)) return null;
       final assignments = await _service.listAssignments();
+      if (!_current(epoch)) return null;
       state = state.copyWith(
         assignments: assignments,
         operation: CoachProgramAssignmentOperation.idle,
@@ -181,24 +195,29 @@ class CoachProgramAssignmentsNotifier
       );
       return assignmentId;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return null;
       _fail(_databaseMessage(error));
       return null;
     } catch (_) {
+      if (!_current(epoch)) return null;
       _fail('No se pudo asignar el programa.');
       return null;
     }
   }
 
   Future<CoachProgramAssignment?> openAssignment(String assignmentId) async {
+    final epoch = _epoch;
     if (!_requirePermanentAccount() || state.busy) return null;
     state = state.copyWith(
       operation: CoachProgramAssignmentOperation.opening,
+      clearSelected: true,
       clearMessage: true,
       isError: false,
     );
 
     try {
       final assignment = await _service.getAssignment(assignmentId);
+      if (!_current(epoch)) return null;
       state = state.copyWith(
         selected: assignment,
         operation: CoachProgramAssignmentOperation.idle,
@@ -206,9 +225,11 @@ class CoachProgramAssignmentsNotifier
       );
       return assignment;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return null;
       _fail(_databaseMessage(error));
       return null;
     } catch (_) {
+      if (!_current(epoch)) return null;
       _fail('No se pudo abrir el programa asignado.');
       return null;
     }
@@ -218,6 +239,7 @@ class CoachProgramAssignmentsNotifier
     String assignmentId, {
     bool activate = true,
   }) async {
+    final epoch = _epoch;
     if (!_requirePermanentAccount() || state.busy) return false;
 
     state = state.copyWith(
@@ -228,6 +250,7 @@ class CoachProgramAssignmentsNotifier
 
     try {
       final assignment = await _service.getAssignment(assignmentId);
+      if (!_current(epoch)) return false;
       final userId = ref.read(appIdentityProvider).userId;
       if (!assignment.summary.isClient(userId)) {
         _fail('Solo el cliente asignado puede instalar este programa.');
@@ -235,16 +258,19 @@ class CoachProgramAssignmentsNotifier
       }
 
       await _service.acceptAssignment(assignmentId);
+      if (!_current(epoch)) return false;
       await ref.read(coachProgramInstallerProvider).install(
             assignment,
             activate: activate,
           );
+      if (!_current(epoch)) return false;
 
       ref.invalidate(exerciseListProvider);
       ref.invalidate(routineListProvider);
       ref.invalidate(trainingProgramListProvider);
 
       final assignments = await _service.listAssignments();
+      if (!_current(epoch)) return false;
       state = state.copyWith(
         assignments: assignments,
         selected: assignment,
@@ -256,9 +282,11 @@ class CoachProgramAssignmentsNotifier
       );
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (error) {
+      if (!_current(epoch)) return false;
       _fail(
         'La asignación fue recibida, pero no se pudo instalar localmente: '
         '${error.toString()}',
@@ -270,6 +298,7 @@ class CoachProgramAssignmentsNotifier
   Future<CoachProgramInstallAssessment?> assessAcceptedRevisionInstall(
     String assignmentId,
   ) async {
+    final epoch = _epoch;
     if (!_requirePermanentAccount() || state.busy) return null;
 
     state = state.copyWith(
@@ -282,6 +311,7 @@ class CoachProgramAssignmentsNotifier
       final revisionService =
           ref.read(coachProgramRevisionAcceptanceServiceProvider);
       final revisionState = await revisionService.loadState(assignmentId);
+      if (!_current(epoch)) return null;
       final revisionId = revisionState.acceptedRevisionId;
       final revisionNumber = revisionState.acceptedRevisionNumber;
       if (revisionId == null || revisionNumber == null) {
@@ -293,6 +323,7 @@ class CoachProgramAssignmentsNotifier
         assignmentId: assignmentId,
         revisionId: revisionId,
       );
+      if (!_current(epoch)) return null;
       if (revision.revisionNumber != revisionNumber) {
         _fail('La revisión aceptada cambió; vuelve a intentarlo.');
         return null;
@@ -301,15 +332,18 @@ class CoachProgramAssignmentsNotifier
       final assessment = await ref
           .read(coachProgramInstallerProvider)
           .assessAcceptedRevision(revision);
+      if (!_current(epoch)) return null;
       state = state.copyWith(
         operation: CoachProgramAssignmentOperation.idle,
         isError: false,
       );
       return assessment;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return null;
       _fail(_databaseMessage(error));
       return null;
     } catch (error) {
+      if (!_current(epoch)) return null;
       _fail(
         'No se pudo comprobar la copia local antes de instalar: '
         '${error.toString()}',
@@ -323,6 +357,7 @@ class CoachProgramAssignmentsNotifier
     bool activate = true,
     bool confirmLocalChanges = false,
   }) async {
+    final epoch = _epoch;
     if (!_requirePermanentAccount() || state.busy) return false;
 
     state = state.copyWith(
@@ -335,6 +370,7 @@ class CoachProgramAssignmentsNotifier
       final revisionService =
           ref.read(coachProgramRevisionAcceptanceServiceProvider);
       final revisionState = await revisionService.loadState(assignmentId);
+      if (!_current(epoch)) return false;
       final revisionId = revisionState.acceptedRevisionId;
       final revisionNumber = revisionState.acceptedRevisionNumber;
       if (revisionId == null || revisionNumber == null) {
@@ -346,6 +382,7 @@ class CoachProgramAssignmentsNotifier
         assignmentId: assignmentId,
         revisionId: revisionId,
       );
+      if (!_current(epoch)) return false;
       if (revision.revisionNumber != revisionNumber) {
         _fail('La revisión aceptada cambió; vuelve a intentarlo.');
         return false;
@@ -356,6 +393,7 @@ class CoachProgramAssignmentsNotifier
             activate: activate,
             confirmLocalChanges: confirmLocalChanges,
           );
+      if (!_current(epoch)) return false;
 
       ref.invalidate(exerciseListProvider);
       ref.invalidate(routineListProvider);
@@ -377,14 +415,17 @@ class CoachProgramAssignmentsNotifier
       );
       return true;
     } on CoachProgramLocalChangesException {
+      if (!_current(epoch)) return false;
       _fail(
         'La copia local tiene cambios. Revísalos y confirma antes de instalar.',
       );
       return false;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (error) {
+      if (!_current(epoch)) return false;
       _fail(
         'La revisión sigue aceptada, pero no se pudo instalar localmente: '
         '${error.toString()}',
@@ -394,6 +435,7 @@ class CoachProgramAssignmentsNotifier
   }
 
   Future<bool> archiveAssignment(String assignmentId) async {
+    final epoch = _epoch;
     if (!_requirePermanentAccount() || state.busy) return false;
     state = state.copyWith(
       operation: CoachProgramAssignmentOperation.archiving,
@@ -402,7 +444,9 @@ class CoachProgramAssignmentsNotifier
     );
     try {
       await _service.archiveAssignment(assignmentId);
+      if (!_current(epoch)) return false;
       final assignments = await _service.listAssignments();
+      if (!_current(epoch)) return false;
       state = state.copyWith(
         assignments: assignments,
         operation: CoachProgramAssignmentOperation.idle,
@@ -412,9 +456,11 @@ class CoachProgramAssignmentsNotifier
       );
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (_) {
+      if (!_current(epoch)) return false;
       _fail('No se pudo archivar el programa.');
       return false;
     }
@@ -427,11 +473,7 @@ class CoachProgramAssignmentsNotifier
   }
 
   void _fail(String message) {
-    state = state.copyWith(
-      operation: CoachProgramAssignmentOperation.idle,
-      message: message,
-      isError: true,
-    );
+    state = CoachProgramAssignmentsState(message: message, isError: true);
   }
 
   String _databaseMessage(PostgrestException error) {

@@ -3,6 +3,10 @@ import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/coach/application/coach_progress_provider.dart';
 import 'package:core/features/coach/application/coach_task_provider.dart';
+import 'package:core/features/coach/application/coach_checkin_provider.dart';
+import 'package:core/features/coach/application/coach_program_assignment_provider.dart';
+import 'package:core/features/coach_pro/application/coach_pro_client_detail_provider.dart';
+import 'package:core/features/coach/application/coach_measurement_provider.dart';
 import 'package:core/features/nutrition/application/nutrition_guidance_provider.dart';
 import 'package:core/features/coach/data/coach_client_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -98,6 +102,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
     }
     if (state.busy) return false;
 
+    final previous = state.relationships;
     final generation = ++_generation;
     state = state.copyWith(
       operation: CoachClientOperation.loading,
@@ -109,6 +114,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
     try {
       final relationships = await _service.getRelationships();
       if (!_current(generation)) return false;
+      if (_permissionsChanged(previous, relationships)) _invalidateShared();
       state = state.copyWith(
         relationships: relationships,
         operation: CoachClientOperation.idle,
@@ -117,12 +123,14 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
       return true;
     } on PostgrestException {
       if (!_current(generation)) return false;
+      _invalidateShared();
       _fail(
         'Coach/Client todavía no está disponible en el backend activo.',
       );
       return false;
     } catch (_) {
       if (!_current(generation)) return false;
+      _invalidateShared();
       _fail('No se pudieron cargar las relaciones de entrenador.');
       return false;
     }
@@ -225,6 +233,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
     try {
       await _service.acceptInvitation(code);
       if (!_current(generation)) return false;
+      _invalidateShared();
       final relationships = await _service.getRelationships();
       if (!_current(generation)) return false;
       state = state.copyWith(
@@ -276,6 +285,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
             .read(nutritionGuidanceProvider.notifier)
             .clearForClient(previous.clientUserId);
       }
+      _invalidateShared();
       final relationships = await _service.getRelationships();
       if (!_current(generation)) return false;
       state = state.copyWith(
@@ -320,6 +330,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
             .read(nutritionGuidanceProvider.notifier)
             .clearForClient(previous.clientUserId);
       }
+      _invalidateShared();
       final relationships = await _service.getRelationships();
       if (!_current(generation)) return false;
       state = state.copyWith(
@@ -338,6 +349,27 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
       _fail('No se pudo revocar la relación.');
       return false;
     }
+  }
+
+  bool _permissionsChanged(List<CoachClientRelationship> before, List<CoachClientRelationship> after) {
+    if (before.length != after.length) return true;
+    for (final old in before) {
+      final match = after.where((item) => item.id == old.id);
+      if (match.length != 1 || match.single.status != old.status ||
+          match.single.permissions.length != old.permissions.length ||
+          !match.single.permissions.containsAll(old.permissions)) return true;
+    }
+    return false;
+  }
+  void _invalidateShared() {
+    ref.invalidate(coachProgressProvider);
+    ref.invalidate(coachTaskProvider);
+    ref.invalidate(coachCheckinProvider);
+    ref.invalidate(coachProgramAssignmentsProvider);
+    ref.invalidate(nutritionGuidanceProvider);
+    ref.invalidate(nutritionGuidanceDetailProvider);
+    ref.invalidate(coachProClientDetailProvider);
+    ref.invalidate(coachMeasurementProvider);
   }
 
   CoachClientRelationship? _relationshipById(String id) {
@@ -393,6 +425,12 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
 
   String _databaseMessage(PostgrestException error) {
     final raw = error.message.toLowerCase();
+    if (raw.contains('coach pro entitlement required')) {
+      return 'Coach Pro necesita una autorización de desarrollo vigente.';
+    }
+    if (raw.contains('client limit') || raw.contains('client capacity')) {
+      return 'Se alcanzó el límite de clientes del plan.';
+    }
     if (raw.contains('coach capability required')) {
       return 'La cuenta todavía no tiene capacidad de entrenador sincronizada.';
     }

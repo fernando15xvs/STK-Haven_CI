@@ -59,33 +59,43 @@ final nutritionGuidanceProvider =
 );
 
 class NutritionGuidanceNotifier extends Notifier<NutritionGuidanceState> {
-  late final NutritionGuidanceService _service;
+  late NutritionGuidanceService _service;
+  int _epoch = 0;
+  bool _current(int epoch) => ref.mounted && epoch == _epoch;
 
   @override
   NutritionGuidanceState build() {
+    ref.watch(appIdentityProvider.select((value) => (value.signedIn, value.userId)));
+    _epoch++;
+    ref.onDispose(() => _epoch++);
     _service = ref.watch(nutritionGuidanceServiceProvider);
     return const NutritionGuidanceState();
   }
 
   Future<void> refresh() async {
+    final epoch = _epoch;
     if (!ref.read(appIdentityProvider).signedIn || state.busy) return;
 
     state = state.copyWith(
       operation: NutritionGuidanceOperation.loading,
+      summaries: const [], openedPlans: const {},
       clearMessage: true,
       isError: false,
     );
 
     try {
       final summaries = await _service.listGuidance();
+      if (!_current(epoch)) return;
       state = state.copyWith(
         summaries: List.unmodifiable(summaries),
         operation: NutritionGuidanceOperation.idle,
         isError: false,
       );
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return;
       _fail(_databaseMessage(error));
     } catch (_) {
+      if (!_current(epoch)) return;
       _fail('No se pudo cargar la orientación alimentaria.');
     }
   }
@@ -94,16 +104,19 @@ class NutritionGuidanceNotifier extends Notifier<NutritionGuidanceState> {
     String planId, {
     int? version,
   }) async {
+    final epoch = _epoch;
     if (!ref.read(appIdentityProvider).signedIn || state.busy) return null;
 
     state = state.copyWith(
       operation: NutritionGuidanceOperation.opening,
+      openedPlans: const {},
       clearMessage: true,
       isError: false,
     );
 
     try {
       final plan = await _service.getGuidance(planId, version: version);
+      if (!_current(epoch)) return null;
       final key = _cacheKey(planId, plan.version);
       final next = Map<String, NutritionGuidancePlan>.from(state.openedPlans)
         ..[key] = plan;
@@ -114,9 +127,11 @@ class NutritionGuidanceNotifier extends Notifier<NutritionGuidanceState> {
       );
       return plan;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return null;
       _fail(_databaseMessage(error));
       return null;
     } catch (_) {
+      if (!_current(epoch)) return null;
       _fail('No se pudo abrir esta orientación alimentaria.');
       return null;
     }
@@ -131,6 +146,7 @@ class NutritionGuidanceNotifier extends Notifier<NutritionGuidanceState> {
     String generalNotes = '',
     List<NutritionGuidanceMeal> meals = const <NutritionGuidanceMeal>[],
   }) async {
+    final epoch = _epoch;
     if (!ref.read(appIdentityProvider).signedIn || state.busy) return null;
 
     state = state.copyWith(
@@ -156,6 +172,7 @@ class NutritionGuidanceNotifier extends Notifier<NutritionGuidanceState> {
         planId: planId,
         payload: payload,
       );
+      if (!_current(epoch)) return null;
 
       state = state.copyWith(
         operation: NutritionGuidanceOperation.idle,
@@ -165,17 +182,21 @@ class NutritionGuidanceNotifier extends Notifier<NutritionGuidanceState> {
         isError: false,
       );
       await refresh();
+      if (!_current(epoch)) return null;
       return id;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return null;
       _fail(_databaseMessage(error));
       return null;
     } catch (_) {
+      if (!_current(epoch)) return null;
       _fail('No se pudo guardar la orientación alimentaria.');
       return null;
     }
   }
 
   Future<bool> archive(String planId) async {
+    final epoch = _epoch;
     if (!ref.read(appIdentityProvider).signedIn || state.busy) return false;
 
     state = state.copyWith(
@@ -186,23 +207,28 @@ class NutritionGuidanceNotifier extends Notifier<NutritionGuidanceState> {
 
     try {
       await _service.archiveGuidance(planId);
+      if (!_current(epoch)) return false;
       state = state.copyWith(
         operation: NutritionGuidanceOperation.idle,
         message: 'Orientación archivada.',
         isError: false,
       );
       await refresh();
+      if (!_current(epoch)) return false;
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(epoch)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (_) {
+      if (!_current(epoch)) return false;
       _fail('No se pudo archivar la orientación alimentaria.');
       return false;
     }
   }
 
   void clearForClient(String clientUserId) {
+    _epoch++;
     final summaries = state.summaries
         .where((item) => item.clientUserId != clientUserId)
         .toList(growable: false);
@@ -215,15 +241,12 @@ class NutritionGuidanceNotifier extends Notifier<NutritionGuidanceState> {
     state = state.copyWith(
       summaries: List.unmodifiable(summaries),
       openedPlans: Map.unmodifiable(opened),
+      operation: NutritionGuidanceOperation.idle,
     );
   }
 
   void _fail(String message) {
-    state = state.copyWith(
-      operation: NutritionGuidanceOperation.idle,
-      message: message,
-      isError: true,
-    );
+    state = NutritionGuidanceState(message: message, isError: true);
   }
 
   String _databaseMessage(PostgrestException error) {
@@ -242,3 +265,14 @@ class NutritionGuidanceNotifier extends Notifier<NutritionGuidanceState> {
 
   String _cacheKey(String planId, int version) => '$planId::$version';
 }
+
+typedef NutritionGuidanceDetailQuery = ({String userId, String planId, int version});
+/// Sensitive detail is refetched and scoped to the viewing identity, not a
+/// retained snapshot passed from a previous route.
+final nutritionGuidanceDetailProvider = FutureProvider.autoDispose.family<NutritionGuidancePlan?, NutritionGuidanceDetailQuery>((ref,query) async {
+  final actor = ref.watch(appIdentityProvider.select((value)=>(value.signedIn,value.userId)));
+  if (!actor.$1 || actor.$2 != query.userId) return null;
+  final value = await ref.watch(nutritionGuidanceServiceProvider).getGuidance(query.planId,version:query.version);
+  if (value.id != query.planId || value.version != query.version) throw const FormatException('Guidance identity mismatch');
+  return value;
+});

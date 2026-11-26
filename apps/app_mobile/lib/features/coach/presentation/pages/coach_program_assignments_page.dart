@@ -11,11 +11,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class CoachProgramAssignmentsPage extends ConsumerStatefulWidget {
   final String? clientUserId;
   final String? clientDisplayName;
+  final String? relationshipId;
+  final bool canAssign;
 
   const CoachProgramAssignmentsPage({
     super.key,
     this.clientUserId,
     this.clientDisplayName,
+    this.relationshipId,
+    this.canAssign = false,
   });
 
   @override
@@ -24,8 +28,12 @@ class CoachProgramAssignmentsPage extends ConsumerStatefulWidget {
 }
 
 class _CoachProgramAssignmentsPageState
-    extends ConsumerState<CoachProgramAssignmentsPage> {
+    extends ConsumerState<CoachProgramAssignmentsPage> with WidgetsBindingObserver {
   bool _requestedInitialLoad = false;
+  late final String? _viewerId;
+  @override void initState(){super.initState();_viewerId=ref.read(appIdentityProvider).userId;WidgetsBinding.instance.addObserver(this);}
+  @override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}
+  @override void didChangeAppLifecycleState(AppLifecycleState state){if(mounted&&state==AppLifecycleState.resumed&&ModalRoute.of(context)?.isCurrent==true&&ref.read(appIdentityProvider).userId==_viewerId){ref.read(coachProgramAssignmentsProvider.notifier).refresh();}}
 
   void _scheduleRefresh(bool signedIn) {
     if (!signedIn || _requestedInitialLoad) return;
@@ -41,6 +49,7 @@ class _CoachProgramAssignmentsPageState
     final identity = ref.watch(appIdentityProvider);
     final state = ref.watch(coachProgramAssignmentsProvider);
     final userId = identity.userId;
+    if(!identity.signedIn || userId!=_viewerId) return Scaffold(appBar:AppBar(title:const Text('Programas asignados')),body:const Center(child:Text('La sesión cambió. Vuelve a Coach.')));
     final localPrograms = ref.watch(trainingProgramListProvider);
     _scheduleRefresh(identity.signedIn);
 
@@ -54,15 +63,10 @@ class _CoachProgramAssignmentsPageState
     final assignments = widget.clientUserId == null
         ? state.assignments
         : state.assignments
-            .where((item) => item.clientUserId == widget.clientUserId)
+            .where((item) => item.clientUserId == widget.clientUserId && (widget.relationshipId==null||item.relationshipId==widget.relationshipId))
             .toList(growable: false);
 
-    final canAssignToSelectedClient = widget.clientUserId != null &&
-        identity.signedIn &&
-        assignments.any((item) => item.isCoach(userId)) ||
-        (widget.clientUserId != null &&
-            identity.signedIn &&
-            assignments.isEmpty);
+    final canAssignToSelectedClient = widget.canAssign && widget.clientUserId != null && userId != widget.clientUserId && identity.signedIn;
 
     return Scaffold(
       appBar: AppBar(
@@ -243,7 +247,7 @@ class _CoachProgramAssignmentsPageState
       ),
     );
 
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted || ref.read(appIdentityProvider).userId!=_viewerId) return;
     await ref
         .read(coachProgramAssignmentsProvider.notifier)
         .assignLocalProgram(
@@ -259,7 +263,7 @@ class _CoachProgramAssignmentsPageState
     final assignment = await ref
         .read(coachProgramAssignmentsProvider.notifier)
         .openAssignment(summary.id);
-    if (!mounted || assignment == null) return;
+    if (!mounted || assignment == null || ref.read(appIdentityProvider).userId!=_viewerId) return;
 
     final userId = ref.read(appIdentityProvider).userId;
     final isClient = assignment.summary.isClient(userId);
@@ -366,7 +370,7 @@ class _CoachProgramAssignmentsPageState
       ),
     );
 
-    if (activate == null || !mounted) return;
+    if (activate == null || !mounted || ref.read(appIdentityProvider).userId!=_viewerId) return;
     await ref
         .read(coachProgramAssignmentsProvider.notifier)
         .acceptAndInstall(

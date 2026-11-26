@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:core/core/services/supabase_client_gateway.dart';
 import 'package:core/domain/models/coach_client_progress.dart';
 import 'package:core/domain/models/workout_session.dart';
@@ -19,12 +20,16 @@ class CoachProgressState {
   final CoachProgressOperation operation;
   final String? message;
   final bool isError;
+  final bool syncPending;
+  final DateTime? lastSuccessfulSync;
 
   const CoachProgressState({
     this.byClientId = const <String, CoachClientProgress>{},
     this.operation = CoachProgressOperation.idle,
     this.message,
     this.isError = false,
+    this.syncPending = false,
+    this.lastSuccessfulSync,
   });
 
   bool get busy => operation != CoachProgressOperation.idle;
@@ -35,12 +40,16 @@ class CoachProgressState {
     String? message,
     bool clearMessage = false,
     bool? isError,
+    bool? syncPending,
+    DateTime? lastSuccessfulSync,
   }) {
     return CoachProgressState(
       byClientId: byClientId ?? this.byClientId,
       operation: operation ?? this.operation,
       message: clearMessage ? null : (message ?? this.message),
       isError: isError ?? this.isError,
+      syncPending: syncPending ?? this.syncPending,
+      lastSuccessfulSync: lastSuccessfulSync ?? this.lastSuccessfulSync,
     );
   }
 }
@@ -57,13 +66,15 @@ final coachProgressProvider =
 class CoachProgressNotifier extends Notifier<CoachProgressState> {
   late CoachProgressService _service;
   int _generation = 0;
+  List<WorkoutSession>? _queuedHistory;
   bool _current(int generation) => ref.mounted && generation == _generation;
 
   @override
   CoachProgressState build() {
     ref.watch(appIdentityProvider.select((value) => (value.signedIn, value.userId)));
     _generation++;
-    ref.onDispose(() => _generation++);
+    _queuedHistory = null;
+    ref.onDispose(() { _generation++; _queuedHistory = null; });
     _service = ref.watch(coachProgressServiceProvider);
     return const CoachProgressState();
   }
@@ -74,11 +85,17 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
   }) async {
     final identity = ref.read(appIdentityProvider);
     if (!identity.signedIn) return false;
-    if (state.busy) return false;
+    if (state.busy) {
+      _queuedHistory = List<WorkoutSession>.of(history);
+      state = state.copyWith(syncPending: true);
+      return false;
+    }
     final generation = ++_generation;
+    _queuedHistory = null;
 
     state = state.copyWith(
       operation: CoachProgressOperation.syncingOwn,
+      syncPending: false,
       clearMessage: true,
       isError: false,
     );
@@ -94,6 +111,8 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
       if (!_current(generation)) return false;
       state = state.copyWith(
         operation: CoachProgressOperation.idle,
+        lastSuccessfulSync: DateTime.now(),
+        syncPending: _queuedHistory != null,
         message: silent ? null : 'Progreso compartido actualizado.',
         clearMessage: silent,
         isError: false,
@@ -106,6 +125,7 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
         message: silent ? null : _databaseMessage(error),
         clearMessage: silent,
         isError: !silent,
+        syncPending: true,
       );
       return false;
     } catch (_) {
@@ -115,8 +135,11 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
         message: silent ? null : 'No se pudo actualizar el progreso compartido.',
         clearMessage: silent,
         isError: !silent,
+        syncPending: true,
       );
       return false;
+    } finally {
+      if (_current(generation)) _scheduleQueued();
     }
   }
 
@@ -156,6 +179,8 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
       if (!_current(generation)) return null;
       _fail('No se pudo cargar el progreso compartido.');
       return null;
+    } finally {
+      if (_current(generation)) _scheduleQueued();
     }
   }
 
@@ -169,6 +194,19 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
       byClientId: Map.unmodifiable(next),
       operation: cancelRead ? CoachProgressOperation.idle : state.operation,
     );
+    if (cancelRead) _scheduleQueued();
+  }
+
+  void _scheduleQueued() {
+    if (_queuedHistory == null) return;
+    final generation = _generation;
+    scheduleMicrotask(() {
+      if (!_current(generation) || state.busy) return;
+      final latest = _queuedHistory;
+      if (latest == null) return;
+      _queuedHistory = null;
+      unawaited(syncOwnProgress(latest, silent: true));
+    });
   }
 
   void _fail(String message) {

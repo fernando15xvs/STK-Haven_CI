@@ -7,25 +7,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class CoachNutritionGuidancePage extends ConsumerStatefulWidget {
   final String clientUserId;
   final String clientDisplayName;
+  final String? relationshipId;
   final bool canEdit;
-  const CoachNutritionGuidancePage({super.key, required this.clientUserId, required this.clientDisplayName, required this.canEdit});
+  const CoachNutritionGuidancePage({super.key, required this.clientUserId, required this.clientDisplayName, required this.canEdit, this.relationshipId});
   @override
   ConsumerState<CoachNutritionGuidancePage> createState() => _CoachNutritionGuidancePageState();
 }
 
-class _CoachNutritionGuidancePageState extends ConsumerState<CoachNutritionGuidancePage> {
+class _CoachNutritionGuidancePageState extends ConsumerState<CoachNutritionGuidancePage> with WidgetsBindingObserver {
   bool _loaded = false;
+  late final String? _viewerId;
+  @override void initState(){super.initState();_viewerId=ref.read(appIdentityProvider).userId;WidgetsBinding.instance.addObserver(this);}
+  @override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}
+  @override void didChangeAppLifecycleState(AppLifecycleState state){if(mounted&&state==AppLifecycleState.resumed&&ModalRoute.of(context)?.isCurrent==true&&ref.read(appIdentityProvider).userId==_viewerId){ref.read(nutritionGuidanceProvider.notifier).refresh();}}
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(nutritionGuidanceProvider);
-    final userId = ref.watch(appIdentityProvider).userId;
+    final identity=ref.watch(appIdentityProvider);
+    final userId = identity.userId;
+    if(!identity.signedIn||userId!=_viewerId)return Scaffold(appBar:AppBar(title:const Text('Orientación alimentaria')),body:const Center(child:Text('La sesión cambió. Vuelve a Coach.')));
     if (!_loaded) {
       _loaded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) ref.read(nutritionGuidanceProvider.notifier).refresh();
       });
     }
-    final plans = state.summaries.where((p) => p.clientUserId == widget.clientUserId).toList(growable: false);
+    final plans = state.summaries.where((p) => p.clientUserId == widget.clientUserId && (widget.relationshipId==null||p.relationshipId==widget.relationshipId)).toList(growable: false);
     ref.listen(nutritionGuidanceProvider, (previous, next) {
       if (next.message == null || next.message == previous?.message) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.message!)));
@@ -68,27 +75,51 @@ class _CoachNutritionGuidancePageState extends ConsumerState<CoachNutritionGuida
   Future<void> _open(String id, String? userId) async {
     final plan = await ref.read(nutritionGuidanceProvider.notifier).open(id);
     if (!mounted || plan == null) return;
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => _NutritionGuidanceDetail(
+    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => _VerifiedNutritionGuidanceDetail(viewerId:_viewerId!,
       plan: plan,
       editable: widget.canEdit && plan.coachUserId == userId,
       onEdit: () => _edit(plan),
       onVersion: (version) async {
         final historical = await ref.read(nutritionGuidanceProvider.notifier).open(plan.id, version: version);
         if (!mounted || historical == null) return;
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => _NutritionGuidanceDetail(plan: historical, editable: false)));
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => _VerifiedNutritionGuidanceDetail(viewerId:_viewerId!,plan: historical, editable: false)));
       },
     )));
   }
 
   Future<void> _edit(NutritionGuidancePlan? plan) async {
     final draft = await Navigator.of(context).push<_GuidanceDraft>(MaterialPageRoute(builder: (_) => _NutritionGuidanceEditor(initial: plan)));
-    if (!mounted || draft == null) return;
+    if (!mounted || draft == null || ref.read(appIdentityProvider).userId!=_viewerId) return;
     final id = await ref.read(nutritionGuidanceProvider.notifier).save(
       clientUserId: widget.clientUserId, planId: plan?.id, title: draft.title,
       overview: draft.overview, hydrationNotes: draft.hydration, generalNotes: draft.notes, meals: draft.meals,
     );
     if (!mounted || id == null) return;
     if (plan != null) Navigator.of(context).pop();
+  }
+}
+
+class _VerifiedNutritionGuidanceDetail extends ConsumerStatefulWidget {
+  final String viewerId;
+  final NutritionGuidancePlan plan;
+  final bool editable;
+  final VoidCallback? onEdit;
+  final Future<void> Function(int version)? onVersion;
+  const _VerifiedNutritionGuidanceDetail({required this.viewerId,required this.plan,required this.editable,this.onEdit,this.onVersion});
+  @override ConsumerState<_VerifiedNutritionGuidanceDetail> createState()=>_VerifiedNutritionGuidanceDetailState();
+}
+class _VerifiedNutritionGuidanceDetailState extends ConsumerState<_VerifiedNutritionGuidanceDetail> with WidgetsBindingObserver {
+  NutritionGuidanceDetailQuery get _query=>(userId:widget.viewerId,planId:widget.plan.id,version:widget.plan.version);
+  @override void initState(){super.initState();WidgetsBinding.instance.addObserver(this);}
+  @override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}
+  @override void didChangeAppLifecycleState(AppLifecycleState state){if(mounted&&state==AppLifecycleState.resumed)ref.invalidate(nutritionGuidanceDetailProvider(_query));}
+  @override Widget build(BuildContext context){
+    final identity=ref.watch(appIdentityProvider);
+    if(!identity.signedIn||identity.userId!=widget.viewerId)return const Scaffold(body:Center(child:Text('La sesión cambió.')));
+    return ref.watch(nutritionGuidanceDetailProvider(_query)).when(skipLoadingOnRefresh:false,skipLoadingOnReload:false,
+      loading:()=>const Scaffold(body:Center(child:CircularProgressIndicator())),
+      error:(_,_)=>Scaffold(appBar:AppBar(title:const Text('Orientación alimentaria')),body:Center(child:TextButton(onPressed:()=>ref.invalidate(nutritionGuidanceDetailProvider(_query)),child:const Text('No disponible. Reintentar')))),
+      data:(value)=>value==null?const Scaffold(body:Center(child:Text('Orientación no disponible.'))):_NutritionGuidanceDetail(plan:value,editable:widget.editable,onEdit:widget.onEdit,onVersion:widget.onVersion));
   }
 }
 

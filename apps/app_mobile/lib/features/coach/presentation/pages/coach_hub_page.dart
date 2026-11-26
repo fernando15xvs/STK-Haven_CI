@@ -15,7 +15,8 @@ class CoachHubPage extends ConsumerWidget {
     final profile = ref.watch(userExperienceProfileProvider).value;
     final entitlement = ref.watch(coachProEntitlementProvider);
     final isCoach = profile?.isCoach ?? false;
-    final hasCoachPro = entitlement.value?.accessActive ?? false;
+    final hasCoachPro = !entitlement.isLoading && !entitlement.hasError && (entitlement.value?.accessActive ?? false);
+    if (identity.signedIn && hasCoachPro) return const CoachProDashboardPage();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Coach')),
@@ -42,6 +43,8 @@ class CoachHubPage extends ConsumerWidget {
                           : 'Inicia sesión con una cuenta permanente para usar las funciones Coach.',
                     ),
                     const SizedBox(height: 12),
+                    if (identity.signedIn && !hasCoachPro)
+                      const Text('El acceso profesional de desarrollo se habilita por cuenta desde el servidor. No se requieren pagos durante QA.'),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,

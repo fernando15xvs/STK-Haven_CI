@@ -18,12 +18,17 @@ class _Identity extends AppIdentityNotifier {
 }
 class _Service implements CoachProgressService {
   final requests = <Completer<CoachClientProgress>>[];
+  final syncRequests = <Completer<void>>[];
   @override
   Never get client => throw UnimplementedError();
   @override
   Future<void> syncOwnProgress(CoachClientProgress progress, {
     List<CoachExerciseProgressSummary> exerciseProgress = const [],
-  }) async {}
+  }) {
+    final request = Completer<void>();
+    syncRequests.add(request);
+    return request.future;
+  }
   @override
   Future<CoachClientProgress> getClientProgress(String clientUserId) {
     final request = Completer<CoachClientProgress>();
@@ -78,6 +83,25 @@ void main() {
     service.requests.last.complete(_progress('client'));
     expect(await old, isNull);
     expect(container.read(coachProgressProvider).byClientId, isEmpty);
+  });
+  test('publication coalesces overlapping requests and retries only explicitly after failure', () async {
+    final notifier = container.read(coachProgressProvider.notifier);
+    final first = notifier.syncOwnProgress([]);
+    expect(await notifier.syncOwnProgress([]), isFalse);
+    expect(container.read(coachProgressProvider).syncPending, isTrue);
+    service.syncRequests.first.complete();
+    expect(await first, isTrue);
+    await Future<void>.delayed(Duration.zero);
+    expect(service.syncRequests, hasLength(2));
+    service.syncRequests.last.completeError(StateError('offline'));
+    await Future<void>.delayed(Duration.zero);
+    expect(container.read(coachProgressProvider).syncPending, isTrue);
+    expect(service.syncRequests, hasLength(2));
+    final retry = notifier.syncOwnProgress([]);
+    service.syncRequests.last.complete();
+    expect(await retry, isTrue);
+    expect(container.read(coachProgressProvider).syncPending, isFalse);
+    expect(container.read(coachProgressProvider).lastSuccessfulSync, isNotNull);
   });
   test('mismatched client payload fails closed', () async {
     final request = container.read(coachProgressProvider.notifier).loadClientProgress('client');

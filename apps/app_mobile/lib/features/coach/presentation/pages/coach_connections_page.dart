@@ -2,6 +2,8 @@ import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/coach/application/coach_client_provider.dart';
 import 'package:gym_tracker/features/coach/presentation/pages/coach_client_detail_page.dart';
+import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_client_detail_page.dart';
+import 'package:core/features/coach_pro/application/coach_pro_entitlement_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +46,7 @@ class _CoachConnectionsPageState
   void _scheduleInitialLoad(String? userId) {
     if (_requestedUserId == userId) return;
     _requestedUserId = userId;
+    WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted && _requestedUserId == userId) _codeController.clear(); });
     if (userId == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || ref.read(appIdentityProvider).userId != userId) return;
@@ -57,8 +60,9 @@ class _CoachConnectionsPageState
     final profile = ref.watch(userExperienceProfileProvider).value;
     final coachState = ref.watch(coachClientProvider);
     final userId = identity.userId;
-    final isCoach =
-        profile?.capabilities.contains(UserCapability.coach) ?? false;
+    final isCoach = identity.isCoach || (profile?.capabilities.contains(UserCapability.coach) ?? false);
+    final entitlement = widget.clientOnly ? null : ref.watch(coachProEntitlementProvider);
+    final canUsePro = identity.signedIn && entitlement!=null && !entitlement.isLoading && !entitlement.hasError && (entitlement.value?.accessActive ?? false);
     final visibleRelationships = widget.clientOnly
         ? coachState.relationships
             .where((relationship) => relationship.isClient(userId))
@@ -131,7 +135,9 @@ class _CoachConnectionsPageState
                             'El código expira y la app guarda solo su hash.',
                       ),
                       const SizedBox(height: 10),
-                      _InviteBuilder(
+                      if (!canUsePro)
+                        const Card(child:Padding(padding:EdgeInsets.all(16),child:Text('Coach Pro necesita autorización temporal de desarrollo. No hay pagos habilitados.')))
+                      else _InviteBuilder(
                         selected: _invitePermissions,
                         busy: coachState.busy,
                         onChanged: (permissions) {
@@ -158,11 +164,11 @@ class _CoachConnectionsPageState
                           'Revisa quién invita y qué permisos pide antes de aceptar.',
                     ),
                     const SizedBox(height: 10),
-                      _AcceptInvitationCard(
-                        controller: _codeController,
-                        busy: coachState.busy,
-                        onPreview: _previewInvitation,
-                      ),
+                      if (visibleRelationships.isEmpty)
+                        _AcceptInvitationCard(controller:_codeController,busy:coachState.busy,onPreview:_previewInvitation)
+                      else Card(child:ExpansionTile(title:const Text('Vincular otro entrenador'),children:[
+                        Padding(padding:const EdgeInsets.all(12),child:_AcceptInvitationCard(controller:_codeController,busy:coachState.busy,onPreview:_previewInvitation)),
+                      ])),
                     ],
                     const SizedBox(height: 24),
                     _SectionHeader(
@@ -204,9 +210,9 @@ class _CoachConnectionsPageState
                           busy: coachState.busy,
                           onOpen: () => Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => CoachClientDetailPage(
-                                relationshipId: relationship.id,
-                              ),
+                              builder: (_) => canUsePro && relationship.isCoach(userId) && relationship.isActive
+                                ? CoachProClientDetailPage(relationshipId:relationship.id)
+                                : CoachClientDetailPage(relationshipId:relationship.id),
                             ),
                           ),
                           onPermissions: relationship.isClient(userId) &&

@@ -87,6 +87,22 @@ jobs:
       - uses: supabase/setup-cli@v1
         with:
           version: v2.118.0
+      # CLI assigns the new migration version in this isolated checkout.
+      - name: Generate Coach secure migration with pinned CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          existing=(supabase/migrations/*_stk_coach_secure_completion.sql)
+          if [ "${#existing[@]}" -eq 0 ]; then
+            supabase migration new stk_coach_secure_completion
+            generated=(supabase/migrations/*_stk_coach_secure_completion.sql)
+            test "${#generated[@]}" -eq 1
+            cp supabase/pending/stk_coach_secure_completion.sql "${generated[0]}"
+          else
+            test "${#existing[@]}" -eq 1
+            cmp supabase/pending/stk_coach_secure_completion.sql "${existing[0]}"
+          fi
       - name: Stage post-Roadmap 2 migrations for upgrade test
         run: |
           mkdir -p /tmp/stk-post-roadmap2-migrations
@@ -216,6 +232,13 @@ jobs:
         run: supabase db reset
       - name: Run pgTAP after clean rebuild
         run: supabase test db
+      - name: Export validated Coach migration
+        uses: actions/upload-artifact@v4
+        with:
+          name: stk-coach-secure-migration
+          path: supabase/migrations/*_stk_coach_secure_completion.sql
+          if-no-files-found: error
+          retention-days: 14
       - name: Stop isolated Supabase
         if: always()
         run: supabase stop --no-backup

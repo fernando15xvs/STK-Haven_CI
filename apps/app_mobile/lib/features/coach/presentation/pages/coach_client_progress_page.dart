@@ -1,4 +1,6 @@
 import 'package:core/domain/models/coach_client_progress.dart';
+import 'package:core/features/coach/domain/smart_coach_engine.dart';
+import 'package:gym_tracker/features/coach/presentation/widgets/smart_coach_insights.dart';
 import 'package:core/features/coach/application/coach_progress_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
@@ -22,7 +24,11 @@ class CoachClientProgressPage extends ConsumerStatefulWidget {
 }
 
 class _CoachClientProgressPageState
-    extends ConsumerState<CoachClientProgressPage> {
+    extends ConsumerState<CoachClientProgressPage> with WidgetsBindingObserver {
+  late final String? _viewerId;
+  @override void initState(){super.initState();_viewerId=ref.read(appIdentityProvider).userId;WidgetsBinding.instance.addObserver(this);}
+  @override void dispose(){WidgetsBinding.instance.removeObserver(this);super.dispose();}
+  @override void didChangeAppLifecycleState(AppLifecycleState state){if(state==AppLifecycleState.resumed&&mounted)_load();}
   bool _requested = false;
 
   @override
@@ -38,13 +44,14 @@ class _CoachClientProgressPageState
 
   Future<void> _load() async {
     final identity = ref.read(appIdentityProvider);
+    if(!identity.signedIn||identity.userId!=_viewerId)return;
     if (identity.userId == widget.clientUserId) {
       await ref.read(coachProgressProvider.notifier).syncOwnProgress(
             ref.read(workoutHistoryProvider),
             silent: true,
           );
     }
-    if (!mounted) return;
+    if (!mounted || ref.read(appIdentityProvider).userId!=_viewerId) return;
     await ref
         .read(coachProgressProvider.notifier)
         .loadClientProgress(widget.clientUserId);
@@ -75,7 +82,7 @@ class _CoachClientProgressPageState
             constraints: const BoxConstraints(maxWidth: 900),
             child: Builder(
               builder: (context) {
-                if (!identity.signedIn) {
+                if (!identity.signedIn || identity.userId!=_viewerId) {
                   return const Center(child: Text('Inicia sesión para consultar el progreso compartido.'));
                 }
                 if (loading) {
@@ -94,7 +101,7 @@ class _CoachClientProgressPageState
                   return const _EmptyState();
                 }
 
-                return _ProgressBody(progress: progress);
+                return _ProgressBody(progress: progress, syncPending:identity.userId==widget.clientUserId&&state.syncPending);
               },
             ),
           ),
@@ -107,13 +114,16 @@ class _CoachClientProgressPageState
 class _ProgressBody extends StatelessWidget {
   final CoachClientProgress progress;
 
-  const _ProgressBody({required this.progress});
+  final bool syncPending;
+  const _ProgressBody({required this.progress,required this.syncPending});
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
       children: [
+        if(syncPending) const Card(child:Padding(padding:EdgeInsets.all(12),child:Text('Hay progreso pendiente de sincronizar. Usa Actualizar para reintentar.'))),
+        SmartCoachInsights(insights:SmartCoachEngine.progress(progress,now:DateTime.now())),
         Text('Datos sincronizados: ${progress.generatedAt.toLocal().toString().split('.').first}',
           style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 12),

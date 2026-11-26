@@ -1,4 +1,5 @@
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_review_inbox_page.dart';
+import 'package:gym_tracker/features/coach/presentation/pages/coach_connections_page.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_templates_page.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_client_detail_page.dart';
 import 'dart:async';
@@ -43,7 +44,15 @@ class CoachProDashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final identity = ref.watch(appIdentityProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Coach Pro')),
+      appBar: AppBar(title: const Text('Coach Pro'),actions:[
+        if(identity.signedIn)IconButton(tooltip:'Invitar cliente y conexiones',icon:const Icon(Icons.person_add_alt_1_outlined),onPressed:()async{
+          await Navigator.of(context).push<void>(MaterialPageRoute(builder:(_)=>const CoachConnectionsPage(professionalOnly:true)));
+          if(context.mounted && ref.read(appIdentityProvider).userId==identity.userId){
+            if(identity.userId!=null){ref.invalidate(coachProDashboardPlanProvider(identity.userId!));ref.invalidate(coachProPortfolioOverviewProvider(identity.userId!));}
+            await ref.read(coachProDashboardProvider.notifier).refresh();
+          }
+        }),
+      ]),
       body: SafeArea(
         child: !identity.signedIn || identity.userId == null
             ? const Center(
@@ -149,6 +158,7 @@ class _DashboardState extends ConsumerState<_Dashboard>
                         style: Theme.of(context).textTheme.headlineSmall),
                     const SizedBox(height: 8),
                     const Text('Cada cliente decide qué información comparte.'),
+
                     const SizedBox(height: 8),
                     Align(
                       alignment: Alignment.centerLeft,
