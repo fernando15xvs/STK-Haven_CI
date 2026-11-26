@@ -29,6 +29,9 @@ class QuickAccessMenu extends StatelessWidget {
           child: Wrap(
             alignment: WrapAlignment.spaceEvenly,
             runAlignment: WrapAlignment.center,
+            // A two-line label must not move its circle or first line
+            // relative to shorter labels in the same row.
+            crossAxisAlignment: WrapCrossAlignment.start,
             spacing: gap,
             runSpacing: gap,
             children: [

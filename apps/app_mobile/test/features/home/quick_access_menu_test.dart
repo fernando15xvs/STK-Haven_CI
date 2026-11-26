@@ -61,9 +61,37 @@ void main() {
           final icon = find.byKey(ValueKey('quick_access_icon_$label'));
           expect(tester.getSize(icon).height, greaterThanOrEqualTo(48));
         }
-        if (scale == 1) {
-          expect(tester.getCenter(find.text('Coach')).dy,
-              closeTo(tester.getCenter(find.text('Hábitos')).dy, 1));
+        // Compare the actual row geometry, not text-box centers: a
+        // two-line label has a lower center even when perfectly aligned.
+        final columns = scale > 1.85 ? 1 : scale > 1.3 ? 2 : 3;
+        double? previousBottom;
+        for (var start = 0; start < labels.length; start += columns) {
+          final row = labels.skip(start).take(columns);
+          final firstIcon = tester.getRect(find.byKey(
+            ValueKey('quick_access_icon_${row.first}')));
+          final firstText = tester.getRect(find.byKey(
+            ValueKey('quick_access_label_${row.first}')));
+          if (previousBottom != null) {
+            expect(firstIcon.top, greaterThanOrEqualTo(previousBottom + 11));
+          }
+          var bottom = firstText.bottom;
+          double? previousRight;
+          for (final label in row) {
+            final icon = tester.getRect(find.byKey(
+              ValueKey('quick_access_icon_$label')));
+            final text = tester.getRect(find.byKey(
+              ValueKey('quick_access_label_$label')));
+            expect(icon.center.dy, closeTo(firstIcon.center.dy, 1));
+            expect(text.top, closeTo(firstText.top, 1));
+            expect(text.top - icon.bottom, closeTo(6, 1));
+            expect(text.center.dx, closeTo(icon.center.dx, 1));
+            if (previousRight != null) {
+              expect(icon.left, greaterThan(previousRight));
+            }
+            previousRight = icon.right;
+            if (text.bottom > bottom) bottom = text.bottom;
+          }
+          previousBottom = bottom;
         }
         await tester.ensureVisible(find.text('Herramientas'));
         await tester.pumpAndSettle();

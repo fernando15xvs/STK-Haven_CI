@@ -8,3 +8,6 @@ Base CI #45716144817 7/7. Entrega única, PR #57, espejo CI, Web intacta.
 
 ## Accesos rápidos (+) — corrección de contraste
 Base #45721441235 7/7. Se conserva el menú circular y todas sus rutas/condiciones. Scrim negro 70% claro / 65% oscuro, texto blanco independiente de acento, tipografía compartida 13dp, dos líneas normales y adaptación sin recorte con texto ampliado. Tres columnas normales, menos con accesibilidad, scroll acotado al espacio seguro. Pruebas de contraste AA incluso sobre blanco, ocho acentos, claro/oscuro/OLED, anchos 320/390/430 y escala 100/160/200%. Pendiente CI único y QA física. No cambios en navegación inferior, Core, Web ni datos.
+
+### Corrección del gate de accesos rápidos
+CI #45727108584: 68/69 pruebas de Inicio, fallo en 320dp/100% por comparar centros de etiquetas de una y dos líneas (8.5dp de diferencia). Se explicita alineación superior del Wrap y se verifica geometría de todas las filas, centros de iconos, comienzo de etiquetas, distancia icono-texto, separación horizontal y vertical; se conservan pruebas de no recorte, contraste, tamaños táctiles y navegación. Nuevo CI pendiente; no se cambia opacidad, fuente, rutas ni datos.
