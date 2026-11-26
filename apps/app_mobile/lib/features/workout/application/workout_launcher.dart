@@ -13,7 +13,21 @@ import 'package:core/features/workout/application/todays_workout_status.dart';
 import 'package:core/features/programs/application/training_day_decision.dart';
 
 class WorkoutLauncher {
-  static Future<void> launch(
+  static bool _launching = false;
+
+  static Future<void> launch(BuildContext context, WidgetRef ref, Routine routine, {
+    bool independent = false, String? occurrenceId,
+  }) async {
+    if (_launching) return;
+    _launching = true;
+    try {
+      await _launch(context,ref,routine,independent:independent,occurrenceId:occurrenceId);
+    } finally {
+      _launching = false;
+    }
+  }
+
+  static Future<void> _launch(
     BuildContext context,
     WidgetRef ref,
     Routine routine, {
@@ -71,14 +85,23 @@ class WorkoutLauncher {
     }
 
     if (!context.mounted) return;
+    if (ref.read(activeTrainingProgramProvider) != null) {
+      try {
+        await ref.read(trainingProgramListProvider.notifier).recoverAbandonedReservations();
+      } catch (_) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No se pudo revisar la planificación. Inténtalo de nuevo.')));
+        return;
+      }
+    }
+    if (!context.mounted) return;
     final programSession = ref.read(nextProgramSessionProvider);
     final currentProgram = ref.read(activeTrainingProgramProvider);
     final now = DateTime.now();
     final completedToday = TodaysWorkoutStatus.latestCompletedToday(ref.read(workoutHistoryProvider), now) != null;
     final scheduledDate = programSession?.scheduledDate;
     final future = scheduledDate != null && TrainingDayDecision.localDay(scheduledDate).isAfter(TrainingDayDecision.localDay(now));
-    if (!independent && currentProgram != null && (completedToday ||
-        (occurrenceId == null && (programSession == null || future)))) {
+    if (!independent && currentProgram != null && (occurrenceId == null && (completedToday || programSession == null || future))) {
       final proceed = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
         title: Text(completedToday ? 'Ya entrenaste hoy' : 'No hay sesión disponible hoy'),
         content: const Text('Puedes realizar un entrenamiento independiente sin avanzar el programa.'),
@@ -120,7 +143,7 @@ class WorkoutLauncher {
         if (selection != null && context.mounted) {
           for (final selected in ref.read(routineListProvider)) {
             if (selected.id == selection.routineId) {
-              await launch(context, ref, selected, occurrenceId: selection.occurrenceId);
+              await _launch(context, ref, selected, occurrenceId: selection.occurrenceId);
               break;
             }
           }

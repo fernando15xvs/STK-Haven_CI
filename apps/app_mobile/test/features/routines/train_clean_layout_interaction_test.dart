@@ -129,6 +129,7 @@ Future<void> _pumpTrain(
   bool oled = false,
   AppUiStyle style = AppUiStyle.classic,
   AppFontFamily font = AppFontFamily.outfit,
+  DateTime? clock,
 }) async {
   tester.view.physicalSize = Size(width, 1280);
   tester.view.devicePixelRatio = 1;
@@ -138,6 +139,7 @@ Future<void> _pumpTrain(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        if(clock!=null) trainingDayClockProvider.overrideWith((ref)=>clock),
         routineListProvider.overrideWith(_Routines.new),
         exerciseListProvider.overrideWith(_Exercises.new),
         workoutHistoryProvider.overrideWith(completed ? _CompletedHistory.new : _History.new),
@@ -180,6 +182,29 @@ Future<void> _pumpTrain(
 
 void main() {
   setUpAll(() async => initializeDateFormatting('es'));
+
+  testWidgets('absence today keeps pending routine and supports next-week scenarios',(tester) async {
+    await _pumpTrain(tester,clock:DateTime(2026,11,26,9));
+    await tester.tap(find.byKey(const ValueKey('train_open_planning')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Adaptar planificación'));
+    await tester.tap(find.text('Adaptar planificación'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('No puedo entrenar hoy'));
+    await tester.tap(find.text('No puedo entrenar hoy'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Disponibilidad temporal ajustada esta semana'),findsOneWidget);
+    expect(find.text('0/4 sesiones'),findsOneWidget);
+    await tester.ensureVisible(find.text('Próxima semana'));
+    await tester.tap(find.text('Próxima semana'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Si no entreno más esta semana'));
+    await tester.tap(find.text('Si no entreno más esta semana'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(),isNull);
+  });
 
   for (final width in [320.0, 390.0, 430.0]) {
     for (final scale in [1.0, 2.0]) {

@@ -152,8 +152,13 @@ class TrainingProgram {
     final start = localWeekStart(instant);
     final end = shiftCalendarDays(start, 7);
     final seen = <String>{};
-    final matches = completions.where((item) =>
-        !item.completedAt.isBefore(start) && item.completedAt.isBefore(end))
+    final creditedWeeks = {for (final o in adaptation?.occurrences ?? const <PlanOccurrence>[])
+      if (o.workoutId != null) o.workoutId!: o.week};
+    final matches = completions.where((item) {
+      final credited = creditedWeeks[item.workoutSessionId];
+      return credited != null ? credited == start :
+        !item.completedAt.isBefore(start) && item.completedAt.isBefore(end);
+    })
         .toList()..sort((a, b) => a.completedAt.compareTo(b.completedAt));
     return List<ProgramCompletion>.unmodifiable(
       matches.where((item) => seen.add(item.workoutSessionId)),

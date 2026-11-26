@@ -5,6 +5,8 @@ import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_plan_insights.dart';
 import 'package:core/features/programs/application/program_week_plan.dart';
 import 'package:core/features/programs/application/program_adaptation_policy.dart';
+import 'package:core/features/programs/application/program_rotation_coordinator.dart';
+import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/domain/models/program_adaptation.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_routine_order_policy.dart';
@@ -73,6 +75,8 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
         ? allPrograms.where((program) => program.isTemplate).toList(growable: false)
         : allPrograms;
     final routines = ref.watch(routineListProvider);
+    final history = ref.watch(workoutHistoryProvider);
+    final now = ref.watch(trainingDayClockProvider);
     final profile=ref.watch(userExperienceProfileProvider).value;
     final isMinor=(profile?.ageAt(DateTime.now()) ?? 99)<18;
     final youthGuidance=YouthTrainingGuidance.forProfile(
@@ -151,11 +155,14 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
               itemCount: programs.length,
               itemBuilder: (context, index) {
-                final program = programs[index];
+                final stored = programs[index];
+                final program = stored.isActive && !stored.isTemplate
+                    ? ProgramAdaptationPolicy.prepare(ProgramRotationCoordinator.reconcile(stored,history),routines,now)
+                    : stored;
                 final insights = ProgramPlanInsights.calculate(
                   program: program,
                   routines: routines,
-                  now: DateTime.now(),
+                  now: now,
                 );
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 14),
@@ -831,8 +838,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
           existing: existing,
           updatedRoutineIds: routineIds,
         );
-        await ref.read(trainingProgramListProvider.notifier).save(
-              existing.copyWith(
+        final edited = existing.copyWith(
                 name: name.text.trim().isEmpty
                     ? existing.name
                     : name.text.trim(),
@@ -847,8 +853,16 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                 fixedWeekdayRoutineIds: fixedWeekdayRoutineIds,
                 deloadWeeks: deloadWeeks,
                 nextRotationIndex: safeNext,
-              ),
-            );
+              );
+        if (existing.adaptation != null && ProgramRoutineOrderPolicy.scheduleChanged(existing,edited)) {
+          final proceed = await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+            title:const Text('Actualizar planificación'),
+            content:const Text('Se conservará tu historial. Los cambios compatibles mantienen las sesiones pendientes; los cambios de estructura pueden reconstruir el orden, intercambios y posposiciones. Las pausas se conservan.'),
+            actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancelar')),
+              FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Confirmar'))]));
+          if(proceed!=true||!context.mounted)return;
+        }
+        await ref.read(trainingProgramListProvider.notifier).save(edited);
       }
     }
 
@@ -1130,7 +1144,7 @@ class _ProgramCard extends StatelessWidget {
             if (insights.next14SessionCount > 0)
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
-                title: const Text('Próximos 14 días'),
+                title: Text(program.adaptation == null ? 'Próximos 14 días' : 'Resto de esta semana y próxima'),
                 subtitle: Text(
                   program.scheduleMode == ProgramScheduleMode.flexible
                       ? '${insights.next14SessionCount} sesiones estimadas por frecuencia · distribución por rutina'

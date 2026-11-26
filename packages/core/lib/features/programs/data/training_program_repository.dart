@@ -13,6 +13,14 @@ class TrainingProgramRepository {
 
   final Box _box;
   final Box _metadataBox;
+  static final _queues = Expando<Future<void>>('program writes');
+
+  Future<T> _enqueue<T>(Future<T> Function() operation) {
+    final previous = _queues[_metadataBox] ?? Future<void>.value();
+    final current = previous.then((_) => operation());
+    _queues[_metadataBox] = current.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return current;
+  }
 
   List<TrainingProgram> getAll() {
     // The metadata shadow is authoritative because it is the representation
@@ -56,19 +64,32 @@ class TrainingProgramRepository {
     return active.first;
   }
 
-  Future<void> save(TrainingProgram program) async {
+  Future<void> _saveUnlocked(TrainingProgram program) async {
     await _synchronizeBoxFromShadow();
     await _box.put(program.id, program.toJson());
     await _writeShadow();
   }
 
-  Future<void> delete(String id) async {
+  Future<void> save(TrainingProgram program) => _enqueue(() => _saveUnlocked(program));
+
+  /// Read and modify the authoritative shadow under the same write lease.
+  Future<TrainingProgram?> update(String id, TrainingProgram Function(TrainingProgram) change) =>
+      _enqueue(() async {
+        final existing = getById(id);
+        if (existing == null) return null;
+        final next = change(existing);
+        if (next.id != id) throw StateError('Programa incorrecto.');
+        if (!identical(next, existing)) await _saveUnlocked(next);
+        return next;
+      });
+
+  Future<void> delete(String id) => _enqueue(() async {
     await _synchronizeBoxFromShadow();
     await _box.delete(id);
     await _writeShadow();
-  }
+  });
 
-  Future<void> activate(String id, {DateTime? startedAt}) async {
+  Future<void> activate(String id, {DateTime? startedAt}) => _enqueue(() async {
     await _synchronizeBoxFromShadow();
     final all = _programsFromBox();
     TrainingProgram? target;
@@ -93,17 +114,17 @@ class TrainingProgramRepository {
       await _box.put(updated.id, updated.toJson());
     }
     await _writeShadow();
-  }
+  });
 
-  Future<void> clear() async {
+  Future<void> clear() => _enqueue(() async {
     await _box.clear();
     await _metadataBox.delete(backupMetadataKey);
-  }
+  });
 
   /// Rebuilds the optimized mirror from the restored backup representation.
   /// Calling this after a restore is optional for correctness because reads use
   /// the shadow, but it is useful before any subsequent write.
-  Future<void> hydrateFromBackupMetadata() => _synchronizeBoxFromShadow();
+  Future<void> hydrateFromBackupMetadata() => _enqueue(_synchronizeBoxFromShadow);
 
   Future<void> _synchronizeBoxFromShadow() async {
     final shadow = _shadowValues().toList(growable: false);

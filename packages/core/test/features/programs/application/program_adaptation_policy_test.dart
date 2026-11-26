@@ -162,6 +162,119 @@ void main() {
     expect(repaired.completions,p.completions);
   });
 
+  test('explicit repair preserves Tuesday workout and fixes pending cycle', () {
+    var p = plan().recordCompletion(workoutSessionId:'tuesday',routineId:'A',completedAt:DateTime(2026,11,24,9));
+    p = prepared(p);
+    final repaired = ProgramAdaptationPolicy.repairRolling(p,const [],now,'C');
+    expect(slots(repaired).map((o)=>o.routineId), ['A','C','D','A','B']);
+    expect(repaired.completions,p.completions);
+    expect(repaired.adaptation!.occurrences.where((o)=>o.archived).length,4);
+    expect(view(repaired,now).nextSuggestion!.routineId,'C');
+  });
+
+  test('temporary absence keeps slots and expires on Monday', () {
+    final thursday = DateTime(2026,11,26,9);
+    final p = ProgramAdaptationPolicy.prepare(plan(mode:ProgramScheduleMode.continuous)
+      .copyWith(trainingWeekdays:{1,2,4,5,6}), const [], thursday);
+    final absent = ProgramAdaptationPolicy.setUnavailableDays(p,const [],thursday,[thursday]);
+    expect(view(absent,thursday).nextSuggestion!.date,DateTime(2026,11,27));
+    expect(absent.completions,isEmpty);
+    expect(slots(absent).map((o)=>o.id),slots(p).map((o)=>o.id));
+    final restored = TrainingProgram.fromJson(absent.toJson());
+    final rolled = ProgramAdaptationPolicy.prepare(restored,const [],DateTime(2026,11,30,9));
+    expect(rolled.adaptation!.unavailableDays,isEmpty);
+    expect(slots(rolled).first.id,slots(p).first.id);
+  });
+
+  test('orphan cleanup preserves live draft and releases abandoned reservation', () {
+    var p = prepared(plan());
+    p = ProgramAdaptationPolicy.bind(p,const [],'orphan','A',now,slotId:slots(p)[0].id);
+    p = ProgramAdaptationPolicy.bind(p,const [],'live','B',now,slotId:slots(p)[1].id);
+    final clean = ProgramAdaptationPolicy.releaseOrphanedBindings(p,{'live'});
+    expect(clean.adaptation!.bindings.keys,['live']);
+    expect(view(clean,now).nextSuggestion!.routineId,'A');
+  });
+
+  test('bound Sunday workout keeps original planning week after Monday rollover', () {
+    final sunday = DateTime(2026,11,29,23,30);
+    final monday = DateTime(2026,11,30,0,30);
+    var p = ProgramAdaptationPolicy.prepare(plan(),const [],sunday);
+    final id = slots(p).first.id;
+    p = ProgramAdaptationPolicy.bind(p,const [],'night','A',sunday,slotId:id);
+    p = ProgramAdaptationPolicy.prepare(p,const [],monday);
+    final actual = WorkoutSession(id:'night',routineId:'A',routineNameSnapshot:'A',
+      startedAt:sunday,finishedAt:monday,durationSeconds:3600,
+      exercises:[WorkoutExercise(exerciseId:'e',exerciseNameSnapshot:'E',muscleGroupSnapshot:'Torso',
+        sets:[WorkoutSet(weight:10,reps:8,completed:true)])]);
+    p = ProgramRotationCoordinator.reconcile(p,[actual]);
+    expect(p.completionsInLocalWeek(sunday).single.workoutSessionId,'night');
+    expect(p.completionsInLocalWeek(monday),isEmpty);
+    expect(p.completions.single.completedAt,monday);
+    expect(slots(p).length,5);
+    expect(p.adaptation!.occurrences.firstWhere((o)=>o.id==id).status,PlanOccurrenceStatus.completed);
+  });
+
+  test('injury scenario: Tuesday A, Friday C, Saturday B, Monday D', () {
+    final tue=DateTime(2026,11,24,9), fri=DateTime(2026,11,27,9), sat=DateTime(2026,11,28,9);
+    var p=plan(mode:ProgramScheduleMode.continuous).copyWith(trainingWeekdays:{1,2,4,5,6});
+    p=ProgramAdaptationPolicy.prepare(p,const [],tue);
+    TrainingProgram finish(TrainingProgram p,String id,String routine,DateTime time) {
+      final occurrence=slots(p).firstWhere((o)=>o.status==PlanOccurrenceStatus.pending&&o.routineId==routine);
+      p=ProgramAdaptationPolicy.bind(p,const [],id,routine,time,slotId:occurrence.id);
+      return ProgramRotationCoordinator.reconcile(p,[WorkoutSession(id:id,routineId:routine,
+        routineNameSnapshot:routine,startedAt:time,finishedAt:time.add(const Duration(hours:1)),durationSeconds:3600,
+        exercises:[WorkoutExercise(exerciseId:'e',exerciseNameSnapshot:'E',muscleGroupSnapshot:'Torso',
+          sets:[WorkoutSet(weight:10,reps:8,completed:true)])])]);
+    }
+    p=finish(p,'tue','A',tue);
+    final thursday=DateTime(2026,11,26,9);
+    p=ProgramAdaptationPolicy.setUnavailableDays(p,const [],thursday,[thursday]);
+    p=ProgramAdaptationPolicy.exchange(p,const [],slots(p)[1].id,slots(p)[2].id,fri);
+    p=finish(p,'fri','C',fri);
+    p=finish(p,'sat','B',sat);
+    expect(view(p,sat.add(const Duration(hours:2))).completed,3);
+    expect(view(p,sat.add(const Duration(hours:2))).nextWeekRoutineIds,['D','A','B','C','D']);
+    p=TrainingProgram.fromJson(p.toJson());
+    p=ProgramAdaptationPolicy.prepare(p,const [],DateTime(2026,11,30,9));
+    expect(slots(p).map((o)=>o.routineId),['D','A','B','C','D']);
+    expect(p.completions.length,3);
+  });
+
+  test('52 weeks of rolling sessions preserve order and unique occurrence ids', () {
+    var p=plan();
+    var cursor=0;
+    const ids=['A','B','C','D'];
+    for(var w=0;w<52;w++){
+      final date=TrainingProgram.shiftCalendarDays(monday,w*7);
+      p=ProgramAdaptationPolicy.prepare(p,const [],date);
+      expect(slots(p).map((o)=>o.routineId),List.generate(5,(i)=>ids[(cursor+i)%4]));
+      for(var i=0;i<5;i++){
+        final time=TrainingProgram.shiftCalendarDays(date,i).add(const Duration(hours:9));
+        final row=slots(p)[i];final id='w${w}_${i}';
+        p=ProgramAdaptationPolicy.bind(p,const [],id,row.routineId,time,slotId:row.id);
+        p=ProgramRotationCoordinator.reconcile(p,[WorkoutSession(id:id,routineId:row.routineId,
+          routineNameSnapshot:row.routineId,startedAt:time,finishedAt:time.add(const Duration(hours:1)),
+          durationSeconds:3600,exercises:[WorkoutExercise(exerciseId:'e',exerciseNameSnapshot:'E',
+            muscleGroupSnapshot:'Torso',sets:[WorkoutSet(weight:10,reps:8,completed:true)])])]);
+      }
+      p=TrainingProgram.fromJson(p.toJson());
+      cursor=(cursor+5)%4;
+    }
+    expect(p.completions.length,260);
+    expect(p.adaptation!.occurrences.map((o)=>o.id).toSet().length,p.adaptation!.occurrences.length);
+  });
+
+  test('calendar-only edit retains omitted, deferred and swapped slot identities', () {
+    var p=prepared(plan());
+    p=ProgramAdaptationPolicy.exchange(p,const [],slots(p)[0].id,slots(p)[2].id,now);
+    p=ProgramAdaptationPolicy.omit(p,const [],slots(p)[1].id,now);
+    p=ProgramAdaptationPolicy.postpone(p,const [],slots(p)[2].id,now,DateTime(2026,11,26));
+    final edited=ProgramRoutineOrderPolicy.applyScheduleEdit(existing:p,
+      edited:p.copyWith(scheduleMode:ProgramScheduleMode.continuous),now:now);
+    expect(slots(edited).map((o)=>o.toJson()).toList(),slots(p).map((o)=>o.toJson()).toList());
+    expect(edited.adaptation!.nextUnallocatedRotationIndex,p.adaptation!.nextUnallocatedRotationIndex);
+  });
+
   test('rollover retains only bounded rolling debt and weekly starts again', () {
     final nextMonday = DateTime(2026,11,30,9);
     final rolling = prepared(plan());

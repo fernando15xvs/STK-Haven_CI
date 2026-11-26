@@ -25,6 +25,19 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
+  test('concurrent writes share the same metadata lease', () async {
+    final other = TrainingProgramRepository(programs, metadataBox:metadata);
+    await Future.wait([repository.save(_program('one','Uno')),other.save(_program('two','Dos'))]);
+    expect(repository.getAll().map((p)=>p.id).toSet(),{'one','two'});
+    await Future.wait([
+      repository.update('one',(p)=>p.copyWith(notes:'primero')),
+      other.update('one',(p)=>p.copyWith(name:'Actualizado')),
+    ]);
+    final one = repository.getById('one')!;
+    expect(one.notes,'primero');
+    expect(one.name,'Actualizado');
+  });
+
   test('old backup without program shadow does not retain stale program box', () async {
     final stale = _program('stale', 'Programa que no pertenece al backup');
     await repository.save(stale);

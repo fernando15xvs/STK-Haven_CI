@@ -3,6 +3,7 @@ import 'package:core/domain/models/program_adaptation.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/program_schedule_projector.dart';
 import 'package:core/features/programs/application/program_week_plan.dart';
+import 'package:core/features/programs/application/program_adaptation_policy.dart';
 
 class ProgramPlanInsights {
   final int plannedThisWeek;
@@ -44,6 +45,8 @@ class ProgramPlanInsights {
   }
 
   String get paceLabel {
+    if (weekPlan?.isPaused == true) return 'Programa en pausa. Tu progreso se conserva.';
+    if (weekPlan?.closedBelowGoal == true) return 'Planificación cerrada sin completar el objetivo semanal.';
     if (scheduleMode == ProgramScheduleMode.flexible) {
       if (remainingThisWeek == 0) {
         return 'Completaste tu frecuencia objetivo de esta semana.';
@@ -91,14 +94,15 @@ class ProgramPlanInsights {
     final completedThisWeek =
         rawCompletedThisWeek.clamp(0, plannedThisWeek).toInt();
 
+    final weekPlan = ProgramWeekPlan.calculate(program: program, routines: routines, now: now);
     final dueThroughToday =
         program.scheduleMode == ProgramScheduleMode.flexible
             ? 0
             : plannedWeek
-                .where((item) => !item.date.isAfter(today))
+                .where((item) => !item.date.isAfter(today) &&
+                  !(program.adaptation?.unavailableDays.contains(item.date) ?? false))
                 .length;
 
-    final weekPlan = ProgramWeekPlan.calculate(program: program, routines: routines, now: now);
     final next = weekPlan.nextSuggestion;
 
     final next14 = ProgramScheduleProjector.project(
@@ -109,9 +113,9 @@ class ProgramPlanInsights {
       initialRotationIndex:
           ProgramScheduleProjector.rotationIndexAt(program, now),
     );
-    final futureIds = program.adaptation == null ? next14.map((item) => item.routineId) : [
-      ...weekPlan.slots.where((item) => !item.isCompleted && !item.isPaused &&
-        item.status == PlanOccurrenceStatus.pending).map((item) => item.routineId),
+    final adapted = program.adaptation == null ? null : ProgramAdaptationPolicy.prepare(program,routines,now);
+    final futureIds = adapted == null ? next14.map((item) => item.routineId) : [
+      ...ProgramAdaptationPolicy.forecastRemainingThisWeek(adapted,routines,now),
       ...weekPlan.nextWeekRoutineIds,
     ];
     final counts = <String, int>{};
@@ -135,7 +139,10 @@ class ProgramPlanInsights {
       completedThisWeek: completedThisWeek,
       dueThroughToday: dueThroughToday,
       pendingDue:
-          (dueThroughToday - completedThisWeek).clamp(0, 999).toInt(),
+          program.adaptation == null
+            ? (dueThroughToday - completedThisWeek).clamp(0, 999).toInt()
+            : weekPlan.slots.where((s) => s.status == PlanOccurrenceStatus.pending &&
+              !s.isPaused && s.date != null && !s.date!.isAfter(today)).length,
       remainingThisWeek:
           (plannedThisWeek - completedThisWeek).clamp(0, 999).toInt(),
       nextScheduledDate: next?.date,

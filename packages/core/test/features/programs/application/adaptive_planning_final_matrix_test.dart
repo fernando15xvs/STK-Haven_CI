@@ -57,6 +57,29 @@ void main() {
     }
   }
 
+  for(final mode in ProgramScheduleMode.values) {
+    for(final policy in ProgramSequencePolicy.values) {
+      if(mode==ProgramScheduleMode.fixed&&policy==ProgramSequencePolicy.weekly)continue;
+      test('exceptions survive backup and do not fabricate completion: $mode $policy',(){
+        var p=ProgramAdaptationPolicy.prepare(program(mode,policy,5),const [],monday);
+        final first=ProgramAdaptationPolicy.current(p).first;
+        p=ProgramAdaptationPolicy.omit(p,const [],first.id,monday);
+        expect(p.completions,isEmpty);
+        p=ProgramAdaptationPolicy.restoreOmitted(p,const [],first.id,monday);
+        p=ProgramAdaptationPolicy.pause(p,const [],monday,routineIds:{'A'});
+        p=ProgramAdaptationPolicy.setUnavailableDays(p,const [],monday,[monday]);
+        p=TrainingProgram.fromJson(p.toJson());
+        expect(p.adaptation!.routinePausedAt('A',monday),isTrue);
+        expect(view(p,monday).completed,0);
+        expect(view(p,monday).nextSuggestion?.routineId,isNot('A'));
+        final rolled=ProgramAdaptationPolicy.prepare(p,const [],nextMonday);
+        expect(rolled.adaptation!.unavailableDays,isEmpty);
+        expect(view(rolled,nextMonday).target,5);
+        expect(view(rolled,nextMonday).completed,0);
+      });
+    }
+  }
+
   test('rotating preview accounts for a deferred position, not all pending rows', () {
     final p=ProgramAdaptationPolicy.prepare(program(ProgramScheduleMode.flexible,
       ProgramSequencePolicy.rolling,5),const [],monday);

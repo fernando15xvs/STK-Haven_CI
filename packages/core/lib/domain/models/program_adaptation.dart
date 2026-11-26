@@ -62,7 +62,7 @@ class PlanPause {
 class ProgramAdaptation {
   const ProgramAdaptation({required this.week, this.occurrences = const [],
     this.pauses = const [], this.bindings = const {}, this.nextSerial = 0,
-    this.nextUnallocatedRotationIndex});
+    this.nextUnallocatedRotationIndex, this.unavailableDays = const []});
   final DateTime week;
   final List<PlanOccurrence> occurrences;
   final List<PlanPause> pauses;
@@ -72,6 +72,8 @@ class ProgramAdaptation {
   final int nextSerial;
   /// Allocation cursor; null denotes the legacy representation.
   final int? nextUnallocatedRotationIndex;
+  /// Civil dates the user explicitly cannot train; never consumes a slot.
+  final List<DateTime> unavailableDays;
 
   bool programPausedAt(DateTime now) => pauses.any((p) => p.routineId == null && p.activeAt(now));
   bool routinePausedAt(String id, DateTime now) => pauses.any((p) =>
@@ -99,18 +101,20 @@ class ProgramAdaptation {
 
   ProgramAdaptation copyWith({DateTime? week, List<PlanOccurrence>? occurrences,
       List<PlanPause>? pauses, Map<String,String>? bindings, int? nextSerial,
-       int? nextUnallocatedRotationIndex}) =>
+       int? nextUnallocatedRotationIndex, List<DateTime>? unavailableDays}) =>
     ProgramAdaptation(week: week ?? this.week,
       occurrences: List.unmodifiable(occurrences ?? this.occurrences),
       pauses: List.unmodifiable(pauses ?? this.pauses),
       bindings: Map.unmodifiable(bindings ?? this.bindings),
       nextSerial: nextSerial ?? this.nextSerial,
-       nextUnallocatedRotationIndex: nextUnallocatedRotationIndex ?? this.nextUnallocatedRotationIndex);
+       nextUnallocatedRotationIndex: nextUnallocatedRotationIndex ?? this.nextUnallocatedRotationIndex,
+       unavailableDays: List.unmodifiable(unavailableDays ?? this.unavailableDays));
   Map<String,dynamic> toJson() => {'week': week.toIso8601String(),
     'occurrences': occurrences.map((o) => o.toJson()).toList(),
     'pauses': pauses.map((p) => p.toJson()).toList(),
     'bindings': bindings, 'nextSerial': nextSerial,
-    if (nextUnallocatedRotationIndex != null) 'nextUnallocatedRotationIndex': nextUnallocatedRotationIndex};
+    if (nextUnallocatedRotationIndex != null) 'nextUnallocatedRotationIndex': nextUnallocatedRotationIndex,
+    if (unavailableDays.isNotEmpty) 'unavailableDays': unavailableDays.map((d) => d.toIso8601String()).toList()};
   factory ProgramAdaptation.fromJson(Map<String,dynamic> json) => ProgramAdaptation(
     week: DateTime.parse(json['week'] as String),
     occurrences: (json['occurrences'] as List? ?? const []).whereType<Map>()
@@ -119,5 +123,7 @@ class ProgramAdaptation {
         .map((p) => PlanPause.fromJson(Map<String,dynamic>.from(p))).toList(),
     bindings: Map<String,String>.from(json['bindings'] as Map? ?? const {}),
     nextSerial: (json['nextSerial'] as num?)?.toInt() ?? 0,
-     nextUnallocatedRotationIndex: (json['nextUnallocatedRotationIndex'] as num?)?.toInt());
+     nextUnallocatedRotationIndex: (json['nextUnallocatedRotationIndex'] as num?)?.toInt(),
+     unavailableDays: (json['unavailableDays'] as List? ?? const []).whereType<String>()
+       .map(DateTime.tryParse).whereType<DateTime>().toList());
 }

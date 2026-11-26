@@ -49,7 +49,10 @@ class ProgramAdaptationPolicy {
       // Weekly/fixed plans expire missed positions instead of creating debt.
       final reserved = old.bindings.values.toSet();
       for (final o in old.occurrences) {
-        if (_pending(o) && o.week == old.week && rolling &&
+        // An in-flight workout retains its original planning week across midnight.
+        if (_pending(o) && reserved.contains(o.id)) {
+          records.add(o);
+        } else if (_pending(o) && o.week == old.week && rolling &&
             current.length < target && program.routineIds.contains(o.routineId)) {
           current.add(o.copyWith(week: week, clearDate: true));
         } else if (_pending(o) && !reserved.contains(o.id)) {
@@ -84,7 +87,8 @@ class ProgramAdaptationPolicy {
     }
     final adaptation = (old ?? ProgramAdaptation(week: week)).copyWith(
       week: week, occurrences: [...records, ...current], nextSerial: serial,
-      nextUnallocatedRotationIndex: cursor);
+      nextUnallocatedRotationIndex: cursor,
+      unavailableDays: old?.unavailableDays.where((d) => !d.isBefore(week)).toList() ?? const []);
     return _syncPendingCursor(program.copyWith(adaptation: adaptation));
   }
 
@@ -118,7 +122,9 @@ class ProgramAdaptationPolicy {
     var serial = old.nextSerial;
     final rows = <PlanOccurrence>[
       for (final o in old.occurrences)
-        o.copyWith(archived: true, status: _pending(o) ? PlanOccurrenceStatus.expired : o.status),
+        if (o.week == fresh.week)
+          o.copyWith(archived: true, status: _pending(o) ? PlanOccurrenceStatus.expired : o.status)
+        else o,
       for (final o in fresh.occurrences)
         PlanOccurrence(id: '${edited.id}:occ:${serial++}', week: o.week,
           routineId: o.routineId, date: o.date, notBefore: o.notBefore,
@@ -126,7 +132,8 @@ class ProgramAdaptationPolicy {
     ];
     return next.copyWith(adaptation: old.copyWith(week: fresh.week,
       occurrences: rows, nextSerial: serial,
-      nextUnallocatedRotationIndex: fresh.nextUnallocatedRotationIndex));
+      nextUnallocatedRotationIndex: fresh.nextUnallocatedRotationIndex,
+      unavailableDays: old.unavailableDays.where((d)=>!d.isBefore(fresh.week)).toList()));
   }
 
   static DateTime? availableDate(TrainingProgram program, Iterable<Routine> routines,
@@ -140,6 +147,11 @@ class ProgramAdaptationPolicy {
         occurrence.date!.isBefore(day(now))) return null;
     final pauses = program.adaptation!.pauses;
     for (var i = 0; i < 370; i++) {
+      if (fixed && lower != null && candidate != day(lower)) return null;
+      if (program.adaptation!.unavailableDays.contains(candidate)) {
+        candidate = TrainingProgram.shiftCalendarDays(candidate, 1);
+        continue;
+      }
       final relevant = pauses.where((p) => (p.routineId == null ||
           p.routineId == occurrence.routineId) && p.activeAt(candidate == day(now) ? now : candidate));
       if (relevant.any((p) => p.endsAt == null)) return null;
@@ -147,7 +159,7 @@ class ProgramAdaptationPolicy {
       final explicitDay = occurrence.notBefore != null && candidate == day(occurrence.notBefore!);
       if (relevant.isEmpty && (flexible || fixed || explicitDay ||
           ProgramScheduleProjector.isTrainingDay(program, routines, candidate))) {
-        if (!program.repeatsWeekly || TrainingProgram.localWeekStart(candidate) == occurrence.week) {
+        if ((!program.repeatsWeekly && !fixed) || TrainingProgram.localWeekStart(candidate) == occurrence.week) {
           return candidate;
         }
         return null;
@@ -171,16 +183,11 @@ class ProgramAdaptationPolicy {
     final target = ProgramScheduleProjector.effectiveTargetSessionsPerWeek(p, routines);
     final ids = p.routineIds;
     if (ids.isEmpty) return const [];
-    final retained = <String>[];
-    final projected = p.scheduleMode == ProgramScheduleMode.continuous
-        ? projectedDates(p, routines, now) : null;
-    for (final o in current(p).where(_pending)) {
-      if (!ids.contains(o.routineId)) continue;
-      final available = projected == null ? availableDate(p, routines, o, now) : projected[o.id];
-      if (available == null || !available.isBefore(nextMonday)) {
-        retained.add(o.routineId);
-      }
-    }
+    final assumed = _forecastRemainingIds(p,routines,now);
+    final retained = <String>[
+      for(final o in current(p).where(_pending))
+        if(ids.contains(o.routineId) && !assumed.contains(o.id)) o.routineId,
+    ];
     return List.unmodifiable([
       ...retained.take(target),
       for (var i = 0; i < target - retained.length; i++)
@@ -188,14 +195,36 @@ class ProgramAdaptationPolicy {
     ]);
   }
 
+  static Set<String> _forecastRemainingIds(TrainingProgram p, Iterable<Routine> routines, DateTime now) {
+    final state = p.adaptation!;
+    final end = TrainingProgram.shiftCalendarDays(state.week,7);
+    final projected = p.scheduleMode == ProgramScheduleMode.continuous || state.unavailableDays.isNotEmpty
+        ? projectedDates(p,routines,now) : null;
+    final result = <String>{};
+    final target = ProgramScheduleProjector.effectiveTargetSessionsPerWeek(p,routines);
+    final completed = p.completionsInLocalWeek(now).where((c)=>!c.completedAt.isAfter(now)).length;
+    for(final o in current(p).where(_pending)) {
+      if(result.length>=target-completed) break;
+      if(!p.routineIds.contains(o.routineId))continue;
+      final date=projected==null?availableDate(p,routines,o,now):projected[o.id];
+      if(date!=null&&date.isBefore(end))result.add(o.id);
+    }
+    return result;
+  }
+
+  static List<String> forecastRemainingThisWeek(TrainingProgram p, Iterable<Routine> routines, DateTime now) {
+    final ids=_forecastRemainingIds(p,routines,now);
+    return [for(final o in current(p)) if(ids.contains(o.id)) o.routineId];
+  }
+
   /// Assign at most one opportunity per day for the continuous forecast.
   static Map<String, DateTime> projectedDates(TrainingProgram p,
       Iterable<Routine> routines, DateTime now) {
-    final rows = current(p).where(_pending).toList();
+    final rows = current(p).where((o) => _pending(o) && p.routineIds.contains(o.routineId)).toList();
     final result = <String, DateTime>{};
     final today = day(now);
     final end = TrainingProgram.shiftCalendarDays(p.adaptation!.week, 7);
-    final used = p.completionsInLocalWeek(now).where((c) => !c.completedAt.isAfter(now))
+    final used = p.completions.where((c) => !c.completedAt.isAfter(now))
         .map((c) => day(c.completedAt)).toSet();
     for (var date = today; date.isBefore(end); date = TrainingProgram.shiftCalendarDays(date, 1)) {
       if (used.contains(date)) continue;
@@ -293,7 +322,7 @@ class ProgramAdaptationPolicy {
     final today = day(now);
     final recovered = rows.removeAt(index).copyWith(
       notBefore: today, date: p.scheduleMode == ProgramScheduleMode.flexible ? null : today);
-    if (shiftFollowing && p.scheduleMode != ProgramScheduleMode.flexible) {
+    if (shiftFollowing && p.scheduleMode == ProgramScheduleMode.fixed) {
       var nextDay = today;
       for (var i = 0; i < rows.length; i++) {
         final row = rows[i];
@@ -403,6 +432,65 @@ class ProgramAdaptationPolicy {
       binding = selected.id;
     }
     return p.copyWith(adaptation: state.copyWith(bindings: {...state.bindings, workoutId: binding}));
+  }
+
+  /// Temporary availability only; does not edit weekdays or the weekly target.
+  static TrainingProgram setUnavailableDays(TrainingProgram program, Iterable<Routine> routines,
+      DateTime now, Iterable<DateTime> dates) {
+    final p = prepare(program, routines, now);
+    final week = p.adaptation!.week;
+    final end = TrainingProgram.shiftCalendarDays(week, 7);
+    final days = dates.map(day).toSet();
+    if (days.any((d) => d.isBefore(day(now)) || !d.isBefore(end))) {
+      throw ArgumentError('Selecciona días restantes de esta semana.');
+    }
+    return p.copyWith(adaptation: p.adaptation!.copyWith(unavailableDays: days.toList()..sort()));
+  }
+
+  /// Explicit, previewable repair of unresolved rolling slots. Never infer
+  /// which old exchanges were intentional or rewrite completed workouts.
+  static TrainingProgram repairRolling(TrainingProgram program, Iterable<Routine> routines,
+      DateTime now, String nextRoutineId) {
+    final p = prepare(program, routines, now);
+    if (p.scheduleMode == ProgramScheduleMode.fixed || p.repeatsWeekly) {
+      throw StateError('La reparación de rotación solo aplica a programas rotativos.');
+    }
+    final state = p.adaptation!;
+    var cursor = p.routineIds.indexOf(nextRoutineId);
+    if (cursor < 0) throw ArgumentError('Rutina fuera del programa.');
+    if (state.occurrences.any((o) => _pending(o) && state.bindings.containsValue(o.id))) {
+      throw StateError('Finaliza o descarta la sesión en curso antes de reparar.');
+    }
+    final target = ProgramScheduleProjector.effectiveTargetSessionsPerWeek(p, routines);
+    final keep = current(p).where((o) => !_pending(o)).length;
+    var serial = state.nextSerial;
+    final rows = <PlanOccurrence>[
+      for (final o in state.occurrences)
+        if (o.week == state.week && _pending(o))
+          o.copyWith(archived: true, status: PlanOccurrenceStatus.expired) else o,
+    ];
+    for (var i = keep; i < target; i++) {
+      rows.add(PlanOccurrence(id: '${p.id}:occ:${serial++}', week: state.week,
+        routineId: p.routineIds[cursor]));
+      cursor = (cursor + 1) % p.routineIds.length;
+    }
+    return _syncPendingCursor(p.copyWith(adaptation: state.copyWith(
+      occurrences: rows, nextSerial: serial, nextUnallocatedRotationIndex: cursor)));
+  }
+
+  /// Remove orphaned reservations only after the caller checks the persisted
+  /// draft and workout history. Completed/independent history stays intact.
+  static TrainingProgram releaseOrphanedBindings(TrainingProgram program, Set<String> liveWorkoutIds) {
+    final state = program.adaptation;
+    if (state == null) return program;
+    final bindings = Map<String,String>.from(state.bindings);
+    final complete = program.completions.map((c) => c.workoutSessionId).toSet();
+    bindings.removeWhere((id, _) => !liveWorkoutIds.contains(id) && !complete.contains(id));
+    if (bindings.length == state.bindings.length) return program;
+    final rows = [for (final o in state.occurrences)
+      if (_pending(o) && o.week.isBefore(state.week) && state.bindings.containsValue(o.id) &&
+          !bindings.containsValue(o.id)) o.copyWith(status: PlanOccurrenceStatus.expired) else o];
+    return _syncPendingCursor(program.copyWith(adaptation: state.copyWith(bindings: bindings, occurrences: rows)));
   }
 
   static TrainingProgram reconcile(TrainingProgram program, Iterable<WorkoutSession> history) {

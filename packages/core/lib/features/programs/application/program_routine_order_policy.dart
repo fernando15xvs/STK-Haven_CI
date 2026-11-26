@@ -2,6 +2,7 @@ import 'package:core/domain/models/training_program.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/program_adaptation.dart';
 import 'package:core/features/programs/application/program_adaptation_policy.dart';
+import 'package:core/features/programs/application/program_schedule_projector.dart';
 
 /// Non-destructive edit rules for a program's ordered routine IDs.
 ///
@@ -84,6 +85,20 @@ class ProgramRoutineOrderPolicy {
         ? edited.copyWith(weeklySequenceRoutineIds: edited.weeklySequence)
         : edited;
     if (changed) validateWeeklyConfiguration(normalized);
+    final compatibleCalendarChange = changed && existing.adaptation != null &&
+        existing.scheduleMode != ProgramScheduleMode.fixed && normalized.scheduleMode != ProgramScheduleMode.fixed &&
+        existing.sequencePolicy == normalized.sequencePolicy &&
+        existing.routineIds.length == normalized.routineIds.length &&
+        existing.routineIds.indexed.every((e) => normalized.routineIds[e.$1] == e.$2) &&
+        existing.weeklySequenceRoutineIds.length == normalized.weeklySequenceRoutineIds.length &&
+        existing.weeklySequenceRoutineIds.indexed.every((e) => normalized.weeklySequenceRoutineIds[e.$1] == e.$2) &&
+        ProgramScheduleProjector.effectiveTargetSessionsPerWeek(existing, routines) ==
+          ProgramScheduleProjector.effectiveTargetSessionsPerWeek(normalized, routines);
+    if (compatibleCalendarChange) {
+      return ProgramAdaptationPolicy.prepare(normalized.copyWith(startedAt: existing.startedAt,
+        completions: existing.completions, adaptation: existing.adaptation,
+        nextRotationIndex: existing.nextRotationIndex, sequenceEffectiveAt: now), routines, now);
+    }
     var pointer = nextIndexAfterEdit(existing: existing,
         updatedRoutineIds: normalized.routineIds);
     if (changed && existing.adaptation != null) {

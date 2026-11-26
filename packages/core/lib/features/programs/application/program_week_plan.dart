@@ -42,6 +42,8 @@ class ProgramWeekPlan {
   final int target;
   final int completed;
   bool get goalReached => target > 0 && completed >= target;
+  bool get hasPending => slots.any((s) => s.status == PlanOccurrenceStatus.pending && !s.isCompleted);
+  bool get closedBelowGoal => !goalReached && !hasPending && target > 0;
 
   static ProgramWeekPlan calculate({required TrainingProgram program,
       required Iterable<Routine> routines, required DateTime now}) {
@@ -74,7 +76,8 @@ class ProgramWeekPlan {
       nextWeekRoutineIds: future,
       nextSuggestion: next == null || completed >= target ? null : ProgramNextSuggestion(
         next.routineId, occurrenceId: next.id,
-        date: p.scheduleMode == ProgramScheduleMode.flexible && next.notBefore == null
+        date: p.scheduleMode == ProgramScheduleMode.flexible && next.notBefore == null &&
+            ProgramAdaptationPolicy.availableDate(p, routines, next, now) == ProgramAdaptationPolicy.day(now)
           ? null : ProgramAdaptationPolicy.availableDate(p, routines, next, now)));
   }
 

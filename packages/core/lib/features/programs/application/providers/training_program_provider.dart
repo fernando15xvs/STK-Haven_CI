@@ -11,6 +11,7 @@ import 'package:core/features/programs/data/training_program_repository.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/routines/application/providers/routine_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
+import 'package:core/features/workout/data/active_workout_repository.dart';
 import 'package:riverpod/riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
@@ -99,13 +100,14 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
   }
 
   Future<void> save(TrainingProgram program) async {
-    final existing = _repository.getById(program.id);
-    final updated = existing == null ? program : ProgramRoutineOrderPolicy.applyScheduleEdit(
-      existing: ProgramRotationCoordinator.reconcile(existing, ref.read(workoutHistoryProvider)),
-      edited: program, now: DateTime.now(), routines: ref.read(routineListProvider),
-    );
-    if (existing == null) ProgramRoutineOrderPolicy.validateWeeklyConfiguration(updated);
-    await _repository.save(updated);
+    final updated = await _repository.update(program.id, (existing) =>
+      ProgramRoutineOrderPolicy.applyScheduleEdit(
+        existing: ProgramRotationCoordinator.reconcile(existing, ref.read(workoutHistoryProvider)),
+        edited: program, now: DateTime.now(), routines: ref.read(routineListProvider)));
+    if (updated == null) {
+      ProgramRoutineOrderPolicy.validateWeeklyConfiguration(program);
+      await _repository.save(program);
+    }
     refresh();
   }
 
@@ -247,10 +249,12 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
       TrainingProgram, List<Routine>, DateTime) command) async {
     final active = _repository.getActive();
     if (active == null) throw StateError('No hay programa activo.');
-    final current = ProgramRotationCoordinator.reconcile(active, ref.read(workoutHistoryProvider));
-    final updated = command(current, ref.read(routineListProvider), DateTime.now());
-    if (updated.id != current.id) throw StateError('Programa incorrecto.');
-    await _repository.save(updated);
+    final updated = await _repository.update(active.id, (latest) {
+      if (!latest.isActive) throw StateError('El programa activo cambió.');
+      final current = ProgramRotationCoordinator.reconcile(latest, ref.read(workoutHistoryProvider));
+      return command(current, ref.read(routineListProvider), DateTime.now());
+    });
+    if (updated == null) throw StateError('El programa ya no existe.');
     refresh();
     return updated;
   }
@@ -264,24 +268,34 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
     final id = const Uuid().v4();
     await adaptActive((p, routines, now) {
       final prepared = ProgramAdaptationPolicy.prepare(p, routines, now);
-      final suggestion = ProgramAdaptationPolicy.nextOccurrence(prepared, routines, now);
       return ProgramAdaptationPolicy.bind(prepared, routines, id, routineId, now,
-        slotId: occurrenceId,
-        independent: independent || (occurrenceId == null &&
-            (suggestion?.routineId != routineId ||
-              (suggestion != null && (ProgramAdaptationPolicy.availableDate(prepared, routines,
-                  suggestion, now)?.isAfter(ProgramAdaptationPolicy.day(now)) ?? true)))));
+        slotId: occurrenceId, independent: independent);
     });
     return id;
   }
 
   Future<void> releaseWorkoutBinding(String workoutId) async {
     for (final program in _repository.getAll()) {
-      final state = program.adaptation;
-      if (state == null || !state.bindings.containsKey(workoutId) ||
-          program.completions.any((c) => c.workoutSessionId == workoutId)) continue;
-      final bindings = Map<String,String>.from(state.bindings)..remove(workoutId);
-      await _repository.save(program.copyWith(adaptation: state.copyWith(bindings: bindings)));
+      await _repository.update(program.id, (latest) {
+        final state = latest.adaptation;
+        if (state == null || !state.bindings.containsKey(workoutId) ||
+            latest.completions.any((c) => c.workoutSessionId == workoutId)) return latest;
+        final bindings = Map<String,String>.from(state.bindings)..remove(workoutId);
+        return latest.copyWith(adaptation: state.copyWith(bindings: bindings));
+      });
+    }
+    refresh();
+  }
+
+  /// Called only after the launcher has checked there is no active workout, or
+  /// on explicit user repair. A persisted draft/history protects valid IDs.
+  Future<void> recoverAbandonedReservations() async {
+    if (!Hive.isBoxOpen(HiveBoxes.activeWorkout)) return;
+    final draft = ActiveWorkoutRepository(Hive.box(HiveBoxes.activeWorkout)).getDraft();
+    final live = {if (draft != null) draft.id, ...ref.read(workoutHistoryProvider).map((s) => s.id)};
+    for (final program in _repository.getAll()) {
+      await _repository.update(program.id, (latest) =>
+        ProgramAdaptationPolicy.releaseOrphanedBindings(latest, live));
     }
     refresh();
   }
@@ -291,20 +305,14 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
   Future<TrainingProgram?> reconcileActive() async {
     final active = _repository.getActive();
     if (active == null) return null;
-    final history = ref.read(workoutHistoryProvider);
-    final reconciled = ProgramAdaptationPolicy.prepare(
-      ProgramRotationCoordinator.reconcile(active, history), ref.read(routineListProvider), DateTime.now());
-    if (!_sameProgress(active, reconciled)) {
-      await _repository.save(reconciled);
-      refresh();
-    }
+    final reconciled = await _repository.update(active.id, (latest) {
+      if (!latest.isActive) return latest;
+      return ProgramAdaptationPolicy.prepare(
+        ProgramRotationCoordinator.reconcile(latest, ref.read(workoutHistoryProvider)),
+        ref.read(routineListProvider), DateTime.now());
+    });
+    refresh();
     return reconciled;
-  }
-
-  bool _sameProgress(TrainingProgram a, TrainingProgram b) {
-    return a.nextRotationIndex == b.nextRotationIndex &&
-        a.completions.length == b.completions.length &&
-        identical(a.adaptation, b.adaptation);
   }
 }
 
