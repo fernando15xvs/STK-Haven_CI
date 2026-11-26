@@ -73,7 +73,12 @@ void main() {
       ]) {
         expect(find.widgetWithText(ChoiceChip, label), findsOneWidget);
       }
-      await tester.ensureVisible(find.text('Negro puro OLED'));
+      // The expanded appearance sections can leave OLED unbuilt in ListView.
+      await tester.scrollUntilVisible(
+        find.text('Negro puro OLED'),
+        200,
+        scrollable: find.byType(Scrollable),
+      );
       await tester.tap(find.text('Negro puro OLED'));
       await tester.pumpAndSettle();
       expect(container.read(settingsProvider).appearance.oledBlack, true);
