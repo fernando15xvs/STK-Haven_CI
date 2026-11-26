@@ -35,7 +35,7 @@ select throws_ok($$select public.stk_get_coach_measurements('c5000000-0000-0000-
 select throws_ok($$select public.stk_share_coach_measurements('c5000000-0000-0000-0000-000000000001',now(),'{"waistCm":81}')$$,'P0001','Measurement permission required','coach cannot write measurements');
 select is((select count(*) from public.stk_list_coach_checkins('b5000000-0000-0000-0000-000000000001')),1::bigint,'A sees only A checkins');
 select is(public.stk_get_task_adherence('b5000000-0000-0000-0000-000000000001',1)->>'due_count','1','A adherence excludes B');
-select throws_ok($select public.stk_get_coach_relationship_task_adherence('c5000000-0000-0000-0000-000000000002',1)$,'P0001','Task assignment permission required','coach cannot read other relationship adherence');
+select throws_ok($qa$select public.stk_get_coach_relationship_task_adherence('c5000000-0000-0000-0000-000000000002',1)$qa$,'P0001','Task assignment permission required','coach cannot read other relationship adherence');
 reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a5000000-0000-0000-0000-000000000002","role":"authenticated","is_anonymous":false}',true);
 select is(public.stk_get_coach_measurements('c5000000-0000-0000-0000-000000000002'),null::jsonb,'B cannot see A snapshot even with permission');
@@ -51,7 +51,7 @@ select ok(not has_function_privilege('authenticated','stk_secure.stk_revoke_coac
 select is(stk_secure.stk_revoke_coach_development_trial('a5000000-0000-0000-0000-000000000001','pgTap-coach-qa-revoke-a'),true,'administrator cancels private trial');
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"a5000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);
-select throws_ok($select public.stk_get_coach_measurements('c5000000-0000-0000-0000-000000000001')$,'P0001','Coach Pro entitlement required','expired entitlement denies measurements');
+select throws_ok($qa$select public.stk_get_coach_measurements('c5000000-0000-0000-0000-000000000001')$qa$,'P0001','Coach Pro entitlement required','expired entitlement denies measurements');
 select is(public.stk_get_own_subscription_entitlement('coach_pro')->>'access_active','false','trial revoked immediately on server');
 reset role; set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"b5000000-0000-0000-0000-000000000001","role":"authenticated","is_anonymous":false}',true);

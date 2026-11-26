@@ -82,7 +82,7 @@ class _CoachNutritionGuidancePageState extends ConsumerState<CoachNutritionGuida
       onVersion: (version) async {
         final historical = await ref.read(nutritionGuidanceProvider.notifier).open(plan.id, version: version);
         if (!mounted || historical == null) return;
-        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => _VerifiedNutritionGuidanceDetail(viewerId:_viewerId!,plan: historical, editable: false)));
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => _VerifiedNutritionGuidanceDetail(viewerId:_viewerId,plan: historical, editable: false)));
       },
     )));
   }

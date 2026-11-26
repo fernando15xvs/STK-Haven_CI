@@ -24,3 +24,8 @@ Base CI 45889992134 verde. PR privada #57 draft; espejo únicamente Actions. Web
 ## H — Validación
 - [x] Pruebas Dart, widgets específicos existentes, 27 pgTAP nuevas en instancia desechable; CI conserva siete jobs y web congelada. Fuente SQL nueva en supabase/pending/stk_coach_secure_completion.sql. El entorno de edición no tiene Supabase CLI: el job usa la CLI fijada para generar el archivo real, valida upgrade y rebuild, publica el archivo como artefacto stk-coach-secure-migration. Cuando se autorice despliegue, reconciliar el nombre canónico con ledger y conservar la fuente sin reaplicar SQL.
 - [ ] Resultado del CI, QA física, publicación remota de la migración (solo tras autorización), activación trial y firma iOS. Sin merge, sin pagos ni cambios remotos realizados en esta entrega.
+
+## Corrección del CI 45892803830
+- Analyze Mobile: quitar la segunda aserción `!` redundante en la apertura de una versión histórica de orientación alimentaria (Dart ya promueve el campo final a no nulo).
+- pgTAP incremental: corregir dos delimitadores de cadenas SQL de las pruebas de aislamiento de adherencia y revocación de trial; mantener las 27 comprobaciones. El CI anterior alcanzó 17 sin fallos antes del error de sintaxis.
+- Mobile tests, iOS, Anatomical QA y Edge Functions pasaron en el CI anterior. Se vuelve a ejecutar el gate completo sin cambios de configuración; no se ha modificado Supabase remoto.
