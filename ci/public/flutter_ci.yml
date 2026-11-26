@@ -163,7 +163,7 @@ jobs:
         run: bash ci/public/install_android_ndk_with_retry.sh
       - name: Build debug APK
         working-directory: apps/app_mobile
-        run: flutter build apk --debug --target lib/main_android.dart
+        run: flutter build apk --debug --target lib/main_android.dart --dart-define=STK_DEVELOPMENT_NUTRITION=true
       - name: Build profile APK
         working-directory: apps/app_mobile
         run: flutter build apk --profile --target lib/main_android.dart
@@ -198,7 +198,7 @@ jobs:
         run: flutter build ios --profile --no-codesign --target lib/main_ios.dart
       - name: Build iOS release without signing
         working-directory: apps/app_mobile
-        run: flutter build ios --release --no-codesign --target lib/main_ios.dart
+        run: flutter build ios --release --no-codesign --target lib/main_ios.dart --dart-define=STK_DEVELOPMENT_NUTRITION=true
       - name: Package unsigned iOS IPA
         working-directory: apps/app_mobile
         run: |

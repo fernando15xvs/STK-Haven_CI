@@ -1,6 +1,7 @@
 import 'package:core/features/nutrition/application/nutrition_access_state.dart';
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
 import 'package:flutter/material.dart';
+import 'package:core/features/nutrition/data/nutrition_development_config.dart';
 
 /// A compact, mobile-only explanation of what the user can do NOW.
 ///
@@ -37,6 +38,8 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
     final ageUnknown = access == NutritionAccessState.ageUnknown &&
         !checking && !showNetworkError && !signedOut;
 
+    final awaitingTestGrant = NutritionDevelopmentConfig.enabled &&
+        access == NutritionAccessState.adultUnverified && check == NutritionAdultCheck.unverified;
     final title = isMinor
         ? 'Nutrición para tu etapa'
         : ageUnknown
@@ -47,7 +50,9 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
                     ? 'No se pudo comprobar el acceso'
                     : signedOut
                         ? 'Plan disponible con tu cuenta'
-                        : legalReviewAvailable
+                        : awaitingTestGrant
+                            ? 'Acceso de pruebas pendiente'
+                            : legalReviewAvailable
                             ? 'Plan calórico pendiente de revisión'
                             : 'Plan calórico aún no activado';
 
@@ -61,7 +66,9 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
                     ? 'Comprueba tu conexión e inténtalo otra vez.'
                     : signedOut
                         ? 'Inicia sesión para consultar tu plan.'
-                        : 'Food Vision sigue disponible sin cifras.';
+                        : awaitingTestGrant
+                            ? 'Tu cuenta necesita autorización de desarrollo.'
+                            : 'Food Vision sigue disponible sin cifras.';
 
     final detail = isMinor
         ? 'Durante la adolescencia ofrecemos información sobre alimentos, '
@@ -81,7 +88,10 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
                         ? 'Puedes usar la orientación descriptiva. Los '
                             'cálculos personalizados requieren una cuenta '
                             'con autorización vigente.'
-                        : legalReviewAvailable
+                        : awaitingTestGrant
+                            ? 'Esta compilación es de desarrollo. El administrador debe autorizar '
+                                'tu cuenta adulta temporalmente. No borres tus datos ni repitas el onboarding.'
+                            : legalReviewAvailable
                             ? 'Puedes revisar las condiciones vigentes desde '
                                 'Perfil, sin volver al onboarding ni perder '
                                 'tus registros. Aceptarlas no concede el '
@@ -176,7 +186,7 @@ class StkMobileNutritionAccessPanel extends StatelessWidget {
               ),
             ],
           ),
-          if (showNetworkError && onRetry != null) ...[
+          if ((showNetworkError || awaitingTestGrant) && onRetry != null) ...[
             const SizedBox(height: 6),
             TextButton.icon(
               key: const ValueKey('stk_nutrition_access_retry'),

@@ -1,5 +1,6 @@
 import 'package:supabase/supabase.dart';
 import 'stk_nutrition_server_capabilities.dart';
+import 'nutrition_development_config.dart';
 
 /// A result of checking the trusted backend, not proof of age by itself.
 ///
@@ -44,6 +45,12 @@ class NutritionAdultAccessService {
     try {
       final result = await client.rpc('stk_get_nutrition_capabilities');
       final parsed = StkNutritionServerCapabilities.parse(result);
+      // A separate, explicit development build can consult an expiring
+      // server-owned tester grant; never fabricate a production legal receipt.
+      if (parsed?.personalizedAdultEnergy == false &&
+          NutritionDevelopmentConfig.enabled && !parsed!.legalCurrent) {
+        return client.rpc('stk_get_development_nutrition_access');
+      }
       return parsed?.personalizedAdultEnergy;
     } on PostgrestException catch (error) {
       if (error.code == 'PGRST202' || error.code == '42883') {

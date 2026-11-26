@@ -27,6 +27,7 @@ import 'package:core/features/nutrition/data/food_vision_service.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
 import 'package:core/features/nutrition/data/nutrition_goal_plan_repository.dart';
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
+import 'package:core/features/nutrition/data/nutrition_development_config.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_goal_selector.dart';
 import 'package:flutter/material.dart';
@@ -422,7 +423,7 @@ class _NutritionIntelligencePageState
         const SizedBox(height: 5),
         Text(
           plan == null
-              ? 'Todavía no tienes un plan guardado.'
+              ? 'Utiliza tus medidas guardadas para calcular tu objetivo.'
               : plan.isPaused
                   ? 'Tu plan está en pausa.'
                   : 'Plan guardado: ${plan.estimate.targetLow}–'
@@ -431,6 +432,8 @@ class _NutritionIntelligencePageState
             color: colors.onSurfaceVariant,
           ),
         ),
+        if (NutritionDevelopmentConfig.enabled)
+          const Text('Compilación de pruebas · estimaciones, no prescripción.'),
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
@@ -443,7 +446,7 @@ class _NutritionIntelligencePageState
                 : Icons.tune_rounded),
             label: Text(_showMobilePlanner
                 ? 'Ocultar detalles'
-                : 'Revisar plan'),
+                : plan == null ? 'Calcular mi objetivo' : 'Revisar plan'),
           ),
         ),
         if (_showMobilePlanner) ...[

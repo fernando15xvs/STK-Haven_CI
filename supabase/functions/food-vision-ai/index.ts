@@ -190,6 +190,15 @@ const authenticatedHandler = withSupabase(
       );
       if (!capabilityError) {
         hasVerifiedAdultNutritionAccess = permitted === true;
+        if (!hasVerifiedAdultNutritionAccess && permitted === false &&
+            payload.developmentNutrition === true) {
+          const { data: devGranted, error: devError } = await admin.rpc(
+            'stk_service_can_use_development_nutrition', {
+              p_user_id: userId, p_session_id: sessionId,
+            },
+          );
+          hasVerifiedAdultNutritionAccess = !devError && devGranted === true;
+        }
       } else if (capabilityError.code === 'PGRST202' ||
                  capabilityError.code === '42883') {
         const { data: verification, error: verificationError } = await admin

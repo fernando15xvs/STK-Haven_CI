@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:supabase/supabase.dart';
+import 'nutrition_development_config.dart';
 
 class FoodVisionService {
   static const int maxImageBytes = 4 * 1024 * 1024;
@@ -43,6 +44,7 @@ class FoodVisionService {
           'imageBase64': base64Encode(imageBytes),
           'mimeType': normalizedMime,
           'adultNumericNutrition': adultNumericNutrition,
+          if (NutritionDevelopmentConfig.enabled) 'developmentNutrition': true,
           if (dishHint != null && dishHint.trim().isNotEmpty)
             'dishHint': dishHint.trim(),
         },
