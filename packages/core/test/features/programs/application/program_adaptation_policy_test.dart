@@ -130,6 +130,38 @@ void main() {
         recovered.adaptation!.occurrences.length);
   });
 
+  test('allocation cursor remains separate from next pending occurrence', () {
+    var p = prepared(plan());
+    expect(p.nextRoutineId, 'A');
+    expect(p.adaptation!.nextUnallocatedRotationIndex, 1);
+    final first = slots(p).first;
+    p = ProgramAdaptationPolicy.bind(p, const [], 'real', 'A', now, slotId: first.id);
+    p = ProgramRotationCoordinator.reconcile(p, [workout('real','A')]);
+    expect(p.nextRoutineId, 'B');
+    expect(p.adaptation!.nextUnallocatedRotationIndex, 1);
+    p = TrainingProgram.fromJson(p.toJson());
+    final next = ProgramAdaptationPolicy.prepare(p, const [], DateTime(2026,11,30,9));
+    expect(slots(next).map((o) => o.routineId), ['B','C','D','A','B']);
+    expect(next.nextRoutineId, 'B');
+  });
+
+  test('continuous forecast uses distinct remaining opportunity days', () {
+    final thursday = DateTime(2026,11,26,9);
+    final p = ProgramAdaptationPolicy.prepare(plan(mode: ProgramScheduleMode.continuous)
+      .copyWith(trainingWeekdays: {1,2,4,5,6}), const [], thursday);
+    final dates = ProgramAdaptationPolicy.projectedDates(p, const [], thursday);
+    expect(dates.values.toList(), [DateTime(2026,11,26),DateTime(2026,11,27),DateTime(2026,11,28)]);
+    expect(view(p,thursday).nextWeekRoutineIds, ['D','A','B','C','D']);
+  });
+
+  test('legacy cursor repairs from trusted completion without rewriting history', () {
+    final p = plan().recordCompletion(workoutSessionId:'old',routineId:'A',completedAt:now)
+      .copyWith(nextRotationIndex:0);
+    final repaired = ProgramRotationCoordinator.reconcile(p, const []);
+    expect(repaired.nextRoutineId,'B');
+    expect(repaired.completions,p.completions);
+  });
+
   test('rollover retains only bounded rolling debt and weekly starts again', () {
     final nextMonday = DateTime(2026,11,30,9);
     final rolling = prepared(plan());

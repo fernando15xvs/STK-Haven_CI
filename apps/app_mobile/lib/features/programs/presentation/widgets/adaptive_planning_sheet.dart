@@ -193,6 +193,7 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
     final plan = ProgramWeekPlan.calculate(program: prepared,routines:routines,now:now);
     final state = prepared.adaptation!;
     final rows = ProgramAdaptationPolicy.current(prepared);
+    final projectedDates = {for (final slot in plan.slots) slot.id: slot.date};
     final pending = rows.where((o) => o.status == PlanOccurrenceStatus.pending &&
       !state.bindings.containsValue(o.id)).toList();
     final past = state.occurrences.where((o) => !o.archived && o.week.isBefore(state.week) &&
@@ -238,7 +239,7 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
               final paused = state.routinePausedAt(row.routineId,now);
               final next = row.id == plan.nextSuggestion?.occurrenceId;
               final reserved = state.bindings.containsValue(row.id);
-              final date = row.notBefore ?? row.date;
+              final date = flexible ? row.notBefore : projectedDates[row.id];
               final missed = !flexible && active.scheduleMode == ProgramScheduleMode.fixed &&
                 row.status == PlanOccurrenceStatus.pending && date != null && date.isBefore(ProgramAdaptationPolicy.day(now));
               final label = done?'Completada':omitted?'Omitida':paused?'Pausada':reserved?'En curso':

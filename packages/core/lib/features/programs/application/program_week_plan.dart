@@ -52,10 +52,16 @@ class ProgramWeekPlan {
     final state = p.adaptation!;
     final completions = {for (final c in p.completions) c.workoutSessionId: c};
     final current = ProgramAdaptationPolicy.current(p);
+    final projected = p.scheduleMode == ProgramScheduleMode.continuous
+        ? ProgramAdaptationPolicy.projectedDates(p, routines, now) : const <String, DateTime>{};
     final slots = <ProgramWeekSlot>[
       for (final (index, o) in current.indexed)
         ProgramWeekSlot(id: o.id, routineId: o.routineId, ordinal: index,
-          date: p.scheduleMode == ProgramScheduleMode.flexible ? null : o.date,
+          date: p.scheduleMode == ProgramScheduleMode.flexible ? null :
+            o.status == PlanOccurrenceStatus.completed && completions[o.workoutId] != null
+              ? ProgramAdaptationPolicy.day(completions[o.workoutId]!.completedAt)
+              : p.scheduleMode == ProgramScheduleMode.continuous && o.status == PlanOccurrenceStatus.pending
+                ? projected[o.id] : o.date,
           completion: completions[o.workoutId], status: o.status,
           isPaused: state.routinePausedAt(o.routineId, now)),
     ];

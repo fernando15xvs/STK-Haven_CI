@@ -260,7 +260,7 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
   Future<String?> bindWorkoutStart(String routineId, {String? occurrenceId,
       bool independent = false}) async {
     final active = _repository.getActive();
-    if (active == null || (active.adaptation == null && !independent && occurrenceId == null)) return null;
+    if (active == null) return null;
     final id = const Uuid().v4();
     await adaptActive((p, routines, now) {
       final prepared = ProgramAdaptationPolicy.prepare(p, routines, now);
@@ -292,7 +292,8 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
     final active = _repository.getActive();
     if (active == null) return null;
     final history = ref.read(workoutHistoryProvider);
-    final reconciled = ProgramRotationCoordinator.reconcile(active, history);
+    final reconciled = ProgramAdaptationPolicy.prepare(
+      ProgramRotationCoordinator.reconcile(active, history), ref.read(routineListProvider), DateTime.now());
     if (!_sameProgress(active, reconciled)) {
       await _repository.save(reconciled);
       refresh();
@@ -302,7 +303,8 @@ class TrainingProgramListNotifier extends Notifier<List<TrainingProgram>> {
 
   bool _sameProgress(TrainingProgram a, TrainingProgram b) {
     return a.nextRotationIndex == b.nextRotationIndex &&
-        a.completions.length == b.completions.length;
+        a.completions.length == b.completions.length &&
+        identical(a.adaptation, b.adaptation);
   }
 }
 
@@ -349,7 +351,8 @@ final nextProgramSessionProvider = Provider<NextProgramSession?>((ref) {
   final reconciled = ProgramRotationCoordinator.reconcile(active, history);
   final routines = ref.watch(routineListProvider);
   final now = ref.watch(trainingDayClockProvider).toLocal();
-  final plan = ProgramWeekPlan.calculate(program: reconciled, routines: routines, now: now);
+  final prepared = ProgramAdaptationPolicy.prepare(reconciled, routines, now);
+  final plan = ProgramWeekPlan.calculate(program: prepared, routines: routines, now: now);
   final nextRoutineId = plan.nextSuggestion?.routineId;
   final scheduledDate = plan.nextSuggestion?.date;
   if (nextRoutineId == null) return null;

@@ -18,11 +18,16 @@ class ProgramAdaptationPolicy {
   static TrainingProgram prepare(TrainingProgram program, Iterable<Routine> routines, DateTime now) {
     final week = TrainingProgram.localWeekStart(now);
     final old = program.adaptation;
-    if (old != null && !week.isAfter(old.week)) return program;
     final rolling = program.scheduleMode != ProgramScheduleMode.fixed && !program.repeatsWeekly;
+    if (old != null && !week.isAfter(old.week)) {
+      if (!rolling || old.nextUnallocatedRotationIndex != null) return _syncPendingCursor(program);
+      return _syncPendingCursor(program.copyWith(adaptation: old.copyWith(
+        nextUnallocatedRotationIndex: program.normalizedNextRotationIndex)));
+    }
     final target = ProgramScheduleProjector.effectiveTargetSessionsPerWeek(program, routines);
     var serial = old?.nextSerial ?? 0;
-    var cursor = program.normalizedNextRotationIndex;
+    var cursor = old?.nextUnallocatedRotationIndex ?? program.normalizedNextRotationIndex;
+    if (program.routineIds.isNotEmpty) cursor %= program.routineIds.length;
     final records = <PlanOccurrence>[];
     final current = <PlanOccurrence>[];
     PlanOccurrence make(String id, {DateTime? date, ProgramCompletion? completion}) =>
@@ -78,8 +83,22 @@ class ProgramAdaptationPolicy {
       }
     }
     final adaptation = (old ?? ProgramAdaptation(week: week)).copyWith(
-      week: week, occurrences: [...records, ...current], nextSerial: serial);
-    return program.copyWith(adaptation: adaptation, nextRotationIndex: cursor);
+      week: week, occurrences: [...records, ...current], nextSerial: serial,
+      nextUnallocatedRotationIndex: cursor);
+    return _syncPendingCursor(program.copyWith(adaptation: adaptation));
+  }
+
+  /// Expose the unresolved routine rather than the allocation cursor.
+  static TrainingProgram _syncPendingCursor(TrainingProgram p) {
+    if (p.scheduleMode == ProgramScheduleMode.fixed || p.repeatsWeekly ||
+        p.adaptation == null || p.adaptation!.nextUnallocatedRotationIndex == null || p.routineIds.isEmpty) return p;
+    for (final row in current(p)) {
+      if (!_pending(row)) continue;
+      final index = p.routineIds.indexOf(row.routineId);
+      if (index >= 0) return p.nextRotationIndex == index ? p : p.copyWith(nextRotationIndex: index);
+    }
+    final index = p.adaptation!.nextUnallocatedRotationIndex! % p.routineIds.length;
+    return p.nextRotationIndex == index ? p : p.copyWith(nextRotationIndex: index);
   }
 
   static List<PlanOccurrence> current(TrainingProgram program) =>
@@ -106,7 +125,8 @@ class ProgramAdaptationPolicy {
           status: o.status, workoutId: o.workoutId),
     ];
     return next.copyWith(adaptation: old.copyWith(week: fresh.week,
-      occurrences: rows, nextSerial: serial));
+      occurrences: rows, nextSerial: serial,
+      nextUnallocatedRotationIndex: fresh.nextUnallocatedRotationIndex));
   }
 
   static DateTime? availableDate(TrainingProgram program, Iterable<Routine> routines,
@@ -152,9 +172,11 @@ class ProgramAdaptationPolicy {
     final ids = p.routineIds;
     if (ids.isEmpty) return const [];
     final retained = <String>[];
+    final projected = p.scheduleMode == ProgramScheduleMode.continuous
+        ? projectedDates(p, routines, now) : null;
     for (final o in current(p).where(_pending)) {
       if (!ids.contains(o.routineId)) continue;
-      final available = availableDate(p, routines, o, now);
+      final available = projected == null ? availableDate(p, routines, o, now) : projected[o.id];
       if (available == null || !available.isBefore(nextMonday)) {
         retained.add(o.routineId);
       }
@@ -162,8 +184,31 @@ class ProgramAdaptationPolicy {
     return List.unmodifiable([
       ...retained.take(target),
       for (var i = 0; i < target - retained.length; i++)
-        ids[(p.normalizedNextRotationIndex + i) % ids.length],
+        ids[((state.nextUnallocatedRotationIndex ?? p.normalizedNextRotationIndex) + i) % ids.length],
     ]);
+  }
+
+  /// Assign at most one opportunity per day for the continuous forecast.
+  static Map<String, DateTime> projectedDates(TrainingProgram p,
+      Iterable<Routine> routines, DateTime now) {
+    final rows = current(p).where(_pending).toList();
+    final result = <String, DateTime>{};
+    final today = day(now);
+    final end = TrainingProgram.shiftCalendarDays(p.adaptation!.week, 7);
+    final used = p.completionsInLocalWeek(now).where((c) => !c.completedAt.isAfter(now))
+        .map((c) => day(c.completedAt)).toSet();
+    for (var date = today; date.isBefore(end); date = TrainingProgram.shiftCalendarDays(date, 1)) {
+      if (used.contains(date)) continue;
+      final instant = date == today ? now : date;
+      for (final row in rows) {
+        if (result.containsKey(row.id)) continue;
+        if (availableDate(p, routines, row, instant) == date) {
+          result[row.id] = date;
+          break;
+        }
+      }
+    }
+    return result;
   }
 
   static PlanOccurrence? nextOccurrence(TrainingProgram program, Iterable<Routine> routines, DateTime now) {
@@ -186,7 +231,7 @@ class ProgramAdaptationPolicy {
   }
 
   static TrainingProgram _replace(TrainingProgram p, List<PlanOccurrence> rows) =>
-    p.copyWith(adaptation: p.adaptation!.copyWith(occurrences: rows));
+    _syncPendingCursor(p.copyWith(adaptation: p.adaptation!.copyWith(occurrences: rows)));
 
   static int _index(TrainingProgram p, String slotId) {
     final i = p.adaptation!.occurrences.indexWhere((o) => o.id == slotId &&
@@ -262,7 +307,8 @@ class ProgramAdaptationPolicy {
         rows[i] = row.copyWith(date: nextDay, notBefore: nextDay);
       }
     }
-    rows.insert(0, recovered);
+    final firstPending = rows.indexWhere((o) => o.week == p.adaptation!.week && _pending(o));
+    rows.insert(firstPending < 0 ? rows.length : firstPending, recovered);
     return _replace(p, rows);
   }
 
@@ -376,11 +422,12 @@ class ProgramAdaptationPolicy {
       rows[i] = row.copyWith(status: PlanOccurrenceStatus.completed, workoutId: session.id);
       completions.add(ProgramCompletion(workoutSessionId: session.id,
         routineId: row.routineId, completedAt: session.finishedAt,
-        rotationIndex: i, programWeek: program.weekAt(session.finishedAt)));
+        rotationIndex: program.routineIds.indexOf(row.routineId).clamp(0, program.routineIds.length).toInt(),
+         programWeek: program.weekAt(session.finishedAt)));
       seen.add(session.id);
     }
     if (completions.length == program.completions.length) return program;
-    return program.copyWith(completions: List.unmodifiable(completions),
-      adaptation: state.copyWith(occurrences: rows));
+    return _syncPendingCursor(program.copyWith(completions: List.unmodifiable(completions),
+      adaptation: state.copyWith(occurrences: rows)));
   }
 }

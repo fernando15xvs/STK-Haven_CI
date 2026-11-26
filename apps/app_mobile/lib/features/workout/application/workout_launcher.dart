@@ -130,7 +130,7 @@ class WorkoutLauncher {
       independent = true;
     }
 
-    final adapted = ref.read(activeTrainingProgramProvider)?.adaptation != null;
+    final adapted = ref.read(activeTrainingProgramProvider) != null;
     final programNotifier = ref.read(trainingProgramListProvider.notifier);
     final String? sessionId;
     try {

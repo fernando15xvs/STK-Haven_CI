@@ -61,7 +61,8 @@ class PlanPause {
 
 class ProgramAdaptation {
   const ProgramAdaptation({required this.week, this.occurrences = const [],
-    this.pauses = const [], this.bindings = const {}, this.nextSerial = 0});
+    this.pauses = const [], this.bindings = const {}, this.nextSerial = 0,
+    this.nextUnallocatedRotationIndex});
   final DateTime week;
   final List<PlanOccurrence> occurrences;
   final List<PlanPause> pauses;
@@ -69,6 +70,8 @@ class ProgramAdaptation {
   /// A persisted binding survives draft restart and avoids guessing by routine.
   final Map<String, String> bindings;
   final int nextSerial;
+  /// Allocation cursor; null denotes the legacy representation.
+  final int? nextUnallocatedRotationIndex;
 
   bool programPausedAt(DateTime now) => pauses.any((p) => p.routineId == null && p.activeAt(now));
   bool routinePausedAt(String id, DateTime now) => pauses.any((p) =>
@@ -95,16 +98,19 @@ class ProgramAdaptation {
   }
 
   ProgramAdaptation copyWith({DateTime? week, List<PlanOccurrence>? occurrences,
-      List<PlanPause>? pauses, Map<String,String>? bindings, int? nextSerial}) =>
+      List<PlanPause>? pauses, Map<String,String>? bindings, int? nextSerial,
+       int? nextUnallocatedRotationIndex}) =>
     ProgramAdaptation(week: week ?? this.week,
       occurrences: List.unmodifiable(occurrences ?? this.occurrences),
       pauses: List.unmodifiable(pauses ?? this.pauses),
       bindings: Map.unmodifiable(bindings ?? this.bindings),
-      nextSerial: nextSerial ?? this.nextSerial);
+      nextSerial: nextSerial ?? this.nextSerial,
+       nextUnallocatedRotationIndex: nextUnallocatedRotationIndex ?? this.nextUnallocatedRotationIndex);
   Map<String,dynamic> toJson() => {'week': week.toIso8601String(),
     'occurrences': occurrences.map((o) => o.toJson()).toList(),
     'pauses': pauses.map((p) => p.toJson()).toList(),
-    'bindings': bindings, 'nextSerial': nextSerial};
+    'bindings': bindings, 'nextSerial': nextSerial,
+    if (nextUnallocatedRotationIndex != null) 'nextUnallocatedRotationIndex': nextUnallocatedRotationIndex};
   factory ProgramAdaptation.fromJson(Map<String,dynamic> json) => ProgramAdaptation(
     week: DateTime.parse(json['week'] as String),
     occurrences: (json['occurrences'] as List? ?? const []).whereType<Map>()
@@ -112,5 +118,6 @@ class ProgramAdaptation {
     pauses: (json['pauses'] as List? ?? const []).whereType<Map>()
         .map((p) => PlanPause.fromJson(Map<String,dynamic>.from(p))).toList(),
     bindings: Map<String,String>.from(json['bindings'] as Map? ?? const {}),
-    nextSerial: (json['nextSerial'] as num?)?.toInt() ?? 0);
+    nextSerial: (json['nextSerial'] as num?)?.toInt() ?? 0,
+     nextUnallocatedRotationIndex: (json['nextUnallocatedRotationIndex'] as num?)?.toInt());
 }

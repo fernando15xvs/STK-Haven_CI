@@ -35,7 +35,17 @@ class ProgramRotationCoordinator {
     final completions = List<ProgramCompletion>.from(program.completions);
     final seenSessionIds = <String>{...alreadyRecorded};
     var nextIndex = program.normalizedNextRotationIndex;
-    var changed = false;
+    // Only infer the legacy cursor from a trusted completion in the same order.
+    if (program.scheduleMode != ProgramScheduleMode.fixed && !program.repeatsWeekly &&
+        program.completions.isNotEmpty) {
+      final latest = program.completions.reduce((a,b) => a.completedAt.isAfter(b.completedAt) ? a : b);
+      final index = program.routineIds.indexOf(latest.routineId);
+      if (index >= 0 && latest.rotationIndex == index &&
+          (program.sequenceEffectiveAt == null || !latest.completedAt.isBefore(program.sequenceEffectiveAt!))) {
+        nextIndex = (index + 1) % program.routineIds.length;
+      }
+    }
+    var changed = nextIndex != program.normalizedNextRotationIndex;
 
     // An out-of-order workout skipped in an earlier reconciliation must not
     // become the "next" program session merely because the expected workout
