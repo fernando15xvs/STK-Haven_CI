@@ -17,6 +17,7 @@ import '../../../motivation/presentation/widgets/motivation_home_mini_player.dar
 import '../../../routines/presentation/pages/routines_page.dart';
 import '../../../tools/presentation/training_tools_page.dart';
 import 'program_dashboard_page.dart';
+import '../widgets/quick_access_menu.dart';
 import '../../application/home_tab_return_request.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -322,7 +323,10 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: _toggleMenu,
-                  child: Container(color: Colors.black.withValues(alpha: 0.5)),
+                  child: ColoredBox(
+                    key: const ValueKey('quick_access_scrim'),
+                    color: QuickAccessMenu.scrimFor(Theme.of(overlayContext).brightness),
+                  ),
                 ),
               ),
             ),
@@ -330,8 +334,10 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
           Positioned(
             left: 12,
             right: 12,
+            top: MediaQuery.paddingOf(overlayContext).top + 12,
             bottom: MediaQuery.sizeOf(overlayContext).height - offset.dy + 20,
-            child: Center(
+            child: Align(
+              alignment: Alignment.bottomCenter,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 380),
                 child: Material(
@@ -342,48 +348,44 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                       curve: Curves.easeOutCubic,
                     ),
                     alignment: Alignment.bottomCenter,
-                    child: Wrap(
-                      alignment: WrapAlignment.spaceEvenly,
-                      runAlignment: WrapAlignment.center,
-                      spacing: 12,
-                      runSpacing: 12,
+                    child: QuickAccessMenu(
                       children: [
                         if (widget.coachEnabled)
-                          _MenuOption(
+                          QuickAccessOption(
                             icon: Icons.groups_2_outlined,
                             label: 'Coach',
                             onTap: () => _openPage(const CoachHubPage()),
                           ),
-                        _MenuOption(
+                        QuickAccessOption(
                           icon: Icons.task_alt_outlined,
                           label: 'Hábitos',
                           onTap: () => _openPage(const StudyHabitsMobilePage()),
                         ),
                         if (widget.faithEnabled) ...[
-                          _MenuOption(
+                          QuickAccessOption(
                             icon: Icons.menu_book,
                             label: 'La Biblia',
                             onTap: () => _openPage(const BibleReaderPage()),
                           ),
-                          _MenuOption(
+                          QuickAccessOption(
                             icon: Icons.auto_awesome,
                             label: 'Haven Faith',
                             onTap: () => _openPage(const AiChatPage()),
                           ),
                         ],
-                        _MenuOption(
+                        QuickAccessOption(
                           icon: Icons.restaurant_menu_outlined,
                           label: 'Nutrición',
                           onTap: () => _openPage(
                             const NutritionIntelligencePageMobile(),
                           ),
                         ),
-                        _MenuOption(
+                        QuickAccessOption(
                           icon: Icons.headphones_outlined,
                           label: 'Motivation',
                           onTap: () => _openPage(const MotivationPage()),
                         ),
-                        _MenuOption(
+                        QuickAccessOption(
                           icon: Icons.build_circle_outlined,
                           label: 'Herramientas',
                           onTap: () => _openPage(const TrainingToolsPage()),
@@ -445,64 +447,3 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
   }
 }
 
-class _MenuOption extends StatelessWidget {
-  const _MenuOption({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: label,
-      child: ExcludeSemantics(
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(22),
-          child: SizedBox(
-            width: 86,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppColors.of(context).surfaceHigh,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.of(context).surfaceBorder,
-                      width: 2,
-                    ),
-                  ),
-                  child: Icon(
-                    icon,
-                    color: AppColors.of(context).primary,
-                    size: 25,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.of(context).textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
