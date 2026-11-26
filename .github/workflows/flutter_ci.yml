@@ -381,6 +381,9 @@ jobs:
       - name: Test STK Motivation import, playlists, playback and compact player
         working-directory: apps/app_mobile
         run: flutter test test/features/motivation
+      - name: Test Coach and Coach Pro mobile flows
+        working-directory: apps/app_mobile
+        run: flutter test test/migrated_core/features/coach test/migrated_core/features/coach_pro
       - name: Test nutrition access visual matrix and adult privacy
         working-directory: apps/app_mobile
         run: flutter test test/features/nutrition

@@ -75,10 +75,15 @@ final coachClientProvider =
 );
 
 class CoachClientNotifier extends Notifier<CoachClientState> {
-  late final CoachClientService _service;
+  late CoachClientService _service;
+  int _generation = 0;
+  bool _current(int generation) => ref.mounted && generation == _generation;
 
   @override
   CoachClientState build() {
+    ref.watch(appIdentityProvider.select((value) => (value.signedIn, value.userId)));
+    _generation++;
+    ref.onDispose(() => _generation++);
     _service = ref.watch(coachClientServiceProvider);
     return const CoachClientState();
   }
@@ -93,14 +98,17 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
     }
     if (state.busy) return false;
 
+    final generation = ++_generation;
     state = state.copyWith(
       operation: CoachClientOperation.loading,
+      relationships: const [],
       clearMessage: true,
       isError: false,
     );
 
     try {
       final relationships = await _service.getRelationships();
+      if (!_current(generation)) return false;
       state = state.copyWith(
         relationships: relationships,
         operation: CoachClientOperation.idle,
@@ -108,11 +116,13 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
       );
       return true;
     } on PostgrestException {
+      if (!_current(generation)) return false;
       _fail(
         'Coach/Client todavía no está disponible en el backend activo.',
       );
       return false;
     } catch (_) {
+      if (!_current(generation)) return false;
       _fail('No se pudieron cargar las relaciones de entrenador.');
       return false;
     }
@@ -128,9 +138,11 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
     int expiresInHours = 168,
   }) async {
     if (state.busy) return null;
+    final preparingGeneration = _generation;
     final ready = await _prepareCoachAccount();
-    if (!ready) return null;
+    if (!ready || !_current(preparingGeneration) || state.busy) return null;
 
+    final generation = ++_generation;
     state = state.copyWith(
       operation: CoachClientOperation.creatingInvitation,
       clearInvitationCode: true,
@@ -143,6 +155,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
         permissions: permissions,
         expiresInHours: expiresInHours,
       );
+      if (!_current(generation)) return null;
       state = state.copyWith(
         operation: CoachClientOperation.idle,
         invitationCode: code,
@@ -152,9 +165,11 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
       );
       return code;
     } on PostgrestException catch (error) {
+      if (!_current(generation)) return null;
       _fail(_databaseMessage(error));
       return null;
     } catch (_) {
+      if (!_current(generation)) return null;
       _fail('No se pudo crear la invitación.');
       return null;
     }
@@ -164,6 +179,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
     if (state.busy || code.trim().isEmpty) return null;
     if (!_requirePermanentAccount()) return null;
 
+    final generation = ++_generation;
     state = state.copyWith(
       operation: CoachClientOperation.previewingInvitation,
       clearInvitationPreview: true,
@@ -173,6 +189,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
 
     try {
       final preview = await _service.previewInvitation(code);
+      if (!_current(generation)) return null;
       if (preview == null) {
         _fail('La invitación no existe, expiró o ya fue utilizada.');
         return null;
@@ -184,9 +201,11 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
       );
       return preview;
     } on PostgrestException catch (error) {
+      if (!_current(generation)) return null;
       _fail(_databaseMessage(error));
       return null;
     } catch (_) {
+      if (!_current(generation)) return null;
       _fail('No se pudo revisar la invitación.');
       return null;
     }
@@ -196,6 +215,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
     if (state.busy || code.trim().isEmpty) return false;
     if (!_requirePermanentAccount()) return false;
 
+    final generation = ++_generation;
     state = state.copyWith(
       operation: CoachClientOperation.acceptingInvitation,
       clearMessage: true,
@@ -204,7 +224,9 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
 
     try {
       await _service.acceptInvitation(code);
+      if (!_current(generation)) return false;
       final relationships = await _service.getRelationships();
+      if (!_current(generation)) return false;
       state = state.copyWith(
         relationships: relationships,
         operation: CoachClientOperation.idle,
@@ -214,9 +236,11 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
       );
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(generation)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (_) {
+      if (!_current(generation)) return false;
       _fail('No se pudo aceptar la invitación.');
       return false;
     }
@@ -227,6 +251,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
     required Set<CoachPermission> permissions,
   }) async {
     if (state.busy || !_requirePermanentAccount()) return false;
+    final generation = ++_generation;
     state = state.copyWith(
       operation: CoachClientOperation.updatingPermissions,
       clearMessage: true,
@@ -238,6 +263,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
         relationshipId: relationshipId,
         permissions: permissions,
       );
+      if (!_current(generation)) return false;
       final previous = _relationshipById(relationshipId);
       if (previous != null) {
         ref
@@ -251,6 +277,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
             .clearForClient(previous.clientUserId);
       }
       final relationships = await _service.getRelationships();
+      if (!_current(generation)) return false;
       state = state.copyWith(
         relationships: relationships,
         operation: CoachClientOperation.idle,
@@ -259,9 +286,11 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
       );
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(generation)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (_) {
+      if (!_current(generation)) return false;
       _fail('No se pudieron actualizar los permisos.');
       return false;
     }
@@ -269,6 +298,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
 
   Future<bool> revokeRelationship(String relationshipId) async {
     if (state.busy || !_requirePermanentAccount()) return false;
+    final generation = ++_generation;
     state = state.copyWith(
       operation: CoachClientOperation.revoking,
       clearMessage: true,
@@ -278,6 +308,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
     try {
       final previous = _relationshipById(relationshipId);
       await _service.revokeRelationship(relationshipId);
+      if (!_current(generation)) return false;
       if (previous != null) {
         ref
             .read(coachProgressProvider.notifier)
@@ -290,6 +321,7 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
             .clearForClient(previous.clientUserId);
       }
       final relationships = await _service.getRelationships();
+      if (!_current(generation)) return false;
       state = state.copyWith(
         relationships: relationships,
         operation: CoachClientOperation.idle,
@@ -298,9 +330,11 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
       );
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(generation)) return false;
       _fail(_databaseMessage(error));
       return false;
     } catch (_) {
+      if (!_current(generation)) return false;
       _fail('No se pudo revocar la relación.');
       return false;
     }
@@ -328,9 +362,11 @@ class CoachClientNotifier extends Notifier<CoachClientState> {
       return false;
     }
 
+    final generation = _generation;
     final synced = await ref
         .read(appIdentityProvider.notifier)
         .syncOwnProfile(capabilities: capabilities);
+    if (!_current(generation)) return false;
     if (!synced) {
       _fail(
         ref.read(appIdentityProvider).message ??

@@ -55,10 +55,15 @@ final coachProgressProvider =
 );
 
 class CoachProgressNotifier extends Notifier<CoachProgressState> {
-  late final CoachProgressService _service;
+  late CoachProgressService _service;
+  int _generation = 0;
+  bool _current(int generation) => ref.mounted && generation == _generation;
 
   @override
   CoachProgressState build() {
+    ref.watch(appIdentityProvider.select((value) => (value.signedIn, value.userId)));
+    _generation++;
+    ref.onDispose(() => _generation++);
     _service = ref.watch(coachProgressServiceProvider);
     return const CoachProgressState();
   }
@@ -70,6 +75,7 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
     final identity = ref.read(appIdentityProvider);
     if (!identity.signedIn) return false;
     if (state.busy) return false;
+    final generation = ++_generation;
 
     state = state.copyWith(
       operation: CoachProgressOperation.syncingOwn,
@@ -85,6 +91,7 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
         snapshot,
         exerciseProgress: exerciseProgress,
       );
+      if (!_current(generation)) return false;
       state = state.copyWith(
         operation: CoachProgressOperation.idle,
         message: silent ? null : 'Progreso compartido actualizado.',
@@ -93,6 +100,7 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
       );
       return true;
     } on PostgrestException catch (error) {
+      if (!_current(generation)) return false;
       state = state.copyWith(
         operation: CoachProgressOperation.idle,
         message: silent ? null : _databaseMessage(error),
@@ -101,6 +109,7 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
       );
       return false;
     } catch (_) {
+      if (!_current(generation)) return false;
       state = state.copyWith(
         operation: CoachProgressOperation.idle,
         message: silent ? null : 'No se pudo actualizar el progreso compartido.',
@@ -115,8 +124,11 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
     if (clientUserId.trim().isEmpty) return null;
     if (!ref.read(appIdentityProvider).signedIn) return null;
     if (state.busy) return null;
-
+    final generation = ++_generation;
+    final remaining = Map<String, CoachClientProgress>.from(state.byClientId)
+      ..remove(clientUserId);
     state = state.copyWith(
+      byClientId: Map.unmodifiable(remaining),
       operation: CoachProgressOperation.loadingClient,
       clearMessage: true,
       isError: false,
@@ -124,6 +136,10 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
 
     try {
       final progress = await _service.getClientProgress(clientUserId);
+      if (!_current(generation)) return null;
+      if (progress.clientUserId != null && progress.clientUserId != clientUserId) {
+        throw const FormatException('Client progress identity mismatch');
+      }
       final next = Map<String, CoachClientProgress>.from(state.byClientId)
         ..[clientUserId] = progress;
       state = state.copyWith(
@@ -133,19 +149,26 @@ class CoachProgressNotifier extends Notifier<CoachProgressState> {
       );
       return progress;
     } on PostgrestException catch (error) {
+      if (!_current(generation)) return null;
       _fail(_databaseMessage(error));
       return null;
     } catch (_) {
+      if (!_current(generation)) return null;
       _fail('No se pudo cargar el progreso compartido.');
       return null;
     }
   }
 
   void clearClient(String clientUserId) {
-    if (!state.byClientId.containsKey(clientUserId)) return;
+    // Revocation must also discard any in-flight protected response.
+    final cancelRead = state.operation == CoachProgressOperation.loadingClient;
+    if (cancelRead) _generation++;
     final next = Map<String, CoachClientProgress>.from(state.byClientId)
       ..remove(clientUserId);
-    state = state.copyWith(byClientId: Map.unmodifiable(next));
+    state = state.copyWith(
+      byClientId: Map.unmodifiable(next),
+      operation: cancelRead ? CoachProgressOperation.idle : state.operation,
+    );
   }
 
   void _fail(String message) {

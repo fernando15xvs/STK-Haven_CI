@@ -52,6 +52,7 @@ class _CoachClientProgressPageState
 
   @override
   Widget build(BuildContext context) {
+    final identity = ref.watch(appIdentityProvider);
     final state = ref.watch(coachProgressProvider);
     final progress = state.byClientId[widget.clientUserId];
     final loading =
@@ -74,17 +75,18 @@ class _CoachClientProgressPageState
             constraints: const BoxConstraints(maxWidth: 900),
             child: Builder(
               builder: (context) {
-                if (loading && progress == null) {
+                if (!identity.signedIn) {
+                  return const Center(child: Text('Inicia sesión para consultar el progreso compartido.'));
+                }
+                if (loading) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (state.isError && progress == null) {
+                if (state.isError) {
                   return _ErrorState(
                     message:
                         state.message ?? 'No se pudo cargar el progreso.',
-                    onRetry: () => ref
-                        .read(coachProgressProvider.notifier)
-                        .loadClientProgress(widget.clientUserId),
+                    onRetry: _load,
                   );
                 }
 
@@ -112,6 +114,9 @@ class _ProgressBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
       children: [
+        Text('Datos sincronizados: ${progress.generatedAt.toLocal().toString().split('.').first}',
+          style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 12,
           runSpacing: 12,

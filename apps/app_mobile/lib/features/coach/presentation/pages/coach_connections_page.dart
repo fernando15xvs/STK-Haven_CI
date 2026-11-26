@@ -26,7 +26,7 @@ class CoachConnectionsPage extends ConsumerStatefulWidget {
 class _CoachConnectionsPageState
     extends ConsumerState<CoachConnectionsPage> {
   final TextEditingController _codeController = TextEditingController();
-  bool _requestedInitialLoad = false;
+  String? _requestedUserId;
   Set<CoachPermission> _invitePermissions = const {
     CoachPermission.viewWorkouts,
     CoachPermission.viewProgress,
@@ -41,11 +41,12 @@ class _CoachConnectionsPageState
     super.dispose();
   }
 
-  void _scheduleInitialLoad(bool signedIn) {
-    if (!signedIn || _requestedInitialLoad) return;
-    _requestedInitialLoad = true;
+  void _scheduleInitialLoad(String? userId) {
+    if (_requestedUserId == userId) return;
+    _requestedUserId = userId;
+    if (userId == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted || ref.read(appIdentityProvider).userId != userId) return;
       ref.read(coachClientProvider.notifier).refreshRelationships();
     });
   }
@@ -68,7 +69,7 @@ class _CoachConnectionsPageState
                 .toList(growable: false)
             : coachState.relationships;
 
-    _scheduleInitialLoad(identity.signedIn);
+    _scheduleInitialLoad(identity.signedIn ? userId : null);
 
     ref.listen(coachClientProvider, (previous, next) {
       if (next.message == null ||
