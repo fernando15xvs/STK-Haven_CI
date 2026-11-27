@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "source_repository": "fernando15xvs/STK-Haven",
+  "source_commit": "add617ca899a806641cce1cb165915b4a29839ef",
+  "product_file_count": 1648,
+  "product_roots": {
+    ".gitignore": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "a588931c36b624d9d4c0103ae66beb8d7758cb2d"
+    },
+    "README.md": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b6c0e671fd6627d5f62d376c8b122a009b13978d"
+    },
+    "apps": {
+      "mode": "040000",
+      "type": "tree",
+      "sha": "1c78bc1025cf365e82291296233f5b885b8cd17c"
+    },
+    "packages": {
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ddda280bfb4eb5fc40ae54df195fb7a28b52e0e9"
+    },
+    "pubspec.lock": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d46dc16d26a3a98e67cfb3604644f3fd487ef2f0"
+    },
+    "pubspec.yaml": {
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5e80733698e0c9fa0f807767f2d059f9be562f94"
+    },
+    "scripts": {
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6f1518c34d20a5a062e66dcaae7a4d9b07649502"
+    },
+    "supabase": {
+      "mode": "040000",
+      "type": "tree",
+      "sha": "6a77a1bde0b5cd15a097dfb88ed43d7d785cab8b"
+    },
+    "tools": {
+      "mode": "040000",
+      "type": "tree",
+      "sha": "0be0853d7e82d9346672a4e95c47d65fc68e1bd0"
+    }
+  }
+}

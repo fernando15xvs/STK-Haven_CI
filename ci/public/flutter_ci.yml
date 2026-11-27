@@ -25,6 +25,8 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+      - name: Verify canonical product snapshot parity
+        run: python3 ci/public/verify_product_snapshot.py
       # Phase A: report the complete dependency graph without failing for
       # known legacy Core/Flutter violations. Phase B adds enforcement.
       - name: Inventory architecture imports (diagnostic only)

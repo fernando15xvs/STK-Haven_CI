@@ -1,9 +1,9 @@
 # CI-only snapshot for STK Haven
-Private canonical repository: fernando15xvs/STK-Haven
-Canonical PR #51 DATA-09 partial, set status evidence without Hive migrations
-HEAD 2d9e6c693962ea7f2479e59dd45be52f290dded8
-Branch fix/progress-set-status-evidence-20261104
-Changed product files (5): apps/app_mobile/lib/features/exercises/presentation/widgets/exercise_history_set_row.dart, apps/app_mobile/test/features/progress/progress_set_status_semantics_test.dart, docs/progress/PROGRESS_SET_STATUS_EVIDENCE_CONTRACT_20261104.md, packages/core/lib/features/workout/application/workout_set_record_status.dart, packages/core/test/features/workout/application/workout_set_record_status_test.dart
 
-PR #50 merged in canonical main at 8bb41fa; CI #41941825531 SUCCESS 7/7 on mirror.
-Public mirror main is exclusively GitHub Actions, no PR and no user data, signing credentials or private Git history. DATA-09 remains open pending real evidence persistence/decision.
+Private canonical repository: fernando15xvs/STK-Haven
+Canonical main: add617ca899a806641cce1cb165915b4a29839ef
+Validated product baseline: d86ce7e156e5d34f7d8f2acb25da3f9f1c9540d2 (CI #46050600150, seven required jobs green).
+Delivery: reconciliation of PR #57 and Exercise Library A–J.
+Product files: 1648; tree manifest: ci/public/product_snapshot.json.
+The publisher verified the canonical and mirror product trees by mode, type and SHA before creating this snapshot. The new CI run validates this manifest and the existing mobile-only gates.
+No private Git history, private documents, personal data or credentials are copied. Documentation differences are intentional; Web remains paused. CI and artifacts run only here.
