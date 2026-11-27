@@ -66,9 +66,46 @@ void main() {
       );
 
       expect(unilateral.map((exercise) => exercise.id), ['row_uni', 'curl_alt']);
-      expect(bilateral.map((exercise) => exercise.id), ['bench', 'pulldown']);
+      expect(bilateral, isEmpty);
+      expect(ExerciseLibraryFilter.apply(
+        exercises: exercises,
+        laterality: ExerciseLateralityFilter.unspecified,
+      ).map((exercise) => exercise.id), ['bench', 'pulldown']);
+      final explicit = Exercise(id: 'explicit', name: 'Remo bilateral',
+          muscleGroup: 'Espalda');
+      expect(ExerciseLibraryFilter.lateralityOf(explicit),
+          ExerciseLateralityFilter.bilateral);
     });
 
+    test('search tolerates reordered words, accents and a small typo', () {
+      expect(ExerciseLibraryFilter.apply(exercises: exercises,
+          query: 'maquina remo').map((e) => e.id), ['row_uni']);
+      expect(ExerciseLibraryFilter.apply(exercises: exercises,
+          query: 'mancuerns curl').map((e) => e.id), ['curl_alt']);
+    });
+    test('secondary muscles are optional and primary results come first', () {
+      final secondary = Exercise(id: 'secondary', name: 'Press',
+        muscleGroup: 'Pecho', secondaryMuscles: ['Tríceps']);
+      final primary = Exercise(id: 'primary', name: 'Extensión',
+        muscleGroup: 'Tríceps');
+      expect(ExerciseLibraryFilter.apply(exercises: [secondary, primary],
+          muscle: 'Brazos', includeSecondary: false).map((e) => e.id), ['primary']);
+      expect(ExerciseLibraryFilter.apply(exercises: [secondary, primary],
+          muscle: 'Brazos', includeSecondary: true).map((e) => e.id),
+          ['primary', 'secondary']);
+    });
+    test('alphabetical ordering is opt-in', () {
+      expect(ExerciseLibraryFilter.apply(exercises: exercises,
+          sort: ExerciseLibrarySort.alphabetical).map((e) => e.id),
+          ['curl_alt', 'pulldown', 'bench', 'row_uni']);
+    });
+    test('removing one facet preserves the other filters', () {
+      const selection = AdvancedExerciseFilterSelection(
+          equipment: 'Barra', customOnly: true);
+      final next = selection.without(ExerciseLibraryFacet.equipment);
+      expect(next.activeCount, 1);
+      expect(next.customOnly, isTrue);
+    });
     test('combines favorites, search and filters', () {
       final result = ExerciseLibraryFilter.apply(
         exercises: exercises,

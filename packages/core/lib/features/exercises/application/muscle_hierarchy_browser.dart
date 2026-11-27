@@ -36,14 +36,14 @@ class MuscleHierarchyBrowser {
   /// Uses only known anatomical IDs. A broad legacy label such as "Hombros"
   /// matches the general shoulder category, never a deltoid portion. Combined
   /// and unrecognised labels do not silently acquire a specific muscle.
-  static bool matchesExercise(Exercise exercise, String selectedId) {
+  static bool matchesExercise(Exercise exercise, String selectedId, {bool includeSecondary = true}) {
     final selected = MuscleTaxonomyV1.byId[selectedId];
     if (selected == null) return false;
     final profile = CuratedExerciseCatalog.anatomyFor(exercise.id);
     if (profile != null) {
       final targets = <String>[
         profile.primaryId,
-        ...profile.secondaryIds,
+        if (includeSecondary) ...profile.secondaryIds,
         ...profile.emphasisIds,
       ];
       return targets.any((id) =>
@@ -53,7 +53,7 @@ class MuscleHierarchyBrowser {
     }
     for (final label in <String>[
       exercise.muscleGroup,
-      ...exercise.secondaryMuscles,
+      if (includeSecondary) ...exercise.secondaryMuscles,
     ]) {
       final resolved = MuscleTaxonomyV1.resolveLegacy(label);
       final targetId = resolved.nodeId;

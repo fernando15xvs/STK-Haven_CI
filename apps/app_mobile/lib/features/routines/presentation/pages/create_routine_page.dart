@@ -55,14 +55,19 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
   }
 
   Future<void> _addExercise() async {
-    final selected = await Navigator.push<Exercise>(
+    final selected = await Navigator.push<List<Exercise>>(
       context,
       MaterialPageRoute(
-        builder: (_) => const ExerciseLibraryPage(isSelectionMode: true),
+        builder: (_) => const ExerciseLibraryPage(
+          isSelectionMode: true, allowMultiple: true,
+        ),
       ),
     );
     if (selected == null || !mounted) return;
-    _showExerciseConfig(selected);
+    for (final exercise in selected) {
+      if (!mounted) return;
+      await _showExerciseConfig(exercise);
+    }
   }
 
   void _editExercise(int index, Exercise exercise) {
@@ -87,7 +92,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
     });
   }
 
-  void _showExerciseConfig(Exercise exercise, {int? index}) {
+  Future<void> _showExerciseConfig(Exercise exercise, {int? index}) async {
     final current = index == null ? null : _selectedExercises[index];
     final personal = ref
         .read(exercisePersonalSettingsProvider.notifier)
@@ -157,7 +162,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
       });
     }
 
-    showModalBottomSheet<void>(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,

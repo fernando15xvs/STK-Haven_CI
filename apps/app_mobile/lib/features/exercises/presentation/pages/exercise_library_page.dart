@@ -1,11 +1,13 @@
 import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:core/core/constants/muscle_taxonomy_v1.dart';
+import 'package:core/core/constants/curated_exercise_catalog.dart';
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/features/exercises/application/exercise_demonstration_library.dart';
+import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_png_pilot_library.dart';
 import 'package:gym_tracker/features/exercises/presentation/widgets/exercise_demonstration_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
-import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/features/exercises/application/custom_exercise_service.dart';
 import 'package:core/features/exercises/application/exercise_library_filter.dart';
@@ -16,13 +18,15 @@ import 'package:core/features/workout/application/exercise_performance_memory.da
 import 'package:core/features/workout/application/workout_history_index.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/custom_exercise_editor_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detail_page.dart';
-import 'package:gym_tracker/features/exercises/presentation/widgets/muscle_hierarchy_picker.dart';
 import 'package:gym_tracker/features/exercises/presentation/widgets/advanced_exercise_filter_sheet.dart';
 
 class ExerciseLibraryPage extends ConsumerStatefulWidget {
   final bool isSelectionMode;
+  final bool allowMultiple;
 
-  const ExerciseLibraryPage({super.key, this.isSelectionMode = false});
+  const ExerciseLibraryPage({
+    super.key, this.isSelectionMode = false, this.allowMultiple = false,
+  }) : assert(!allowMultiple || isSelectionMode);
 
   @override
   ConsumerState<ExerciseLibraryPage> createState() =>
@@ -30,14 +34,19 @@ class ExerciseLibraryPage extends ConsumerStatefulWidget {
 }
 
 class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
+  final _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedMuscle = ExerciseLibraryFilter.allOption;
-  String? _selectedAnatomyId;
-  String _selectedEquipment = ExerciseLibraryFilter.allOption;
-  ExerciseLateralityFilter _laterality = ExerciseLateralityFilter.all;
   bool _favoritesOnly = false;
-  AdvancedExerciseFilterSelection _advanced =
-      const AdvancedExerciseFilterSelection();
+  AdvancedExerciseFilterSelection _advanced = const AdvancedExerciseFilterSelection();
+  ExerciseLibrarySort _sort = ExerciseLibrarySort.relevance;
+  final _selected = <String, Exercise>{};
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   static const _muscles = [
     'Todos',
@@ -49,38 +58,49 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
     'Core',
   ];
 
-  Future<void> _chooseAnatomicalMuscle() async {
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => const FractionallySizedBox(
-        heightFactor: 0.85,
-        child: MuscleHierarchyPicker(),
+  Future<void> _chooseAdvancedFilters(List<String> equipmentOptions) async {
+    final result = await showModalBottomSheet<AdvancedExerciseFilterSelection>(
+      context: context, isScrollControlled: true, useSafeArea: true,
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.9,
+        child: AdvancedExerciseFilterSheet(
+          initialSelection: _advanced, equipmentOptions: equipmentOptions,
+        ),
       ),
     );
     if (!mounted || result == null) return;
     setState(() {
-      _selectedAnatomyId = result.isEmpty ? null : result;
-      _selectedMuscle = ExerciseLibraryFilter.allOption;
+      _advanced = result;
+      if (result.anatomyId != null) {
+        _selectedMuscle = ExerciseLibraryFilter.allOption;
+      }
     });
   }
 
-  Future<void> _chooseAdvancedFilters() async {
-    final result = await showModalBottomSheet<AdvancedExerciseFilterSelection>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.84,
-        child: AdvancedExerciseFilterSheet(initialSelection: _advanced),
-      ),
-    );
-    if (!mounted || result == null) return;
-    setState(() => _advanced = result);
+  void _select(Exercise exercise) {
+    if (widget.allowMultiple) {
+      setState(() => _selected[exercise.id] = exercise);
+    } else {
+      Navigator.of(context).pop(exercise);
+    }
+  }
+
+  void _resetFilters() {
+    _searchController.clear();
+    setState(() {
+      _searchQuery = '';
+      _selectedMuscle = ExerciseLibraryFilter.allOption;
+      _favoritesOnly = false;
+      _advanced = const AdvancedExerciseFilterSelection();
+      _sort = ExerciseLibrarySort.relevance;
+    });
   }
 
   Future<void> _previewAndSelect(Exercise exercise) async {
+    final history = ref.read(workoutHistoryIndexProvider);
+    final settings = ref.read(settingsProvider);
+    final memory = ExercisePerformanceMemory.latestForExerciseInIndex(history, exercise.id);
+    final lastSet = memory?.latestRepresentativeSet;
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -101,10 +121,24 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
               child: SingleChildScrollView(
                 key: const Key('exercise_selection_preview'),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ExerciseDemonstrationCard(
-                  exercise: exercise,
-                  compact: true,
-                  reduceMotion: ref.read(settingsProvider).reduceMotion,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (lastSet != null) ...[
+                      Text('Último rendimiento',
+                          style: Theme.of(sheetContext).textTheme.labelLarge),
+                      Text('${FitnessFormatter.formatWeight(lastSet.performanceWeight, settings.weightUnit)} × ${lastSet.performanceReps}${lastSet.performanceRir == null ? '' : ' · RIR ${lastSet.performanceRir}'}'),
+                      if (memory != null)
+                        Text('${memory.routineName.trim().isEmpty ? 'Entrenamiento libre' : memory.routineName} · ${memory.performedAt.day}/${memory.performedAt.month}/${memory.performedAt.year}',
+                            style: Theme.of(sheetContext).textTheme.bodySmall),
+                      const SizedBox(height: 12),
+                    ],
+                    ExerciseDemonstrationCard(
+                      exercise: exercise,
+                      compact: true,
+                      reduceMotion: settings.reduceMotion,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -138,59 +172,123 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
       ),
     );
     if (!mounted || confirmed != true) return;
-    Navigator.of(context).pop(exercise);
+    _select(exercise);
   }
 
-  Future<void> _openCustomEditor([dynamic exercise]) async {
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => CustomExerciseEditorPage(exercise: exercise),
-      ),
+  Future<void> _openCustomEditor([Exercise? exercise]) async {
+    final result = await Navigator.of(context).push<Exercise>(
+      MaterialPageRoute(builder: (_) => CustomExerciseEditorPage(exercise: exercise)),
     );
     if (!mounted || result == null) return;
-    if (widget.isSelectionMode) Navigator.of(context).pop(result);
+    if (widget.isSelectionMode) _select(result);
+  }
+
+  Future<void> _editFromDetail(Exercise exercise) async {
+    final result = await Navigator.of(context).push<Exercise>(
+      MaterialPageRoute(builder: (_) => CustomExerciseEditorPage(exercise: exercise)),
+    );
+    if (mounted && result != null) Navigator.of(context).pop();
+  }
+
+  String _facetLabel(ExerciseLibraryFacet facet) => switch (facet) {
+    ExerciseLibraryFacet.equipment => _advanced.equipment,
+    ExerciseLibraryFacet.laterality => switch (_advanced.laterality) {
+      ExerciseLateralityFilter.unilateral => 'Unilateral',
+      ExerciseLateralityFilter.bilateral => 'Bilateral',
+      ExerciseLateralityFilter.unspecified => 'No especificada',
+      ExerciseLateralityFilter.all => 'Ejecución',
+    },
+    ExerciseLibraryFacet.anatomy =>
+      MuscleTaxonomyV1.byId[_advanced.anatomyId]?.labelEs ?? 'Anatomía',
+    ExerciseLibraryFacet.movement => _advanced.movementCategory!.labelEs,
+    ExerciseLibraryFacet.mechanics => _advanced.mechanics!.labelEs,
+    ExerciseLibraryFacet.difficulty => _advanced.difficulty,
+    ExerciseLibraryFacet.bodyweight => 'Peso corporal',
+    ExerciseLibraryFacet.custom => 'Personalizados',
+    ExerciseLibraryFacet.secondary => 'Músculos secundarios',
+  };
+
+  String _sortLabel(ExerciseLibrarySort sort) => switch (sort) {
+    ExerciseLibrarySort.relevance => 'Relevancia',
+    ExerciseLibrarySort.alphabetical => 'Alfabético',
+    ExerciseLibrarySort.recent => 'Usados recientemente',
+    ExerciseLibrarySort.mostUsed => 'Más utilizados',
+  };
+
+  Widget _thumbnail(Exercise exercise) {
+    final colors = AppColors.of(context);
+    final media = ExerciseDemonstrationLibrary.mediaFor(exercise);
+    final pilot = PngPilotLibrary.forId(exercise.id);
+    final asset = pilot != null
+        ? pilot.imageAt(0)
+        : media?.format == ExerciseMediaFormat.poster ? media!.assetPath : null;
+    final fallback = Icon(Icons.fitness_center, size: 22, color: colors.textSecondary);
+    return Container(
+      width: 44, height: 44,
+      decoration: BoxDecoration(
+        color: colors.surfaceHigh,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: asset == null ? fallback : Image.asset(
+        asset, fit: BoxFit.contain, cacheWidth: 96,
+        errorBuilder: (_, _, _) => fallback,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppColors.of(context);
     final allExercises = ref.watch(exerciseListProvider);
     final favoriteIds = ref.watch(exerciseFavoriteIdsProvider);
     final historyIndex = ref.watch(workoutHistoryIndexProvider);
-    final weightUnit = ref.watch(
-      settingsProvider.select((settings) => settings.weightUnit),
-    );
-    final equipmentOptions = ExerciseLibraryFilter.equipmentOptions(
-      allExercises,
-    );
-    final filteredExercises = ExerciseLibraryFilter.apply(
+    final weightUnit = ref.watch(settingsProvider.select((s) => s.weightUnit));
+    final equipmentOptions = ExerciseLibraryFilter.equipmentOptions(allExercises);
+    final filtered = ExerciseLibraryFilter.apply(
       exercises: allExercises,
       query: _searchQuery,
       muscle: _selectedMuscle,
-      anatomyId: _selectedAnatomyId,
-      equipment: _selectedEquipment,
-      laterality: _laterality,
+      anatomyId: _advanced.anatomyId,
+      equipment: _advanced.equipment,
+      laterality: _advanced.laterality,
       movementCategory: _advanced.movementCategory,
       mechanics: _advanced.mechanics,
       difficulty: _advanced.difficulty,
       bodyweightOnly: _advanced.bodyweightOnly,
+      customOnly: _advanced.customOnly,
+      includeSecondary: _advanced.includeSecondary,
       favoriteIds: favoriteIds,
       favoritesOnly: _favoritesOnly,
+      sort: _sort,
+      historyIndex: historyIndex,
     );
-    final memoryById = ExercisePerformanceMemory.latestForExercisesInIndex(
-      historyIndex,
-      filteredExercises.map((exercise) => exercise.id),
+    final facets = _advanced.activeFacets;
+    final typing = MediaQuery.viewInsetsOf(context).bottom > 0;
+
+    Widget chip(String label, bool selected, VoidCallback onTap,
+        {IconData? icon}) => Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: FilterChip(
+        avatar: icon == null ? null : Icon(icon, size: 17,
+            color: selected ? colors.onPrimary : colors.textSecondary),
+        label: Text(label),
+        labelStyle: AppTypography.labelMedium.copyWith(
+          color: selected ? colors.onPrimary : colors.textSecondary,
+        ),
+        selected: selected, showCheckmark: false,
+        onSelected: (_) => onTap(),
+        selectedColor: colors.primary, backgroundColor: colors.surfaceHigh,
+        side: BorderSide.none,
+      ),
     );
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.isSelectionMode ? 'Seleccionar Ejercicio' : 'Biblioteca',
-          style: AppTypography.headlineMedium,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        elevation: 0,
-        backgroundColor: AppColors.of(context).background,
+        title: Text(widget.isSelectionMode ? 'Seleccionar ejercicio' : 'Biblioteca',
+          style: AppTypography.headlineMedium, maxLines: 1,
+          overflow: TextOverflow.ellipsis),
+        elevation: 0, backgroundColor: colors.background,
         actions: [
           IconButton(
             tooltip: 'Crear ejercicio personalizado',
@@ -199,376 +297,223 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Buscar ejercicio...',
-                hintStyle: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.of(context).textDisabled,
-                ),
-                prefixIcon: Icon(
-                  Icons.search,
-                  color: AppColors.of(context).textSecondary,
-                ),
-                filled: true,
-                fillColor: AppColors.of(context).surfaceHigh,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              style: AppTypography.bodyMedium.copyWith(
-                color: AppColors.of(context).textPrimary,
-              ),
-              onChanged: (value) => setState(() => _searchQuery = value),
-            ),
-          ),
-          SizedBox(
-            height: 48,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              itemCount: _muscles.length + 1,
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      avatar: Icon(
-                        _favoritesOnly ? Icons.star : Icons.star_border,
-                        size: 17,
-                        color: _favoritesOnly
-                            ? AppColors.of(context).onPrimary
-                            : AppColors.of(context).textSecondary,
-                      ),
-                      label: const Text('Favoritos'),
-                      selected: _favoritesOnly,
-                      showCheckmark: false,
-                      onSelected: (selected) =>
-                          setState(() => _favoritesOnly = selected),
-                      selectedColor: AppColors.of(context).primary,
-                      backgroundColor: AppColors.of(context).surfaceHigh,
-                      side: BorderSide.none,
-                    ),
-                  );
-                }
-                final muscle = _muscles[index - 1];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: Text(muscle),
-                    selected: _selectedAnatomyId == null &&
-                        _selectedMuscle == muscle,
-                    showCheckmark: false,
-                    onSelected: (_) => setState(() {
-                      _selectedMuscle = muscle;
-                      _selectedAnatomyId = null;
-                    }),
-                    selectedColor: AppColors.of(context).primary,
-                    backgroundColor: AppColors.of(context).surfaceHigh,
-                    side: BorderSide.none,
-                  ),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    key: const Key('anatomy_picker_open'),
-                    onPressed: _chooseAnatomicalMuscle,
-                    icon: const Icon(Icons.account_tree_outlined),
-                    label: Text(
-                      _selectedAnatomyId == null
-                          ? 'Explorar músculos por región'
-                          : MuscleTaxonomyV1.byId[_selectedAnatomyId]?.labelEs ??
-                              'Explorar músculos',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                if (_selectedAnatomyId != null)
-                  IconButton(
-                    key: const Key('anatomy_picker_reset'),
-                    tooltip: 'Quitar filtro anatómico',
-                    onPressed: () =>
-                        setState(() => _selectedAnatomyId = null),
-                    icon: const Icon(Icons.close),
-                  ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final equipment = DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  initialValue: equipmentOptions.contains(_selectedEquipment)
-                      ? _selectedEquipment
-                      : ExerciseLibraryFilter.allOption,
-                  decoration: const InputDecoration(
-                    labelText: 'Equipo',
-                    isDense: true,
-                  ),
-                  items: [
-                    for (final item in equipmentOptions)
-                      DropdownMenuItem<String>(
-                        value: item,
-                        child: Text(item,
-                            maxLines: 1, overflow: TextOverflow.ellipsis),
-                      ),
-                  ],
-                  onChanged: (value) => setState(
-                    () => _selectedEquipment =
-                        value ?? ExerciseLibraryFilter.allOption,
-                  ),
-                );
-                final laterality =
-                    DropdownButtonFormField<ExerciseLateralityFilter>(
-                  isExpanded: true,
-                  initialValue: _laterality,
-                  decoration: const InputDecoration(
-                    labelText: 'Ejecución',
-                    isDense: true,
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: ExerciseLateralityFilter.all,
-                      child: Text('Todos'),
-                    ),
-                    DropdownMenuItem(
-                      value: ExerciseLateralityFilter.unilateral,
-                      child: Text('Unilateral'),
-                    ),
-                    DropdownMenuItem(
-                      value: ExerciseLateralityFilter.bilateral,
-                      child: Text('Bilateral'),
-                    ),
-                  ],
-                  onChanged: (value) => setState(
-                    () => _laterality =
-                        value ?? ExerciseLateralityFilter.all,
-                  ),
-                );
-                if (constraints.maxWidth < 350) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      equipment,
-                      const SizedBox(height: 8),
-                      laterality,
-                    ],
-                  );
-                }
-                return Row(
-                  children: [
-                    Expanded(child: equipment),
-                    const SizedBox(width: 10),
-                    Expanded(child: laterality),
-                  ],
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                key: const Key('open_advanced_exercise_filters'),
-                onPressed: _chooseAdvancedFilters,
-                icon: const Icon(Icons.tune_outlined),
-                label: Text(_advanced.activeCount == 0
-                    ? 'Filtros avanzados'
-                    : 'Filtros avanzados (${_advanced.activeCount})'),
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Expanded(
-            child: filteredExercises.isEmpty
-                ? Center(
-                    child: Text(
-                      _favoritesOnly
-                          ? 'Aún no tienes favoritos con estos filtros'
-                          : _selectedAnatomyId != null
-                               ? 'Todavía no hay ejercicios clasificados para este músculo. Los nombres antiguos no se asignan sin verificar.'
-                               : _advanced.activeCount > 0
-                                   ? 'Sin resultados con estos filtros. Los ejercicios sin metadatos avanzados no se asignan automáticamente.'
-                                   : 'No se encontraron ejercicios',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.bodyLarge.copyWith(
-                        color: AppColors.of(context).textSecondary,
-                      ),
-                    ),
-                  )
-                : ListView.separated(
-                    padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ).copyWith(bottom: 100)),
-                    itemCount: filteredExercises.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final exercise = filteredExercises[index];
-                      final isFavorite = favoriteIds.contains(exercise.id);
-                      final isUnilateral = ExerciseLibraryFilter.isUnilateral(
-                        exercise,
-                      );
-                      final isCustom = CustomExerciseService.isCustom(exercise);
-                      final memory = memoryById[exercise.id];
-                      final lastSet = memory?.latestRepresentativeSet;
-                      final lastPerformance = lastSet == null
-                          ? null
-                          : '${FitnessFormatter.formatWeight(lastSet.performanceWeight, weightUnit)} × ${lastSet.performanceReps}${lastSet.performanceRir == null ? '' : ' @RIR ${lastSet.performanceRir}'}';
-                      return PremiumCard(
-                        padding: const EdgeInsets.all(12),
-                        onTap: () {
-                          if (widget.isSelectionMode) {
-                            _previewAndSelect(exercise);
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ExerciseDetailPage(exercise: exercise),
-                              ),
-                            );
-                          }
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+              child: Row(
+                children: [
+                  Expanded(child: TextField(
+                    key: const Key('library_search'),
+                    controller: _searchController,
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar ejercicio...',
+                      hintStyle: AppTypography.bodyMedium.copyWith(color: colors.textSecondary),
+                      prefixIcon: Icon(Icons.search, color: colors.textSecondary),
+                      suffixIcon: _searchQuery.isEmpty ? null : IconButton(
+                        tooltip: 'Borrar búsqueda',
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
                         },
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                color: AppColors.of(context).surfaceHigh,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(
-                                Icons.fitness_center,
-                                color: AppColors.of(context).textSecondary,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // At 320px / 160% text, a side-by-side
-                                  // custom badge steals all width from a long
-                                  // name. Stack the badge below the title.
-                                  Text(
-                                    exercise.name,
-                                    maxLines: 5,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTypography.headlineSmall.copyWith(
-                                      color: AppColors.of(context).textPrimary,
-                                    ),
-                                  ),
-                                  if (isCustom) ...[
-                                    const SizedBox(height: AppSpacing.xxs),
-                                    Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          maxWidth: 112,
-                                        ),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 7,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.of(context)
-                                                .primary.withValues(alpha: 0.12),
-                                            borderRadius:
-                                                BorderRadius.circular(999),
-                                          ),
-                                          child: Text(
-                                            'Personalizado',
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: AppTypography.labelSmall
-                                                .copyWith(
-                                              color:
-                                                  AppColors.of(context).primary,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${exercise.muscleGroup} • ${exercise.equipment.isEmpty ? 'Libre' : exercise.equipment}${isUnilateral ? ' • Unilateral' : ''}',
-                                    style: AppTypography.labelMedium.copyWith(
-                                      color: AppColors.of(
-                                        context,
-                                      ).textSecondary,
-                                    ),
-                                  ),
-                                  if (lastPerformance != null) ...[
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      'Última: $lastPerformance · ${memory!.routineName.trim().isEmpty ? 'Entrenamiento libre' : memory.routineName}',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppTypography.bodySmall.copyWith(
-                                        color: AppColors.of(context).primary,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            if (isCustom && !widget.isSelectionMode)
-                              IconButton(
-                                tooltip: 'Editar ejercicio',
-                                onPressed: () => _openCustomEditor(exercise),
-                                icon: const Icon(Icons.edit_outlined),
-                              ),
-                            IconButton(
-                              tooltip: isFavorite
-                                  ? 'Quitar de favoritos'
-                                  : 'Añadir a favoritos',
-                              onPressed: () => ref
-                                  .read(exerciseFavoriteIdsProvider.notifier)
-                                  .toggleFavorite(exercise.id),
-                              icon: Icon(
-                                isFavorite ? Icons.star : Icons.star_border,
-                                color: isFavorite
-                                    ? AppColors.of(context).gold
-                                    : AppColors.of(context).textSecondary,
-                              ),
-                            ),
-                            Icon(
-                              widget.isSelectionMode
-                                  ? Icons.add_circle
-                                  : Icons.chevron_right,
-                              color: widget.isSelectionMode
-                                  ? AppColors.of(context).primary
-                                  : AppColors.of(context).textSecondary,
-                              size: widget.isSelectionMode ? 28 : 24,
-                            ),
-                          ],
-                        ),
-                      );
+                        icon: const Icon(Icons.close),
+                      ),
+                      filled: true, fillColor: colors.surfaceHigh,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    style: AppTypography.bodyMedium.copyWith(color: colors.textPrimary),
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                  )),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    key: const Key('open_advanced_exercise_filters'),
+                    tooltip: 'Filtros (${facets.length} activos)',
+                    style: IconButton.styleFrom(
+                      backgroundColor: colors.primary, foregroundColor: colors.onPrimary,
+                      minimumSize: const Size(48, 48),
+                    ),
+                    onPressed: () {
+                      FocusScope.of(context).unfocus();
+                      _chooseAdvancedFilters(equipmentOptions);
                     },
+                    icon: Badge(
+                      isLabelVisible: facets.isNotEmpty,
+                      label: Text('${facets.length}'),
+                      child: const Icon(Icons.tune),
+                    ),
                   ),
-          ),
-        ],
+                ],
+              ),
+            ),
+            if (!typing)
+              SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(children: [
+                chip('Favoritos', _favoritesOnly,
+                    () => setState(() => _favoritesOnly = !_favoritesOnly),
+                    icon: _favoritesOnly ? Icons.star : Icons.star_border),
+                for (final muscle in _muscles)
+                  chip(muscle, _advanced.anatomyId == null && _selectedMuscle == muscle,
+                    () => setState(() {
+                      _selectedMuscle = muscle;
+                      _advanced = _advanced.without(ExerciseLibraryFacet.anatomy);
+                    })),
+              ]),
+            ),
+            if (!typing && facets.isNotEmpty)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(children: [
+                  for (final facet in facets)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: InputChip(
+                        key: ValueKey('library_active_${facet.name}'),
+                        label: Text(_facetLabel(facet)),
+                        onDeleted: () => setState(() => _advanced = _advanced.without(facet)),
+                      ),
+                    ),
+                ]),
+              ),
+            if (!typing)
+              Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(children: [
+                Expanded(child: Text(
+                  '${filtered.length} ejercicios',
+                  style: AppTypography.labelMedium.copyWith(color: colors.textSecondary),
+                )),
+                PopupMenuButton<ExerciseLibrarySort>(
+                  key: const Key('library_sort'),
+                  tooltip: 'Ordenar: ${_sortLabel(_sort)}',
+                  initialValue: _sort,
+                  icon: Icon(Icons.sort, color: colors.primary),
+                  onSelected: (sort) => setState(() => _sort = sort),
+                  itemBuilder: (_) => [
+                    for (final sort in ExerciseLibrarySort.values)
+                      PopupMenuItem(value: sort, child: Text(_sortLabel(sort))),
+                  ],
+                ),
+              ]),
+            ),
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.search_off, size: 36, color: colors.textSecondary),
+                          const SizedBox(height: 8),
+                          Text(_favoritesOnly
+                              ? 'No hay favoritos con estos filtros'
+                              : 'No se encontraron ejercicios',
+                              textAlign: TextAlign.center),
+                          const SizedBox(height: 8),
+                          TextButton(onPressed: _resetFilters,
+                              child: const Text('Limpiar búsqueda y filtros')),
+                        ]),
+                      ),
+                    )
+                  : ListView.separated(
+                      key: const Key('library_results'),
+                      padding: SecondaryScreenInsets.scrollPadding(context,
+                          const EdgeInsets.fromLTRB(16, 0, 16, 24)),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) => Divider(
+                          height: 1, color: colors.surfaceBorder),
+                      itemBuilder: (context, index) {
+                        final exercise = filtered[index];
+                        final isFavorite = favoriteIds.contains(exercise.id);
+                        final isCustom = CustomExerciseService.isCustom(exercise);
+                        final chosen = _selected.containsKey(exercise.id);
+                        final lastSet = ExercisePerformanceMemory
+                            .latestForExerciseInIndex(historyIndex, exercise.id)
+                            ?.latestRepresentativeSet;
+                        final lastPerformance = lastSet == null ? null
+                            : '${FitnessFormatter.formatWeight(lastSet.performanceWeight, weightUnit)} × ${lastSet.performanceReps}${lastSet.performanceRir == null ? '' : ' · RIR ${lastSet.performanceRir}'}';
+                        return Material(
+                          color: colors.background,
+                          child: InkWell(
+                            key: ValueKey('library_exercise_${exercise.id}'),
+                            onTap: () {
+                              if (widget.isSelectionMode) {
+                                if (chosen) {
+                                  setState(() => _selected.remove(exercise.id));
+                                } else {
+                                  _previewAndSelect(exercise);
+                                }
+                              } else {
+                                Navigator.push(context, MaterialPageRoute<void>(
+                                  builder: (_) => ExerciseDetailPage(
+                                    exercise: exercise,
+                                    onEdit: isCustom ? () => _editFromDetail(exercise) : null,
+                                  ),
+                                ));
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 11),
+                              child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                                _thumbnail(exercise),
+                                const SizedBox(width: 10),
+                                Expanded(child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(exercise.name, style: AppTypography.bodyLarge.copyWith(
+                                      fontWeight: FontWeight.w600, color: colors.textPrimary)),
+                                    const SizedBox(height: 3),
+                                    Text('${exercise.muscleGroup} · ${exercise.equipment.isEmpty ? 'Libre' : exercise.equipment}',
+                                      style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
+                                    if (isCustom)
+                                      Text('Personalizado', style: AppTypography.labelSmall.copyWith(
+                                          color: colors.textSecondary)),
+                                    if (lastPerformance != null)
+                                      Text(lastPerformance, style: AppTypography.bodySmall.copyWith(
+                                          color: colors.primary)),
+                                  ],
+                                )),
+                                IconButton(
+                                  tooltip: isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
+                                  onPressed: () => ref.read(exerciseFavoriteIdsProvider.notifier)
+                                      .toggleFavorite(exercise.id),
+                                  icon: Icon(isFavorite ? Icons.star : Icons.star_border,
+                                      color: isFavorite ? colors.gold : colors.textSecondary),
+                                ),
+                                Icon(widget.isSelectionMode
+                                    ? chosen ? Icons.check_circle : Icons.add_circle_outline
+                                    : Icons.chevron_right,
+                                    color: widget.isSelectionMode ? colors.primary : colors.textSecondary,
+                                    size: 22),
+                              ]),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
+      bottomNavigationBar: widget.allowMultiple ? SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: FilledButton(
+            key: const Key('library_confirm_multiple'),
+            onPressed: _selected.isEmpty ? null : () =>
+                Navigator.of(context).pop(List<Exercise>.unmodifiable(_selected.values)),
+            child: Text('Añadir seleccionados (${_selected.length})'),
+          ),
+        ),
+      ) : null,
     );
   }
 }

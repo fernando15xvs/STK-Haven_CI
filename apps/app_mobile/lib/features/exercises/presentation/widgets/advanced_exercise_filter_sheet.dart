@@ -2,34 +2,21 @@ import 'package:core/core/constants/curated_exercise_catalog.dart';
 import 'package:core/features/exercises/application/exercise_library_filter.dart';
 import 'package:flutter/material.dart';
 
-/// Browsing state only. Does not change workouts, favorites, or stored exercises.
-class AdvancedExerciseFilterSelection {
-  final ExerciseMovementCategory? movementCategory;
-  final ExerciseMechanics? mechanics;
-  final String difficulty;
-  final bool bodyweightOnly;
+import 'package:core/core/constants/muscle_taxonomy_v1.dart';
+import 'muscle_hierarchy_picker.dart';
 
-  const AdvancedExerciseFilterSelection({
-    this.movementCategory,
-    this.mechanics,
-    this.difficulty = ExerciseLibraryFilter.allOption,
-    this.bodyweightOnly = false,
-  });
-
-  int get activeCount =>
-      (movementCategory == null ? 0 : 1) +
-      (mechanics == null ? 0 : 1) +
-      (difficulty == ExerciseLibraryFilter.allOption ? 0 : 1) +
-      (bodyweightOnly ? 1 : 0);
-}
+export 'package:core/features/exercises/application/exercise_library_filter.dart'
+    show AdvancedExerciseFilterSelection;
 
 class AdvancedExerciseFilterSheet extends StatefulWidget {
   const AdvancedExerciseFilterSheet({
     super.key,
     required this.initialSelection,
+    this.equipmentOptions,
   });
 
   final AdvancedExerciseFilterSelection initialSelection;
+  final List<String>? equipmentOptions;
 
   @override
   State<AdvancedExerciseFilterSheet> createState() =>
@@ -42,27 +29,130 @@ class _AdvancedExerciseFilterSheetState
   late ExerciseMechanics? _mechanics;
   late String _difficulty;
   late bool _bodyweightOnly;
+  late String _equipment;
+  late ExerciseLateralityFilter _laterality;
+  String? _anatomyId;
+  late bool _customOnly;
+  late bool _includeSecondary;
+  bool get _unified => widget.equipmentOptions != null;
 
   @override
   void initState() {
     super.initState();
-    _movement = widget.initialSelection.movementCategory;
-    _mechanics = widget.initialSelection.mechanics;
-    _difficulty = widget.initialSelection.difficulty;
-    _bodyweightOnly = widget.initialSelection.bodyweightOnly;
+    _load(widget.initialSelection);
   }
 
+  void _load(AdvancedExerciseFilterSelection selection) {
+    _movement = selection.movementCategory;
+    _mechanics = selection.mechanics;
+    _difficulty = selection.difficulty;
+    _bodyweightOnly = selection.bodyweightOnly;
+    _equipment = widget.equipmentOptions == null || widget.equipmentOptions!.contains(selection.equipment)
+        ? selection.equipment : ExerciseLibraryFilter.allOption;
+    _laterality = selection.laterality;
+    _anatomyId = selection.anatomyId;
+    _customOnly = selection.customOnly;
+    _includeSecondary = selection.includeSecondary;
+  }
+
+  Future<void> _chooseAnatomy() async {
+    final result = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => const FractionallySizedBox(
+        heightFactor: 0.85, child: MuscleHierarchyPicker(),
+      ),
+    );
+    if (!mounted || result == null) return;
+    setState(() => _anatomyId = result.isEmpty ? null : result);
+  }
+
+  AdvancedExerciseFilterSelection get _selection =>
+      AdvancedExerciseFilterSelection(
+        equipment: _equipment, laterality: _laterality,
+        anatomyId: _anatomyId, movementCategory: _movement,
+        mechanics: _mechanics, difficulty: _difficulty,
+        bodyweightOnly: !_unified && _bodyweightOnly, customOnly: _customOnly,
+        includeSecondary: _includeSecondary,
+      );
+
   @override
-  Widget build(BuildContext context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('Filtros avanzados',
+  Widget build(BuildContext context) {
+    final fields = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+                Text(_unified ? 'Filtros' : 'Filtros avanzados',
                     style: Theme.of(context).textTheme.titleLarge),
+                if (_unified) ...[
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    key: const Key('library_equipment'),
+                    isExpanded: true,
+                    initialValue: widget.equipmentOptions!.contains(_equipment)
+                        ? _equipment : ExerciseLibraryFilter.allOption,
+                    decoration: const InputDecoration(labelText: 'Equipo',
+                        border: OutlineInputBorder(), isDense: true),
+                    items: [
+                      for (final item in widget.equipmentOptions!)
+                        DropdownMenuItem(value: item, child: Text(item,
+                            overflow: TextOverflow.ellipsis)),
+                    ],
+                    onChanged: (value) => setState(() =>
+                        _equipment = value ?? ExerciseLibraryFilter.allOption),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<ExerciseLateralityFilter>(
+                    key: const Key('library_laterality'),
+                    isExpanded: true, initialValue: _laterality,
+                    decoration: const InputDecoration(labelText: 'Ejecución',
+                        border: OutlineInputBorder(), isDense: true),
+                    items: const [
+                      DropdownMenuItem(value: ExerciseLateralityFilter.all,
+                          child: Text('Todos')),
+                      DropdownMenuItem(value: ExerciseLateralityFilter.unilateral,
+                          child: Text('Unilateral')),
+                      DropdownMenuItem(value: ExerciseLateralityFilter.bilateral,
+                          child: Text('Bilateral')),
+                      DropdownMenuItem(value: ExerciseLateralityFilter.unspecified,
+                          child: Text('No especificada')),
+                    ],
+                    onChanged: (value) => setState(() =>
+                        _laterality = value ?? ExerciseLateralityFilter.all),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    key: const Key('anatomy_picker_open'),
+                    onPressed: _chooseAnatomy,
+                    icon: const Icon(Icons.account_tree_outlined),
+                    label: Text(_anatomyId == null
+                        ? 'Explorar músculos por región'
+                        : MuscleTaxonomyV1.byId[_anatomyId]?.labelEs ?? 'Anatomía'),
+                  ),
+                  if (_anatomyId != null)
+                    TextButton(
+                      key: const Key('anatomy_picker_reset'),
+                      onPressed: () => setState(() => _anatomyId = null),
+                      child: const Text('Quitar filtro anatómico'),
+                    ),
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Incluir músculos secundarios'),
+                    value: _includeSecondary,
+                    onChanged: (value) => setState(() =>
+                        _includeSecondary = value ?? false),
+                  ),
+                  CheckboxListTile(
+                    key: const Key('facet_custom'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Solo personalizados'),
+                    value: _customOnly,
+                    onChanged: (value) => setState(() => _customOnly = value ?? false),
+                  ),
+                  const Divider(),
+                  Text('Filtros avanzados', style: Theme.of(context).textTheme.titleMedium),
+                ],
                 const SizedBox(height: 6),
                 const Text(
                   'Patrón, mecánica y nivel son orientativos. '
@@ -147,7 +237,7 @@ class _AdvancedExerciseFilterSheetState
                   onChanged: (value) => setState(() =>
                       _difficulty = value ?? ExerciseLibraryFilter.allOption),
                 ),
-                CheckboxListTile(
+                if (!_unified) CheckboxListTile(
                   key: const Key('facet_bodyweight'),
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
@@ -158,7 +248,9 @@ class _AdvancedExerciseFilterSheetState
                       setState(() => _bodyweightOnly = checked ?? false),
                 ),
                 const SizedBox(height: 12),
-                Row(
+      ],
+    );
+    final actions = Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
@@ -175,21 +267,27 @@ class _AdvancedExerciseFilterSheetState
                         key: const Key('facet_apply'),
                         onPressed: () => Navigator.pop(
                           context,
-                          AdvancedExerciseFilterSelection(
-                            movementCategory: _movement,
-                            mechanics: _mechanics,
-                            difficulty: _difficulty,
-                            bodyweightOnly: _bodyweightOnly,
-                          ),
+                          _selection,
                         ),
                         child: const Text('Aplicar'),
                       ),
                     ),
                   ],
-                ),
-              ],
-            ),
-          ),
+                );
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        child: _unified ? Column(
+          children: [
+            Expanded(child: SingleChildScrollView(child: fields)),
+            const SizedBox(height: 8),
+            actions,
+          ],
+        ) : SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min,
+              children: [fields, actions]),
         ),
-      );
+      ),
+    );
+  }
 }

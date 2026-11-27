@@ -19,8 +19,9 @@ import 'package:core/features/profile/application/providers/settings_provider.da
 
 class ExerciseDetailPage extends ConsumerWidget {
   final Exercise exercise;
+  final VoidCallback? onEdit;
 
-  const ExerciseDetailPage({super.key, required this.exercise});
+  const ExerciseDetailPage({super.key, required this.exercise, this.onEdit});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,6 +43,11 @@ class ExerciseDetailPage extends ConsumerWidget {
         ),
         elevation: 0,
         centerTitle: true,
+        actions: [
+          if (onEdit != null)
+            IconButton(tooltip: 'Editar ejercicio', onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined)),
+        ],
       ),
       body: ListView(
         padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.symmetric(
