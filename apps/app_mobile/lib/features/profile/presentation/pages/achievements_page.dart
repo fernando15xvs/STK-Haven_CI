@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:math';
 
 import 'package:gym_tracker/core/theme/app_palette.dart';
@@ -64,7 +65,7 @@ class AchievementsPage extends ConsumerWidget {
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+              padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(16, 0, 16, 32)),
               sliver: SliverList.builder(
                 itemCount: data.achievements.length,
                 itemBuilder: (context, index) {

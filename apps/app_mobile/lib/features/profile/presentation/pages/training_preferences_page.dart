@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/core/utils/weight_converter.dart';
 import 'package:gym_tracker/features/profile/presentation/widgets/profile_section_card.dart';
 import 'package:core/features/profile/application/unilateral_rest_choices.dart';
@@ -18,7 +19,7 @@ class TrainingPreferencesPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Entrenamiento y unidades')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(16)),
         children: [
           ProfileSectionCard(
             title: 'Unidades y progresión',

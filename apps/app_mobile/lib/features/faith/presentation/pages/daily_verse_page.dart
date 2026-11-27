@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
@@ -40,7 +41,7 @@ class DailyVersePage extends ConsumerWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

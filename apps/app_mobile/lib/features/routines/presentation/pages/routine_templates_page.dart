@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/routine_template.dart';
 import 'package:core/features/routines/application/routine_template_service.dart';
 import 'package:flutter/material.dart';
@@ -32,12 +33,12 @@ class _RoutineTemplatesPageState extends ConsumerState<RoutineTemplatesPage> {
         centerTitle: false,
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(
+        padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(
           AppSpacing.md,
           AppSpacing.sm,
           AppSpacing.md,
           AppSpacing.xxl,
-        ),
+        )),
         children: [
           PremiumCard(
             backgroundColor: AppColors.of(

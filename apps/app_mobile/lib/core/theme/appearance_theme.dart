@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:gym_tracker/core/theme/app_palette.dart';
 import 'package:gym_tracker/core/theme/app_ui_styles.dart';
@@ -83,9 +83,7 @@ class AppearanceTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        systemOverlayStyle: brightness == Brightness.dark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
+        systemOverlayStyle: MobileSystemBars.style(brightness),
       ),
       cardTheme: CardThemeData(
         color: p.surface,

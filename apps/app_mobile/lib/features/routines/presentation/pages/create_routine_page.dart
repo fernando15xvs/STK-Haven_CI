@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -909,7 +910,7 @@ class _CreateRoutinePageState extends ConsumerState<CreateRoutinePage> {
         ],
       ),
       body: ListView(
-        padding: AppSpacing.pagePadding,
+        padding: SecondaryScreenInsets.scrollPadding(context, AppSpacing.pagePadding),
         children: [
           PremiumCard(
             padding: const EdgeInsets.symmetric(

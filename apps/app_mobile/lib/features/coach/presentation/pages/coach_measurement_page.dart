@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/coach/application/coach_measurement_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
@@ -35,11 +36,11 @@ class _CoachMeasurementPageState extends ConsumerState<CoachMeasurementPage> wit
       appBar:AppBar(title:const Text('Medidas compartidas'),actions:[
         IconButton(tooltip:'Actualizar',onPressed:_busy?null:()=>ref.invalidate(coachMeasurementProvider(_query)),icon:const Icon(Icons.refresh)),
       ]),
-      body:SafeArea(
+      body:SafeArea(bottom: false, 
         child:Center(
           child:ConstrainedBox(
             constraints:const BoxConstraints(maxWidth:680),
-            child:ListView(padding:const EdgeInsets.all(20),children:[
+            child:ListView(padding:SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)),children:[
               Text(_isClient?'Tú eliges qué compartir':'Resumen autorizado por el cliente',
                 style:Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height:8),

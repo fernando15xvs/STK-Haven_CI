@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/coach_assigned_task.dart';
 import 'package:core/domain/models/habit_task.dart';
 import 'package:core/features/coach/application/coach_task_notification_service.dart';
@@ -85,7 +86,7 @@ class _CoachTasksPageState extends ConsumerState<CoachTasksPage> with WidgetsBin
               label: const Text('Asignar tarea'),
             )
           : null,
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 920),
@@ -93,7 +94,7 @@ class _CoachTasksPageState extends ConsumerState<CoachTasksPage> with WidgetsBin
               onRefresh: _refresh,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+                padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 110)),
                 children: [
                   _AdherenceCard(
                     adherence: adherence,

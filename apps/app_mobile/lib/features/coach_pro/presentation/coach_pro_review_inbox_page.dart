@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/coach_pro/application/coach_pro_review_queue_provider.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_review_reason.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_client_detail_page.dart';
@@ -67,13 +68,13 @@ class _InboxState extends ConsumerState<_Inbox> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final result = ref.watch(coachProReviewQueueProvider(_query));
-    return SafeArea(child: Center(child: ConstrainedBox(
+    return SafeArea(bottom: false, child: Center(child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 820),
       child: RefreshIndicator(
         onRefresh: () async => _refresh(),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)),
           children: [
             Text('Clientes que requieren revisión',
                 style: Theme.of(context).textTheme.headlineSmall),

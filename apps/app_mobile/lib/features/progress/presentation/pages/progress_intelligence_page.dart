@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:math' as math;
 import 'dart:ui' show FontFeature;
 
@@ -472,7 +473,7 @@ class _ProgressExercisesPanelState extends ConsumerState<ProgressExercisesPanel>
               : matching.isEmpty
                   ? const Center(child: Text('No hay ejercicios con ese nombre.'))
                   : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                      padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(16, 4, 16, 32)),
                       itemCount: matching.length,
                       itemBuilder: (context, index) {
                         final entry = matching[index];

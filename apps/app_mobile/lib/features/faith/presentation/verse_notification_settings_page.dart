@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
@@ -189,7 +190,7 @@ class _VerseSettingsState extends ConsumerState<VerseNotificationSettingsPage>
     body: _loading
         ? const Center(child: CircularProgressIndicator())
         : ListView(
-            padding: const EdgeInsets.all(16),
+            padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(16)),
             children: [
               const Text(
                 'Recibe versículos variados, independientes del versículo del día.',

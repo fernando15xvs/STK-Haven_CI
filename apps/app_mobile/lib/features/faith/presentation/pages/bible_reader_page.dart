@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
@@ -134,10 +135,10 @@ class BibleReaderPage extends ConsumerWidget {
               // Reading Area
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(
+                  padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.symmetric(
                     horizontal: 24,
                     vertical: 16,
-                  ).copyWith(bottom: 100),
+                  ).copyWith(bottom: 100)),
                   itemCount: state.verses.length + 1, // +1 for the title header
                   itemBuilder: (context, index) {
                     if (index == 0) {

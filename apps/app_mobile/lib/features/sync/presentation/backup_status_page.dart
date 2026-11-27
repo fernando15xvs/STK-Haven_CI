@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:gym_tracker/features/identity/presentation/cloud_auth_page.dart';
 import 'package:gym_tracker/features/profile/presentation/widgets/profile_section_card.dart';
 import 'package:core/core/services/backup_activity_service.dart';
@@ -54,7 +55,7 @@ class BackupStatusPage extends ConsumerWidget {
           final restoreSource = BackupActivityService.lastRestoreSource;
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(16)),
             children: [
               ProfileSectionCard(
                 title: 'Nube',

@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -111,9 +112,9 @@ class _PersonalPdfReaderPageState extends State<PersonalPdfReaderPage> {
           overflow: TextOverflow.ellipsis,
         ),
       ),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(24)),
           children: [
             Icon(
               Icons.picture_as_pdf_outlined,

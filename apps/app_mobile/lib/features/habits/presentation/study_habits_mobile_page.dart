@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/habit_task.dart';
 import 'package:core/features/habits/application/habit_task_templates.dart';
 import 'package:core/features/habits/application/habit_tasks_provider.dart';
@@ -191,9 +192,9 @@ class _StudyHabitsMobilePageState extends ConsumerState<StudyHabitsMobilePage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Hábitos & Lectura')),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 110),
+          padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 16, 20, 110)),
           children: [
             _Overview(
               pending: dueToday.length,

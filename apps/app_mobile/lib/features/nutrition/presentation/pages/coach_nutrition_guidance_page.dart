@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:core/features/nutrition/application/nutrition_guidance_provider.dart';
@@ -47,7 +48,7 @@ class _CoachNutritionGuidancePageState extends ConsumerState<CoachNutritionGuida
         onRefresh: () => ref.read(nutritionGuidanceProvider.notifier).refresh(),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+          padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 110)),
           children: [
             Text(widget.clientDisplayName, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
@@ -136,7 +137,7 @@ class _NutritionGuidanceDetail extends StatelessWidget {
       if (editable && onEdit != null) IconButton(tooltip: 'Crear nueva versión', onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
     ]),
     body: ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
+      padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 80)),
       children: [
         Text(plan.scopeNotice, style: Theme.of(context).textTheme.bodySmall),
         if (plan.overview.isNotEmpty) ...[const SizedBox(height: 16), Text(plan.overview)],
@@ -200,7 +201,7 @@ class _NutritionGuidanceEditorState extends State<_NutritionGuidanceEditor> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(widget.initial == null ? 'Nueva guía' : 'Nueva versión'), actions: [TextButton(onPressed: _save, child: const Text('Guardar'))]),
-    body: ListView(padding: const EdgeInsets.fromLTRB(20, 20, 20, 100), children: [
+    body: ListView(padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 100)), children: [
       const Text(NutritionGuidancePlan.defaultScopeNotice),
       const SizedBox(height: 16),
       TextField(controller: title, decoration: const InputDecoration(labelText: 'Título')),

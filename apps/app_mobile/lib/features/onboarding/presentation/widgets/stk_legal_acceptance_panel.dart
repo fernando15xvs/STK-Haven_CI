@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:async';
 
 import 'package:core/features/onboarding/application/stk_age_eligibility.dart';
@@ -141,9 +142,9 @@ class _StkLegalAcceptancePanelState extends State<StkLegalAcceptancePanel> {
   @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    return SafeArea(
+    return SafeArea(bottom: false, 
       child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(AppSpacing.lg)),
         children: [
           Text('Antes de comenzar', style: AppTypography.headlineLarge),
           const SizedBox(height: AppSpacing.sm),

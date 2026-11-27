@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/features/exercises/application/custom_exercise_service.dart';
 import 'package:core/features/exercises/application/providers/exercise_provider.dart';
@@ -158,11 +159,11 @@ class _CustomExerciseEditorPageState
             ),
         ],
       ),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(16)),
             children: [
               Text(
                 _isEditing

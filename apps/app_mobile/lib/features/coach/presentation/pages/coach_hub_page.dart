@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:gym_tracker/features/coach/presentation/pages/coach_connections_page.dart';
 import 'package:core/features/coach_pro/application/coach_pro_entitlement_provider.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_dashboard_page.dart';
@@ -20,9 +21,9 @@ class CoachHubPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Coach')),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+          padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 40)),
           children: [
             Card(
               child: Padding(

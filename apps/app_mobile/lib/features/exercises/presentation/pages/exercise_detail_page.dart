@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -43,10 +44,10 @@ class ExerciseDetailPage extends ConsumerWidget {
         centerTitle: true,
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(
+        padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.lg,
-        ),
+        )),
         children: [
           // Basic Info Pills
           Wrap(

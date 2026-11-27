@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/layout/mobile_content_frame.dart';
 import '../../../ai/presentation/pages/ai_chat_page.dart';
 import '../../../faith/presentation/pages/bible_reader_page.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
@@ -106,7 +107,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         : false;
     final coachEnabled = coachCapability || coachProAccess;
 
-    return Scaffold(
+    return PrimaryTabSafeArea(child: Scaffold(
       // Keeping the body out from underneath the navigation surface avoids an
       // extra translucent compositing layer while scrolling on Android.
       extendBody: false,
@@ -171,7 +172,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 }
 

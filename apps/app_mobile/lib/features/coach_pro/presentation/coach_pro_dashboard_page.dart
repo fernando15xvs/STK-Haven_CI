@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_review_inbox_page.dart';
 import 'package:gym_tracker/features/coach/presentation/pages/coach_connections_page.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_templates_page.dart';
@@ -53,7 +54,7 @@ class CoachProDashboardPage extends ConsumerWidget {
           }
         }),
       ]),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: !identity.signedIn || identity.userId == null
             ? const Center(
                 child: Padding(
@@ -146,7 +147,7 @@ class _DashboardState extends ConsumerState<_Dashboard>
         onRefresh: _refresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
+          padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(16, 20, 16, 40)),
           children: [
             Center(
               child: ConstrainedBox(

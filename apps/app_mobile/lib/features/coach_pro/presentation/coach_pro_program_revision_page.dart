@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/coach_pro/application/coach_pro_template_provider.dart';
 import 'package:core/features/coach_pro/application/coach_pro_program_revision_provider.dart';
 import 'package:core/features/coach_pro/data/coach_pro_program_revision_service.dart';
@@ -100,12 +101,12 @@ class _RevisionHistoryState extends ConsumerState<_RevisionHistory>
   @override
   Widget build(BuildContext context) {
     final result = ref.watch(coachProProgramRevisionHistoryProvider(_query));
-    return SafeArea(
+    return SafeArea(bottom: false, 
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 820),
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)),
             children: [
               Text(
                 widget.assignmentName,
@@ -394,12 +395,12 @@ class _RevisionDetailState extends ConsumerState<_RevisionDetail>
   @override
   Widget build(BuildContext context) {
     final result = ref.watch(coachProProgramRevisionDetailProvider(_query));
-    return SafeArea(
+    return SafeArea(bottom: false, 
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 820),
           child: ListView(
-            padding: const EdgeInsets.all(20),
+            padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)),
             children: [
               Align(
                 alignment: Alignment.centerLeft,

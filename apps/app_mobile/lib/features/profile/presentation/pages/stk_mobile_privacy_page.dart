@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:async';
 
 import 'package:core/database/hive/hive_boxes.dart';
@@ -364,7 +365,7 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(AppSpacing.lg)),
       children: [
         Text('Tus datos y tu privacidad', style: AppTypography.headlineLarge),
         const SizedBox(height: AppSpacing.sm),
@@ -493,7 +494,7 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
       backgroundColor: AppColors.of(context).background,
       appBar: AppBar(title: const Text('Legal y privacidad')),
       body: SafeArea(
-        child: uid != null
+        bottom: false, child: uid != null
             ? _content(StkLegalSubjectType.authenticated, uid, uid)
             : FutureBuilder<String>(
                 future: _guestFuture,

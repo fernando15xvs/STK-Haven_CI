@@ -21,6 +21,8 @@ import 'package:core/features/coach/application/coach_task_notification_service.
 import 'package:core/features/habits/application/habit_task_notification_service.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -56,6 +58,9 @@ Future<void> bootstrapMobileApp({
   required PlatformServicesInitializer initializePlatformServices,
 }) async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (defaultTargetPlatform == TargetPlatform.android) {
+    await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  }
   installMobileCorePreferences();
   await initializeDateFormatting('es', null);
   Intl.defaultLocale = 'es';

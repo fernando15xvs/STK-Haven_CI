@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/coach_client_progress.dart';
 import 'package:core/features/coach/domain/smart_coach_engine.dart';
 import 'package:gym_tracker/features/coach/presentation/widgets/smart_coach_insights.dart';
@@ -76,7 +77,7 @@ class _CoachClientProgressPageState
           ),
         ],
       ),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
@@ -120,7 +121,7 @@ class _ProgressBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
+      padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 80)),
       children: [
         if(syncPending) const Card(child:Padding(padding:EdgeInsets.all(12),child:Text('Hay progreso pendiente de sincronizar. Usa Actualizar para reintentar.'))),
         SmartCoachInsights(insights:SmartCoachEngine.progress(progress,now:DateTime.now())),

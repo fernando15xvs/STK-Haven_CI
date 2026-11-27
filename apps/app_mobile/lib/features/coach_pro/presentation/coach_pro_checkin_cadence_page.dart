@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/coach_pro/application/coach_pro_checkin_cadence_provider.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_checkin_cadence.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -114,10 +115,10 @@ class _CadenceEditorState extends ConsumerState<_CadenceEditor>
   @override
   Widget build(BuildContext context) {
     final response = ref.watch(coachProCheckinCadenceProvider(_query));
-    return SafeArea(child: Center(child: ConstrainedBox(
+    return SafeArea(bottom: false, child: Center(child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 720),
       child: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)),
         children: [
           Text('Frecuencia orientativa',
               style: Theme.of(context).textTheme.headlineSmall),

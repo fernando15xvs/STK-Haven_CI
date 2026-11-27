@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/application/adult_energy_planner.dart';
 import 'package:flutter/material.dart';
@@ -43,9 +44,9 @@ class _NutritionInternalDemoPageState extends State<NutritionInternalDemoPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Laboratorio de Nutrición')),
-      body: SafeArea(
+      body: SafeArea(bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(16, 16, 16, 32)),
           children: [
             Card(
               color: scheme.surfaceContainerHigh,

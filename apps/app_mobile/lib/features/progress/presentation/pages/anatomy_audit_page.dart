@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/exercises/application/exercise_anatomy_audit.dart';
 import 'package:core/features/exercises/application/providers/exercise_provider.dart';
 import 'package:core/features/routines/application/providers/routine_provider.dart';
@@ -30,7 +31,7 @@ class AnatomyAuditPage extends ConsumerWidget {
       appBar: AppBar(title: const Text('Revisión anatómica')),
       body: ListView(
         key: const ValueKey('anatomy_audit_list'),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(16, 12, 16, 32)),
         children: [
           Text('Diagnóstico de este dispositivo',
               style: Theme.of(context).textTheme.titleMedium),

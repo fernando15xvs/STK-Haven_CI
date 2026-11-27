@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
@@ -112,7 +113,7 @@ class _StkLegalDocumentPageState extends State<StkLegalDocumentPage> {
     return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(title: Text(widget.title)),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: FutureBuilder<String>(
           future: _document,
           builder: (context, snapshot) {
@@ -144,7 +145,7 @@ class _StkLegalDocumentPageState extends State<StkLegalDocumentPage> {
             }
             return SelectionArea(
               child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.xl),
+                padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(AppSpacing.xl)),
                 children: [
                   Text(widget.title, style: AppTypography.headlineLarge),
                   const SizedBox(height: AppSpacing.md),

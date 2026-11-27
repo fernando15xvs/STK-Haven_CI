@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/coach_pro/application/coach_pro_task_comments_provider.dart';
 import 'package:core/features/coach_pro/data/coach_pro_task_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -41,9 +42,9 @@ class _CommentsState extends ConsumerState<_Comments> with WidgetsBindingObserve
   Widget build(BuildContext context) {
     final result = ref.watch(coachProTaskCommentsProvider(_query));
     String date(DateTime value) => MaterialLocalizations.of(context).formatMediumDate(value);
-    return SafeArea(child: Center(child: ConstrainedBox(
+    return SafeArea(bottom: false, child: Center(child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 820),
-      child: ListView(padding: const EdgeInsets.all(20), children: [
+      child: ListView(padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)), children: [
         Align(alignment: Alignment.centerLeft, child: TextButton.icon(
           onPressed: result.isLoading ? null : _refresh,
           icon: const Icon(Icons.refresh), label: const Text('Actualizar'))),

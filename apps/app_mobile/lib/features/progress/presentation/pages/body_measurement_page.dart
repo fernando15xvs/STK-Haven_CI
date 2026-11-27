@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import '../widgets/body_measurement_silhouette.dart';
 import '../widgets/body_measurement_summary.dart';
 import 'package:flutter/material.dart';
@@ -181,7 +182,7 @@ class _BodyMeasurementPageState extends ConsumerState<BodyMeasurementPage> {
       backgroundColor: Colors.transparent,
       body: ListView(
         key: const Key('body_measurement_main_list'),
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
+        padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(16, 12, 16, 100)),
         children: [
           BodyMeasurementSilhouette(
             onAddMeasurement: () => _showAddMeasurementModal(context),

@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_checkin_cadence_page.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_reminder_settings_page.dart';
 import 'package:core/domain/models/coach_checkin.dart';
@@ -27,7 +28,7 @@ class _CoachCheckinsPageState extends ConsumerState<CoachCheckinsPage>{
       appBar:AppBar(title:Text('Check-ins · ${widget.clientDisplayName}')),
       floatingActionButton:widget.isClient&&widget.canCreate?FloatingActionButton.extended(onPressed:s.busy?null:_create,icon:const Icon(Icons.add_rounded),label:const Text('Nuevo check-in')):null,
       body:RefreshIndicator(onRefresh:()=>ref.read(coachCheckinProvider.notifier).load(widget.clientUserId,relationshipId:widget.relationshipId),child:ListView(
-        physics:const AlwaysScrollableScrollPhysics(),padding:const EdgeInsets.fromLTRB(20,20,20,100),children:[
+        physics:const AlwaysScrollableScrollPhysics(),padding:SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20,20,20,100)),children:[
           const Card(child:Padding(padding:EdgeInsets.all(16),child:Text('Registro breve de energía y recuperación percibidas. No es una evaluación médica ni genera diagnósticos.'))),
           if (widget.isClient && widget.canCreate)
             Align(alignment: Alignment.centerLeft,

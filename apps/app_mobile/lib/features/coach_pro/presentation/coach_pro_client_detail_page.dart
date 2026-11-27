@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_task_agenda_page.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_task_page.dart';
 import 'package:core/domain/models/nutrition_guidance.dart';
@@ -70,9 +71,9 @@ class _DetailState extends ConsumerState<_Detail> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final result = ref.watch(coachProClientDetailProvider(_query));
-    return SafeArea(child: Center(child: ConstrainedBox(
+    return SafeArea(bottom: false, child: Center(child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 820),
-      child: ListView(padding: const EdgeInsets.all(20), children: [
+      child: ListView(padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)), children: [
         Wrap(spacing: 12, runSpacing: 8, children: [
           for (final section in CoachProClientSection.values)
             ChoiceChip(label: Text(_sectionLabel(section)), selected: _section == section,

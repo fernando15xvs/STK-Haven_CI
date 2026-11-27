@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
@@ -50,10 +51,10 @@ class FavoritesPage extends ConsumerWidget {
               ),
             )
           : ListView.separated(
-              padding: const EdgeInsets.symmetric(
+              padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 16,
-              ).copyWith(bottom: 100),
+              ).copyWith(bottom: 100)),
               itemCount: favorites.length,
               separatorBuilder: (_, _) => const SizedBox(height: 16),
               itemBuilder: (context, index) {

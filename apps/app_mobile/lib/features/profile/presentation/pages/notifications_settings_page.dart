@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/progress/application/body_measurement_provider.dart';
 import 'package:gym_tracker/features/profile/presentation/widgets/profile_section_card.dart';
 import 'package:gym_tracker/features/progress/presentation/widgets/measurement_reminder_controls.dart';
@@ -36,7 +37,7 @@ class NotificationsSettingsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Notificaciones')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(16)),
         children: [
           ProfileSectionCard(
             title: 'Mensajes personales',

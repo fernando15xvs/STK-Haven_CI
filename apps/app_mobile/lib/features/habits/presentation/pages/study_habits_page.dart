@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/habit_task.dart';
 import 'package:core/features/habits/application/study_resource_catalog.dart';
@@ -73,12 +74,12 @@ class StudyHabitsPage extends ConsumerWidget {
         icon: const Icon(Icons.add_rounded),
         label: const Text('Nueva tarea'),
       ),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 860),
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+              padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 110)),
               children: [
                 _OverviewCard(
                   pendingToday: dueToday.length,

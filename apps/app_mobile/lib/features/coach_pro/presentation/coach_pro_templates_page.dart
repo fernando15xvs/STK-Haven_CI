@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/coach_pro/application/coach_pro_template_provider.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_template.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -109,9 +110,9 @@ class _TemplatesState extends ConsumerState<CoachProTemplatesPage>
     final result = ref.watch(coachProTemplatePageProvider(
       (userId: user, offset: _offset),
     ));
-    return SafeArea(child: Center(child: ConstrainedBox(
+    return SafeArea(bottom: false, child: Center(child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 820),
-      child: ListView(padding: const EdgeInsets.all(20), children: [
+      child: ListView(padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)), children: [
         Text('Plantillas reutilizables',
             style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 8),

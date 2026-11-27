@@ -140,7 +140,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
             ),
           ),
           Positioned(
-            bottom: 30,
+            bottom: 30 + MediaQuery.paddingOf(context).bottom,
             left: 0,
             right: 0,
             child: AnimatedOpacity(

@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:async';
 
 import 'package:core/features/habits/application/habit_task_templates.dart';
@@ -83,9 +84,9 @@ class _WindDownPageState extends ConsumerState<WindDownPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Bajar revoluciones')),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(24)),
           children: [
             Text(
               'Rutina nocturna · 10 min',

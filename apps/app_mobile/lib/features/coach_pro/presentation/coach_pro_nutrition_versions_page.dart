@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/coach_pro/application/coach_pro_nutrition_provider.dart';
 import 'package:core/features/coach_pro/data/coach_pro_nutrition_service.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -39,8 +40,8 @@ class _VersionsState extends ConsumerState<_Versions> with WidgetsBindingObserve
   @override
   Widget build(BuildContext context) {
     final result = ref.watch(coachProNutritionVersionsProvider(_query));
-    return SafeArea(child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 820),
-      child: ListView(padding: const EdgeInsets.all(20), children: [
+    return SafeArea(bottom: false, child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 820),
+      child: ListView(padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)), children: [
         Align(alignment: Alignment.centerLeft, child: TextButton.icon(
           onPressed: result.isLoading ? null : _refresh, icon: const Icon(Icons.refresh), label: const Text('Actualizar'))),
         result.when(skipLoadingOnRefresh: false, skipLoadingOnReload: false,

@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/domain/models/user_experience_profile.dart';
 import 'package:core/features/coach/application/coach_client_provider.dart';
@@ -95,7 +96,7 @@ class _CoachConnectionsPageState
                   : 'Coach',
         ),
       ),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
@@ -107,7 +108,7 @@ class _CoachConnectionsPageState
               },
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+                padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 110)),
                 children: [
                   _AccountCard(
                     signedIn: identity.signedIn,

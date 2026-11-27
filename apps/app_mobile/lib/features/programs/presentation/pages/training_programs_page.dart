@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:async';
 
 import 'package:core/domain/models/routine.dart';
@@ -152,7 +153,7 @@ class _TrainingProgramsPageState extends ConsumerState<TrainingProgramsPage> {
                 )
               : _EmptyPrograms(hasRoutines: routines.isNotEmpty)
           : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+              padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(16, 16, 16, 32)),
               itemCount: programs.length,
               itemBuilder: (context, index) {
                 final stored = programs[index];

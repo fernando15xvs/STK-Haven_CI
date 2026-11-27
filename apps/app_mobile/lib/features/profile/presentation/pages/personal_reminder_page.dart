@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/core/services/personal_motivational_reminder_service.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/features/profile/data/personal_reminder_repository.dart';
@@ -245,10 +246,10 @@ class _PersonalReminderPageState extends State<PersonalReminderPage> {
     final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Mis mensajes personales')),
-      body: SafeArea(child: Center(child: ConstrainedBox(
+      body: SafeArea(bottom: false, child: Center(child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 780),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 42),
+          padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(18, 16, 18, 42)),
           children: [
             Card(
               color: colors.primaryContainer,

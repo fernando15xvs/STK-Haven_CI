@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/nutrition_history_entry.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
@@ -290,13 +291,13 @@ class _NutritionIntelligencePageState
                 ],
         ),
         body: SafeArea(
-          child: ListView(
+          bottom: false, child: ListView(
             key: ValueKey(_showMobileHistory
                 ? 'nutrition_mobile_history_view'
                 : 'nutrition_mobile_overview'),
-            padding: EdgeInsets.fromLTRB(
+            padding: SecondaryScreenInsets.scrollPadding(context, EdgeInsets.fromLTRB(
               AppUiTokens.of(context).pageHorizontalPadding, 12,
-              AppUiTokens.of(context).pageHorizontalPadding, 32),
+              AppUiTokens.of(context).pageHorizontalPadding, 32)),
             children: _showMobileHistory
                 ? [
                     _buildHistory(colors),
@@ -345,10 +346,10 @@ class _NutritionIntelligencePageState
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrición Inteligente')),
       body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(
+        bottom: false, child: ListView(
+          padding: SecondaryScreenInsets.scrollPadding(context, EdgeInsets.fromLTRB(
             AppUiTokens.of(context).pageHorizontalPadding, 18,
-            AppUiTokens.of(context).pageHorizontalPadding, 32),
+            AppUiTokens.of(context).pageHorizontalPadding, 32)),
           children: [
             _HeroCard(colors: colors),
             const SizedBox(height: 16),

@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
@@ -56,9 +57,9 @@ class _AppearanceSettingsPageState
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 680),
           child: ListView(
-            padding: EdgeInsets.fromLTRB(
+            padding: SecondaryScreenInsets.scrollPadding(context, EdgeInsets.fromLTRB(
               AppUiTokens.of(context).pageHorizontalPadding, 12,
-              AppUiTokens.of(context).pageHorizontalPadding, 32),
+              AppUiTokens.of(context).pageHorizontalPadding, 32)),
             children: [
               Text(
                 'Tu espacio, a tu estilo',

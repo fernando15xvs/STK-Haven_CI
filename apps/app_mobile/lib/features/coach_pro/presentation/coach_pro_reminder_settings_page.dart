@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:async';
 
 import 'package:core/core/services/coach_pro_local_reminder_service.dart';
@@ -149,9 +150,9 @@ class _RemindersState extends ConsumerState<_Reminders>
             .catchError((Object _) => CoachProLocalReminderService.cancel()));
       }
     });
-    return SafeArea(child: Center(child: ConstrainedBox(
+    return SafeArea(bottom: false, child: Center(child: ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 700),
-      child: ListView(padding: const EdgeInsets.all(20), children: [
+      child: ListView(padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)), children: [
         Text('Solo si tú quieres',
           style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 8),

@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
@@ -52,12 +53,12 @@ class ExerciseHistoryPage extends ConsumerWidget {
               ),
             )
           : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(
+              padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(
                 AppSpacing.md,
                 AppSpacing.lg,
                 AppSpacing.md,
                 AppSpacing.xxl,
-              ),
+              )),
               itemCount: sessions.length + 1,
               itemBuilder: (context, index) {
                 if (index == 0) {

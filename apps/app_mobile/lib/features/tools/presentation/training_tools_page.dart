@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:async';
 
 import 'package:core/core/utils/weight_converter.dart';
@@ -120,7 +121,7 @@ class _TrainingToolsPageState extends ConsumerState<TrainingToolsPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Herramientas')),
       body: ListView(
-        padding: AppSpacing.pagePadding,
+        padding: SecondaryScreenInsets.scrollPadding(context, AppSpacing.pagePadding),
         children: [
           Text('CENTRO DE ENTRENAMIENTO', style: AppTypography.labelMedium),
           const SizedBox(height: 8),

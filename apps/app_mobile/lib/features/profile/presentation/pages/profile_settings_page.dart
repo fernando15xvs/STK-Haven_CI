@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
@@ -58,8 +59,8 @@ class ProfileSettingsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Ajustes')),
       body: SafeArea(
-        child: ListView(
-          padding: EdgeInsets.symmetric(horizontal: tokens.pageHorizontalPadding),
+        bottom: false, child: ListView(
+          padding: SecondaryScreenInsets.scrollPadding(context, EdgeInsets.symmetric(horizontal: tokens.pageHorizontalPadding)),
           children: [
             const SizedBox(height: 12),
             Text('Aspecto rápido', style: Theme.of(context).textTheme.titleMedium),

@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/faith/application/reflection_journal_provider.dart';
 import 'package:core/features/faith/data/reflection_journal_repository.dart';
 import 'package:flutter/material.dart';
@@ -108,7 +109,7 @@ class _ReflectionHistoryPageState extends ConsumerState<ReflectionHistoryPage> {
                           ),
                         )
                       : ListView.separated(
-                          padding: AppSpacing.pagePadding,
+                          padding: SecondaryScreenInsets.scrollPadding(context, AppSpacing.pagePadding),
                           itemCount: filtered.length,
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 12),

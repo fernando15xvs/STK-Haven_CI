@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/features/coach/application/coach_program_revision_acceptance_provider.dart';
 import 'package:core/features/coach/data/coach_program_revision_acceptance_service.dart';
@@ -38,7 +39,7 @@ class _CoachProgramRevisionReviewPageState
     final page = ref.watch(clientProgramRevisionPageProvider(_query));
     return Scaffold(
       appBar: AppBar(title: const Text('Revisión propuesta')),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
@@ -186,7 +187,7 @@ class _RevisionContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final weekdays = page.trainingWeekdays.toList()..sort();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+      padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 120)),
       children: [
         Card(
           child: Padding(
@@ -329,7 +330,7 @@ class _ClientProgramRevisionRoutinePageState
     final page = ref.watch(clientProgramRevisionPageProvider(_query));
     return Scaffold(
       appBar: AppBar(title: Text(widget.routine.name)),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
@@ -347,7 +348,7 @@ class _ClientProgramRevisionRoutinePageState
                   );
                 }
                 return ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 80),
+                  padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 80)),
                   children: [
                     for (final exercise in value.exercises)
                       Card(

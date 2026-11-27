@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -849,7 +850,7 @@ class _MotivationPageState extends State<MotivationPage> {
                 ))
           : ListView(
               key: const ValueKey('motivation_library'),
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 100),
+              padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(16, 10, 16, 100)),
               children: [
                 // The active player never duplicates a saved resume card.
                 if (player.currentTrack != null) ...[

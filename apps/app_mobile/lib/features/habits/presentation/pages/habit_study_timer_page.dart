@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'dart:async';
 
 import 'package:core/domain/models/habit_task.dart';
@@ -125,12 +126,12 @@ class _HabitStudyTimerPageState
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.task.title)),
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 620),
             child: ListView(
-              padding: const EdgeInsets.all(24),
+              padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(24)),
               children: [
                 Text(
                   widget.task.category,

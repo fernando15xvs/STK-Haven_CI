@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/coach_program_assignment.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/coach/application/coach_program_assignment_provider.dart';
@@ -89,7 +90,7 @@ class _CoachProgramAssignmentsPageState
               label: const Text('Asignar'),
             )
           : null,
-      body: SafeArea(
+      body: SafeArea(bottom: false, 
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
@@ -101,7 +102,7 @@ class _CoachProgramAssignmentsPageState
               },
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 110),
+                padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 110)),
                 children: [
                   Card(
                     child: Padding(

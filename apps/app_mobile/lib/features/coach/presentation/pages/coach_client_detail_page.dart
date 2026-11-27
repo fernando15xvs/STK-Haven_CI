@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/coach_relationship.dart';
 import 'package:core/features/coach/application/coach_client_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
@@ -59,9 +60,9 @@ class _CoachClientDetailPageState extends ConsumerState<CoachClientDetailPage> w
     bool can(CoachPermission p)=>relationship.allows(p);
     return Scaffold(appBar:AppBar(title:Text(asCoach?'Cliente':'Mi entrenador'),actions:[
       IconButton(tooltip:'Actualizar',onPressed:state.busy?null:_refresh,icon:const Icon(Icons.refresh)),
-    ]),body:SafeArea(child:Center(child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:820),
+    ]),body:SafeArea(bottom: false, child:Center(child:ConstrainedBox(constraints:const BoxConstraints(maxWidth:820),
       child:RefreshIndicator(onRefresh:_refresh,child:ListView(physics:const AlwaysScrollableScrollPhysics(),
-        padding:const EdgeInsets.fromLTRB(20,20,20,80),children:[
+        padding:SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20,20,20,80)),children:[
           Card(child:Padding(padding:const EdgeInsets.all(16),child:Row(children:[
             CircleAvatar(radius:27,child:Icon(asCoach?Icons.person_outline:Icons.sports_outlined)),
             const SizedBox(width:12),

@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:core/core/constants/muscle_taxonomy_v1.dart';
 import 'package:core/domain/models/exercise.dart';
@@ -411,10 +412,10 @@ class _ExerciseLibraryPageState extends ConsumerState<ExerciseLibraryPage> {
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.symmetric(
+                    padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 8,
-                    ).copyWith(bottom: 100),
+                    ).copyWith(bottom: 100)),
                     itemCount: filteredExercises.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {

@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/identity/domain/auth_form_validation.dart';
 import 'package:core/features/sync/application/cloud_sync_provider.dart';
 import 'package:flutter/material.dart';
@@ -166,10 +167,10 @@ class _CloudAuthPageState extends ConsumerState<CloudAuthPage> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1100),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
+                  padding: SecondaryScreenInsets.scrollPadding(context, EdgeInsets.symmetric(
                     horizontal: wide ? 32 : 18,
                     vertical: wide ? 64 : 22,
-                  ),
+                  )),
                   child: wide
                       ? Row(
                           crossAxisAlignment: CrossAxisAlignment.center,

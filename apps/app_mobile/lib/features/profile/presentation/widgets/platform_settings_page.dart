@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/faith/data/bible_public_domain_source.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
@@ -16,7 +17,7 @@ class PlatformSettingsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('App y dispositivo')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(16)),
         children: [
           _SectionCard(
             title: 'Rendimiento y accesibilidad',

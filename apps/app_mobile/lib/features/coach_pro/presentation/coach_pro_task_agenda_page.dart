@@ -1,3 +1,4 @@
+import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
 import 'package:core/features/coach_pro/application/coach_pro_task_agenda_provider.dart';
 import 'package:core/features/coach_pro/domain/coach_pro_task_agenda.dart';
 import 'package:gym_tracker/features/coach_pro/presentation/coach_pro_task_page.dart';
@@ -89,7 +90,7 @@ class _AgendaState extends ConsumerState<_Agenda>
     final result = ref.watch(coachProTaskAgendaPageProvider(_query));
     String date(DateTime d) =>
       MaterialLocalizations.of(context).formatMediumDate(d);
-    return SafeArea(
+    return SafeArea(bottom: false, 
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 820),
@@ -97,7 +98,7 @@ class _AgendaState extends ConsumerState<_Agenda>
             onRefresh: () async => _refresh(),
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
+              padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.all(20)),
               children: [
                 Text('Próximos 14 días',
                   style: Theme.of(context).textTheme.headlineSmall),
