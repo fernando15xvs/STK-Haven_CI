@@ -55,11 +55,15 @@ void main() {
           expect(finder, findsOneWidget);
           final text = tester.widget<Text>(finder);
           expect(text.style!.color, Colors.white);
-          expect(text.style!.fontSize, 13);
+          expect(text.style!.fontSize, 12);
+          expect(text.style!.fontWeight, FontWeight.w600);
           final paragraph = tester.renderObject<RenderParagraph>(finder);
           expect(paragraph.didExceedMaxLines, isFalse, reason: label);
           final icon = find.byKey(ValueKey('quick_access_icon_$label'));
-          expect(tester.getSize(icon).height, greaterThanOrEqualTo(48));
+          expect(tester.getSize(icon), const Size(44, 44));
+          final tapTarget = find.ancestor(of: icon, matching: find.byType(InkWell)).first;
+          expect(tester.getSize(tapTarget).height, greaterThanOrEqualTo(48));
+          expect(tester.getSize(tapTarget).width, greaterThanOrEqualTo(48));
         }
         // Compare the actual row geometry, not text-box centers: a
         // two-line label has a lower center even when perfectly aligned.
@@ -72,7 +76,7 @@ void main() {
           final firstText = tester.getRect(find.byKey(
             ValueKey('quick_access_label_${row.first}')));
           if (previousBottom != null) {
-            expect(firstIcon.top, greaterThanOrEqualTo(previousBottom + 11));
+            expect(firstIcon.top, greaterThanOrEqualTo(previousBottom + 7));
           }
           var bottom = firstText.bottom;
           double? previousRight;
@@ -83,7 +87,7 @@ void main() {
               ValueKey('quick_access_label_$label')));
             expect(icon.center.dy, closeTo(firstIcon.center.dy, 1));
             expect(text.top, closeTo(firstText.top, 1));
-            expect(text.top - icon.bottom, closeTo(6, 1));
+            expect(text.top - icon.bottom, closeTo(4, 1));
             expect(text.center.dx, closeTo(icon.center.dx, 1));
             if (previousRight != null) {
               expect(icon.left, greaterThan(previousRight));

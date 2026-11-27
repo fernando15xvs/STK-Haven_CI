@@ -1,3 +1,5 @@
+import 'dart:ui' show FontVariation;
+
 import 'package:flutter/material.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 
@@ -20,7 +22,7 @@ class QuickAccessMenu extends StatelessWidget {
       // Larger accessibility text gets more room instead of a smaller font.
       final columns = scale > 1.85 || width < 220 ? 1
           : scale > 1.3 || width < 282 ? 2 : 3;
-      const gap = 12.0;
+      const gap = 8.0;
       final itemWidth = (width - (columns - 1) * gap) / columns;
       return SingleChildScrollView(
         key: const ValueKey('quick_access_scroll'),
@@ -69,15 +71,17 @@ class QuickAccessOption extends StatelessWidget {
             children: [
               Container(
                 key: ValueKey('quick_access_icon_$label'),
-                padding: const EdgeInsets.all(14),
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: colors.surfaceHigh,
                   shape: BoxShape.circle,
-                  border: Border.all(color: colors.surfaceBorder, width: 2),
+                  border: Border.all(color: colors.surfaceBorder, width: 1),
                 ),
-                child: Icon(icon, color: colors.primary, size: 25),
+                child: Icon(icon, color: colors.primary, size: 21),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 label,
                 key: ValueKey('quick_access_label_$label'),
@@ -86,7 +90,10 @@ class QuickAccessOption extends StatelessWidget {
                 // Two lines normally; do not clip accessibility-sized labels.
                 maxLines: largeText ? null : 2,
                 overflow: TextOverflow.visible,
-                style: AppTypography.labelLarge.copyWith(
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                   fontSize: 12,
+                   fontWeight: FontWeight.w600,
+                   fontVariations: const [FontVariation('wght', 600)],
                   color: Colors.white,
                   letterSpacing: 0,
                 ),

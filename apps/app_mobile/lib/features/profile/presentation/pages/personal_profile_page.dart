@@ -46,16 +46,16 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
     try {
       final picked = await ImagePicker().pickImage(
         source: ImageSource.gallery,
-        maxWidth: 360,
-        maxHeight: 360,
-        imageQuality: 70,
+        maxWidth: 1440,
+        maxHeight: 1440,
+        imageQuality: 82,
         requestFullMetadata: false,
       );
       if (picked == null) return;
       final bytes = await picked.readAsBytes();
       // Keep backups and local profile writes small, even for unusual images.
-      if (bytes.length < 8 || bytes.length > 220 * 1024) {
-        throw const FormatException('La foto debe pesar menos de 220 KB.');
+      if (bytes.length < 8 || bytes.length > 1024 * 1024) {
+        throw const FormatException('La foto debe pesar menos de 1 MB.');
       }
       final jpeg = bytes[0] == 0xFF && bytes[1] == 0xD8;
       final png = bytes[0] == 0x89 && bytes[1] == 0x50 &&
