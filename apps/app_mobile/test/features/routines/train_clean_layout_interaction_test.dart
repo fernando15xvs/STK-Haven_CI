@@ -2,6 +2,10 @@ import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'package:core/domain/models/appearance_settings.dart';
 import 'package:core/domain/models/exercise.dart';
 import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/user_experience_profile.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
+import 'package:core/features/recovery/application/recovery_provider.dart';
+import 'package:core/features/recovery/application/sleep_diary.dart';
 import 'package:core/domain/models/program_adaptation.dart';
 import 'package:core/features/programs/application/program_adaptation_policy.dart';
 import 'package:core/domain/models/training_program.dart';
@@ -49,6 +53,19 @@ final _suggested = NextProgramSession(
   scheduledDate: null,
   targetSessionsPerWeek: 4,
 );
+
+class _Profile extends UserExperienceProfileNotifier {
+  @override
+  Future<UserExperienceProfile> build() async => UserExperienceProfile();
+}
+class _Sleep extends SleepDiaryNotifier {
+  @override
+  SleepDiary build() => SleepDiary.empty();
+}
+class _Recovery extends RecoveryNotifier {
+  @override
+  RecoveryCheckIn? build() => null;
+}
 
 class _Routines extends RoutineListNotifier {
   @override
@@ -142,6 +159,9 @@ Future<void> _pumpTrain(
         if(clock!=null) trainingDayClockProvider.overrideWith((ref)=>clock),
         routineListProvider.overrideWith(_Routines.new),
         exerciseListProvider.overrideWith(_Exercises.new),
+        userExperienceProfileProvider.overrideWith(_Profile.new),
+        sleepDiaryProvider.overrideWith(_Sleep.new),
+        recoveryProvider.overrideWith(_Recovery.new),
         workoutHistoryProvider.overrideWith(completed ? _CompletedHistory.new : _History.new),
         trainingProgramListProvider.overrideWith(
           hasProgram ? _Programs.new : _NoPrograms.new,

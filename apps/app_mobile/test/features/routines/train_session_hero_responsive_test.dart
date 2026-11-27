@@ -1,5 +1,11 @@
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/domain/models/routine.dart';
+import 'package:core/domain/models/exercise.dart';
+import 'package:core/domain/models/user_experience_profile.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
+import 'package:core/features/recovery/application/recovery_provider.dart';
+import 'package:core/features/recovery/application/sleep_diary.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/domain/models/training_program.dart';
 import 'package:core/features/programs/application/providers/training_program_provider.dart';
@@ -9,6 +15,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:gym_tracker/features/routines/presentation/widgets/next_training_session_hero.dart';
+
+class _Exercises extends ExerciseListNotifier {
+  @override
+  List<Exercise> build() => [
+    Exercise(id: 'shoulder-1', name: 'Press de hombros', muscleGroup: 'Hombros'),
+  ];
+}
+
+class _Profile extends UserExperienceProfileNotifier {
+  @override
+  Future<UserExperienceProfile> build() async => UserExperienceProfile();
+}
+
+class _Sleep extends SleepDiaryNotifier {
+  _Sleep(this.shortNight);
+  final bool shortNight;
+  @override
+  SleepDiary build() => shortNight
+      ? SleepDiary.empty().withEntry(DateTime.now(), 240)
+      : SleepDiary.empty();
+}
+
+class _Recovery extends RecoveryNotifier {
+  @override
+  RecoveryCheckIn? build() => null;
+}
 
 class _NoHistory extends WorkoutHistoryNotifier {
   @override
@@ -87,6 +119,10 @@ void main() {
         await tester.pumpWidget(ProviderScope(
           overrides: [
             workoutHistoryProvider.overrideWith(_NoHistory.new),
+            exerciseListProvider.overrideWith(_Exercises.new),
+            userExperienceProfileProvider.overrideWith(_Profile.new),
+            sleepDiaryProvider.overrideWith(() => _Sleep(false)),
+            recoveryProvider.overrideWith(_Recovery.new),
             activeWorkoutProvider.overrideWith(_NoActiveWorkout.new),
             nextProgramSessionProvider.overrideWith((ref) => suggested),
             activeTrainingProgramProvider.overrideWith((ref) => program),
@@ -118,6 +154,7 @@ void main() {
         expect(find.byKey(const ValueKey('train_start_next_session')),
             findsOneWidget);
         expect(find.text('Upper B'), findsOneWidget);
+        expect(find.text('Revisar exigencia de hoy'), findsNothing);
         expect(
           tester.getSize(find.byKey(const ValueKey('train_next_session_hero'))).width,
           closeTo(width, 0.1),
@@ -129,6 +166,42 @@ void main() {
       }
     }
   }
+
+  testWidgets('short sleep displays contextual recovery action at 320dp and 200% text',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 950);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        workoutHistoryProvider.overrideWith(_NoHistory.new),
+        exerciseListProvider.overrideWith(_Exercises.new),
+        userExperienceProfileProvider.overrideWith(_Profile.new),
+        sleepDiaryProvider.overrideWith(() => _Sleep(true)),
+        recoveryProvider.overrideWith(_Recovery.new),
+        activeWorkoutProvider.overrideWith(_NoActiveWorkout.new),
+        nextProgramSessionProvider.overrideWith((ref) => suggested),
+        activeTrainingProgramProvider.overrideWith((ref) => program),
+        legacyTodaySessionProvider.overrideWith((ref) => null),
+      ],
+      child: MaterialApp(
+        home: Scaffold(body: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: SingleChildScrollView(child: NextTrainingSessionHero(
+            routines: [routine], historyByRoutine: const {},
+            musclesFor: (_) => const ['Hombros'],
+          )),
+        )),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Revisar exigencia de hoy'), findsOneWidget);
+    expect(find.textContaining('Duración de sueño reducida'), findsOneWidget);
+    expect(find.byKey(const ValueKey('train_start_next_session')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('active session wins over projected workout and opens no new Start',
       (tester) async {
