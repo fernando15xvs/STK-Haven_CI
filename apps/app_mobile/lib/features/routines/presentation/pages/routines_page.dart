@@ -13,6 +13,7 @@ import 'package:core/domain/models/training_program.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/core/theme/components/action_navigation_group.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 import 'package:gym_tracker/core/theme/components/primary_button.dart';
 import 'package:gym_tracker/features/routines/presentation/pages/create_routine_page.dart';
@@ -33,7 +34,6 @@ class RoutinesPage extends ConsumerStatefulWidget {
 }
 
 class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBindingObserver {
-  bool _showAllRoutines = false;
   Timer? _clockTimer;
 
   @override
@@ -106,10 +106,6 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
     final eligibleRoutines = routines
         .where((routine) => routine.id != featuredRoutineId)
         .toList(growable: false);
-    final visibleRoutines = !_showAllRoutines && eligibleRoutines.length > 3
-        ? eligibleRoutines.take(3).toList(growable: false) : eligibleRoutines;
-    final hasHiddenRoutines = !_showAllRoutines &&
-        eligibleRoutines.length != visibleRoutines.length;
     List<String> musclesFor(Routine routine) {
       final unique = <String>{};
       for (final item in routine.exercises) {
@@ -143,7 +139,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
               itemCount: 1 +
                   (routines.isEmpty
                       ? 1
-                      : visibleRoutines.length + (hasHiddenRoutines ? 1 : 0)),
+                      : eligibleRoutines.length),
               itemBuilder: (context, index) {
                 if (index == 0) {
                   return Column(
@@ -154,8 +150,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
                         historyByRoutine: usageByRoutine,
                         musclesFor: musclesFor,
                         decision: day,
-                        routineMenu: (routine) => _routineMenu(context, ref, routine,
-                          includeAdapt: activeProgram != null),
+                        routineMenu: (routine) => _routineMenu(context, ref, routine),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       _ProgramOrganizerCard(routines: routines,
@@ -209,19 +204,7 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
                   return _EmptyState(onCreate: createRoutine);
                 }
 
-                if (hasHiddenRoutines && index == visibleRoutines.length + 1) {
-                  return Align(
-                    alignment: Alignment.center,
-                    child: TextButton.icon(
-                      key: const ValueKey('train_show_all_routines'),
-                      onPressed: () => setState(() => _showAllRoutines = true),
-                      icon: const Icon(Icons.expand_more_rounded),
-                      label: const Text('Ver todas las rutinas'),
-                    ),
-                  );
-                }
-
-                final routine = visibleRoutines[index - 1];
+                final routine = eligibleRoutines[index - 1];
                 final muscleGroups = musclesFor(routine);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -266,9 +249,29 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
     }
   }
 
-  Widget _routineMenu(BuildContext context, WidgetRef ref, Routine routine,
-      {bool includeAdapt = false}) =>
-    PopupMenuButton<String>(
+  Widget _routineMenu(BuildContext context, WidgetRef ref, Routine routine) {
+    final colors = AppColors.of(context);
+    final tokens = AppUiTokens.of(context);
+    PopupMenuItem<String> item(String value, String label, IconData icon,
+        {bool destructive = false}) {
+      final color = destructive ? colors.error : colors.textPrimary;
+      return PopupMenuItem<String>(
+        value: value,
+        child: Row(children: [
+          Icon(icon, size: 20, color: destructive ? color : colors.textSecondary),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(child: Text(label,
+            style: AppTypography.bodyMedium.copyWith(color: color))),
+        ]),
+      );
+    }
+
+    return PopupMenuButton<String>(
+      color: colors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(tokens.buttonRadius),
+        side: BorderSide(color: colors.surfaceBorder, width: tokens.borderWidth),
+      ),
       style: IconButton.styleFrom(
         minimumSize: const Size(48, 48),
         fixedSize: const Size(48, 48),
@@ -282,105 +285,108 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
             Navigator.push(context, MaterialPageRoute(
               builder: (_) => CreateRoutinePage(editingRoutine: routine)));
             break;
-          case 'adapt': _showWeeklyPlan(context, ref, ref.read(routineListProvider)); break;
           case 'notes': _editRoutineNotes(context, ref, routine); break;
           case 'duplicate': _duplicateRoutine(context, ref, routine); break;
           case 'delete': _confirmDelete(context, ref, routine); break;
         }
       },
       itemBuilder: (_) => [
-        if (includeAdapt) const PopupMenuItem(value: 'adapt', child: Text('Adaptar planificación')),
-        const PopupMenuItem(value: 'edit', child: Text('Editar')),
-        const PopupMenuItem(value: 'notes', child: Text('Nota')),
-        const PopupMenuItem(value: 'duplicate', child: Text('Duplicar')),
-        const PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+        item('edit', 'Editar', Icons.edit_outlined),
+        item('notes', 'Nota', Icons.sticky_note_2_outlined),
+        item('duplicate', 'Duplicar', Icons.copy_outlined),
+        const PopupMenuDivider(height: 1),
+        item('delete', 'Eliminar', Icons.delete_outline, destructive: true),
       ],
     );
+  }
 
   Future<void> _showTrainingManagement(
     BuildContext context, {
     required bool canCreatePlan,
   }) async {
-    await showModalBottomSheet<void>(
+    final destination = await showModalBottomSheet<String>(
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
+      showDragHandle: true,
       backgroundColor: AppColors.of(context).surfaceHigh,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppRadius.xl),
+          top: Radius.circular(AppUiTokens.of(context).cardRadius),
         ),
       ),
-      builder: (sheetContext) => SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md, AppSpacing.lg, AppSpacing.md, AppSpacing.xl,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            AppUiTokens.of(sheetContext).cardPadding, 0,
+            AppUiTokens.of(sheetContext).cardPadding, AppSpacing.lg,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Gestionar', style: AppTypography.headlineMedium),
+              Row(children: [
+                Expanded(child: Text('Gestionar', style: AppTypography.headlineLarge)),
+                IconButton(tooltip: 'Cerrar gestión',
+                  onPressed: () => Navigator.pop(sheetContext),
+                  icon: const Icon(Icons.close)),
+              ]),
               const SizedBox(height: AppSpacing.sm),
-              ListTile(
-                key: const ValueKey('train_manage_programs'),
-                leading: const Icon(Icons.tune_rounded),
-                title: const Text('Administrar'),
-                subtitle: const Text('Programas, pausas y ajustes'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const TrainingProgramsPage(),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                key: const ValueKey('train_manage_routine_templates'),
-                leading: const Icon(Icons.fitness_center_outlined),
-                title: const Text('Plantillas de rutinas'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RoutineTemplatesPage(),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                key: const ValueKey('train_manage_program_templates'),
-                leading: const Icon(Icons.layers_outlined),
-                title: const Text('Plantillas de programas'),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) =>
-                          const TrainingProgramsPage(templatesOnly: true),
-                    ),
-                  );
-                },
-              ),
-              if (canCreatePlan)
-                ListTile(
-                  key: const ValueKey('train_create_plan'),
-                  leading: const Icon(Icons.add_rounded),
-                  title: const Text('Crear plan'),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    QuickTrainingPlanSheet.show(context);
-                  },
+              ActionNavigationGroup(children: [
+                ActionNavigationTile(
+                  key: const ValueKey('train_manage_programs'),
+                  icon: Icons.tune_rounded,
+                  title: 'Administrar programas',
+                  subtitle: 'Editar, activar y organizar programas',
+                  onTap: () => Navigator.pop(sheetContext, 'programs'),
                 ),
+                ActionNavigationTile(
+                  key: const ValueKey('train_manage_routine_templates'),
+                  icon: Icons.fitness_center_outlined,
+                  title: 'Plantillas de rutinas',
+                  subtitle: 'Explorar y reutilizar rutinas',
+                  onTap: () => Navigator.pop(sheetContext, 'routineTemplates'),
+                ),
+                ActionNavigationTile(
+                  key: const ValueKey('train_manage_program_templates'),
+                  icon: Icons.layers_outlined,
+                  title: 'Plantillas de programas',
+                  subtitle: 'Explorar y reutilizar programas',
+                  onTap: () => Navigator.pop(sheetContext, 'programTemplates'),
+                ),
+                if (canCreatePlan)
+                  ActionNavigationTile(
+                    key: const ValueKey('train_create_plan'),
+                    icon: Icons.add_rounded,
+                    title: 'Crear plan',
+                    subtitle: 'Organizar tus rutinas guardadas',
+                    onTap: () => Navigator.pop(sheetContext, 'create'),
+                  ),
+              ]),
             ],
           ),
         ),
       ),
     );
+    if (!context.mounted) return;
+    switch (destination) {
+      case 'programs':
+        Navigator.push(context, MaterialPageRoute(
+          builder: (_) => const TrainingProgramsPage()));
+        break;
+      case 'routineTemplates':
+        Navigator.push(context, MaterialPageRoute(
+          builder: (_) => const RoutineTemplatesPage()));
+        break;
+      case 'programTemplates':
+        Navigator.push(context, MaterialPageRoute(
+          builder: (_) => const TrainingProgramsPage(templatesOnly: true)));
+        break;
+      case 'create':
+        QuickTrainingPlanSheet.show(context);
+        break;
+    }
   }
 
   Future<void> _editRoutineNotes(

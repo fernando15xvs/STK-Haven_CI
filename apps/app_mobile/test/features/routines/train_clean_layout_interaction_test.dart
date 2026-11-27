@@ -251,9 +251,9 @@ void main() {
     expect(find.descendant(of: hero, matching: find.byType(PopupMenuButton<String>)), findsNothing);
     expect(find.byKey(const ValueKey('train_start_next_session')), findsNothing);
     expect(find.byKey(const ValueKey('train_routine_r0')), findsOneWidget);
-    await tester.scrollUntilVisible(find.byKey(const ValueKey('train_show_all_routines')), 160);
-    await tester.tap(find.byKey(const ValueKey('train_show_all_routines')));
-    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('train_routine_r4')), 160);
+    expect(find.byKey(const ValueKey('train_show_all_routines')), findsNothing);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('train_routine_r0')), -160);
     expect(find.byKey(const ValueKey('train_routine_r0')), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
@@ -270,26 +270,56 @@ void main() {
     }
   }
 
-  testWidgets('Ver todas reveals remaining routines without duplicating the highlighted routine',
+  testWidgets('every non-featured routine is reachable without an expansion button',
       (tester) async {
     await _pumpTrain(tester);
     expect(find.byKey(const ValueKey('train_routine_r0')), findsNothing);
-    expect(find.byKey(const ValueKey('train_routine_r4')), findsNothing);
-
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('train_show_all_routines')),
-      180,
-    );
-    await tester.tap(find.byKey(const ValueKey('train_show_all_routines')));
-    await tester.pumpAndSettle();
-
-    await tester.scrollUntilVisible(
-      find.byKey(const ValueKey('train_routine_r4')),
-      180,
-    );
-    expect(find.byKey(const ValueKey('train_routine_r4')), findsOneWidget);
+    for (final id in ['r1', 'r2', 'r3', 'r4']) {
+      await tester.scrollUntilVisible(
+        find.byKey(ValueKey('train_routine_$id')), 160);
+      expect(find.byKey(ValueKey('train_routine_$id')), findsOneWidget);
+    }
     expect(find.byKey(const ValueKey('train_routine_r0')), findsNothing);
     expect(find.byKey(const ValueKey('train_show_all_routines')), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('featured routine menu contains only routine actions', (tester) async {
+    await _pumpTrain(tester);
+    await tester.tap(find.byTooltip('Opciones de Rutina 0'));
+    await tester.pumpAndSettle();
+    for (final label in ['Editar', 'Nota', 'Duplicar', 'Eliminar']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Adaptar planificación'), findsNothing);
+    expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('adaptation has a separate action view and cancellation keeps the plan',
+      (tester) async {
+    await _pumpTrain(tester, clock: DateTime(2026,11,26,9));
+    final container = ProviderScope.containerOf(tester.element(find.byType(RoutinesPage)));
+    final original = container.read(activeTrainingProgramProvider);
+    await tester.tap(find.byKey(const ValueKey('train_open_planning')));
+    await tester.pumpAndSettle();
+    expect(find.text('No puedo entrenar hoy'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('adaptive_open_actions')));
+    await tester.pumpAndSettle();
+    expect(find.text('DISPONIBILIDAD'), findsOneWidget);
+    expect(find.byKey(const ValueKey('adaptive_week_progress')), findsNothing);
+    await tester.tap(find.text('No puedo entrenar hoy'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(container.read(activeTrainingProgramProvider), same(original));
+    expect(find.text('DISPONIBILIDAD'), findsOneWidget);
+    await tester.tap(find.byTooltip('Volver a planificación'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('adaptive_week_progress')), findsOneWidget);
+    expect(find.text('No puedo entrenar hoy'), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -367,6 +397,16 @@ void main() {
     expect(find.byKey(const ValueKey('train_manage_routine_templates')), findsOneWidget);
     expect(find.byKey(const ValueKey('train_manage_program_templates')), findsOneWidget);
     expect(find.byKey(const ValueKey('train_create_plan')), findsNothing);
+    expect(find.text('Administrar programas'), findsOneWidget);
+    for (final id in ['train_manage_programs', 'train_manage_routine_templates',
+        'train_manage_program_templates']) {
+      final action = find.byKey(ValueKey(id));
+      expect(find.descendant(of: action, matching: find.byIcon(Icons.chevron_right)), findsOneWidget);
+      expect(tester.getSize(action).height, greaterThanOrEqualTo(48));
+    }
+    await tester.tap(find.byTooltip('Cerrar gestión'));
+    await tester.pumpAndSettle();
+    expect(find.text('Administrar programas'), findsNothing);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
   });

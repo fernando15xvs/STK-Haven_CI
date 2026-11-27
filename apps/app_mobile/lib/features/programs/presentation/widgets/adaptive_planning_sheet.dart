@@ -10,6 +10,7 @@ import 'package:core/features/workout/application/workout_history_provider.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
+import 'package:gym_tracker/core/theme/components/action_navigation_group.dart';
 import 'package:intl/intl.dart';
 
 typedef _PlanCommand = TrainingProgram Function(TrainingProgram, List<Routine>, DateTime);
@@ -56,6 +57,7 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
         if (p.id != expected) throw StateError('El programa activo cambió.');
         return command(p,r,n);
       });
+      if (mounted && _showActions) setState(() => _showActions = false);
     } catch (_) {
       if (mounted) setState(() => _error = 'No se pudo aplicar el cambio. Revisa las sesiones pendientes.');
     } finally {
@@ -262,9 +264,147 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
     final mode = flexible ? 'Flexible' : active.scheduleMode == ProgramScheduleMode.fixed ? 'Fijo' : 'Continuo';
     final policy = active.scheduleMode == ProgramScheduleMode.fixed ? '' :
       active.repeatsWeekly ? ' · Repetición semanal' : ' · Rotación por sesiones';
+    final canRepair = !active.repeatsWeekly &&
+        active.scheduleMode != ProgramScheduleMode.fixed && pending.isNotEmpty;
+    final canReview = rows.any((o) => o.status == PlanOccurrenceStatus.pending &&
+        state.bindings.containsValue(o.id));
+    if (_showActions) {
+      return PopScope<PlanningStart>(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && !_busy) setState(() { _showActions = false; _error = null; });
+        },
+        child: SafeArea(
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .82),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppUiTokens.of(context).cardPadding),
+                child: Row(children: [
+                  IconButton(
+                    tooltip: 'Volver a planificación',
+                    onPressed: _busy ? null : () => setState(() {
+                      _showActions = false; _error = null;
+                    }),
+                    icon: const Icon(Icons.arrow_back),
+                  ),
+                  Expanded(child: Text('Adaptar planificación',
+                    style: AppTypography.headlineMedium)),
+                ]),
+              ),
+              if (_busy) const LinearProgressIndicator(),
+              Flexible(
+                child: SingleChildScrollView(
+                  key: const ValueKey('adaptive_actions_scroll'),
+                  padding: EdgeInsets.fromLTRB(
+                    AppUiTokens.of(context).cardPadding, AppSpacing.sm,
+                    AppUiTokens.of(context).cardPadding, AppSpacing.lg),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    if (_error != null) Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      child: Text(_error!, style: AppTypography.bodyMedium.copyWith(color: colors.error)),
+                    ),
+                    const ActionSectionHeading('Disponibilidad'),
+                    ActionNavigationGroup(children: [
+                      ActionNavigationTile(icon: Icons.event_busy_outlined, title: 'No puedo entrenar hoy',
+                        subtitle: 'Conservar las sesiones; no es una omisión',
+                        onTap:_busy?null:()=>_apply('Descansar hoy','La sesión quedará pendiente. En modo fijo podrás recuperarla explícitamente.',
+                          (p,r,n)=>ProgramAdaptationPolicy.setUnavailableDays(p,r,n,{
+                    ...ProgramAdaptationPolicy.prepare(p,r,n).adaptation!.unavailableDays.where((d)=>!d.isBefore(ProgramAdaptationPolicy.day(n))),
+                    ProgramAdaptationPolicy.day(n)}))),
+                      ActionNavigationTile(icon: Icons.calendar_month_outlined, title: 'Tengo menos días disponibles',
+                        subtitle: 'Solo esta semana',onTap:_busy?null:()=>_editAvailability(prepared,now)),
+                    ]),
+                    if (pending.length > 1 || canRepair || canReview) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      const ActionSectionHeading('Orden de entrenamiento'),
+                      ActionNavigationGroup(children: [
+                      if(pending.length>1)
+                        ActionNavigationTile(icon: Icons.swap_horiz_rounded, title: 'Cambiar mi próximo entrenamiento',
+                          subtitle: 'Intercambiar dos sesiones sin cambiar el programa',
+                          onTap:_busy?null:()async{
+                    final first=await _choose('Sesión que quieres cambiar',pending,byId);
+                    if(first==null||!mounted)return;
+                    final second=await _choose('Entrenar en su lugar',pending.where((o)=>o.id!=first.id).toList(),byId);
+                    if(second==null||!mounted)return;
+                    await _apply('Intercambiar sesiones','Ambas seguirán en el programa, con el orden intercambiado.',
+                      (p,r,n)=>ProgramAdaptationPolicy.exchange(p,r,first.id,second.id,n));
+                          }),
+                      if (canRepair)
+                        ActionNavigationTile(icon: Icons.reorder_rounded, title: 'Reparar orden de rotación',
+                          subtitle: 'Reconstruir solo las sesiones pendientes',onTap:_busy?null:()=>_repairRotation(prepared,routines,byId,now)),
+                      if (canReview)
+                        ActionNavigationTile(icon: Icons.fact_check_outlined, title: 'Revisar sesión en curso',
+                          subtitle: 'Liberar únicamente reservas sin entrenamiento guardado',
+                          onTap:_busy?null:()async{
+                    if(!await _confirm('Revisar reservas','Se conservará cualquier entrenamiento activo o guardado.')||!mounted)return;
+                    if (_busy) return;
+                    setState(() { _busy = true; _error = null; });
+                    try {
+                      await ref.read(trainingProgramListProvider.notifier).recoverAbandonedReservations();
+                      if (mounted) setState(() => _showActions = false);
+                    } catch (_) {
+                      if (mounted) setState(() => _error = 'No se pudo revisar las reservas.');
+                    } finally {
+                      if (mounted) setState(() => _busy = false);
+                    }
+                          }),
+                      ]),
+                    ],
+                    const SizedBox(height: AppSpacing.md),
+                    const ActionSectionHeading('Pausas y recuperación'),
+                    ActionNavigationGroup(children: [
+                      ActionNavigationTile(
+                        icon: plan.isPaused ? Icons.play_circle_outline : Icons.pause_circle_outline,
+                        title: plan.isPaused ? 'Reanudar programa' : 'Pausar programa',
+                        subtitle: plan.isPaused ? 'Continuar con las sesiones pendientes' : 'Suspender temporalmente',
+                        onTap:_busy?null:() => plan.isPaused?
+                          _apply('Reanudar programa','Se conservará tu progreso.',
+                    (p,r,n)=>ProgramAdaptationPolicy.resume(p,n)):_pause(null)),
+                      ActionNavigationTile(icon: Icons.healing_outlined, title: 'Lesión o molestia física',
+                        subtitle: 'Pausar temporalmente rutinas afectadas',
+                        onTap:_busy?null:()=>_pauseRoutines(routines.where((r)=>active.routineIds.contains(r.id)).toList())),
+                      if(pausedIds.isNotEmpty)
+                        ActionNavigationTile(icon: Icons.play_circle_outline, title: 'Reanudar rutinas pausadas',
+                          subtitle:pausedIds.map((id)=>byId[id]?.name??id).join(' · '),
+                          onTap:_busy?null:()=>_apply('Reanudar rutinas','Se volverán a incluir en el plan.',
+                    (p,r,n)=>ProgramAdaptationPolicy.resume(p,n,routineIds:pausedIds))),
+                      if(past.isNotEmpty && pending.isNotEmpty)
+                        ActionNavigationTile(icon: Icons.history_rounded, title: 'Recuperar sesión de otra semana',
+                          subtitle: 'Elegir una sesión anterior pendiente de recuperar',
+                          onTap:_busy?null:()async{
+                    final old=await _choose('Sesión anterior',past,byId);
+                    if(old==null||!mounted)return;
+                    final replace=await _choose('Sustituir sesión pendiente',pending,byId);
+                    if(replace==null||!mounted)return;
+                    await _apply('Recuperar sesión anterior','La pendiente elegida quedará omitida, no completada.',
+                      (p,r,n)=>ProgramAdaptationPolicy.recoverPrevious(p,r,old.id,replace.id,n));
+                          }),
+                    ]),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Icon(Icons.shield_outlined, color: colors.primary, size: 20),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(child: Text('Tu historial de entrenamiento se conserva.',
+                        style: AppTypography.bodySmall.copyWith(color: colors.textSecondary))),
+                    ]),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text('Para entrenar sin cambiar el programa, inicia una rutina independiente desde Mis rutinas.',
+                      style: AppTypography.bodySmall.copyWith(color: colors.textSecondary)),
+                  ]),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      );
+    }
     return SafeArea(top: false, child: ConstrainedBox(
       constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * .82),
-      child: SingleChildScrollView(padding: EdgeInsets.fromLTRB(
+      child: SingleChildScrollView(
+        key: const ValueKey('adaptive_calendar_scroll'),
+        padding: EdgeInsets.fromLTRB(
         AppUiTokens.of(context).cardPadding, 0, AppUiTokens.of(context).cardPadding, AppSpacing.lg),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
@@ -289,9 +429,29 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
             const Padding(padding:EdgeInsets.only(top:8),child:Text('Disponibilidad temporal ajustada esta semana')),
           if (_error != null) Padding(padding:const EdgeInsets.only(top:8),
             child:Text(_error!,style:TextStyle(color:colors.error))),
-          const SizedBox(height:AppSpacing.sm),
+          const SizedBox(height:AppSpacing.md),
+          FilledButton(
+            key: const ValueKey('adaptive_open_actions'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(48),
+              backgroundColor: colors.primary, foregroundColor: colors.onPrimary,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: AppSpacing.sm),
+            ),
+            onPressed: _busy ? null : () => setState(() { _showActions = true; _error = null; }),
+            child: const Row(children: [
+              Icon(Icons.tune_rounded),
+              SizedBox(width: AppSpacing.sm),
+              Expanded(child: Text('Adaptar planificación')),
+              Icon(Icons.chevron_right),
+            ]),
+          ),
+          const SizedBox(height:AppSpacing.md),
           Text(flexible ? 'Orden de rotación' : 'Sesiones de la semana',style:AppTypography.headlineSmall),
-          for (final (index,row) in rows.indexed) ...[
+          const SizedBox(height:AppSpacing.xs),
+          if (rows.isNotEmpty)
+            ActionNavigationGroup(children: [
+          for (final (index,row) in rows.indexed)
             Builder(builder:(context){
               final done = row.status == PlanOccurrenceStatus.completed;
               final omitted = row.status == PlanOccurrenceStatus.omitted;
@@ -305,7 +465,10 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
                 missed?'Pendiente de recuperar':row.notBefore!=null&&row.notBefore!.isAfter(ProgramAdaptationPolicy.day(now))?'Pospuesta':
                 next?'Siguiente sesión':!flexible&&date==null&&active.scheduleMode==ProgramScheduleMode.continuous?'Pendiente · sin día disponible':'Pendiente';
               return ListTile(key:ValueKey('adaptive_slot_${row.id}'),
-                dense:true,contentPadding:EdgeInsets.zero,
+                dense:true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+                titleTextStyle: AppTypography.bodyMedium.copyWith(color: colors.textPrimary),
+                subtitleTextStyle: AppTypography.bodySmall.copyWith(color: colors.textSecondary),
                 leading:done?Icon(Icons.check_circle_outline,color:colors.success):
                   paused?Icon(Icons.pause_circle_outline,color:colors.textSecondary):
                   omitted?const Icon(Icons.skip_next):next?Icon(Icons.radio_button_checked,color:colors.primary):
@@ -318,14 +481,45 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
                   onPressed:_busy?null:()=>_slotActions(prepared,row,pending,byId,now),
                   icon:const Icon(Icons.more_horiz)));
             }),
-            const Divider(height:1),
-          ],
+          ]),
           if (rows.isEmpty) const Text('No hay sesiones previstas.'),
-          if (!flexible && active.trainingWeekdays.isNotEmpty && active.scheduleMode == ProgramScheduleMode.continuous)
-            Padding(padding:const EdgeInsets.only(top:8),child:Text('Días habituales: ${[for (var day = 1; day <= 7; day++) if (active.trainingWeekdays.contains(day)) const ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][day-1]].join(' · ')}',
-              style:AppTypography.bodySmall)),
-          ExpansionTile(key:const ValueKey('adaptive_next_week'),tilePadding:EdgeInsets.zero,
+          if (!flexible && active.trainingWeekdays.isNotEmpty &&
+              active.scheduleMode == ProgramScheduleMode.continuous) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text('Días habituales', style: AppTypography.bodySmall.copyWith(
+              color: colors.textSecondary)),
+            const SizedBox(height: AppSpacing.xs),
+            Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
+              for (var day = 1; day <= 7; day++)
+                Semantics(
+                  label: const ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][day - 1],
+                  selected: active.trainingWeekdays.contains(day),
+                  excludeSemantics: true,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+                    decoration: BoxDecoration(
+                      color: active.trainingWeekdays.contains(day)
+                          ? colors.primaryFaded : colors.surfaceHigh,
+                      borderRadius: BorderRadius.circular(AppUiTokens.of(context).buttonRadius),
+                    ),
+                    child: Text(
+                      const ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][day - 1],
+                      style: AppTypography.bodySmall.copyWith(
+                        color: active.trainingWeekdays.contains(day)
+                            ? colors.primary : colors.textSecondary),
+                    ),
+                  ),
+                ),
+            ]),
+          ],
+          const SizedBox(height:AppSpacing.md),
+          ActionNavigationGroup(children: [
+          ExpansionTile(key:const ValueKey('adaptive_next_week'),
+            tilePadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            childrenPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
             initiallyExpanded:_nextWeek,onExpansionChanged:(v)=>_nextWeek=v,
+            leading: Icon(Icons.date_range_outlined, color: colors.primary),
             title:const Text('Próxima semana'),subtitle:const Text('Estimación según lo que entrenes esta semana'),
             children:[
               SwitchListTile(contentPadding:EdgeInsets.zero,title:const Text('Si no entreno más esta semana'),
@@ -334,64 +528,7 @@ class _AdaptivePlanningSheetState extends ConsumerState<AdaptivePlanningSheet> {
               for (final (i,id) in forecastIds.indexed)
               ListTile(dense:true,contentPadding:EdgeInsets.zero,leading:Text('${i+1}'),
                 title:Text(byId[id]?.name??'Rutina no disponible'))]),
-          ExpansionTile(tilePadding:EdgeInsets.zero,initiallyExpanded:_showActions,
-            onExpansionChanged:(v)=>_showActions=v,
-            title:const Text('Adaptar planificación'),leading:const Icon(Icons.tune),
-            children:[
-              ListTile(contentPadding:EdgeInsets.zero,title:const Text('No puedo entrenar hoy'),
-                subtitle:const Text('Conservar las sesiones; no es una omisión'),
-                onTap:_busy?null:()=>_apply('Descansar hoy','La sesión quedará pendiente. En modo fijo podrás recuperarla explícitamente.',
-                  (p,r,n)=>ProgramAdaptationPolicy.setUnavailableDays(p,r,n,{
-                    ...ProgramAdaptationPolicy.prepare(p,r,n).adaptation!.unavailableDays.where((d)=>!d.isBefore(ProgramAdaptationPolicy.day(n))),
-                    ProgramAdaptationPolicy.day(n)}))),
-              ListTile(contentPadding:EdgeInsets.zero,title:const Text('Tengo menos días disponibles'),
-                subtitle:const Text('Solo esta semana'),onTap:_busy?null:()=>_editAvailability(prepared,now)),
-              if(pending.length>1)
-                ListTile(contentPadding:EdgeInsets.zero,title:const Text('Cambiar mi próximo entrenamiento'),
-                  subtitle:const Text('Intercambiar dos sesiones sin cambiar el programa'),
-                  onTap:_busy?null:()async{
-                    final first=await _choose('Sesión que quieres cambiar',pending,byId);
-                    if(first==null||!mounted)return;
-                    final second=await _choose('Entrenar en su lugar',pending.where((o)=>o.id!=first.id).toList(),byId);
-                    if(second==null||!mounted)return;
-                    await _apply('Intercambiar sesiones','Ambas seguirán en el programa, con el orden intercambiado.',
-                      (p,r,n)=>ProgramAdaptationPolicy.exchange(p,r,first.id,second.id,n));
-                  }),
-              if(!active.repeatsWeekly&&active.scheduleMode!=ProgramScheduleMode.fixed&&pending.isNotEmpty)
-                ListTile(contentPadding:EdgeInsets.zero,title:const Text('Reparar orden de rotación'),
-                  subtitle:const Text('Reconstruir solo las sesiones pendientes'),onTap:_busy?null:()=>_repairRotation(prepared,routines,byId,now)),
-              if(rows.any((o)=>o.status==PlanOccurrenceStatus.pending&&state.bindings.containsValue(o.id)))
-                ListTile(contentPadding:EdgeInsets.zero,title:const Text('Revisar sesión en curso'),
-                  subtitle:const Text('Liberar únicamente reservas sin entrenamiento guardado'),
-                  onTap:_busy?null:()async{
-                    if(!await _confirm('Revisar reservas','Se conservará cualquier entrenamiento activo o guardado.')||!mounted)return;
-                    try{await ref.read(trainingProgramListProvider.notifier).recoverAbandonedReservations();}
-                    catch(_){if(mounted)setState(()=>_error='No se pudo revisar las reservas.');}
-                  }),
-              ListTile(contentPadding:EdgeInsets.zero,title:Text(plan.isPaused?'Reanudar programa':'Pausar programa'),
-                onTap:_busy?null:() => plan.isPaused?
-                  _apply('Reanudar programa','Se conservará tu progreso.',
-                    (p,r,n)=>ProgramAdaptationPolicy.resume(p,n)):_pause(null)),
-              ListTile(contentPadding:EdgeInsets.zero,title:const Text('Lesión o molestia física'),
-                subtitle:const Text('Pausar temporalmente rutinas afectadas'),
-                onTap:_busy?null:()=>_pauseRoutines(routines.where((r)=>active.routineIds.contains(r.id)).toList())),
-              if(pausedIds.isNotEmpty)
-                ListTile(contentPadding:EdgeInsets.zero,title:const Text('Reanudar rutinas pausadas'),
-                  subtitle:Text(pausedIds.map((id)=>byId[id]?.name??id).join(' · ')),
-                  onTap:_busy?null:()=>_apply('Reanudar rutinas','Se volverán a incluir en el plan.',
-                    (p,r,n)=>ProgramAdaptationPolicy.resume(p,n,routineIds:pausedIds))),
-              if(past.isNotEmpty && pending.isNotEmpty)
-                ListTile(contentPadding:EdgeInsets.zero,title:const Text('Recuperar sesión de otra semana'),
-                  onTap:_busy?null:()async{
-                    final old=await _choose('Sesión anterior',past,byId);
-                    if(old==null||!mounted)return;
-                    final replace=await _choose('Sustituir sesión pendiente',pending,byId);
-                    if(replace==null||!mounted)return;
-                    await _apply('Recuperar sesión anterior','La pendiente elegida quedará omitida, no completada.',
-                      (p,r,n)=>ProgramAdaptationPolicy.recoverPrevious(p,r,old.id,replace.id,n));
-                  }),
-              const Text('Para entrenar sin cambiar el programa, inicia una rutina independiente desde Mis rutinas.'),
-            ]),
+          ]),
           if(_busy) const LinearProgressIndicator(),
         ]))));
   }
