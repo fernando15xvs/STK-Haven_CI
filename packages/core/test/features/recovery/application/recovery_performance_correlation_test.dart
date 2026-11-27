@@ -108,46 +108,31 @@ void main() {
       );
     });
 
-    test('calculates a positive association from three comparisons', () {
+    test('requires ten comparable observations with variation', () {
       final insight = RecoveryPerformanceCorrelation.analyze(
         checkIns: [
-          recovery(
-            2,
-            energy: 2,
-            sleep: 2,
-            stress: 5,
-            soreness: 3,
-          ),
-          recovery(
-            3,
-            energy: 3,
-            sleep: 3,
-            stress: 3,
-            soreness: 3,
-          ),
-          recovery(
-            4,
-            energy: 4,
-            sleep: 4,
-            stress: 2,
-            soreness: 2,
-          ),
+          for (var day=2; day<=11; day++)
+            recovery(day, energy: day.isEven ? 2 : 5,
+              sleep: day.isEven ? 2 : 5, stress: day.isEven ? 4 : 1, soreness: 2),
         ],
         sessions: [
-          session(1, 100),
-          session(2, 90),
-          session(3, 90),
-          session(4, 99),
+          session(1,100),
+          for (var day=2;day<=11;day++) session(day,day.isEven ? 90 : 100),
         ],
       );
+      expect(insight.comparableSessions,10);
+      expect(insight.hasEnoughData,true);
+      expect(insight.coefficient,closeTo(1,0.001));
+      expect(insight.association,RecoveryPerformanceAssociation.positive);
+    });
 
-      expect(insight.hasEnoughData, true);
-      expect(insight.coefficient, closeTo(1, 0.001));
-      expect(
-        insight.association,
-        RecoveryPerformanceAssociation.positive,
+    test('post-workout check-in is not pre-workout evidence', () {
+      final insight = RecoveryPerformanceCorrelation.analyze(
+        checkIns: [RecoveryCheckIn(date:DateTime(2026,9,2),
+          energy:4,sleep:4,stress:2,soreness:2,updatedAt:DateTime(2026,9,2,20))],
+        sessions: [session(1,100),session(2,110)],
       );
-      expect(insight.averageVolumeChangePercent, closeTo(0, 0.001));
+      expect(insight.points,isEmpty);
     });
 
     test('does not claim an association before the minimum sample', () {
@@ -176,7 +161,7 @@ void main() {
       );
 
       expect(insight.hasEnoughData, false);
-      expect(insight.missingComparisons, 1);
+      expect(insight.missingComparisons, 8);
       expect(insight.coefficient, isNull);
       expect(
         insight.association,

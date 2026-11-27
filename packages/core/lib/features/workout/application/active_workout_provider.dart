@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:core/features/recovery/application/recovery_session_snapshot.dart';
 
 import 'package:riverpod/riverpod.dart';
 import 'package:hive/hive.dart';
@@ -185,6 +186,7 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     List<Exercise> allExercises, {
     bool? prefillFromExerciseMemory,
     String? sessionId,
+    DateTime? startedAt,
   }) {
     _cancelTimers();
     _undoSession = null;
@@ -273,8 +275,8 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
       id: sessionId ?? const Uuid().v4(),
       routineId: routine.id,
       routineNameSnapshot: routine.name,
-      startedAt: DateTime.now(),
-      finishedAt: DateTime.now(),
+      startedAt: startedAt ?? DateTime.now(),
+      finishedAt: startedAt ?? DateTime.now(),
       durationSeconds: 0,
       exercises: exercises,
     );
@@ -1035,6 +1037,9 @@ class ActiveWorkoutNotifier extends Notifier<ActiveWorkoutState> {
     if (discardedSessionId != null && Hive.isBoxOpen(HiveBoxes.trainingPrograms) &&
         Hive.isBoxOpen(HiveBoxes.metadata)) {
       await ref.read(trainingProgramListProvider.notifier).releaseWorkoutBinding(discardedSessionId);
+    }
+    if (discardedSessionId != null) {
+      await RecoverySessionSnapshot.discard(discardedSessionId);
     }
     state = const ActiveWorkoutState();
     unawaited(_cancelUnfinishedReminder());

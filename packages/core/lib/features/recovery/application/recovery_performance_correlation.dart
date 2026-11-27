@@ -5,6 +5,7 @@ import 'package:core/features/workout/application/workout_history_provider.dart'
 import 'package:riverpod/riverpod.dart';
 
 import 'recovery_provider.dart';
+import 'recovery_session_snapshot.dart';
 
 enum RecoveryPerformanceAssociation {
   insufficient,
@@ -24,6 +25,8 @@ class RecoveryPerformancePoint {
   final double volumeChangePercent;
   final int completedWorkingSets;
   final int durationSeconds;
+  final int? sleepMinutes;
+  final double? rirChange;
 
   const RecoveryPerformancePoint({
     required this.sessionId,
@@ -36,11 +39,13 @@ class RecoveryPerformancePoint {
     required this.volumeChangePercent,
     required this.completedWorkingSets,
     required this.durationSeconds,
+    this.sleepMinutes,
+    this.rirChange,
   });
 }
 
 class RecoveryPerformanceInsight {
-  static const int minimumComparableSessions = 3;
+  static const int minimumComparableSessions = 10;
 
   final List<RecoveryPerformancePoint> points;
   final int matchedWorkoutDays;
@@ -56,7 +61,7 @@ class RecoveryPerformanceInsight {
 
   int get comparableSessions => points.length;
   bool get hasEnoughData =>
-      comparableSessions >= minimumComparableSessions;
+      comparableSessions >= minimumComparableSessions && coefficient != null;
 
   int get missingComparisons {
     final missing = minimumComparableSessions - comparableSessions;
@@ -84,6 +89,7 @@ class RecoveryPerformanceCorrelation {
   static RecoveryPerformanceInsight analyze({
     required Iterable<RecoveryCheckIn> checkIns,
     required Iterable<WorkoutSession> sessions,
+    RecoverySessionSnapshot? Function(String id)? snapshotFor,
   }) {
     final recoveryByDay = <String, RecoveryCheckIn>{};
     for (final entry in checkIns) {
@@ -96,28 +102,29 @@ class RecoveryPerformanceCorrelation {
 
     final orderedSessions = sessions.toList()
       ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
-    final previousVolumeByRoutine = <String, double>{};
+    final previousByRoutine = <String, WorkoutSession>{};
     final matchedDays = <String>{};
     final points = <RecoveryPerformancePoint>[];
 
     for (final session in orderedSessions) {
+      final context = snapshotFor?.call(session.id);
+      if (context?.adapted == true) continue;
       final routineKey = _routineKey(session);
+      if (routineKey == null) continue;
       final currentVolume = _workingVolume(session);
-      final previousVolume = previousVolumeByRoutine[routineKey];
-      if (currentVolume > 0) {
-        previousVolumeByRoutine[routineKey] = currentVolume;
-      }
-
+      final previous = previousByRoutine[routineKey];
+      if (currentVolume > 0) previousByRoutine[routineKey] = session;
       final dayKey = _dateKey(session.startedAt);
       final recovery = recoveryByDay[dayKey];
-      if (recovery == null) continue;
+      final score = context != null ? context.score :
+          recovery != null && !recovery.updatedAt.isAfter(session.startedAt) ? recovery.score : null;
+      if (score == null) continue;
       matchedDays.add(dayKey);
-
-      if (previousVolume == null ||
-          previousVolume <= 0 ||
-          currentVolume <= 0) {
-        continue;
-      }
+      if (previous == null || currentVolume <= 0) continue;
+      final previousVolume = _workingVolume(previous);
+      if (previousVolume <= 0) continue;
+      final previousRir = _meanRir(previous);
+      final currentRir = _meanRir(session);
 
       final rawChange =
           ((currentVolume - previousVolume) / previousVolume) * 100;
@@ -127,13 +134,16 @@ class RecoveryPerformanceCorrelation {
           sessionId: session.id,
           routineName: session.routineNameSnapshot,
           date: session.startedAt,
-          recoveryScore: recovery.score,
-          recoveryStatus: recovery.status,
+          recoveryScore: score,
+          recoveryStatus: (context != null ? context.status : recovery?.status) ??
+              (score >= 75 ? RecoveryStatus.ready : score >= 55 ? RecoveryStatus.moderate : RecoveryStatus.low),
           currentVolume: currentVolume,
           previousVolume: previousVolume,
           volumeChangePercent: boundedChange,
           completedWorkingSets: _completedWorkingSets(session),
           durationSeconds: session.durationSeconds,
+          sleepMinutes: context?.sleepMinutes,
+          rirChange: currentRir == null || previousRir == null ? null : currentRir - previousRir,
         ),
       );
     }
@@ -154,7 +164,7 @@ class RecoveryPerformanceCorrelation {
     var volume = 0.0;
     for (final exercise in session.exercises) {
       for (final set in exercise.sets) {
-        if (set.completed && !set.warmup) {
+        if (set.completed && set.setType == WorkoutSetType.working) {
           volume += set.performedVolume;
         }
       }
@@ -166,7 +176,7 @@ class RecoveryPerformanceCorrelation {
     var completed = 0;
     for (final exercise in session.exercises) {
       completed += exercise.sets
-          .where((set) => set.completed && !set.warmup)
+          .where((set) => set.completed && set.setType == WorkoutSetType.working)
           .length;
     }
     return completed;
@@ -198,7 +208,7 @@ class RecoveryPerformanceCorrelation {
     }
 
     final denominator = math.sqrt(recoverySquares * performanceSquares);
-    if (denominator <= 0.000001) return 0;
+    if (denominator <= 0.000001) return null;
     return (numerator / denominator).clamp(-1.0, 1.0).toDouble();
   }
 
@@ -206,21 +216,36 @@ class RecoveryPerformanceCorrelation {
     int pointCount,
     double? coefficient,
   ) {
-    if (pointCount < RecoveryPerformanceInsight.minimumComparableSessions) {
+    if (pointCount < RecoveryPerformanceInsight.minimumComparableSessions || coefficient == null) {
       return RecoveryPerformanceAssociation.insufficient;
     }
-    final value = coefficient ?? 0;
+    final value = coefficient;
     if (value >= 0.30) return RecoveryPerformanceAssociation.positive;
     if (value <= -0.30) return RecoveryPerformanceAssociation.inverse;
     return RecoveryPerformanceAssociation.neutral;
   }
 
-  static String _routineKey(WorkoutSession session) {
-    final routineId = session.routineId?.trim();
-    if (routineId != null && routineId.isNotEmpty) {
-      return 'id:$routineId';
+  static String? _routineKey(WorkoutSession session) {
+    final id = session.routineId?.trim();
+    if (id == null || id.isEmpty) return null;
+    // No comparisons across changed exercise selections or repetition/set
+    // structures. Actual completed working sets only, no inferred targets.
+    final signature = <String>[];
+    for (final exercise in session.exercises) {
+      final sets = exercise.sets.where((s) => s.completed &&
+        s.setType == WorkoutSetType.working).toList();
+      if (sets.isEmpty) continue;
+      signature.add('${exercise.exerciseId}:${sets.map((s)=>s.performanceReps).join(",")}');
     }
-    return 'name:${session.routineNameSnapshot.trim().toLowerCase()}';
+    if (signature.isEmpty) return null;
+    return '$id|${signature.join(";")}';
+  }
+
+  static double? _meanRir(WorkoutSession session) {
+    final sets = session.exercises.expand((e) => e.sets)
+        .where((s) => s.completed && s.setType == WorkoutSetType.working).toList();
+    if (sets.isEmpty || sets.any((s) => s.performanceRir == null)) return null;
+    return sets.fold<int>(0, (sum,s)=>sum+s.performanceRir!)/sets.length;
   }
 
   static String _dateKey(DateTime date) {
@@ -238,5 +263,6 @@ final recoveryPerformanceProvider =
   return RecoveryPerformanceCorrelation.analyze(
     checkIns: checkIns,
     sessions: sessions,
+    snapshotFor: RecoverySessionSnapshot.read,
   );
 });

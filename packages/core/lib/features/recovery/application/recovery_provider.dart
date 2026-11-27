@@ -20,6 +20,8 @@ class RecoveryCheckIn {
   final int stress;
   final int soreness;
   final DateTime updatedAt;
+  final List<String> fatiguedAreas;
+  final bool painReported;
 
   const RecoveryCheckIn({
     required this.date,
@@ -28,6 +30,8 @@ class RecoveryCheckIn {
     required this.stress,
     required this.soreness,
     required this.updatedAt,
+    this.fatiguedAreas = const [],
+    this.painReported = false,
   });
 
   int get score {
@@ -37,12 +41,15 @@ class RecoveryCheckIn {
   }
 
   RecoveryStatus get status {
-    if (score >= 75) return RecoveryStatus.ready;
+    if (painReported || energy == 1 || soreness == 5) return RecoveryStatus.low;
+    if (score >= 75 && soreness < 4 && energy > 2 && stress < 5) return RecoveryStatus.ready;
     if (score >= 55) return RecoveryStatus.moderate;
     return RecoveryStatus.low;
   }
 
-  String get recommendation => switch (status) {
+  String get recommendation => painReported
+      ? 'Evita los movimientos que provoquen dolor y busca valoración profesional si es intenso o persistente.'
+      : switch (status) {
         RecoveryStatus.ready =>
           'Tu recuperación acompaña el plan. Mantén la sesión prevista y progresa si la técnica se siente sólida.',
         RecoveryStatus.moderate =>
@@ -58,6 +65,8 @@ class RecoveryCheckIn {
         'stress': stress,
         'soreness': soreness,
         'updatedAt': updatedAt.toIso8601String(),
+        'fatiguedAreas': fatiguedAreas,
+        'painReported': painReported,
       };
 
   factory RecoveryCheckIn.fromMap(Map<dynamic, dynamic> map) {
@@ -69,6 +78,8 @@ class RecoveryCheckIn {
       stress: _rating(map['stress']),
       soreness: _rating(map['soreness']),
       updatedAt: DateTime.tryParse('${map['updatedAt']}') ?? DateTime.now(),
+      fatiguedAreas: List.unmodifiable((map['fatiguedAreas'] is List ? map['fatiguedAreas'] as List : const []).whereType<String>()),
+      painReported: map['painReported'] == true,
     );
   }
 
@@ -91,13 +102,15 @@ class RecoveryNotifier extends Notifier<RecoveryCheckIn?> {
   Box<dynamic> get _box => Hive.box(HiveBoxes.recovery);
 
   @override
-  RecoveryCheckIn? build() => _readFor(DateTime.now());
+  RecoveryCheckIn? build() => Hive.isBoxOpen(HiveBoxes.recovery) ? _readFor(DateTime.now()) : null;
 
   Future<void> save({
     required int energy,
     required int sleep,
     required int stress,
     required int soreness,
+    List<String> fatiguedAreas = const [],
+    bool painReported = false,
   }) async {
     final now = DateTime.now();
     final entry = RecoveryCheckIn(
@@ -107,6 +120,8 @@ class RecoveryNotifier extends Notifier<RecoveryCheckIn?> {
       stress: RecoveryCheckIn._bounded(stress, min: 1, max: 5),
       soreness: RecoveryCheckIn._bounded(soreness, min: 1, max: 5),
       updatedAt: now,
+      fatiguedAreas: List.unmodifiable(fatiguedAreas),
+      painReported: painReported,
     );
     await _box.put(_key(entry.date), entry.toMap());
     state = entry;
@@ -153,5 +168,5 @@ class RecoveryNotifier extends Notifier<RecoveryCheckIn?> {
 
 final recoveryHistoryProvider = Provider<List<RecoveryCheckIn>>((ref) {
   ref.watch(recoveryProvider);
-  return ref.read(recoveryProvider.notifier).recent(limit: 14);
+  return ref.read(recoveryProvider.notifier).recent(limit: 90);
 });

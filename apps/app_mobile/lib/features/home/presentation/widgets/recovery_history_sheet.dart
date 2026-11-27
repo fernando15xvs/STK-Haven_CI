@@ -2,14 +2,17 @@ import 'package:core/features/recovery/application/recovery_history.dart';
 import 'package:core/features/recovery/application/recovery_performance_correlation.dart';
 import 'package:core/features/recovery/application/recovery_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:core/features/recovery/application/sleep_diary.dart';
+import 'package:core/features/recovery/application/adaptive_recovery.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
 
 Future<void> showRecoveryHistorySheet(
   BuildContext context,
   List<RecoveryCheckIn> entries,
-  RecoveryPerformanceInsight performance,
-) async {
-  final history = RecoveryHistorySnapshot.fromEntries(entries);
+  RecoveryPerformanceInsight performance, {
+  SleepDiary? sleep,
+}) async {
+  final history = RecoveryHistorySnapshot.fromEntries(entries, limit: 30);
   await showModalBottomSheet<void>(
     context: context,
     useSafeArea: true,
@@ -81,11 +84,30 @@ Future<void> showRecoveryHistorySheet(
           if (history.isEmpty)
             const _EmptyHistory()
           else ...[
-            _SummaryStrip(history: history),
+            _SummaryStrip(history: history, sleep: sleep),
+            if (AdaptiveRecovery.persistentFatigue(entries, DateTime.now())) ...[
+              const SizedBox(height: AppSpacing.md),
+              ListTile(
+                leading: Icon(Icons.battery_alert, color: AppColors.of(context).warning),
+                title: const Text('Revisa la exigencia de la semana'),
+                subtitle: const Text('Has registrado energía baja o fatiga elevada en varios días recientes. Considera revisar la planificación y una descarga con tu entrenador.'),
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
             _ScoreChart(history: history, maxPoints: 7),
             const SizedBox(height: AppSpacing.md),
             _PerformanceCorrelationCard(insight: performance),
+            if (performance.points.any((p) => p.sleepMinutes != null || p.rirChange != null)) ...[
+              const SizedBox(height: AppSpacing.md),
+              Text('Contexto de sesiones comparables', style: AppTypography.headlineSmall),
+              for (final point in performance.points.where((p)=>p.sleepMinutes!=null || p.rirChange!=null).take(5))
+                ListTile(contentPadding: EdgeInsets.zero,
+                  title: Text('${_compactDate(point.date)} · ${point.routineName}'),
+                  subtitle: Text([
+                    if (point.sleepMinutes != null) 'Sueño: ${point.sleepMinutes!~/60} h ${point.sleepMinutes!%60} min',
+                    if (point.rirChange != null) 'Cambio RIR medio: ${point.rirChange!.toStringAsFixed(1)}',
+                  ].join(' · '))),
+            ],
             const SizedBox(height: AppSpacing.xl),
             Text('Detalle diario', style: AppTypography.headlineMedium),
             const SizedBox(height: AppSpacing.sm),
@@ -144,7 +166,7 @@ class _PerformanceCorrelationCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Cambio de volumen frente a la sesión anterior de la misma rutina.',
+                      'Volumen con los mismos ejercicios y repeticiones registradas. Se excluyen sesiones adaptadas identificadas.',
                       style: AppTypography.bodySmall.copyWith(
                         color: AppColors.of(context).textSecondary,
                       ),
@@ -157,7 +179,9 @@ class _PerformanceCorrelationCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           if (!insight.hasEnoughData) ...[
             Text(
-              'El análisis aparecerá al existir al menos $minimum sesiones comparables con check-in el mismo día.',
+              insight.comparableSessions >= minimum
+                  ? 'Aún no hay variación suficiente para estimar una asociación.'
+                  : 'Se necesitan al menos $minimum comparaciones y recuperación registrada antes de entrenar.',
               style: AppTypography.bodyMedium.copyWith(
                 color: AppColors.of(context).textSecondary,
                 height: 1.4,
@@ -165,7 +189,7 @@ class _PerformanceCorrelationCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             LinearProgressIndicator(
-              value: insight.comparableSessions / minimum,
+              value: (insight.comparableSessions / minimum).clamp(0.0, 1.0).toDouble(),
               minHeight: 7,
               borderRadius: BorderRadius.circular(99),
               backgroundColor: AppColors.of(context).surfaceBorder,
@@ -250,7 +274,7 @@ class _PerformanceCorrelationCard extends StatelessWidget {
           Divider(color: AppColors.of(context).surfaceBorder),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Asociación histórica; no demuestra causa ni recomienda aumentar carga o entrenar con molestias.',
+            'Asociación descriptiva, no demuestra causa. No recomienda aumentar carga ni entrenar con dolor.',
             style: AppTypography.bodySmall.copyWith(
               color: AppColors.of(context).textDisabled,
               height: 1.35,
@@ -296,7 +320,8 @@ class _CorrelationMetric extends StatelessWidget {
 class _SummaryStrip extends StatelessWidget {
   final RecoveryHistorySnapshot history;
 
-  const _SummaryStrip({required this.history});
+  final SleepDiary? sleep;
+  const _SummaryStrip({required this.history, this.sleep});
 
   @override
   Widget build(BuildContext context) {
@@ -312,9 +337,10 @@ class _SummaryStrip extends StatelessWidget {
         const SizedBox(width: AppSpacing.xs),
         Expanded(
           child: _MetricCard(
-            label: 'MEJOR',
-            value: '${history.bestScore}',
-            color: _scoreColor(context, history.bestScore),
+            label: 'SUEÑO',
+            value: sleep?.average(DateTime.now(), 7) == null ? '—' :
+                '${(sleep!.average(DateTime.now(), 7)!/60).toStringAsFixed(1)} h',
+            color: AppColors.of(context).textSecondary,
           ),
         ),
         const SizedBox(width: AppSpacing.xs),

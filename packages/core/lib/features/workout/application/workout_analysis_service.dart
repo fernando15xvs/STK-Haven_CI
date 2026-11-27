@@ -13,6 +13,7 @@ import 'workout_comparator.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/profile/application/gamification_provider.dart';
 import 'package:core/features/recovery/application/recovery_provider.dart';
+import 'package:core/features/recovery/application/recovery_session_snapshot.dart';
 
 final workoutAnalysisServiceProvider = Provider<WorkoutAnalysisService>((ref) {
   return WorkoutAnalysisService(ref);
@@ -48,6 +49,7 @@ class WorkoutAnalysisService {
         final isRirEnabled = settings.isRirEnabled;
         final defaultIncrement = settings.defaultIncrement;
         final recovery = _ref.read(recoveryProvider);
+        final snapshot = RecoverySessionSnapshot.read(session.id);
 
         suggestions = ProgressionEngine.analyze(
           session: session,
@@ -56,7 +58,11 @@ class WorkoutAnalysisService {
           defaultIncrementKg: defaultIncrement,
           exerciseIncrementsKg: settings.exerciseIncrementsKg,
           recentSessions: history,
-          readiness: _readinessForSession(recovery, session.startedAt),
+          readiness: snapshot != null
+              ? (snapshot.globalCaution || snapshot.pain || snapshot.adapted ||
+                  routine.exercises.any((e) => snapshot.cautions(e.exerciseId))
+                  ? ProgressionReadiness.caution : ProgressionReadiness.unknown)
+              : _readinessForSession(recovery, session.startedAt),
         );
 
         for (final target in routine.exercises) {
@@ -153,7 +159,7 @@ ProgressionReadiness _readinessForSession(
   RecoveryCheckIn? checkIn,
   DateTime sessionDate,
 ) {
-  if (checkIn == null || !_sameCalendarDay(checkIn.date, sessionDate)) {
+  if (checkIn == null || checkIn.updatedAt.isAfter(sessionDate) || !_sameCalendarDay(checkIn.date, sessionDate)) {
     return ProgressionReadiness.unknown;
   }
   if (checkIn.status != RecoveryStatus.ready || checkIn.soreness >= 4) {

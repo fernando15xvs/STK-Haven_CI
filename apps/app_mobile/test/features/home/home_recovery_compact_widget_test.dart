@@ -170,7 +170,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('compact empty state still opens existing four-question sheet',
+  testWidgets('compact empty state opens linked sleep and explicit check-in questions',
       (tester) async {
     await tester.pumpWidget(app(
       timing: RecoveryCheckInTiming.planned,
@@ -180,7 +180,7 @@ void main() {
     await tester.tap(find.text('¿Cómo está tu cuerpo hoy?'));
     await tester.pumpAndSettle();
     expect(find.text('Check-in de recuperación'), findsOneWidget);
-    for (final label in ['Energía', 'Sueño', 'Estrés', 'Molestia muscular']) {
+    for (final label in ['Energía', 'Sueño', 'Estrés', 'Fatiga muscular']) {
       expect(find.text(label), findsOneWidget);
     }
     expect(find.text('Guardar check-in'), findsOneWidget);

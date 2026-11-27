@@ -7,6 +7,9 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
 
 import 'recovery_history_sheet.dart';
+import 'package:core/features/recovery/application/sleep_diary.dart';
+import 'package:core/features/recovery/application/adaptive_recovery.dart';
+import 'home_sleep_card.dart';
 
 enum RecoveryCheckInTiming { planned, active, completed }
 
@@ -29,7 +32,8 @@ class RecoveryCheckInCard extends ConsumerWidget {
     final onHistory = history.isEmpty
         ? null
         : () {
-            showRecoveryHistorySheet(context, history, performance);
+            showRecoveryHistorySheet(context, history, performance,
+              sleep: ref.read(sleepDiaryProvider));
           };
 
     return PremiumCard(
@@ -55,10 +59,16 @@ class RecoveryCheckInCard extends ConsumerWidget {
     WidgetRef ref,
     RecoveryCheckIn? current,
   ) async {
-    var energy = current?.energy ?? 3;
-    var sleep = current?.sleep ?? 3;
-    var stress = current?.stress ?? 3;
-    var soreness = current?.soreness ?? 3;
+    final today = DateTime.now();
+    var energy = current?.energy;
+    var stress = current?.stress;
+    var soreness = current?.soreness;
+    final areas = <String>{...?current?.fatiguedAreas};
+    var pain = current?.painReported ?? false;
+    var busy = false;
+    String? error;
+    var diary = ref.read(sleepDiaryProvider);
+    int? sleep = diary.qualityFor(today) ?? current?.sleep;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -98,7 +108,7 @@ class RecoveryCheckInCard extends ConsumerWidget {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Cuatro respuestas rápidas para ajustar mejor la exigencia de hoy.',
+                    'Tu descanso y cómo te sientes ayudan a orientar la exigencia de hoy.',
                     style: AppTypography.bodyMedium.copyWith(
                       color: AppColors.of(context).textSecondary,
                     ),
@@ -109,47 +119,105 @@ class RecoveryCheckInCard extends ConsumerWidget {
                     label: 'Energía',
                     hint: '1 = muy baja · 5 = excelente',
                     value: energy,
-                    onChanged: (value) => setModalState(() => energy = value),
+                    onChanged: (value) { if (!busy) setModalState(() => energy = value); },
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  _RatingRow(
-                    icon: Icons.bedtime_outlined,
-                    label: 'Sueño',
-                    hint: '1 = dormí mal · 5 = muy reparador',
-                    value: sleep,
-                    onChanged: (value) => setModalState(() => sleep = value),
+                  Material(
+                    color: AppColors.of(context).surface,
+                    borderRadius: AppRadius.md_,
+                    child: ListTile(
+                      leading: Icon(Icons.bedtime_outlined, color: AppColors.of(context).primary),
+                      title: const Text('Sueño'),
+                      subtitle: Text([
+                        if (diary.minutesFor(today) != null)
+                          '${diary.minutesFor(today)! ~/ 60} h ${diary.minutesFor(today)! % 60} min'
+                        else 'Duración sin registrar',
+                        if (sleep != null) 'Calidad $sleep/5' else 'Calidad pendiente',
+                      ].join(' · ')),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: busy ? null : () async {
+                        await showSleepDiarySheet(context, today);
+                        if (!context.mounted) return;
+                        final updated = ref.read(sleepDiaryProvider);
+                        setModalState(() {
+                          diary = updated;
+                          sleep = updated.qualityFor(today) ?? sleep;
+                        });
+                      },
+                    ),
                   ),
+                  if (sleep == null) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    _RatingRow(
+                      icon: Icons.bedtime_outlined,
+                      label: 'Calidad del sueño',
+                      hint: '1 = poco reparador · 5 = muy reparador',
+                      value: sleep,
+                      onChanged: (value) { if (!busy) setModalState(() => sleep = value); },
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.lg),
                   _RatingRow(
                     icon: Icons.psychology_alt_outlined,
                     label: 'Estrés',
                     hint: '1 = bajo · 5 = muy alto',
                     value: stress,
-                    onChanged: (value) => setModalState(() => stress = value),
+                    onChanged: (value) { if (!busy) setModalState(() => stress = value); },
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   _RatingRow(
                     icon: Icons.accessibility_new_outlined,
-                    label: 'Molestia muscular',
+                    label: 'Fatiga muscular',
                     hint: '1 = mínima · 5 = muy marcada',
                     value: soreness,
-                    onChanged: (value) => setModalState(() => soreness = value),
+                    onChanged: (value) { if (!busy) setModalState(() => soreness = value); },
                   ),
+                  if ((soreness ?? 0) >= 2) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text('Zonas fatigadas (opcional)', style: AppTypography.headlineSmall),
+                    Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
+                      for (final area in AdaptiveRecovery.areas)
+                        FilterChip(label: Text(area), selected: areas.contains(area),
+                          onSelected: busy ? null : (selected) => setModalState(() {
+                            if (selected) { areas.add(area); } else { areas.remove(area); }
+                          })),
+                    ]),
+                  ],
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Dolor o lesión, distinto de la fatiga habitual'),
+                    value: pain,
+                    onChanged: busy ? null : (v) => setModalState(() => pain = v),
+                  ),
+                  if (pain) const Text('Evita los movimientos que provocan dolor y busca valoración profesional si es intenso o persistente.'),
+                  if (error != null) Text(error!, style: TextStyle(color: AppColors.of(context).error)),
                   const SizedBox(height: AppSpacing.xxl),
                   SizedBox(
                     width: double.infinity,
-                    height: 54,
                     child: FilledButton.icon(
-                      onPressed: () async {
+                      onPressed: busy || energy == null || sleep == null || stress == null || soreness == null
+                        ? null : () async {
+                        setModalState(() { busy = true; error = null; });
+                        try {
+                          if (diary.qualityFor(today) != sleep) {
+                            await ref.read(sleepDiaryProvider.notifier).saveQuality(today, sleep!);
+                          }
                         await ref
                             .read(recoveryProvider.notifier)
                             .save(
-                              energy: energy,
-                              sleep: sleep,
-                              stress: stress,
-                              soreness: soreness,
+                              energy: energy!,
+                              sleep: sleep!,
+                              stress: stress!,
+                              soreness: soreness!,
+                              fatiguedAreas: soreness! >= 2 ? areas.toList() : const [],
+                              painReported: pain,
                             );
-                        if (sheetContext.mounted) Navigator.pop(sheetContext);
+                          if (sheetContext.mounted) Navigator.pop(sheetContext);
+                        } catch (_) {
+                          if (context.mounted) setModalState(() {
+                            busy = false; error = 'No se pudo guardar. Inténtalo de nuevo.';
+                          });
+                        }
                       },
                       icon: const Icon(Icons.check),
                       label: Text(
@@ -474,7 +542,7 @@ class _RatingRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String hint;
-  final int value;
+  final int? value;
   final ValueChanged<int> onChanged;
 
   const _RatingRow({
@@ -494,7 +562,7 @@ class _RatingRow extends StatelessWidget {
           children: [
             Icon(icon, size: 20, color: AppColors.of(context).primary),
             const SizedBox(width: AppSpacing.xs),
-            Text(label, style: AppTypography.headlineSmall),
+            Expanded(child: Text(label, style: AppTypography.headlineSmall)),
           ],
         ),
         const SizedBox(height: 3),
@@ -518,7 +586,7 @@ class _RatingRow extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: AppMotion.fast,
                     curve: AppMotion.curve,
-                    height: 44,
+                    height: 48,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: selected

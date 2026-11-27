@@ -1,4 +1,9 @@
 import 'package:core/domain/models/routine.dart';
+import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
+import 'package:core/features/recovery/application/adaptive_recovery.dart';
+import 'package:core/features/recovery/application/recovery_provider.dart';
+import 'package:core/features/recovery/application/sleep_diary.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
 import 'package:core/features/programs/application/training_program_legacy_policy.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/programs/application/training_day_decision.dart';
@@ -238,6 +243,13 @@ class _NextTrainingSessionHeroState
         label: const Text('Editar nota')));
     }
 
+    final recovery = day.allowsSuggestedStart && routine != null
+        ? AdaptiveRecovery.evaluate(now: now, routine: routine,
+            exercises: ref.watch(exerciseListProvider),
+            sleep: ref.watch(sleepDiaryProvider),
+            checkIn: ref.watch(recoveryProvider),
+            age: AdaptiveRecovery.consentedAge(ref.watch(userExperienceProfileProvider).value, now))
+        : null;
     final ui = AppUiTokens.of(context);
     return SizedBox(
       width: double.infinity,
@@ -307,6 +319,26 @@ class _NextTrainingSessionHeroState
             const SizedBox(height: AppSpacing.sm),
             Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.xs,
                 crossAxisAlignment: WrapCrossAlignment.center, children: items),
+          ],
+          if (recovery != null && recovery.needsReview) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Divider(color: colors.surfaceBorder),
+            InkWell(
+              onTap: _opening ? null : () => _open(routine),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                child: Row(children: [
+                  Icon(Icons.favorite_border, color: colors.warning),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(recovery.pain ? 'Revisa tus molestias' : 'Revisar exigencia de hoy',
+                      style: AppTypography.headlineSmall.copyWith(color: colors.warning)),
+                    Text(recovery.reasons.first, style: AppTypography.bodySmall),
+                  ])),
+                  const Icon(Icons.chevron_right),
+                ]),
+              ),
+            ),
           ],
         ]),
       ),

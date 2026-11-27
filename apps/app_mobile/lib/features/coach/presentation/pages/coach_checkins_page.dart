@@ -5,6 +5,8 @@ import 'package:core/domain/models/coach_checkin.dart';
 import 'package:core/features/coach/application/coach_checkin_provider.dart';
 import 'package:core/features/identity/application/app_identity_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:core/features/recovery/application/recovery_provider.dart';
+import 'package:core/features/recovery/application/sleep_diary.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class CoachCheckinsPage extends ConsumerStatefulWidget {
@@ -72,13 +74,21 @@ class _CoachCheckinsPageState extends ConsumerState<CoachCheckinsPage>{
     );
   }
   Future<void> _create()async{
+    if (!widget.isClient || !widget.canCreate) return;
     var energy=3,recovery=3;final note=TextEditingController();
+    final local=ref.read(recoveryProvider);
+    final now=DateTime.now();
+    final today=local!=null && SleepDiary.dayKey(local.date)==SleepDiary.dayKey(now) ? local : null;
     final ok=await showDialog<bool>(context:context,builder:(d)=>StatefulBuilder(builder:(context,setState)=>AlertDialog(
-      title:const Text('Nuevo check-in'),content:SizedBox(width:480,child:Column(mainAxisSize:MainAxisSize.min,children:[
+      title:const Text('Nuevo check-in'),content:SizedBox(width:480,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        if(today!=null) TextButton.icon(icon:const Icon(Icons.download_outlined),
+          label:const Text('Usar energía de mi check-in de hoy'),
+          onPressed:()=>setState(()=>energy=today.energy)),
+        const Text('Solo se comparte lo que confirmes aquí. El diario de sueño y las molestias privadas no se envían automáticamente.'),
         _Score(label:'Energía percibida',value:energy,onChanged:(v)=>setState(()=>energy=v)),
         _Score(label:'Recuperación percibida',value:recovery,onChanged:(v)=>setState(()=>recovery=v)),
         TextField(controller:note,maxLength:2000,maxLines:3,decoration:const InputDecoration(labelText:'Nota opcional')),
-      ])),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Cancelar')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Guardar'))],
+      ]))),actions:[TextButton(onPressed:()=>Navigator.pop(d,false),child:const Text('Cancelar')),FilledButton(onPressed:()=>Navigator.pop(d,true),child:const Text('Compartir'))],
     )));
     if(ok==true&&mounted&&ref.read(appIdentityProvider).userId==_viewerId)await ref.read(coachCheckinProvider.notifier).create(relationshipId:widget.relationshipId,clientUserId:widget.clientUserId,energy:energy,recovery:recovery,note:note.text);
     note.dispose();

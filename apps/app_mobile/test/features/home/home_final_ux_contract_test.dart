@@ -72,7 +72,7 @@ void main() {
     expect(card, contains("'Energía'"));
     expect(card, contains("'Sueño'"));
     expect(card, contains("'Estrés'"));
-    expect(card, contains("'Molestia muscular'"));
+    expect(card, contains("'Fatiga muscular'"));
   });
 
   test('H07-H08 wellness remains in Home, no duplicate source or layout', () {

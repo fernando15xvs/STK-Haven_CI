@@ -9,6 +9,7 @@ import 'package:core/core/utils/fitness_formatter.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
 import 'package:core/features/workout/application/active_workout_suggestions_provider.dart';
+import 'package:core/features/recovery/application/adaptive_recovery.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_increment_control.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/exercise_rep_range_notice.dart';
 import 'package:gym_tracker/features/workout/presentation/widgets/active_workout_memory_overlay.dart';
@@ -1690,6 +1691,11 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                     ExerciseIncrementControl(
                       exerciseId: widget.workoutExercise.exerciseId,
                     ),
+                    if (!completed && AdaptiveRecovery.highEffort(workingSets)) ...[
+                      const SizedBox(height: 8),
+                      Text('Serie al límite: revisa la carga y deja margen en las siguientes series.',
+                        style: AppTypography.bodySmall.copyWith(color: AppColors.of(context).warning)),
+                    ],
                     if (suggestion != null) ...[
                       const SizedBox(height: 10),
                       _ProgressionReferenceCard(

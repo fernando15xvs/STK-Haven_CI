@@ -8,6 +8,8 @@ import 'package:core/features/workout/application/progression_engine.dart';
 import 'package:core/features/workout/application/exercise_performance_memory.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/features/recovery/application/recovery_provider.dart';
+import 'package:core/features/recovery/application/recovery_session_snapshot.dart';
+import 'package:core/features/recovery/application/adaptive_recovery.dart';
 import 'package:core/features/routines/application/providers/routine_provider.dart';
 
 /// Latest completed performance for every exercise in the active session,
@@ -28,18 +30,19 @@ final activeWorkoutExerciseMemoryProvider =
 final activeWorkoutSuggestionsProvider =
     Provider<Map<String, ProgressionSuggestion>>((ref) {
   final session = ref.watch(activeWorkoutProvider.select((s) => s.session));
-  if (session?.routineId == null) return {};
+  if (session == null || session.routineId == null) return {};
 
   final routineRepo = ref.watch(routineRepositoryProvider);
   final routines = routineRepo.getAllRoutines();
   final routine = routines
-      .where((candidate) => candidate.id == session!.routineId)
+      .where((candidate) => candidate.id == session.routineId)
       .firstOrNull;
   if (routine == null) return {};
 
   final historyIndex = ref.watch(workoutHistoryIndexProvider);
   final memory = ref.watch(activeWorkoutExerciseMemoryProvider);
   final recovery = ref.watch(recoveryProvider);
+  final snapshot = RecoverySessionSnapshot.read(session.id);
   final settings = ref.watch(settingsProvider);
   final result = <String, ProgressionSuggestion>{};
 
@@ -72,7 +75,13 @@ final activeWorkoutSuggestionsProvider =
         target.exerciseId,
         excludeSessionId: entry.session.id,
       ),
-      readiness: _readinessFor(recovery),
+      readiness: session.exercises.where((e) => e.exerciseId == target.exerciseId)
+          .any((e) => AdaptiveRecovery.highEffort(e.sets)) ||
+          (snapshot?.cautions(target.exerciseId) ?? false)
+          ? ProgressionReadiness.caution
+          : snapshot != null
+              ? ProgressionReadiness.unknown
+              : _readinessFor(recovery, session.startedAt),
       sourceRoutineName: entry.routineName,
       sourcePerformedAt: entry.performedAt,
       sourceRepsMin: sourceTarget?.targetRepsMin,
@@ -157,8 +166,10 @@ bool _hasDifferentRepContext({
   return overlapMin > overlapMax;
 }
 
-ProgressionReadiness _readinessFor(RecoveryCheckIn? checkIn) {
-  if (checkIn == null) return ProgressionReadiness.unknown;
+ProgressionReadiness _readinessFor(RecoveryCheckIn? checkIn, DateTime startedAt) {
+  if (checkIn == null || checkIn.updatedAt.isAfter(startedAt) ||
+      checkIn.date.year != startedAt.year || checkIn.date.month != startedAt.month ||
+      checkIn.date.day != startedAt.day) return ProgressionReadiness.unknown;
   if (checkIn.status != RecoveryStatus.ready || checkIn.soreness >= 4) {
     return ProgressionReadiness.caution;
   }
