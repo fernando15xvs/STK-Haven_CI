@@ -17,7 +17,7 @@ class PersonalProfileSummary extends ConsumerWidget {
         key: const ValueKey('profile_centered_identity'),
         mainAxisSize: MainAxisSize.min,
         children: [
-          ProfileAvatar(profile: profile, radius: 54),
+          ProfileAvatar(profile: profile, radius: 54, previewEnabled: true),
           const SizedBox(height: AppSpacing.sm),
           Text(profile?.preferredName ?? 'Tu perfil', textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineSmall),

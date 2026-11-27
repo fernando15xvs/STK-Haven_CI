@@ -60,6 +60,12 @@ class UserExperienceProfileNotifier
     return updated;
   }
 
+  Future<UserExperienceProfile> setOptionalDemographicConsent(bool enabled) async {
+    final current = state.value ?? await future;
+    return saveProfileEdit(original: current,
+      draft: ProfileEditPolicy.withDemographicConsent(current, enabled, DateTime.now()));
+  }
+
   Future<void> setFaithPreference(FaithContentPreference preference) async {
     final current = state.value;
     if (current == null) return;

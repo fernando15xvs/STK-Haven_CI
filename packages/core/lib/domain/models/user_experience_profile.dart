@@ -284,7 +284,7 @@ class UserExperienceProfile {
         : <UserCapability>{};
 
     final rawDays = (json['trainingDaysPerWeek'] as num?)?.toInt();
-    final safeDays = rawDays != null && rawDays >= 2 && rawDays <= 6
+    final safeDays = rawDays != null && rawDays >= 1 && rawDays <= 7
         ? rawDays
         : null;
 

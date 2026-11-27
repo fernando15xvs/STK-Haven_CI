@@ -6,10 +6,11 @@ import 'package:flutter/material.dart';
 
 /// Private profile thumbnail: falls back to the selected emoji or a neutral icon.
 class ProfileAvatar extends StatelessWidget {
-  const ProfileAvatar({super.key, required this.profile, this.radius = 36});
+  const ProfileAvatar({super.key, required this.profile, this.radius = 36, this.previewEnabled = false});
 
   final UserExperienceProfile? profile;
   final double radius;
+  final bool previewEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -23,14 +24,36 @@ class ProfileAvatar extends StatelessWidget {
       }
     }
     final emoji = profile?.avatarEmoji;
-    return CircleAvatar(
-      radius: radius,
-      backgroundImage: photo == null ? null : MemoryImage(photo),
-      child: photo != null
-          ? null
-          : emoji == null
+    final bytes = photo;
+    final avatar = SizedBox.square(
+      dimension: radius * 2,
+      child: ClipOval(child: ColoredBox(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: bytes != null
+          ? Image.memory(bytes, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Icon(Icons.person_outline, size: radius))
+          : Center(child: emoji == null
               ? Icon(Icons.person_outline, size: radius)
-              : Text(emoji, style: TextStyle(fontSize: radius * 0.95)),
+              : Text(emoji, style: TextStyle(fontSize: radius * 0.95))),
+      )),
     );
+    if (!previewEnabled || bytes == null) return avatar;
+    return Semantics(button: true, label: 'Ver foto de perfil', child: GestureDetector(
+      key: const ValueKey('profile_view_avatar'),
+      onTap: () => Navigator.of(context).push<void>(MaterialPageRoute(
+        builder: (viewerContext) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white,
+            leading: IconButton(tooltip: 'Cerrar foto', icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(viewerContext).pop())),
+          body: SafeArea(child: Center(child: InteractiveViewer(
+            minScale: 1, maxScale: 5, child: Image.memory(bytes,
+              key: const ValueKey('profile_fullscreen_photo'), fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined,color:Colors.white,size:48)),
+          ))),
+        ),
+      )),
+      child: avatar,
+    ));
   }
 }

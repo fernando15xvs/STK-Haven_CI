@@ -54,6 +54,13 @@ void main() {
       );
     });
 
+    test('profile preference accepts one through seven days', () {
+      for(var days=1;days<=7;days++){
+        final profile=UserExperienceProfile(trainingDaysPerWeek:days);
+        expect(UserExperienceProfile.fromJson(profile.toJson()).trainingDaysPerWeek,days);
+      }
+    });
+
     test('sanitizes unknown enum values and invalid training days', () {
       final restored = UserExperienceProfile.fromJson(<String, dynamic>{
         'capabilities': ['unknown'],

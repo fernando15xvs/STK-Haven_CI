@@ -52,25 +52,14 @@ void main() {
         'and ${scenario.$2}x text', (tester) async {
       await pumpProfile(tester,
           width: scenario.$1, scale: scenario.$2);
-      expect(find.text('Datos personales'), findsOneWidget);
-      await tester.ensureVisible(find.text('Datos personales'));
-      await tester.tap(find.text('Datos personales'));
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('profile_mobile_demographic_editor')),
-        180,
-        scrollable: editorScroll(),
-      );
-      expect(find.text('Editar fecha, género y cálculo'), findsOneWidget);
-      // Demographic DOB is independent of the separate eligibility DOB.
-      expect(find.text('Fecha: 03/02/2000'), findsOneWidget);
-      // SliverChildListDelegate can build the tile before it is hittable.
-      // Place its TITLE inside the actual viewport before tapping it.
-      await tester.ensureVisible(find.text('Editar fecha, género y cálculo'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Editar fecha, género y cálculo'));
-      await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('profile_birth_date')), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const ValueKey('profile_birth_date')));
+      expect(find.text('Fecha de nacimiento'), findsOneWidget);
+      expect(find.text('03/02/2000'), findsOneWidget);
+      if(scenario.$2==1){
+        await tester.tap(find.byKey(const ValueKey('profile_birth_date')));
+        await tester.pumpAndSettle();
+        expect(find.byType(DatePickerDialog), findsOneWidget);
+      }
       expect(tester.takeException(), isNull);
     });
   }
@@ -78,10 +67,9 @@ void main() {
   testWidgets('legacy follow-up opens the same editor with training expanded', (tester) async {
     await pumpProfile(tester, width: 430, scale: 1, openTraining: true);
     expect(find.text('Editar perfil'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Objetivo principal'), 150,
-      scrollable: editorScroll());
+    await tester.ensureVisible(find.text('Objetivo principal'));
     expect(find.text('Objetivo principal'), findsOneWidget);
-    expect(find.text('Personalización'), findsNothing);
+    expect(find.byType(ExpansionTile), findsNothing);
     expect(tester.takeException(), isNull);
   });
 }

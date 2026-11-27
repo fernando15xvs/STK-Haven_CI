@@ -87,6 +87,7 @@ void main() {
     expect(find.text('Género'), findsNothing);
     expect(find.byKey(const ValueKey('profile_open_settings')), findsOneWidget);
 
+    await tester.ensureVisible(find.byKey(const ValueKey('profile_open_settings')));
     await tester.tap(find.byKey(const ValueKey('profile_open_settings')));
     await tester.pumpAndSettle();
     expect(find.byType(ProfileSettingsPage), findsOneWidget);
@@ -138,6 +139,8 @@ void main() {
         expect(find.text('Género'), findsOneWidget);
         expect(find.text('12/05/1995'), findsOneWidget);
         expect(tester.takeException(), isNull);
+        await tester.scrollUntilVisible(find.byKey(const ValueKey('profile_open_settings')), -180);
+        await tester.ensureVisible(find.byKey(const ValueKey('profile_open_settings')));
         await tester.tap(find.byKey(const ValueKey('profile_open_settings')));
         await tester.pumpAndSettle();
         expect(find.byType(ProfileSettingsPage), findsOneWidget);

@@ -11,6 +11,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:core/features/programs/application/youth_training_guidance.dart';
 import 'package:gym_tracker/core/theme/app_ui_styles.dart';
 import 'package:gym_tracker/core/theme/components/premium_card.dart';
+import 'package:core/features/profile/application/profile_edit_policy.dart';
+import 'package:gym_tracker/features/profile/presentation/pages/stk_mobile_privacy_page.dart';
 
 /// Personal identity stays local. Coach access is managed separately through
 /// explicit relationship permissions; editing this page does not share data.
@@ -27,6 +29,8 @@ class PersonalProfilePage extends ConsumerStatefulWidget {
 class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
+  final _trainingAnchor = GlobalKey();
+  bool _trainingFocused = false;
   UserExperienceProfile? _draft;
   UserExperienceProfile? _original;
   bool _saving = false;
@@ -88,58 +92,27 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
         jsonEncode(draft.toJson()) != jsonEncode(original.toJson());
   }
 
-  /// Explicit local data access. Nothing is sent to a remote service or
-  /// copied to the clipboard automatically; the user can select the text.
-  Future<void> _showOptionalProfileData(UserExperienceProfile draft) async {
-    final data=const JsonEncoder.withIndent('  ').convert({
-      'dateOfBirth':draft.dateOfBirth?.toIso8601String(),
-      'genderIdentity':draft.genderIdentity?.name,
-      'equationSexForEnergy':draft.equationSexForEnergy?.name,
-      'optionalDemographicsConsented':draft.optionalDemographicsConsented,
-      'optionalDemographicsConsentedAt':
-        draft.optionalDemographicsConsentedAt?.toIso8601String(),
-      'optionalDemographicsUpdatedAt':
-        draft.optionalDemographicsUpdatedAt?.toIso8601String(),
-    });
-    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
-      title:const Text('Mis datos opcionales'),
-      content:SingleChildScrollView(child:Column(
-        mainAxisSize:MainAxisSize.min,
-        crossAxisAlignment:CrossAxisAlignment.start,
-        children:[
-          const Text('Esta vista solo muestra los datos demográficos locales. '
-            'Mantén privada cualquier copia que decidas realizar.'),
-          const SizedBox(height:12),
-          SelectableText(data),
-        ],
-      )),
-      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),
-        child:const Text('Cerrar'))],
-    ));
+  Future<bool> _authorizeDemographics() async {
+    if (_draft!.optionalDemographicsConsented) return true;
+    final confirmed = await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('Autorizar datos demográficos opcionales'),
+      content:const Text('Se guardan en tu dispositivo. Si exportas o subes una copia de seguridad, pueden incluirse. No verifican tu edad ni se comparten automáticamente con entrenadores. Puedes retirar el permiso en Legal y privacidad.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancelar')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Autorizar'))]));
+    if(confirmed!=true || !mounted)return false;
+    setState(()=>_draft=ProfileEditPolicy.withDemographicConsent(_draft!,true,DateTime.now()));
+    return true;
   }
 
-  Future<void> _clearOptionalProfileData(UserExperienceProfile draft) async {
-    final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>
-      AlertDialog(
-        title:const Text('Quitar datos demográficos'),
-        content:const Text('Se quitarán la fecha de nacimiento, el género '
-          'y el parámetro de ecuación del borrador. Tus rutinas, medidas '
-          'e historial no cambian. Se aplicará al pulsar Guardar perfil.'),
-        actions:[
-          TextButton(onPressed:()=>Navigator.pop(ctx,false),
-            child:const Text('Cancelar')),
-          FilledButton(onPressed:()=>Navigator.pop(ctx,true),
-            child:const Text('Quitar datos')),
-        ],
-      ));
-    if(confirmed!=true || !mounted)return;
-    setState(()=>_draft=draft.copyWith(
-      clearDateOfBirth:true,
-      clearGenderIdentity:true,
-      clearEquationSexForEnergy:true,
-      optionalDemographicsConsented:false,
-      clearOptionalDemographicsConsentAt:true,
-    ));
+  Future<void> _openPrivacy() async {
+    if (_hasUnsavedChanges) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('Guarda o descarta los cambios antes de gestionar la privacidad.')));
+      return;
+    }
+    await Navigator.of(context).push<void>(MaterialPageRoute(builder:(_)=>const StkMobilePrivacyPage()));
+    if (!mounted) return;
+    final latest=ref.read(userExperienceProfileProvider).value;
+    if(latest!=null) setState((){_draft=latest;_original=latest;_name.text=latest.displayName;});
   }
 
   Future<void> _requestDiscard(bool didPop) async {
@@ -173,75 +146,51 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
     });
   }
 
-  List<Widget> _buildDemographicFields(UserExperienceProfile draft) {
-    return [
-                const SizedBox(height: 10),
-                OutlinedButton.icon(
-                  key:const ValueKey('profile_birth_date'),
-                  icon:const Icon(Icons.calendar_month_outlined),
-                  label:Text(draft.dateOfBirth==null
-                    ? 'Indicar fecha de nacimiento'
-                    : '${draft.dateOfBirth!.day.toString().padLeft(2,'0')}/'
-                      '${draft.dateOfBirth!.month.toString().padLeft(2,'0')}/'
-                      '${draft.dateOfBirth!.year}'),
-                  onPressed:!draft.optionalDemographicsConsented?null:()async{
-                    final now=DateTime.now();
-                    final picked=await showDatePicker(
-                      context:context,
-                      initialDate:draft.dateOfBirth??DateTime(now.year-18),
-                      firstDate:DateTime(1900),lastDate:now);
-                    if(picked!=null && mounted){
-                      setState(()=>_draft=draft.copyWith(dateOfBirth:picked));
-                    }
-                  },
-                ),
-                if(draft.dateOfBirth!=null)
-                  TextButton(onPressed:()=>setState(()=>
-                    _draft=draft.copyWith(clearDateOfBirth:true)),
-                    child:const Text('Quitar fecha')),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<GenderIdentity>(
-                  key:ValueKey(draft.genderIdentity?.name??'gender_none'),
-                  initialValue:draft.genderIdentity,
-                  isExpanded:true,
-                  decoration:const InputDecoration(labelText:'Género (opcional)'),
-                  items:const [
-                    DropdownMenuItem(value:GenderIdentity.woman,
-                      child:Text('Mujer')),
-                    DropdownMenuItem(value:GenderIdentity.man,
-                      child:Text('Hombre')),
-                    DropdownMenuItem(value:GenderIdentity.nonBinary,
-                      child:Text('No binario / otra identidad')),
-                    DropdownMenuItem(value:GenderIdentity.preferNotToSay,
-                      child:Text('Prefiero no decirlo')),
-                  ],
-                  onChanged:!draft.optionalDemographicsConsented?null:
-                    (value)=>setState(()=>_draft=value==null
-                      ?draft.copyWith(clearGenderIdentity:true)
-                      :draft.copyWith(genderIdentity:value)),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<EnergyEquationSex>(
-                  key:ValueKey(draft.equationSexForEnergy?.name??'equation_none'),
-                  initialValue:draft.equationSexForEnergy,
-                  isExpanded:true,
-                  decoration:const InputDecoration(
-                    labelText:'Parámetro de cálculo energético (opcional)',
-                    helperText:'Es independiente de tu identidad de género.',
-                  ),
-                  items:const [
-                    DropdownMenuItem(value:EnergyEquationSex.female,
-                      child:Text('Referencia femenina')),
-                    DropdownMenuItem(value:EnergyEquationSex.male,
-                      child:Text('Referencia masculina')),
-                  ],
-                  onChanged:!draft.optionalDemographicsConsented?null:
-                    (value)=>setState(()=>_draft=value==null
-                      ?draft.copyWith(clearEquationSexForEnergy:true)
-                      :draft.copyWith(equationSexForEnergy:value)),
-                ),
-    ];
+  String _dateLabel(DateTime? date) => date==null?'Sin indicar':
+      '${date.day.toString().padLeft(2,'0')}/${date.month.toString().padLeft(2,'0')}/${date.year}';
+
+  String _genderLabel(GenderIdentity value) => switch(value){
+    GenderIdentity.woman=>'Mujer',GenderIdentity.man=>'Hombre',
+    GenderIdentity.nonBinary=>'No binario / otra identidad',
+    GenderIdentity.preferNotToSay=>'Prefiero no decirlo',
+  };
+  String _energyLabel(EnergyEquationSex value) => switch(value){
+    EnergyEquationSex.female=>'Referencia femenina',EnergyEquationSex.male=>'Referencia masculina',
+  };
+
+  Future<void> _editBirthDate() async {
+    if (!await _authorizeDemographics() || !mounted)return;
+    final current=_draft!;
+    final now=DateTime.now();
+    final birth=current.dateOfBirth;
+    final initial=birth!=null&&!birth.isBefore(DateTime(1900))&&!birth.isAfter(now)?birth:DateTime(now.year-18);
+    final picked=await showDatePicker(context:context,initialDate:initial,firstDate:DateTime(1900),lastDate:now);
+    if(picked!=null&&mounted)setState(()=>_draft=_draft!.copyWith(dateOfBirth:picked));
   }
+
+  List<Widget> _buildDemographicFields(UserExperienceProfile draft) => [
+    _editRow(key:const ValueKey('profile_birth_date'),icon:Icons.calendar_month_outlined,
+      label:'Fecha de nacimiento',value:draft.optionalDemographicsConsented?_dateLabel(draft.dateOfBirth):'Sin autorizar',
+      onTap:_editBirthDate),
+    if(draft.optionalDemographicsConsented&&draft.dateOfBirth!=null)
+      Align(alignment:Alignment.centerLeft,child:TextButton(onPressed:()=>setState(()=>_draft=_draft!.copyWith(clearDateOfBirth:true)),
+        child:const Text('Quitar fecha'))),
+    _editRow(icon:Icons.person_outline,label:'Género',
+      value:!draft.optionalDemographicsConsented?'Sin autorizar':draft.genderIdentity==null?'Sin indicar':_genderLabel(draft.genderIdentity!),
+      onTap:()async{
+        if(!await _authorizeDemographics()||!mounted)return;
+        await _selectOption<GenderIdentity>(label:'Género',value:_draft!.genderIdentity,
+          values:GenderIdentity.values,labelFor:_genderLabel,onChanged:(value)=>setState(()=>_draft=_draft!.copyWith(genderIdentity:value,clearGenderIdentity:value==null)));
+      }),
+    _editRow(icon:Icons.local_fire_department_outlined,label:'Cálculo energético',
+      value:!draft.optionalDemographicsConsented?'Sin autorizar':draft.equationSexForEnergy==null?'Sin indicar':_energyLabel(draft.equationSexForEnergy!),
+      onTap:()async{
+        if(!await _authorizeDemographics()||!mounted)return;
+        await _selectOption<EnergyEquationSex>(label:'Cálculo energético',value:_draft!.equationSexForEnergy,
+          values:EnergyEquationSex.values,labelFor:_energyLabel,description:'La referencia de la ecuación es independiente de tu género.',
+          onChanged:(value)=>setState(()=>_draft=_draft!.copyWith(equationSexForEnergy:value,clearEquationSexForEnergy:value==null)));
+      }),
+  ];
 
   @override
   void dispose() {
@@ -267,28 +216,36 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
             _name.text = saved.displayName;
           }
           final draft = _draft!;
+          if(widget.openTraining&&!_trainingFocused){
+            _trainingFocused=true;
+            WidgetsBinding.instance.addPostFrameCallback((_){
+              final anchor=_trainingAnchor.currentContext;
+              if(mounted&&anchor!=null)Scrollable.ensureVisible(anchor);
+            });
+          }
           return Form(
             key: _formKey,
-            child: ListView(
+            child: Column(children:[Expanded(child: AbsorbPointer(absorbing:_saving,child: SingleChildScrollView(
               key: const ValueKey('profile_editor_scroll'),
               padding: EdgeInsets.fromLTRB(AppUiTokens.of(context).pageHorizontalPadding, 8,
                 AppUiTokens.of(context).pageHorizontalPadding, 24),
-              children: [
+              child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children: [
                 Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  ProfileAvatar(profile: draft, radius: 44),
+                  ProfileAvatar(profile: draft, radius: 44, previewEnabled: true),
                   const SizedBox(height: 6),
                   TextButton(key: const ValueKey('profile_change_avatar'),
                     onPressed: _saving || _pickingPhoto ? null : _chooseAvatar,
                     child: const Text('Cambiar foto o avatar')),
                 ])),
                 const SizedBox(height: 12),
+                Text('Nombre o apodo',style:Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height:8),
                 TextFormField(
                   controller: _name,
                   onChanged: (_) => setState(() {}),
                   maxLength: 40,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
-                    labelText: 'Nombre o apodo',
                     hintText: '¿Cómo quieres que te llamemos?',
                   ),
                   validator: (text) {
@@ -300,125 +257,29 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                   },
                 ),
                 const SizedBox(height: 12),
-                _section(context, key: 'profile_personal_section', icon: Icons.person_outline,
-                  title: 'Datos personales', subtitle: 'Nacimiento, género y cálculo energético',
-                  children: [
-                    const Text('Tu fecha y preferencias son opcionales. No verifican la edad.'),
-                SwitchListTile.adaptive(
-                  key:const ValueKey('profile_optional_demographics_consent'),
-                  contentPadding:EdgeInsets.zero,
-                  title:const Text('Autorizar datos demográficos opcionales'),
-                  subtitle: const Text('Solo con tu permiso. Puedes retirarlo.'),
-                  value:draft.optionalDemographicsConsented,
-                  onChanged:(enabled)async{
-                    if(!enabled &&
-                       (draft.dateOfBirth!=null ||
-                        draft.genderIdentity!=null ||
-                        draft.equationSexForEnergy!=null)){
-                      final confirmed=await showDialog<bool>(
-                        context:context,builder:(ctx)=>AlertDialog(
-                          title:const Text('Desactivar datos opcionales'),
-                          content:const Text('Se quitarán fecha de nacimiento, '
-                            'género y parámetro energético de tu borrador. '
-                            'Se aplicará al guardar. Tus rutinas, '
-                            'historial y preferencias no cambiarán.'),
-                          actions:[
-                            TextButton(onPressed:()=>Navigator.pop(ctx,false),
-                              child:const Text('Cancelar')),
-                            FilledButton(onPressed:()=>Navigator.pop(ctx,true),
-                              child:const Text('Quitar del borrador')),
-                          ],
-                        ),
-                      );
-                      if(confirmed!=true || !mounted)return;
-                    }
-                    if(!mounted)return;
-                    setState((){
-                      _draft=enabled
-                        ?draft.copyWith(
-                          optionalDemographicsConsented:true,
-                          optionalDemographicsConsentedAt:DateTime.now())
-                        :draft.copyWith(
-                          optionalDemographicsConsented:false,
-                          clearOptionalDemographicsConsentAt:true,
-                          clearDateOfBirth:true,
-                          clearGenderIdentity:true,
-                          clearEquationSexForEnergy:true);
-                    });
-                  },
-                ),
-                const ExpansionTile(
-                    key:ValueKey('profile_optional_consent_information'),
-                    title:Text('Más información sobre tus datos'),
-                    tilePadding:EdgeInsets.zero,
-                    childrenPadding:EdgeInsets.only(bottom:12),
-                    children:[Text('Se guardan en tu dispositivo. Si exportas o subes una copia de seguridad, '
-                      'estos datos pueden incluirse en ella. No verifican tu edad '
-                      'ni se comparten automáticamente con entrenadores.')],
-                  ),
-                if(!draft.optionalDemographicsConsented &&
-                   (draft.dateOfBirth!=null ||
-                    draft.genderIdentity!=null ||
-                    draft.equationSexForEnergy!=null))
-                  Text('Los datos anteriores se conservaron sin '
-                    'suponer tu autorización. Puedes revisarlos o '
-                    'quitarlos, o autorizarlos expresamente.',
-                    style:Theme.of(context).textTheme.bodySmall),
-                ExpansionTile(
-                    key:const ValueKey('profile_mobile_demographic_editor'),
-                    tilePadding:EdgeInsets.zero,
-                    title:const Text('Editar fecha, género y cálculo'),
-                    subtitle:Text(draft.dateOfBirth == null
-                      ? 'Fecha de nacimiento no indicada'
-                      : 'Fecha: ${draft.dateOfBirth!.day.toString().padLeft(2,'0')}/'
-                        '${draft.dateOfBirth!.month.toString().padLeft(2,'0')}/'
-                        '${draft.dateOfBirth!.year}'),
-                    children:_buildDemographicFields(draft),
-                  ),
-
-                  ]),
-                _section(context, key: 'profile_training_section', icon: Icons.fitness_center_outlined,
-                  title: 'Preferencias de entrenamiento', subtitle: 'Objetivo, experiencia y frecuencia',
-                  initiallyExpanded: widget.openTraining, children: _trainingFields(draft)),
-                _section(context, key: 'profile_mode_section', icon: Icons.group_outlined,
-                  title: 'Modo de uso', subtitle: 'Atleta y entrenador',
-                  children: _modeFields(draft)),
-                _section(context, key: 'profile_faith_section', icon: Icons.menu_book_outlined,
-                  title: 'Contenido de Fe', subtitle: 'Contenido y reflexiones',
-                  children: _faithFields(draft)),
-                _section(context, key: 'profile_home_section', icon: Icons.home_outlined,
-                  title: 'Bienestar en Inicio', subtitle: 'Sueño y hábitos diarios', children: [
-                    SwitchListTile.adaptive(contentPadding: EdgeInsets.zero,
-                      title: const Text('Mostrar sueño'), value: draft.showSleepOnHome,
-                      onChanged: (value) => setState(() => _draft = draft.copyWith(showSleepOnHome: value))),
-                    SwitchListTile.adaptive(contentPadding: EdgeInsets.zero,
-                      title: const Text('Mostrar Mis hábitos'), value: draft.habitsEnabled,
-                      subtitle: const Text('Tus tareas diarias, sin borrar registros al ocultarlas.'),
-                      onChanged: (value) => setState(() => _draft = draft.copyWith(habitsEnabled: value))),
-                  ]),
-                _section(context, key: 'profile_privacy_section', icon: Icons.shield_outlined,
-                  title: 'Privacidad de tus datos', subtitle: 'Consultar o quitar datos personales',
-                  children: [
-                    const Text('Tu nombre y avatar permanecen personales. Los permisos para entrenadores se administran en Mi Coach.'),
-                const SizedBox(height:12),
-                Wrap(spacing:8,runSpacing:8,children:[
-                  OutlinedButton.icon(
-                    key:const ValueKey('profile_view_optional_data'),
-                    onPressed:()=>_showOptionalProfileData(draft),
-                    icon:const Icon(Icons.visibility_outlined),
-                    label:const Text('Ver mis datos opcionales'),
-                  ),
-                  TextButton.icon(
-                    key:const ValueKey('profile_clear_optional_data'),
-                    onPressed:()=>_clearOptionalProfileData(draft),
-                    icon:const Icon(Icons.delete_outline),
-                    label:const Text('Quitar datos demográficos'),
-                  ),
+                _section(context,key:'profile_personal_section',title:'Datos personales',
+                  children:_buildDemographicFields(draft)),
+                Align(alignment:Alignment.centerLeft,child:TextButton(
+                  key:const ValueKey('profile_manage_privacy'),onPressed:_saving?null:_openPrivacy,
+                  child:const Text('Gestionar privacidad'))),
+                KeyedSubtree(key:_trainingAnchor,child:_section(context,key:'profile_training_section',title:'Preferencias de entrenamiento',
+                  children:_trainingFields(draft))),
+                _section(context,key:'profile_mode_section',title:'Modo de uso',
+                  children:_modeFields(draft)),
+                _section(context,key:'profile_faith_section',title:'Contenido de Fe',
+                  children:_faithFields(draft)),
+                _section(context,key:'profile_home_section',title:'Bienestar en Inicio',children:[
+                  SwitchListTile.adaptive(contentPadding:EdgeInsets.zero,
+                    title:const Text('Mostrar sueño'),value:draft.showSleepOnHome,
+                    onChanged:(v)=>setState(()=>_draft=_draft!.copyWith(showSleepOnHome:v))),
+                  SwitchListTile.adaptive(contentPadding:EdgeInsets.zero,
+                    title:const Text('Mostrar Mis hábitos'),value:draft.habitsEnabled,
+                    subtitle:const Text('Ocultar no elimina tus registros.'),
+                    onChanged:(v)=>setState(()=>_draft=_draft!.copyWith(habitsEnabled:v))),
                 ]),
-
-                  ]),
-                const SizedBox(height: 24),
-                FilledButton.icon(
+              ]),
+            ))),
+            SafeArea(top:false,child:Padding(padding:EdgeInsets.fromLTRB(AppUiTokens.of(context).pageHorizontalPadding,8,AppUiTokens.of(context).pageHorizontalPadding,8),child:SizedBox(width:double.infinity,child:FilledButton.icon(
                   icon: _saving
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.save_outlined),
@@ -451,9 +312,8 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                       if (mounted) setState(() => _saving = false);
                     }
                   },
-                ),
-              ],
-            ),
+                )))),
+            ]),
           );
         },
       ),
@@ -461,17 +321,43 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
     );
   }
 
-  Widget _section(BuildContext context, {required String key, required IconData icon,
-      required String title, required String subtitle, required List<Widget> children,
-      bool initiallyExpanded = false}) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: PremiumCard(padding: EdgeInsets.zero, child: ExpansionTile(
-      key: ValueKey(key), initiallyExpanded: initiallyExpanded, maintainState: true,
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-      title: Text(title), subtitle: Text(subtitle),
-      childrenPadding: EdgeInsets.fromLTRB(14, 0, 14, 14), children: children,
-    )),
-  );
+  Widget _section(BuildContext context,{required String key,required String title,required List<Widget> children}) =>
+    Padding(padding:EdgeInsets.only(bottom:AppUiTokens.of(context).sectionGap),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text(title,key:ValueKey(key),style:Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height:8),
+        PremiumCard(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,
+          children:[for(var i=0;i<children.length;i++) ...[
+            if(i>0)const Divider(height:16),
+            children[i],
+          ]])),
+      ]));
+
+  Widget _editRow({Key? key,IconData? icon,required String label,required String value,required VoidCallback onTap}) =>
+    ListTile(key:key,contentPadding:EdgeInsets.zero,
+      leading:icon==null?null:Icon(icon,color:Theme.of(context).colorScheme.primary),
+      title:Text(label,style:Theme.of(context).textTheme.bodyMedium),
+      subtitle:Text(value,style:Theme.of(context).textTheme.bodySmall),
+      trailing:const Icon(Icons.chevron_right_rounded),onTap:_saving?null:onTap);
+
+  Future<void> _selectOption<T>({required String label,required T? value,
+    required List<T> values,required String Function(T) labelFor,
+    required ValueChanged<T?> onChanged,bool allowNull=true,String? description,String emptyLabel='Sin indicar'}) async {
+    final selected=await showModalBottomSheet<(T?,)> (context:context,useSafeArea:true,
+      isScrollControlled:true,showDragHandle:true,builder:(ctx)=>ConstrainedBox(
+        constraints:BoxConstraints(maxHeight:MediaQuery.sizeOf(ctx).height*.75),
+        child:ListView(shrinkWrap:true,padding:EdgeInsets.all(AppUiTokens.of(ctx).cardPadding),children:[
+          Text(label,style:Theme.of(ctx).textTheme.titleLarge),
+          if(description!=null)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(description)),
+          for(final item in values)ListTile(title:Text(labelFor(item)),
+            trailing:value==item?Icon(Icons.check,color:Theme.of(ctx).colorScheme.primary):null,
+            onTap:()=>Navigator.pop(ctx,(item,))),
+          if(allowNull)ListTile(title:Text(emptyLabel),
+            trailing:value==null?Icon(Icons.check,color:Theme.of(ctx).colorScheme.primary):null,
+            onTap:()=>Navigator.pop(ctx,(null,))),
+        ])));
+    if(selected!=null&&mounted)onChanged(selected.$1);
+  }
 
   Future<void> _chooseAvatar() async {
     final draft = _draft!;
@@ -513,7 +399,6 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                           clearTrainingGoal: value == null,
                         )),
               ),
-              const SizedBox(height: 12),
               _dropdown<TrainingExperience>(
                 label: 'Experiencia',
                 value: draft.trainingExperience,
@@ -525,7 +410,6 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                           clearTrainingExperience: value == null,
                         )),
               ),
-              const SizedBox(height: 12),
               _daysSelector(draft),
               if(YouthTrainingGuidance.forProfile(draft,DateTime.now())
                   case final guidance?) ...[
@@ -534,7 +418,6 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                   key:const ValueKey('experience_youth_rest_guidance'),
                   style:Theme.of(context).textTheme.bodySmall),
               ],
-              const SizedBox(height: 12),
               _dropdown<SessionDurationPreference>(
                 label: 'Duración habitual',
                 value: draft.sessionDuration,
@@ -548,7 +431,6 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                       ));
                 },
               ),
-              const SizedBox(height: 12),
               _dropdown<TrainingEnvironment>(
                 label: 'Lugar / equipamiento',
                 value: draft.trainingEnvironment,
@@ -560,9 +442,8 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
                           clearTrainingEnvironment: value == null,
                         )),
               ),
-              const SizedBox(height: 12),
               _dropdown<PlanningPreference>(
-                label: 'Planificación',
+                label: 'Preferencia de rutinas',
                 value: draft.planningPreference,
                 values: PlanningPreference.values,
                 labelFor: _planningLabel,
@@ -614,44 +495,25 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
   ];
 
   List<Widget> _faithFields(UserExperienceProfile draft) => [
-              _faithChoice(
-                draft,
-                FaithContentPreference.enabled,
-                'Sí, incluirlo',
-                'Biblia, versículo diario, Haven Faith y estudio.',
-              ),
-              _faithChoice(
-                draft,
-                FaithContentPreference.disabled,
-                'No, mantenerlo oculto',
-                'No se cargarán módulos de Fe.',
-              ),
-              _faithChoice(
-                draft,
-                FaithContentPreference.undecided,
-                'Decidir después',
-                'Se mantiene oculto hasta que elijas activarlo.',
-              ),
-
+    SwitchListTile.adaptive(key:const ValueKey('profile_faith_master'),contentPadding:EdgeInsets.zero,
+      title:const Text('Activar contenido de Fe'),subtitle:const Text('Biblia, Haven Faith y estudio.'),
+      value:draft.faithEnabled,onChanged:(enabled)=>setState(()=>_draft=_draft!.copyWith(
+        faithPreference:enabled?FaithContentPreference.enabled:FaithContentPreference.disabled))),
     if (draft.faithEnabled)
       Consumer(builder: (context, ref, _) {
         final saved = ref.watch(settingsProvider.select((s) => s.showDailyVerse));
         return SwitchListTile.adaptive(
           key: const ValueKey('profile_show_verse'), contentPadding: EdgeInsets.zero,
           title: const Text('Versículo en Inicio'),
-          subtitle: const Text('Mostrar el mensaje diario sin desactivar la Biblia.'),
           value: _verseDraft ?? saved,
           onChanged: (value) => setState(() => _verseDraft = value == saved ? null : value),
         );
       }),
     if (draft.faithEnabled)
-      SwitchListTile.adaptive(
-        contentPadding: EdgeInsets.zero,
+      SwitchListTile.adaptive(contentPadding: EdgeInsets.zero,
         title: const Text('Reflexiones al terminar de entrenar'),
-        subtitle: const Text('Mostrar en el resumen final.'),
         value: draft.showWorkoutReflections,
-        onChanged: (value) => setState(() => _draft = draft.copyWith(showWorkoutReflections: value)),
-      ),
+        onChanged: (value) => setState(() => _draft = _draft!.copyWith(showWorkoutReflections: value))),
   ];
 
   void _toggleCapability(
@@ -672,83 +534,17 @@ class _PersonalProfilePageState extends ConsumerState<PersonalProfilePage> {
   }
 
 
-  Widget _daysSelector(UserExperienceProfile draft) {
-    return InputDecorator(
-      decoration: const InputDecoration(
-        labelText: 'Frecuencia preferida',
-        helperText: 'El plan activo se edita en Entrenar.',
-        helperMaxLines: 3,
-      ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final day in [2, 3, 4, 5, 6])
-            ChoiceChip(
-              label: Text('$day'),
-              selected: draft.trainingDaysPerWeek == day,
-              onSelected: (_) => setState(
-                () => _draft = draft.copyWith(trainingDaysPerWeek: day),
-              ),
-            ),
-          ChoiceChip(
-            label: const Text('No lo sé'),
-            selected: draft.trainingDaysPerWeek == null,
-            onSelected: (_) =>
-                setState(() => _draft = draft.copyWith(clearTrainingDays: true)),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _daysSelector(UserExperienceProfile draft) => _editRow(
+    label:'Frecuencia preferida',value:draft.trainingDaysPerWeek==null?'Variable':'${draft.trainingDaysPerWeek} días',
+    onTap:()=>_selectOption<int>(label:'Frecuencia preferida',value:draft.trainingDaysPerWeek,
+      values:const [1,2,3,4,5,6,7],labelFor:(d)=>'$d ${d==1?'día':'días'}',
+      description:'El plan activo se edita en Entrenar.',emptyLabel:'Variable',
+      onChanged:(v)=>setState(()=>_draft=_draft!.copyWith(trainingDaysPerWeek:v,clearTrainingDays:v==null))));
 
-  Widget _faithChoice(
-    UserExperienceProfile draft,
-    FaithContentPreference value,
-    String title,
-    String subtitle,
-  ) {
-    return RadioListTile<FaithContentPreference>(
-      contentPadding: EdgeInsets.zero,
-      value: value,
-      groupValue: draft.faithPreference,
-      onChanged: (next) {
-        if (next == null) return;
-        setState(() => _draft = draft.copyWith(faithPreference: next));
-      },
-      title: Text(title),
-      subtitle: Text(subtitle),
-    );
-  }
-
-  Widget _dropdown<T>({
-    required String label,
-    required T? value,
-    required List<T> values,
-    required String Function(T) labelFor,
-    required ValueChanged<T?> onChanged,
-    bool allowNull = true,
-  }) {
-    return DropdownButtonFormField<T?>(
-      initialValue: value,
-      isExpanded: true,
-      decoration: InputDecoration(labelText: label),
-      items: [
-        if (allowNull)
-          DropdownMenuItem<T?>(
-            value: null,
-            child: const Text('Por decidir'),
-          ),
-        ...values.map(
-          (item) => DropdownMenuItem<T?>(
-            value: item,
-            child: Text(labelFor(item)),
-          ),
-        ),
-      ],
-      onChanged: onChanged,
-    );
-  }
+  Widget _dropdown<T>({required String label,required T? value,required List<T> values,
+    required String Function(T) labelFor,required ValueChanged<T?> onChanged,bool allowNull=true}) =>
+    _editRow(label:label,value:value==null?'Sin indicar':labelFor(value),
+      onTap:()=>_selectOption<T>(label:label,value:value,values:values,labelFor:labelFor,onChanged:onChanged,allowNull:allowNull));
 
   String _goalLabel(TrainingGoal value) => switch (value) {
         TrainingGoal.hypertrophy => 'Ganar masa muscular',

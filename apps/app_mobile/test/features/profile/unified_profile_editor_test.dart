@@ -45,18 +45,11 @@ void main(){
         widget is Scrollable && widget.axisDirection == AxisDirection.down),
     );
     expect(editorScroll, findsOneWidget);
-    await tester.ensureVisible(find.text('Preferencias de entrenamiento'));
-    await tester.tap(find.text('Preferencias de entrenamiento'));
+    await tester.ensureVisible(find.text('Frecuencia preferida'));
+    await tester.tap(find.text('Frecuencia preferida'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.widgetWithText(ChoiceChip,'4'),120,
-      scrollable: editorScroll);
-    await tester.ensureVisible(find.widgetWithText(ChoiceChip,'4'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(ChoiceChip,'4'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Guardar perfil'),180,
-      scrollable: editorScroll);
-    await tester.ensureVisible(find.text('Guardar perfil'));
+    await tester.ensureVisible(find.text('4 días'));
+    await tester.tap(find.text('4 días'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Guardar perfil'));
     await tester.pumpAndSettle();

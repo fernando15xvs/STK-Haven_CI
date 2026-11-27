@@ -28,24 +28,16 @@ class ProfilePage extends ConsumerWidget {
     final gamification = ref.watch(gamificationProvider);
     final tokens = AppUiTokens.of(context);
     return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 48,
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            key: const ValueKey('profile_open_settings'),
-            tooltip: 'Ajustes',
-            icon: const Icon(Icons.settings_outlined),
-            onPressed: () => _open(context, const ProfileSettingsPage()),
-          ),
-        ],
-      ),
       body: SafeArea(
         bottom: false,
         child: ListView(
           padding: EdgeInsets.symmetric(horizontal: tokens.pageHorizontalPadding),
           children: [
-            const SizedBox(height: 8),
+            Align(alignment: Alignment.centerRight, child: IconButton(
+              key: const ValueKey('profile_open_settings'), tooltip: 'Ajustes',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => _open(context, const ProfileSettingsPage()),
+            )),
             PersonalProfileSummary(
               onEdit: () => _open(
                 context,

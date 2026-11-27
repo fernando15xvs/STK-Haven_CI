@@ -6,6 +6,7 @@ import 'package:core/features/onboarding/application/stk_legal_acceptance.dart';
 import 'package:core/features/onboarding/data/stk_legal_server_receipt_service.dart';
 import 'package:core/features/profile/application/providers/user_experience_profile_provider.dart';
 import 'package:gym_tracker/features/sync/presentation/backup_status_page.dart';
+import 'package:gym_tracker/features/profile/presentation/widgets/profile_local_data_section.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -459,6 +460,8 @@ class _StkMobilePrivacyPageState extends ConsumerState<StkMobilePrivacyPage> {
           icon: const Icon(Icons.shield_outlined),
           label: const Text('Retirar todos los permisos opcionales'),
         ),
+        const SizedBox(height: AppSpacing.lg),
+        const ProfileLocalDataSection(),
         const SizedBox(height: AppSpacing.lg),
         Text('Datos y copias', style: AppTypography.headlineMedium),
         const SizedBox(height: AppSpacing.sm),

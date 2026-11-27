@@ -28,6 +28,20 @@ void main() {
     expect(updated.legacyTrainingFollowupDismissed,isTrue);
     expect(updated.onboardingVersion,3);
   });
+  test('centralized consent never changes legal eligibility or training preferences', () {
+    final revoked=ProfileEditPolicy.withDemographicConsent(original,false,now);
+    expect(revoked.optionalDemographicsConsented,isFalse);
+    expect(revoked.dateOfBirth,isNull);
+    expect(revoked.genderIdentity,isNull);
+    expect(revoked.equationSexForEnergy,isNull);
+    expect(revoked.eligibilityBirthDate,original.eligibilityBirthDate);
+    expect(revoked.trainingDaysPerWeek,original.trainingDaysPerWeek);
+    final authorized=ProfileEditPolicy.withDemographicConsent(revoked,true,now);
+    expect(authorized.optionalDemographicsConsented,isTrue);
+    expect(authorized.optionalDemographicsConsentedAt,now);
+    expect(authorized.dateOfBirth,isNull);
+  });
+
   test('optional demographic withdrawal leaves eligibility and preferences intact', () {
     final updated=merge(original.copyWith(clearDateOfBirth:true,clearGenderIdentity:true,
       clearEquationSexForEnergy:true,optionalDemographicsConsented:false,

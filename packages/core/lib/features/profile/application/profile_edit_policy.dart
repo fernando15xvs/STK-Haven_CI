@@ -4,6 +4,20 @@ import 'package:core/domain/models/user_experience_profile.dart';
 /// Pure Dart merge of the single editor's owned fields. A stale draft never
 /// overwrites unrelated settings or silently restores revoked demographic data.
 class ProfileEditPolicy {
+  /// Local optional demographics are distinct from legal age/eligibility.
+  /// Revocation clears only these fields; unrelated history and settings stay.
+  static UserExperienceProfile withDemographicConsent(
+      UserExperienceProfile profile, bool enabled, DateTime now) {
+    if (enabled) {
+      if (profile.optionalDemographicsConsented) return profile;
+      return profile.copyWith(optionalDemographicsConsented:true,
+        optionalDemographicsConsentedAt:now);
+    }
+    return profile.copyWith(optionalDemographicsConsented:false,
+      clearOptionalDemographicsConsentAt:true, clearDateOfBirth:true,
+      clearGenderIdentity:true, clearEquationSexForEnergy:true);
+  }
+
   static UserExperienceProfile merge({required UserExperienceProfile original,
       required UserExperienceProfile draft, required UserExperienceProfile current,
       required DateTime now}) {
