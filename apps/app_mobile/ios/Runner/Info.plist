@@ -26,6 +26,8 @@
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<key>NSFaceIDUsageDescription</key>
+		<string>STK Haven usa Face ID solo si activas el bloqueo del diario privado.</string>
 		<key>NSCameraUsageDescription</key>
 		<string>STK Haven usa la cámara cuando eliges analizar una comida con Food Vision.</string>
 		<key>NSPhotoLibraryUsageDescription</key>

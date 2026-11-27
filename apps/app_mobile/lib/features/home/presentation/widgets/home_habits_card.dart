@@ -1,5 +1,6 @@
 import 'package:core/domain/models/habit_task.dart';
 import 'package:core/features/habits/application/habit_schedule_service.dart';
+import 'package:core/features/habits/application/habit_integrity_policy.dart';
 import 'package:core/features/habits/application/habit_tasks_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +29,8 @@ class _HomeHabitsCardState extends ConsumerState<HomeHabitsCard>{
   Widget build(BuildContext context){
     final tasks=ref.watch(visibleHabitTasksProvider);
     final completions=ref.watch(habitTasksProvider.select((s)=>s.completions));
-    final rows=tasks.where((t)=>HabitScheduleService.isDueOn(t,widget.now)).toList();
+    final rows=tasks.where(HabitIntegrityPolicy.isPersonalDashboardTask).where((t)=>HabitIntegrityPolicy.pending(t,completions,widget.now)||
+      (HabitScheduleService.isDueOn(t,widget.now)&&HabitScheduleService.isResolvedOn(t,completions,widget.now))).toList();
     bool done(HabitTask task)=>HabitScheduleService.isCompletedOn(task,completions,widget.now);
     final count=rows.where(done).length;
     final colors=AppColors.of(context);

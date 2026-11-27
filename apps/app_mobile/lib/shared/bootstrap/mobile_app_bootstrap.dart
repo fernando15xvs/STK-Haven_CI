@@ -19,6 +19,7 @@ import 'package:core/features/faith/services/verse_notification_service.dart';
 import 'package:core/features/progress/services/measurement_reminder_service.dart';
 import 'package:core/features/coach/application/coach_task_notification_service.dart';
 import 'package:core/features/habits/application/habit_task_notification_service.dart';
+import 'package:core/features/habits/application/focus_timer_notification_service.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -94,6 +95,7 @@ Future<void> bootstrapMobileApp({
   HabitTaskNotificationService.installBackend(
     const MobileHabitTaskNotificationBackend(),
   );
+  FocusTimerNotificationService.installBackend(const MobileFocusTimerNotificationBackend());
   VerseNotificationService.installBackend(const MobileVerseNotificationBackend());
   PersonalMotivationalReminderService.installBackend(
     const MobilePersonalMotivationalReminderBackend(),

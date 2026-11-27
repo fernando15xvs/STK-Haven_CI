@@ -2,6 +2,7 @@ import AudioToolbox
 import CoreMotion
 import Flutter
 import PDFKit
+import LocalAuthentication
 import UIKit
 import UserNotifications
 import WidgetKit
@@ -194,12 +195,111 @@ import WidgetKit
         binaryMessenger: controller.binaryMessenger
       )
 
+      let journalChannel = FlutterMethodChannel(name: "stk_haven/private_journal", binaryMessenger: controller.binaryMessenger)
+      journalChannel.setMethodCallHandler { call, result in
+        if call.method == "authenticate" {
+          let auth = LAContext()
+          var error: NSError?
+          guard auth.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
+            result(false); return
+          }
+          auth.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "Abrir diario privado") { success, _ in
+            DispatchQueue.main.async { result(success) }
+          }
+          return
+        }
+        do {
+          let manager = FileManager.default
+          let root = try manager.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+          var dir = root.appendingPathComponent("stk_private_journal", isDirectory: true)
+          try manager.createDirectory(at: dir, withIntermediateDirectories: true)
+          var values = URLResourceValues()
+          values.isExcludedFromBackup = true
+          try dir.setResourceValues(values)
+          let file = dir.appendingPathComponent("journal.json")
+          switch call.method {
+          case "read":
+            if manager.fileExists(atPath: file.path) {
+              result(try String(contentsOf: file, encoding: .utf8))
+            } else {
+              result("[]")
+            }
+          case "write":
+            guard let args = call.arguments as? [String: Any], let data = args["data"] as? String else {
+              result(FlutterError(code: "journal_input", message: "Datos no válidos", details: nil)); return
+            }
+            try Data(data.utf8).write(to: file, options: [.atomic, .completeFileProtection])
+            result(true)
+          default: result(FlutterMethodNotImplemented)
+          }
+        } catch {
+          result(FlutterError(code: "journal_storage", message: "No se pudo acceder al diario privado", details: nil))
+        }
+      }
+
       let pdfChannel = FlutterMethodChannel(
         name: "stk_haven/pdf_reader",
         binaryMessenger: controller.binaryMessenger
       )
 
       pdfChannel.setMethodCallHandler { call, result in
+        if call.method == "searchText",
+           let args = call.arguments as? [String: Any],
+           let path = args["path"] as? String,
+           let query = args["query"] as? String {
+          DispatchQueue.global(qos: .userInitiated).async {
+            guard let document = PDFDocument(url: URL(fileURLWithPath: path)), !document.isLocked else {
+              DispatchQueue.main.async { result(FlutterError(code: "pdf_search_unavailable", message: "Búsqueda no disponible", details: nil)) }
+              return
+            }
+            let pages = Set(document.findString(String(query.prefix(200)), withOptions: .caseInsensitive)
+              .flatMap { $0.pages }.map { document.index(for: $0) + 1 }.filter { $0 > 0 })
+            DispatchQueue.main.async { result(Array(pages.sorted().prefix(200))) }
+          }
+          return
+        }
+        if call.method == "renderPage",
+           let args = call.arguments as? [String: Any],
+           let path = args["path"] as? String {
+          let requested = args["page"] as? Int ?? 1
+          let thumbnail = args["thumbnail"] as? Bool ?? false
+          let highlightTerms = (args["highlightTerms"] as? [String] ?? []).prefix(20)
+          DispatchQueue.global(qos: .userInitiated).async {
+            guard let document = PDFDocument(url: URL(fileURLWithPath: path)),
+                  document.pageCount > 0,
+                  !document.isLocked else {
+              DispatchQueue.main.async { result(FlutterError(code: "pdf_unreadable", message: "No se pudo abrir el PDF", details: nil)) }
+              return
+            }
+            let index = min(max(requested - 1, 0), document.pageCount - 1)
+            guard let page = document.page(at: index) else {
+              DispatchQueue.main.async { result(FlutterError(code: "pdf_page", message: "Página no disponible", details: nil)) }
+              return
+            }
+            let bounds = page.bounds(for: .cropBox)
+            guard bounds.width > 0, bounds.height > 0 else {
+              DispatchQueue.main.async { result(FlutterError(code: "pdf_page", message: "Página no válida", details: nil)) }
+              return
+            }
+            let scale = thumbnail ? min(220 / bounds.width, 300 / bounds.height) : min(1600 / bounds.width, 2200 / bounds.height)
+            let size = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+            for term in highlightTerms where !term.isEmpty {
+              for selection in document.findString(String(term.prefix(200)), withOptions: .caseInsensitive) where selection.pages.contains(page) {
+                let mark = PDFAnnotation(bounds: selection.bounds(for: page), forType: .highlight, withProperties: nil)
+                mark.color = UIColor.yellow.withAlphaComponent(0.45)
+                page.addAnnotation(mark)
+              }
+            }
+            let image = page.thumbnail(of: size, for: .cropBox)
+            guard let data = image.pngData() else {
+              DispatchQueue.main.async { result(FlutterError(code: "pdf_page", message: "Página no disponible", details: nil)) }
+              return
+            }
+            let payload: [String: Any] = ["bytes": FlutterStandardTypedData(bytes: data), "currentPage": index + 1, "totalPages": document.pageCount]
+            DispatchQueue.main.async { result(payload) }
+          }
+          return
+        }
         guard call.method == "openPdf",
               let args = call.arguments as? [String: Any],
               let path = args["path"] as? String else {

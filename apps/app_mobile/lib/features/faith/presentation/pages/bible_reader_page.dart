@@ -1,4 +1,5 @@
 import 'package:gym_tracker/core/layout/mobile_content_frame.dart';
+import 'package:gym_tracker/features/habits/presentation/pages/study_habits_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
@@ -18,6 +19,8 @@ class BibleReaderPage extends ConsumerWidget {
         backgroundColor: AppColors.of(context).background,
         elevation: 0,
         centerTitle: true,
+        actions:[IconButton(tooltip:'Planes de estudio bíblico',icon:const Icon(Icons.library_books_outlined),
+          onPressed:()=>Navigator.of(context).push(MaterialPageRoute<void>(builder:(_)=>const StudyHabitsPage(faithOnly:true))))],
       ),
       body: stateAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),

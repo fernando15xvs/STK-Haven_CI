@@ -56,6 +56,167 @@ class MainActivity : AudioServiceActivity(), SensorEventListener {
         )
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "stk_haven/private_journal")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "authenticate") {
+                    if (Build.VERSION.SDK_INT < 30) {
+                        result.success(false)
+                    } else {
+                        val manager = getSystemService(android.hardware.biometrics.BiometricManager::class.java)
+                        val authenticators = android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                            android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                        if (manager?.canAuthenticate(authenticators) != android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) {
+                            result.success(false)
+                        } else {
+                            val prompt = android.hardware.biometrics.BiometricPrompt.Builder(this)
+                                .setTitle("Abrir diario privado").setAllowedAuthenticators(authenticators).build()
+                            prompt.authenticate(android.os.CancellationSignal(), mainExecutor,
+                                object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                                    override fun onAuthenticationSucceeded(value: android.hardware.biometrics.BiometricPrompt.AuthenticationResult) {
+                                        result.success(true)
+                                    }
+                                    override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                                        result.success(false)
+                                    }
+                                })
+                        }
+                    }
+                    return@setMethodCallHandler
+                }
+                try {
+                    val file = android.util.AtomicFile(java.io.File(noBackupFilesDir, "stk_private_journal.bin"))
+                    val alias = "stk_private_journal_key_v1"
+                    val store = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                    fun key(): javax.crypto.SecretKey {
+                        val existing = store.getKey(alias, null) as? javax.crypto.SecretKey
+                        if (existing != null) return existing
+                        val generator = javax.crypto.KeyGenerator.getInstance("AES", "AndroidKeyStore")
+                        generator.init(android.security.keystore.KeyGenParameterSpec.Builder(alias,
+                            android.security.keystore.KeyProperties.PURPOSE_ENCRYPT or android.security.keystore.KeyProperties.PURPOSE_DECRYPT)
+                            .setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
+                            .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
+                            .setKeySize(256).build())
+                        return generator.generateKey()
+                    }
+                    when (call.method) {
+                        "read" -> {
+                            if (!file.baseFile.exists()) result.success("[]")
+                            else {
+                                val bytes = file.readFully()
+                                require(bytes.size > 12)
+                                val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+                                cipher.init(javax.crypto.Cipher.DECRYPT_MODE, key(), javax.crypto.spec.GCMParameterSpec(128, bytes.copyOfRange(0,12)))
+                                result.success(String(cipher.doFinal(bytes.copyOfRange(12,bytes.size)), Charsets.UTF_8))
+                            }
+                        }
+                        "write" -> {
+                            val data = call.argument<String>("data") ?: throw IllegalArgumentException()
+                            val cipher = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
+                            cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key())
+                            require(cipher.iv.size == 12)
+                            val bytes = cipher.iv + cipher.doFinal(data.toByteArray(Charsets.UTF_8))
+                            val stream = file.startWrite()
+                            try { stream.write(bytes); file.finishWrite(stream) }
+                            catch (e: Exception) { file.failWrite(stream); throw e }
+                            result.success(true)
+                        }
+                        else -> result.notImplemented()
+                    }
+                } catch (_: Exception) {
+                    result.error("journal_storage", "No se pudo acceder al diario privado", null)
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "stk_haven/pdf_reader")
+            .setMethodCallHandler { call, result ->
+                if (call.method == "searchText") {
+                    val path = call.argument<String>("path")
+                    val query = call.argument<String>("query").orEmpty().take(200)
+                    if (android.os.Build.VERSION.SDK_INT < 35 || path == null) {
+                        result.error("pdf_search_unavailable", "Búsqueda no disponible", null)
+                    } else Thread {
+                        try {
+                            val file = java.io.File(path).canonicalFile
+                            val root = java.io.File(filesDir.parentFile, "app_flutter").canonicalFile
+                            require(file.path.startsWith(root.path + java.io.File.separator))
+                            val fd = android.os.ParcelFileDescriptor.open(file, android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+                            val renderer = try { android.graphics.pdf.PdfRenderer(fd) } catch (e: Exception) { fd.close(); throw e }
+                            val matches = mutableListOf<Int>()
+                            renderer.use { pdf ->
+                                for (i in 0 until pdf.pageCount) {
+                                    pdf.openPage(i).use { page ->
+                                        val search = page.javaClass.getMethod("searchText", String::class.java)
+                                        val found = search.invoke(page, query) as? List<*>
+                                        if (!found.isNullOrEmpty()) matches.add(i + 1)
+                                    }
+                                    if (matches.size >= 200) break
+                                }
+                            }
+                            runOnUiThread { result.success(matches) }
+                        } catch (_: Exception) {
+                            runOnUiThread { result.error("pdf_search_unavailable", "Búsqueda no disponible", null) }
+                        }
+                    }.start()
+                } else if (call.method != "renderPage") {
+                    result.notImplemented()
+                } else {
+                    val path = call.argument<String>("path")
+                    val requested = call.argument<Int>("page") ?: 1
+                    val thumbnail = call.argument<Boolean>("thumbnail") == true
+                    val highlightTerms = call.argument<List<String>>("highlightTerms").orEmpty().take(20)
+                    if (path == null) {
+                        result.error("pdf_missing", "PDF no disponible", null)
+                    } else {
+                        Thread {
+                            try {
+                                val file = java.io.File(path).canonicalFile
+                                val root = java.io.File(filesDir.parentFile, "app_flutter").canonicalFile
+                                require(file.path.startsWith(root.path + java.io.File.separator))
+                                val fd = android.os.ParcelFileDescriptor.open(file, android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+                                val renderer = try { android.graphics.pdf.PdfRenderer(fd) } catch (e: Exception) { fd.close(); throw e }
+                                renderer.use { pdf ->
+                                    require(pdf.pageCount > 0)
+                                    val index = (requested - 1).coerceIn(0, pdf.pageCount - 1)
+                                    pdf.openPage(index).use { page ->
+                                        val scale = if (thumbnail) minOf(220f / page.width, 300f / page.height) else minOf(1600f / page.width, 2200f / page.height)
+                                        val bitmap = android.graphics.Bitmap.createBitmap(
+                                            (page.width * scale).toInt().coerceAtLeast(1),
+                                            (page.height * scale).toInt().coerceAtLeast(1),
+                                            android.graphics.Bitmap.Config.ARGB_8888)
+                                        try {
+                                            bitmap.eraseColor(android.graphics.Color.WHITE)
+                                            page.render(bitmap, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                            if (Build.VERSION.SDK_INT >= 35 && highlightTerms.isNotEmpty()) {
+                                                val canvas = android.graphics.Canvas(bitmap)
+                                                val paint = android.graphics.Paint().apply { color = 0x55FFFF00 }
+                                                for (term in highlightTerms) {
+                                                    try {
+                                                        val matches = page.javaClass.getMethod("searchText", String::class.java).invoke(page, term.take(200)) as? List<*>
+                                                        for (match in matches.orEmpty()) {
+                                                            if (match == null) continue
+                                                            val bounds = match.javaClass.getMethod("getBounds").invoke(match) as? List<*>
+                                                            for (rect in bounds.orEmpty()) {
+                                                                if (rect is android.graphics.RectF) canvas.drawRect(rect.left * scale, rect.top * scale, rect.right * scale, rect.bottom * scale, paint)
+                                                            }
+                                                        }
+                                                    } catch (_: Exception) { /* text extraction unavailable on this page */ }
+                                                }
+                                            }
+                                            val stream = java.io.ByteArrayOutputStream()
+                                            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream)
+                                            val payload = mapOf("bytes" to stream.toByteArray(), "currentPage" to index + 1, "totalPages" to pdf.pageCount)
+                                            runOnUiThread { result.success(payload) }
+                                        } finally { bitmap.recycle() }
+                                    }
+                                }
+                            } catch (_: Exception) {
+                                runOnUiThread { result.error("pdf_unreadable", "No se pudo abrir el PDF", null) }
+                            }
+                        }.start()
+                    }
+                }
+            }
+
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "stk_haven/timezone",

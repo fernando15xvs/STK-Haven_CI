@@ -1,5 +1,8 @@
 class HabitStudyTimerState {
   final String taskId;
+  final String sessionId;
+  final bool focusMode;
+  final bool notifyOnEnd;
   final int targetSeconds;
   final int accumulatedSeconds;
   final DateTime? runningSince;
@@ -7,6 +10,9 @@ class HabitStudyTimerState {
 
   const HabitStudyTimerState({
     required this.taskId,
+    this.sessionId = '',
+    this.focusMode = false,
+    this.notifyOnEnd=false,
     required this.targetSeconds,
     this.accumulatedSeconds = 0,
     this.runningSince,
@@ -35,6 +41,9 @@ class HabitStudyTimerState {
   HabitStudyTimerState pause(DateTime now) {
     return HabitStudyTimerState(
       taskId: taskId,
+      sessionId: sessionId,
+      focusMode:focusMode,
+      notifyOnEnd:notifyOnEnd,
       targetSeconds: targetSeconds,
       accumulatedSeconds: elapsedSecondsAt(now),
       runningSince: null,
@@ -46,6 +55,9 @@ class HabitStudyTimerState {
     if (isRunning) return this;
     return HabitStudyTimerState(
       taskId: taskId,
+      sessionId: sessionId,
+      focusMode:focusMode,
+      notifyOnEnd:notifyOnEnd,
       targetSeconds: targetSeconds,
       accumulatedSeconds: accumulatedSeconds,
       runningSince: now,
@@ -55,6 +67,9 @@ class HabitStudyTimerState {
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'taskId': taskId,
+        'sessionId': sessionId,
+        'focusMode':focusMode,
+        'notifyOnEnd':notifyOnEnd,
         'targetSeconds': targetSeconds,
         'accumulatedSeconds': accumulatedSeconds,
         'runningSince': runningSince?.toIso8601String(),
@@ -67,6 +82,9 @@ class HabitStudyTimerState {
         (json['accumulatedSeconds'] as num?)?.toInt() ?? 0;
     return HabitStudyTimerState(
       taskId: '${json['taskId'] ?? ''}'.trim(),
+      sessionId: '${json['sessionId'] ?? ''}',
+      focusMode:json['focusMode']==true,
+      notifyOnEnd:json['notifyOnEnd']==true,
       targetSeconds: target.clamp(0, 86400).toInt(),
       accumulatedSeconds: accumulated < 0 ? 0 : accumulated,
       runningSince: json['runningSince'] == null

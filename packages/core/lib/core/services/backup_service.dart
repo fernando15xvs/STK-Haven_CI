@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:core/features/habits/application/habit_integrity_policy.dart';
 
 import 'package:hive/hive.dart';
 import 'package:core/database/hive/hive_boxes.dart';
@@ -953,13 +954,7 @@ class BackupService {
   Map<String, dynamic> _habitTasksBackupMap(
     Map<dynamic, dynamic> source,
   ) {
-    final filtered = <dynamic, dynamic>{};
-    for (final entry in source.entries) {
-      final key = entry.key.toString();
-      if (key.startsWith('runtime::')) continue;
-      filtered[entry.key] = entry.value;
-    }
-    return _normalizeMap(filtered);
+    return _normalizeMap(HabitIntegrityPolicy.backupWithoutPrivateNotes(source));
   }
 
   Map<String, dynamic> _normalizeMap(Map<dynamic, dynamic> source) {

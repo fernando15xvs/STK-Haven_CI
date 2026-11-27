@@ -1,5 +1,6 @@
 import 'package:core/database/hive/hive_boxes.dart';
 import 'package:core/domain/models/habit_task.dart';
+import 'habit_integrity_policy.dart';
 import 'package:core/features/habits/application/habit_schedule_service.dart';
 import 'package:core/features/habits/application/habit_task_templates.dart';
 import 'package:core/features/habits/application/habit_task_notification_service.dart';
@@ -72,6 +73,9 @@ class HabitTasksNotifier extends Notifier<HabitTasksState> {
     bool faithSpecific = false,
     String reference = '',
     String notes = '',
+    String sourceReference = '',
+    int? weeklyGoal,
+    double? targetQuantity,String quantityUnit='',
   }) async {
     final now = DateTime.now();
     final task = HabitTask(
@@ -90,6 +94,10 @@ class HabitTasksNotifier extends Notifier<HabitTasksState> {
       faithSpecific: faithSpecific,
       reference: reference.trim(),
       notes: notes.trim(),
+      sourceReference: sourceReference,
+      weeklyGoal: weeklyGoal?.clamp(1,7).toInt(),
+      targetQuantity:targetQuantity!=null&&targetQuantity.isFinite&&targetQuantity>0?targetQuantity:null,
+      quantityUnit:quantityUnit.trim(),
     );
     await _repository.saveTask(task);
     refresh();
@@ -113,13 +121,40 @@ class HabitTasksNotifier extends Notifier<HabitTasksState> {
       faithSpecific: template.faithSpecific,
       reference: template.reference,
       notes: template.notes,
+      sourceReference: template.key.isEmpty?'':'template:${template.key}',
     );
   }
 
+  final Map<String,Future<HabitTask>> _templateWrites={};
+  Future<HabitTask> ensureTemplate(HabitTaskTemplate template) {
+    final key=template.key.isEmpty?template.title:template.key;
+    final current=_templateWrites[key];
+    if(current!=null)return current;
+    final operation=_ensureTemplate(template);
+    _templateWrites[key]=operation;
+    return operation.whenComplete(()=>_templateWrites.remove(key));
+  }
+  Future<HabitTask> _ensureTemplate(HabitTaskTemplate template) async {
+    final identity='template:${template.key}';
+    for(final task in _repository.getTasks()){
+      if(task.source==HabitTaskSource.coach)continue;
+      if((template.key.isNotEmpty&&task.sourceReference==identity)||
+         (task.sourceReference.isEmpty&&task.title==template.title&&task.category==template.category&&task.type==template.type)){
+        if(template.key.isEmpty||task.sourceReference==identity)return task;
+        final migrated=task.copyWith(sourceReference:identity);
+        await _repository.saveTask(migrated);refresh();return migrated;
+      }
+    }
+    return createFromTemplate(template);
+  }
+
   Future<void> updateTask(HabitTask task) async {
-    await _repository.saveTask(
-      task.copyWith(updatedAt: DateTime.now()),
-    );
+    final next=task.copyWith(updatedAt: DateTime.now());
+    await _repository.saveTask(next);
+    if(next.source!=HabitTaskSource.coach&&next.reminderEnabled){
+      final ok=await HabitTaskNotificationService.scheduleNext(next,requestPermissionIfNeeded:false);
+      if(!ok)await _repository.saveTask(next.copyWith(reminderEnabled:false));
+    }
     refresh();
   }
 
@@ -160,6 +195,11 @@ class HabitTasksNotifier extends Notifier<HabitTasksState> {
   }
 
   Future<void> archiveTask(String taskId) async {
+    final task = _repository.getTask(taskId);
+    if (task == null || task.source == HabitTaskSource.coach) return;
+    if(_repository.getActiveStudyTimer()?.taskId==taskId)throw StateError('Finaliza o descarta la sesión activa primero');
+    await HabitTaskNotificationService.cancel(taskId);
+    await _repository.saveTask(task.copyWith(reminderEnabled:false));
     await _repository.archiveTask(
       taskId,
       updatedAt: DateTime.now(),
@@ -173,12 +213,23 @@ class HabitTasksNotifier extends Notifier<HabitTasksState> {
     String note = '',
     HabitTaskCompletionStatus status = HabitTaskCompletionStatus.completed,
     DateTime? completedAt,
+    String? completionId,
+    double? quantity,
   }) async {
+    final time=completedAt ?? DateTime.now();
+    final task=_repository.getTask(taskId);
+    if(task==null || task.archived) throw StateError('Hábito no disponible');
+    if(quantity!=null&&(!quantity.isFinite||quantity<=0))throw ArgumentError('Cantidad inválida');
+    final existing=_repository.getCompletions(taskId:taskId);
+    for(final row in existing){
+      if(row.id==completionId || (task.type==HabitTaskType.checklist && HabitIntegrityPolicy.day(row.completedAt)==HabitIntegrityPolicy.day(time))) return row;
+    }
     final completion = HabitTaskCompletion(
-      id: _uuid.v4(),
+      id: completionId ?? (task.type==HabitTaskType.checklist ? 'daily:${taskId}:${HabitIntegrityPolicy.day(time).toIso8601String()}' : _uuid.v4()),
       taskId: taskId,
-      completedAt: completedAt ?? DateTime.now(),
+      completedAt: time,
       minutesSpent: minutesSpent.clamp(0, 1440).toInt(),
+      quantity:quantity,
       note: note.trim(),
       status: status,
     );
@@ -258,8 +309,7 @@ final dueHabitTasksTodayProvider = Provider<List<HabitTask>>((ref) {
   return tasks
       .where(
         (task) =>
-            HabitScheduleService.isDueOn(task, today) &&
-            !HabitScheduleService.isResolvedOn(task, completions, today),
+            HabitIntegrityPolicy.pending(task, completions, today),
       )
       .toList(growable: false);
 });

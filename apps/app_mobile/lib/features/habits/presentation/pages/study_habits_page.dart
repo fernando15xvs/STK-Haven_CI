@@ -18,7 +18,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class StudyHabitsPage extends ConsumerWidget {
-  const StudyHabitsPage({super.key});
+  const StudyHabitsPage({super.key,this.faithOnly=false});
+  final bool faithOnly;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -67,9 +68,9 @@ class StudyHabitsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Study & Hábitos'),
+        title: Text(faithOnly?'Planes de estudio bíblico':'Study & Hábitos'),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: faithOnly?null:FloatingActionButton.extended(
         onPressed: () => _showCreateTaskDialog(context, ref),
         icon: const Icon(Icons.add_rounded),
         label: const Text('Nueva tarea'),
@@ -81,6 +82,7 @@ class StudyHabitsPage extends ConsumerWidget {
             child: ListView(
               padding: SecondaryScreenInsets.scrollPadding(context, const EdgeInsets.fromLTRB(20, 20, 20, 110)),
               children: [
+                if(!faithOnly)...[
                 _OverviewCard(
                   pendingToday: dueToday.length,
                   completedToday: state.completions
@@ -119,7 +121,8 @@ class StudyHabitsPage extends ConsumerWidget {
                     },
                   ),
                 ],
-                if (faithEnabled && !hasBibleTemplate) ...[
+                ],
+                if (!faithOnly && faithEnabled && !hasBibleTemplate) ...[
                   const SizedBox(height: 16),
                   Card(
                     child: Padding(
@@ -224,6 +227,7 @@ class StudyHabitsPage extends ConsumerWidget {
                   icon: const Icon(Icons.library_books_outlined),
                   label: const Text('Buscar recursos y licencias'),
                 ),
+                if(!faithOnly)...[
                 const SizedBox(height: 24),
                 _SectionTitle(
                   title: 'Para hoy',
@@ -271,7 +275,7 @@ class StudyHabitsPage extends ConsumerWidget {
                     text: 'Todavía no has creado tareas.',
                   )
                 else
-                  for (final task in visibleTasks) ...[
+                  for (final task in visibleTasks.where((t)=>!dueToday.any((d)=>d.id==t.id))) ...[
                     _HabitTaskCard(
                       task: task,
                       streak: HabitScheduleService.currentStreak(
@@ -325,6 +329,7 @@ class StudyHabitsPage extends ConsumerWidget {
                       ],
                     ),
                   ),
+                ],
               ],
             ),
           ),
