@@ -8,6 +8,7 @@ import 'package:core/features/nutrition/application/adult_activity_suggestion.da
 import 'package:core/features/nutrition/application/wellness_rest_guidance.dart';
 import 'package:core/features/workout/application/workout_history_provider.dart';
 import 'package:core/features/nutrition/application/adult_macro_guide.dart';
+import 'package:core/features/nutrition/application/nutrition_daily_context.dart' show TrainingMacroExample;
 import 'package:core/features/nutrition/application/latest_body_measurements.dart';
 import 'package:core/features/nutrition/application/nutrition_weight_trend.dart';
 import 'package:core/features/nutrition/application/nutrition_plan_measurement_review.dart';
@@ -921,8 +922,8 @@ abstract class _NutritionPageStateBase
         children:[
           const Padding(padding:EdgeInsets.fromLTRB(24,0,24,12),
             child:Text('Confirma solo lo que realmente comiste. Si los ingredientes son distintos, corrige y vuelve a analizar antes de registrar.')),
-          for(final option in const <double,String>{0.25:'Un cuarto',0.5:'La mitad',0.75:'Tres cuartos',1.0:'Toda la porción'}.entries)
-            SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,option.key),
+          for(final option in const <int,String>{25:'Un cuarto',50:'La mitad',75:'Tres cuartos',100:'Toda la porción'}.entries)
+            SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,option.key / 100),
               child:Text('Confirmar: ${option.value}')),
           SimpleDialogOption(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancelar')),
         ],
