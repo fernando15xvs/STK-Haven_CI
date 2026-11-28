@@ -99,108 +99,6 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget>
     await _syncReminder();
   }
 
-  Future<void> _showSettings() async {
-    final current = ref.read(hydrationPreferencesProvider);
-    var targetMl = current.targetMl;
-    var reminderEnabled = current.reminderEnabled;
-    var reminderHour = current.reminderHour;
-
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setSheetState) {
-          return SafeArea(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                20,
-                20,
-                20 + MediaQuery.viewInsetsOf(context).bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Configurar hidratación',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'La meta es personalizable y sirve solo como referencia de registro; no es una recomendación médica.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Meta diaria: ${(targetMl / 1000).toStringAsFixed(targetMl % 1000 == 0 ? 0 : 2)} L',
-                  ),
-                  Slider(
-                    value: targetMl.toDouble(),
-                    min: 1000,
-                    max: 5000,
-                    divisions: 16,
-                    label: '$targetMl ml',
-                    onChanged: (value) =>
-                        setSheetState(() => targetMl = value.round()),
-                  ),
-                  SwitchListTile.adaptive(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Recordarme si aún no llego a mi meta'),
-                    value: reminderEnabled,
-                    onChanged: (value) =>
-                        setSheetState(() => reminderEnabled = value),
-                  ),
-                  if (reminderEnabled) ...[
-                    const SizedBox(height: 8),
-                    DropdownButtonFormField<int>(
-                      initialValue: reminderHour,
-                      decoration: const InputDecoration(
-                        labelText: 'Hora del recordatorio',
-                      ),
-                      items: [
-                        for (final hour in [12, 15, 18, 20, 22])
-                          DropdownMenuItem(
-                            value: hour,
-                            child: Text(
-                              '${hour.toString().padLeft(2, '0')}:00',
-                            ),
-                          ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setSheetState(() => reminderHour = value);
-                        }
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: FilledButton(
-                      onPressed: () => Navigator.pop(sheetContext, true),
-                      child: const Text('Guardar'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-
-    if (saved != true) return;
-    await ref.read(hydrationPreferencesProvider.notifier).setTargetMl(targetMl);
-    await ref
-        .read(hydrationPreferencesProvider.notifier)
-        .setReminderHour(reminderHour);
-    await ref
-        .read(hydrationPreferencesProvider.notifier)
-        .setReminderEnabled(reminderEnabled);
-    await _syncReminder(requestPermission: reminderEnabled);
-  }
-
   @override
   Widget build(BuildContext context) {
     // Dashboard refreshes daily totals at midnight even when this tile is
@@ -241,13 +139,6 @@ class _HydrationWidgetState extends ConsumerState<HydrationWidget>
                   widget.compact ? 'Agua' : 'Hidratación diaria',
                   style: AppTypography.labelLarge,
                 ),
-              ),
-              IconButton(
-                tooltip: 'Configurar hidratación y recordatorios',
-                onPressed: _showSettings,
-                icon: const Icon(Icons.tune_rounded, size: 20),
-                color: colors.textSecondary,
-                visualDensity: VisualDensity.compact,
               ),
             ],
           ),

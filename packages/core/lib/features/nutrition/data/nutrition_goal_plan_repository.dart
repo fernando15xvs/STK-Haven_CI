@@ -18,6 +18,28 @@ class NutritionGoalPlanRepository {
       return NutritionGoalPlan.fromJson(Map<String,dynamic>.from(value));
     }catch(_){return null;}
   }
-  Future<void> save(NutritionGoalPlan plan)=>_metadata.put(_key,plan.toJson());
+  /// Archive prior explicitly saved calculations in the same account-scoped
+  /// record and atomic write. Pause/review edits are not new calculations.
+  List<NutritionGoalPlan> previousPlans(){
+    final raw=_metadata.get(_key);
+    if(raw is! Map || raw['previousPlans'] is! List)return const [];
+    final plans=<NutritionGoalPlan>[];
+    for(final value in (raw['previousPlans'] as List).take(24)){
+      if(value is! Map)continue;
+      try{plans.add(NutritionGoalPlan.fromJson(Map<String,dynamic>.from(value)));}
+      catch(_){/* Skip invalid old snapshot. */}
+    }
+    return List.unmodifiable(plans);
+  }
+
+  Future<void> save(NutritionGoalPlan plan) async {
+    final previous=read();
+    final history=previousPlans();
+    final archive=[
+      if(previous!=null && previous.savedAt!=plan.savedAt) previous,
+      ...history,
+    ].take(24).map((e)=>e.toJson()).toList();
+    await _metadata.put(_key,{...plan.toJson(),'previousPlans':archive});
+  }
   Future<void> clear()=>_metadata.delete(_key);
 }

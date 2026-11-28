@@ -56,6 +56,23 @@ void main() {
     expect(repository.getEntries().single.estimate.dishName, 'Plato mixto');
   });
 
+  test('consumption is explicit, reversible and isolated by owner',() async {
+    final first=NutritionHistoryRepository(box,ownerId:'a');
+    final second=NutritionHistoryRepository(box,ownerId:'b');
+    final entry=NutritionHistoryEntry(id:'same',analyzedAt:DateTime(2026,11,27),
+      dishHint:'',estimate:estimate('Plato'));
+    await first.save(entry);
+    await second.save(entry);
+    expect(first.getEntries().single.consumedAt,isNull);
+    final date=DateTime(2026,11,27,13);
+    await first.setConsumption('same',date);
+    await first.setFavorite('same',true);
+    expect(first.getEntries().single.consumedAt,date);
+    expect(second.getEntries().single.consumedAt,isNull);
+    await first.setConsumption('same',null);
+    expect(first.getEntries().single.consumedAt,isNull);
+  });
+
   test('entries can be deleted individually and cleared', () async {
     final repository = NutritionHistoryRepository(box);
     for (final id in ['a', 'b']) {

@@ -32,6 +32,10 @@ import 'package:core/features/nutrition/data/nutrition_development_config.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_goal_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:core/features/nutrition/application/nutrition_daily_context.dart';
+import 'package:core/features/recovery/application/sleep_diary.dart';
+import 'package:gym_tracker/features/nutrition/presentation/widgets/nutrition_wellness_settings.dart';
+import 'package:gym_tracker/features/nutrition/presentation/widgets/nutrition_overview_sections.dart';
 import 'package:gym_tracker/core/theme/app_ui_styles.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -188,6 +192,7 @@ class _NutritionIntelligencePageState
     _analyzing=false;
     _invalidateEnergyDraft();
     _activePlan=null;
+    _showMobilePlanner=false;
     _message=null;
   }
 
@@ -256,23 +261,23 @@ class _NutritionIntelligencePageState
     );
     if (widget.mobileCompactLayout) {
       return PopScope(
-        canPop: !_showMobileHistory,
+        canPop: !_showMobileHistory && !_showMobilePlanner,
         onPopInvokedWithResult: (didPop, _) {
-          if (!didPop && _showMobileHistory && mounted) {
-            setState(() => _showMobileHistory = false);
+          if (!didPop && (_showMobileHistory || _showMobilePlanner) && mounted) {
+            setState(() { _showMobileHistory = false; _showMobilePlanner = false; });
           }
         },
         child: Scaffold(
         appBar: AppBar(
-          title: Text(_showMobileHistory ? 'Mis análisis' : 'Nutrición'),
-          leading: _showMobileHistory
+          title: Text(_showMobileHistory ? 'Mis análisis' : _showMobilePlanner ? 'Mi plan' : 'Nutrición'),
+          leading: (_showMobileHistory || _showMobilePlanner)
               ? IconButton(
                   tooltip: 'Volver a Nutrición',
-                  onPressed: () => setState(() => _showMobileHistory = false),
+                  onPressed: () => setState(() { _showMobileHistory = false; _showMobilePlanner = false; }),
                   icon: const Icon(Icons.arrow_back_rounded),
                 )
               : null,
-          actions: _showMobileHistory
+          actions: (_showMobileHistory || _showMobilePlanner)
               ? null
               : [
                   if (widget.onOpenInternalDemo != null)
@@ -282,19 +287,14 @@ class _NutritionIntelligencePageState
                       onPressed: widget.onOpenInternalDemo,
                       icon: const Icon(Icons.science_outlined),
                     ),
-                  IconButton(
-                    key: const ValueKey('nutrition_mobile_history_appbar'),
-                    tooltip: 'Mis análisis guardados',
-                    onPressed: () => setState(() => _showMobileHistory = true),
-                    icon: const Icon(Icons.history_rounded),
-                  ),
+
                 ],
         ),
         body: SafeArea(
           bottom: false, child: ListView(
             key: ValueKey(_showMobileHistory
                 ? 'nutrition_mobile_history_view'
-                : 'nutrition_mobile_overview'),
+                : _showMobilePlanner ? 'nutrition_mobile_plan_view' : 'nutrition_mobile_overview'),
             padding: SecondaryScreenInsets.scrollPadding(context, EdgeInsets.fromLTRB(
               AppUiTokens.of(context).pageHorizontalPadding, 12,
               AppUiTokens.of(context).pageHorizontalPadding, 32)),
@@ -302,9 +302,9 @@ class _NutritionIntelligencePageState
                 ? [
                     _buildHistory(colors),
                   ]
+                : _showMobilePlanner && hasAdultAccess
+                ? [_buildEnergyPlanner(colors)]
                 : [
-                    _buildFoodVision(colors),
-                    const SizedBox(height: 20),
                     StkMobileNutritionGoalSelector(
                       audience: StkAgeAwareNutritionPlans.audience(
                         declaredAge: ref.watch(
@@ -314,9 +314,7 @@ class _NutritionIntelligencePageState
                       ),
                       selected: _stkGoal,
                       onSelected: _chooseStkGoal,
-                      onOpenAdultPlanner: hasAdultAccess
-                          ? _openAdultPlanFromGoals
-                          : null,
+                      onOpenAdultPlanner: null,
                     ),
                     const SizedBox(height: 20),
                     if (hasAdultAccess)
@@ -335,6 +333,12 @@ class _NutritionIntelligencePageState
                         access: access,
                         onRefreshAdultAccess: widget.onRefreshAdultAccess,
                       ),
+                    const SizedBox(height: 16),
+                    _buildMobileWellness(colors, hasAdultAccess),
+                    const SizedBox(height: 16),
+                    if (hasAdultAccess) _buildMobileFollowUp(colors),
+                    const SizedBox(height: 16),
+                    _buildFoodVision(colors),
                     const SizedBox(height: 14),
                     _buildMobileHistorySummary(colors),
                   ],
@@ -412,50 +416,35 @@ class _NutritionIntelligencePageState
     );
   }
 
-  Widget _buildMobileAdultPlan(ColorScheme colors) {
-    final plan = _activePlan;
-    return Column(
-      key: const ValueKey('nutrition_mobile_adult_plan'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Tu plan', style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w700,
-        )),
-        const SizedBox(height: 5),
-        Text(
-          plan == null
-              ? 'Utiliza tus medidas guardadas para calcular tu objetivo.'
-              : plan.isPaused
-                  ? 'Tu plan está en pausa.'
-                  : 'Plan guardado: ${plan.estimate.targetLow}–'
-                      '${plan.estimate.targetHigh} kcal/día',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
-        ),
-        if (NutritionDevelopmentConfig.enabled)
-          const Text('Compilación de pruebas · estimaciones, no prescripción.'),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            key: const ValueKey('nutrition_mobile_review_adult_plan'),
-            onPressed: () => setState(
-              () => _showMobilePlanner = !_showMobilePlanner,
-            ),
-            icon: Icon(_showMobilePlanner
-                ? Icons.expand_less_rounded
-                : Icons.tune_rounded),
-            label: Text(_showMobilePlanner
-                ? 'Ocultar detalles'
-                : plan == null ? 'Calcular mi objetivo' : 'Revisar plan'),
-          ),
-        ),
-        if (_showMobilePlanner) ...[
-          const SizedBox(height: 6),
-          _buildEnergyPlanner(colors),
-        ],
-      ],
-    );
+  Widget _buildMobileAdultPlan(ColorScheme colors) => NutritionPlanOverview(
+    plan:_activePlan,goal:_goal,onReview:_openAdultPlanFromGoals,
+    onMacros:(plan)=>_showAdultMacroGuide(plan.estimate,savedPlan:plan));
+
+  Widget _buildMobileWellness(ColorScheme colors,bool adultAuthorized) =>
+    NutritionWellnessOverview(intent:_stkGoal,adultAuthorized:adultAuthorized,
+      onHistory:_showWellnessGoalHistory);
+
+  Widget _buildMobileFollowUp(ColorScheme colors) => NutritionFollowUp(
+    plan:_activePlan,previousCount:_planRepository?.previousPlans().length??0,
+    onMeasurements:widget.onOpenMeasurements,onReview:_openAdultPlanFromGoals,
+    onPrevious:_showPreviousPlans);
+
+  Future<void> _showPreviousPlans() async {
+    final token=_currentNutritionToken;
+    if(!_hasAdultNumericAccess || !_sameMutationSession(token))return;
+    final allowed=await NutritionAdultAccessService(Supabase.instance.client).hasVerifiedAccess();
+    if(!mounted||!allowed||!_hasAdultNumericAccess||!_sameMutationSession(token))return;
+    final previous=_planRepository?.previousPlans()??const <NutritionGoalPlan>[];
+    await showModalBottomSheet<void>(context:context,isScrollControlled:true,
+      useSafeArea:true,showDragHandle:true,builder:(ctx)=>SafeArea(top:false,
+        child:SingleChildScrollView(padding:const EdgeInsets.all(20),
+          child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            Text('Planes anteriores',style:Theme.of(ctx).textTheme.titleLarge),
+            const Text('Referencias históricas, no objetivos activos.'),
+            for(final plan in previous) ListTile(contentPadding:EdgeInsets.zero,
+              title:Text('${DateFormat('dd/MM/yyyy').format(plan.savedAt)} · ${plan.goal.name}'),
+              subtitle:Text('${plan.estimate.targetLow}–${plan.estimate.targetHigh} kcal/día · ${plan.weightKg.toStringAsFixed(1)} kg')),
+          ]))));
   }
 
   Future<void> _chooseStkGoal(StkNutritionIntent selected) async {
@@ -500,31 +489,24 @@ class _NutritionIntelligencePageState
 
   void _openAdultPlanFromGoals() {
     if (!_hasAdultNumericAccess) return;
-    if (widget.mobileCompactLayout && !_showMobilePlanner) {
-      setState(() => _showMobilePlanner = true);
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        final target = _energyFormKey.currentContext;
-        if (target != null) {
-          Scrollable.ensureVisible(
-            target,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            alignment: 0.04,
-          );
+    if (widget.mobileCompactLayout) {
+      setState(() {
+        final plan=_activePlan;
+        if(plan!=null && _activity==null){
+          _activity=plan.activityLevel;
+          _equationSex=plan.equationSex;
+          // Do not overwrite the newly selected intent with the saved goal.
+          final profile=ref.read(userExperienceProfileProvider).value;
+          final age=profile?.optionalDemographicsConsented==true?profile?.ageAt(DateTime.now()):null;
+          _ageController.text=(age??plan.ageYears).toString();
         }
+        _showMobilePlanner=true;
       });
       return;
     }
     final target = _energyFormKey.currentContext;
-    if (target != null) {
-      Scrollable.ensureVisible(
-        target,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        alignment: 0.04,
-      );
-    }
+    if(target!=null)Scrollable.ensureVisible(target,
+      duration:const Duration(milliseconds:300),alignment:0.04);
   }
 
   Widget _buildEnergyPlanner(ColorScheme colors) {
@@ -581,7 +563,7 @@ class _NutritionIntelligencePageState
               runSpacing: 12,
               children: [
                 SizedBox(
-                  width: 150,
+                  width: double.infinity,
                   child: TextField(
                     controller: _ageController,
                     keyboardType: TextInputType.number,
@@ -590,7 +572,8 @@ class _NutritionIntelligencePageState
                       labelText: 'Edad',
                       hintText: permittedDemographics?.ageAt(DateTime.now())
                         ?.toString(),
-                      helperText: 'De Perfil, o indícala para este cálculo.',
+                      helperText: 'De Perfil o para este cálculo.',
+                      helperMaxLines: 3,
                     ),
                   ),
                 ),
@@ -648,6 +631,7 @@ class _NutritionIntelligencePageState
               decoration: const InputDecoration(
                 labelText: 'Parámetro fisiológico de la ecuación',
                 helperText: 'Solo para estimar energía; no define tu identidad.',
+                helperMaxLines: 3,
               ),
               items: const [
                 DropdownMenuItem(
@@ -674,6 +658,7 @@ class _NutritionIntelligencePageState
               decoration: const InputDecoration(
                 labelText: 'Actividad habitual',
                 helperText: 'Incluye también tu actividad fuera del entrenamiento.',
+                helperMaxLines: 3,
               ),
               items: const [
                 DropdownMenuItem(
@@ -744,7 +729,9 @@ class _NutritionIntelligencePageState
                     color:colors.onSurfaceVariant)),
               ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<EnergyGoal>(
+            if(widget.mobileCompactLayout)
+              Text('Objetivo: ${StkAgeAwareNutritionPlans.label(_stkGoal)}',style:Theme.of(context).textTheme.titleMedium)
+            else DropdownButtonFormField<EnergyGoal>(
               value: _goal,
               decoration: const InputDecoration(labelText: 'Objetivo'),
               items: const [
@@ -1119,12 +1106,16 @@ class _NutritionIntelligencePageState
           TextButton(onPressed:()=>Navigator.pop(ctx,'water'),
             child:const Text('Revisar agua')),
           TextButton(
-            onPressed:stepSuggestion==null?null:
+            onPressed:stepSuggestion==null&&!widget.mobileCompactLayout?null:
               ()=>Navigator.pop(ctx,'steps'),
             child:const Text('Revisar pasos')),
         ],
       ));
     if(!mounted)return;
+    if(widget.mobileCompactLayout && (selected=='water'||selected=='steps')){
+      await openNutritionWellnessSettings(context,water:selected=='water',adultAuthorized:_hasAdultNumericAccess);
+      return;
+    }
     if(selected=='water')await _reviewWaterTarget();
     if(selected=='steps')await _reviewStepTarget();
   }
@@ -1549,6 +1540,8 @@ class _NutritionIntelligencePageState
                   ),
             ),
             const SizedBox(height: 10),
+            if(widget.mobileCompactLayout && _hasAdultNumericAccess)
+              _buildConfirmedMeals(colors),
             if (_history.isNotEmpty)
               Wrap(spacing:8,runSpacing:8,children:[
                 ChoiceChip(
@@ -1635,10 +1628,17 @@ class _NutritionIntelligencePageState
                         ?Icons.favorite_rounded:Icons.favorite_border_rounded,
                         color:entry.isFavorite?colors.primary:null),
                     ),
-                    IconButton(
-                      tooltip:'Eliminar',
-                      onPressed:()=>_deleteHistoryEntry(entry.id),
-                      icon:const Icon(Icons.delete_outline),
+                    PopupMenuButton<String>(
+                      tooltip:'Opciones de análisis',
+                      onSelected:(action){
+                        if(action=='delete')_deleteHistoryEntry(entry.id);
+                        if(action=='consumed')_setMealConsumption(entry);
+                      },
+                      itemBuilder:(_)=>[
+                        if(widget.mobileCompactLayout && _hasAdultNumericAccess && entry.estimate.numericNutritionAvailable)
+                          PopupMenuItem(value:'consumed',child:Text(entry.consumedAt==null?'Registrar comida consumida':'Quitar registro de consumo')),
+                        const PopupMenuItem(value:'delete',child:Text('Eliminar')),
+                      ],
                     ),
                   ]),
                 ),
@@ -1647,6 +1647,40 @@ class _NutritionIntelligencePageState
       );
     if (widget.mobileCompactLayout) return content;
     return Card(child: content);
+  }
+
+  Widget _buildConfirmedMeals(ColorScheme colors) {
+    final now=DateTime.now();
+    final confirmed=_history.where((e)=>e.consumedAt!=null &&
+      SleepDiary.dayKey(e.consumedAt!.toLocal())==SleepDiary.dayKey(now)).toList();
+    return Card(color:colors.surface,child:Padding(padding:const EdgeInsets.all(12),child:Column(
+      crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text('Comidas confirmadas hoy',style:Theme.of(context).textTheme.titleMedium),
+        Text('${confirmed.length} registros voluntarios · historial parcial'),
+        const Text('Analizar una foto no registra consumo. Confirma solo el plato y porción realmente consumidos. No se calcula un saldo de calorías.'),
+      ])));
+  }
+
+  Future<void> _setMealConsumption(NutritionHistoryEntry entry) async {
+    final token=_currentNutritionToken;
+    if(!_hasAdultNumericAccess||!_sameMutationSession(token)||!entry.estimate.numericNutritionAvailable)return;
+    final remove=entry.consumedAt!=null;
+    final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:Text(remove?'Quitar registro de consumo':'Registrar comida de hoy'),
+      content:Text(remove?'Se conserva el análisis de Food Vision.':
+        'Confirma que consumiste hoy el plato y la porción descrita. Si no coincide, corrige el análisis antes de registrar. La estimación no es una medición.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancelar')),
+        FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(remove?'Quitar registro':'Confirmar consumo'))],
+    ));
+    if(confirmed!=true||!mounted||!_sameMutationSession(token))return;
+    try{
+      final allowed=await NutritionAdultAccessService(Supabase.instance.client).hasVerifiedAccess();
+      if(!mounted||!allowed||!_hasAdultNumericAccess||!_sameMutationSession(token))return;
+      await _historyRepository.setConsumption(entry.id,remove?null:DateTime.now());
+      if(mounted&&_sameMutationSession(token))setState(()=>_history=_historyRepository.getEntries());
+    }catch(_){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('No se pudo actualizar el registro de consumo.')));
+    }
   }
 
   Future<void> _setHistoryFavorite(NutritionHistoryEntry entry) async {
@@ -1670,6 +1704,8 @@ class _NutritionIntelligencePageState
     final hour = date.hour.toString().padLeft(2, '0');
     final minute = date.minute.toString().padLeft(2, '0');
     final details = <String>['$day/$month/${date.year} $hour:$minute'];
+    if(_hasAdultNumericAccess && entry.consumedAt!=null)
+      details.add('Consumo confirmado · ${DateFormat('dd/MM').format(entry.consumedAt!.toLocal())}');
     if (_hasAdultNumericAccess &&
         entry.estimate.numericNutritionAvailable &&
         entry.estimate.caloriesLow != null &&
@@ -1793,6 +1829,7 @@ class _NutritionIntelligencePageState
   }
 
   void _calculateEnergy() {
+    if(!_hasAdultNumericAccess || !_sameNutritionOwner)return;
     try {
       final ageText = _ageController.text.trim();
       final savedDemographics=ref.read(userExperienceProfileProvider).value;
@@ -1847,19 +1884,21 @@ class _NutritionIntelligencePageState
 
   void _preparePlanReview(NutritionGoalPlan plan) {
     if(!_hasAdultNumericAccess)return;
-    final currentAge=ref.read(userExperienceProfileProvider).value
-      ?.ageAt(DateTime.now());
+    final profile=ref.read(userExperienceProfileProvider).value;
+    final currentAge=profile?.optionalDemographicsConsented==true?profile?.ageAt(DateTime.now()):null;
     setState((){
       // This changes editable form fields, NOT the saved plan or Medidas.
       _ageController.text=(currentAge??plan.ageYears).toString();
       _equationSex=plan.equationSex;
       _activity=plan.activityLevel;
+      if(!widget.mobileCompactLayout) {
       _goal=plan.goal;
       _stkGoal = switch (plan.goal) {
         EnergyGoal.maintenance => StkNutritionIntent.maintenance,
         EnergyGoal.gradualGain => StkNutritionIntent.volume,
         EnergyGoal.gradualLoss => StkNutritionIntent.deficit,
       };
+      }
       _invalidateEnergyDraft();
     });
     final target=_energyFormKey.currentContext;
@@ -1945,7 +1984,7 @@ class _NutritionIntelligencePageState
     final confirmed=await showDialog<bool>(
       context:context,builder:(ctx)=>AlertDialog(
         title:const Text('Quitar objetivo nutricional'),
-        content:const Text('Se elimina solo este plan local. '
+        content:const Text('Se elimina el plan local y sus referencias anteriores. '
           'Tus registros de Medidas, agua, pasos y Food Vision se conservan.'),
         actions:[
           TextButton(onPressed:()=>Navigator.pop(ctx,false),
@@ -1964,7 +2003,9 @@ class _NutritionIntelligencePageState
     }
   }
 
-  Future<void> _showAdultMacroGuide(EnergyEstimate estimate) async {
+  Future<void> _showAdultMacroGuide(EnergyEstimate estimate, {NutritionGoalPlan? savedPlan}) async {
+    final token=_currentNutritionToken;
+    if(!_sameMutationSession(token))return;
     final age=ref.read(userExperienceProfileProvider).value
       ?.ageAt(DateTime.now());
     // The published adult AMDR covers age 19+, unlike the adult energy
@@ -1977,7 +2018,7 @@ class _NutritionIntelligencePageState
     }
     final verified=await NutritionAdultAccessService(
       Supabase.instance.client).hasVerifiedAccess();
-    if(!mounted || !verified || !_hasAdultNumericAccess)return;
+    if(!mounted || !verified || !_hasAdultNumericAccess || !_sameMutationSession(token))return;
 
     late final AdultMacroGuide macros;
     try{
@@ -1988,6 +2029,10 @@ class _NutritionIntelligencePageState
           'con el rango de energía actual.')));
       return;
     }
+    final profile=savedPlan==null?_calculatedProfile:AdultEnergyProfile(
+      ageYears:savedPlan.ageYears,weightKg:savedPlan.weightKg,heightCm:savedPlan.heightCm,
+      equationSex:savedPlan.equationSex,activityLevel:savedPlan.activityLevel,goal:savedPlan.goal);
+    final example=profile==null?null:TrainingMacroExample.calculate(profile,estimate);
     await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
       title:const Text('Macronutrientes: orientación general'),
       content:SingleChildScrollView(child:Column(
@@ -1996,6 +2041,20 @@ class _NutritionIntelligencePageState
         children:[
           const Text('Rangos amplios para adultos sanos (19+), basados '
             'en referencias AMDR. No son una meta individual de gimnasio.'),
+          if(example!=null)...[
+            const SizedBox(height:12),
+            const Text('Ejemplo conjunto para adultos sanos que entrenan fuerza'),
+            const SizedBox(height:8),
+            for(final item in [('Proteínas',example.proteinG,4),('Carbohidratos',example.carbsG,4),('Grasas',example.fatG,9)])
+              Padding(padding:const EdgeInsets.only(bottom:8),child:Column(
+                crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  Text('${item.$1}: ${item.$2} g'),
+                  LinearProgressIndicator(value:item.$2*item.$3/example.energy),
+                ])),
+            Text('Total aproximado: ${example.energy} kcal. Ejemplo opcional, no dieta ni meta guardada.'),
+            const Text('Referencia de proteína: ISSN (2017); límites AMDR.'),
+            const Divider(),
+          ],
           const SizedBox(height:14),
           Text('Proteínas · 10–35 %: '
             '${macros.proteinGramsLow}–${macros.proteinGramsHigh} g/día'),
@@ -2077,6 +2136,11 @@ class _NutritionIntelligencePageState
         content:Text('El acceso adulto cambió. No se guardó el plan.')));
       return;
     }
+    if(!identical(profile,_calculatedProfile) || !identical(estimate,_energyEstimate) ||
+        LatestBodyMeasurements.fromRecords(ref.read(bodyMeasurementProvider)).fingerprint!=_calculationMeasurementIds){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('El cálculo cambió. Revísalo antes de guardar.')));
+      return;
+    }
     final plan=NutritionGoalPlan(
       savedAt:DateTime.now(),
       accessCheckedAt:DateTime.now().toUtc(),
@@ -2095,7 +2159,7 @@ class _NutritionIntelligencePageState
     try{
       await repo.save(plan);
       if(mounted && _sameMutationSession(sessionAtStart)){
-        setState(()=>_activePlan=plan);
+        setState((){_activePlan=plan;if(widget.mobileCompactLayout)_showMobilePlanner=false;});
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content:const Text('Plan guardado. Las metas de agua y pasos '
             'no se han modificado.'),
@@ -2623,11 +2687,10 @@ class _EnergyResultCard extends StatelessWidget {
             '${estimate.maintenanceLow}–${estimate.maintenanceHigh} kcal/día',
           ),
           const SizedBox(height: 10),
-          for (final assumption in estimate.assumptions)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text('• $assumption'),
-            ),
+          ExpansionTile(tilePadding:EdgeInsets.zero,title:const Text('Cómo interpretar este rango'),children:[
+            for(final assumption in estimate.assumptions) Padding(
+              padding:const EdgeInsets.only(bottom:4),child:Text('• $assumption')),
+          ]),
         ],
       ),
     );

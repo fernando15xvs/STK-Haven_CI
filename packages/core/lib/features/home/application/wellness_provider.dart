@@ -17,6 +17,20 @@ class HydrationPreferencesNotifier extends Notifier<HydrationPreferences> {
   @override
   HydrationPreferences build() => _repository.getHydrationPreferences();
 
+  /// Single persisted edit for the nutrition settings screen.
+  Future<void> configure({required int targetMl, required bool reminderEnabled,
+      required int reminderHour}) async {
+    final target = targetMl.clamp(1000,5000).toInt();
+    final updated = state.copyWith(targetMl:target,
+      reminderEnabled:reminderEnabled, reminderHour:reminderHour.clamp(6,22).toInt(),
+      goalChanges: target==state.targetMl ? state.goalChanges :
+        WellnessGoalChange.append(state.goalChanges, WellnessGoalChange(
+          previousTarget:state.targetMl,newTarget:target,
+          changedAt:DateTime.now().toUtc(),source:WellnessGoalChangeSource.nutritionReview)));
+    await _repository.saveHydrationPreferences(updated);
+    state=updated;
+  }
+
   Future<void> setTargetMl(int value, {
     WellnessGoalChangeSource source=WellnessGoalChangeSource.preferences,
   }) async {
@@ -70,6 +84,19 @@ class StepGoalPreferencesNotifier extends Notifier<StepGoalPreferences> {
 
   @override
   StepGoalPreferences build() => _repository.getStepGoalPreferences();
+
+  Future<void> configure({required int targetSteps, required bool reminderEnabled,
+      required StepReminderCadence cadence}) async {
+    final target=targetSteps.clamp(1000,50000).toInt();
+    final updated=state.copyWith(targetSteps:target, reminderEnabled:reminderEnabled,
+      reminderCadence:cadence,
+      goalChanges:target==state.targetSteps ? state.goalChanges :
+        WellnessGoalChange.append(state.goalChanges, WellnessGoalChange(
+          previousTarget:state.targetSteps,newTarget:target,
+          changedAt:DateTime.now().toUtc(),source:WellnessGoalChangeSource.nutritionReview)));
+    await _repository.saveStepGoalPreferences(updated);
+    state=updated;
+  }
 
   Future<void> setTargetSteps(int value, {
     WellnessGoalChangeSource source=WellnessGoalChangeSource.preferences,

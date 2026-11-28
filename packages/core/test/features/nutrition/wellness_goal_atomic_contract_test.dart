@@ -25,6 +25,8 @@ void main() {
       expect(save,greaterThanOrEqualTo(0));
       expect(notify,greaterThan(save));
     }
+    assertsSavedBeforeState('configure','saveHydrationPreferences');
+    assertsSavedBeforeState('configure','saveStepGoalPreferences',occurrence:1);
     assertsSavedBeforeState('setReminderEnabled',
       'saveHydrationPreferences');
     assertsSavedBeforeState('setReminderHour',

@@ -52,7 +52,7 @@ void main(){
     expect(source,contains('Future<void> _reviewWellnessAfterPlanSave() async'));
     expect(source,contains("if(selected=='water')await _reviewWaterTarget();"));
     expect(source,contains("if(selected=='steps')await _reviewStepTarget();"));
-    expect(source,contains("onPressed:stepSuggestion==null?null:"));
+    expect(source,contains("onPressed:stepSuggestion==null&&!widget.mobileCompactLayout?null:"));
     expect(source,contains('Conservar mis metas'));
   });
 

@@ -5,8 +5,10 @@ class NutritionHistoryEntry {
   final DateTime analyzedAt;
   final String dishHint;
   final FoodVisionEstimate estimate;
-  /// Optional local favorite only. No photo or daily count is stored.
+  /// Optional local favorite. No photo is stored.
   final bool isFavorite;
+  /// Explicit consumption event, never inferred from analysis date.
+  final DateTime? consumedAt;
 
   const NutritionHistoryEntry({
     required this.id,
@@ -14,12 +16,14 @@ class NutritionHistoryEntry {
     required this.dishHint,
     required this.estimate,
     this.isFavorite = false,
+    this.consumedAt,
   });
 
-  NutritionHistoryEntry copyWith({bool? isFavorite}) =>
+  NutritionHistoryEntry copyWith({bool? isFavorite, DateTime? consumedAt, bool clearConsumption=false}) =>
       NutritionHistoryEntry(
         id:id,analyzedAt:analyzedAt,dishHint:dishHint,
         estimate:estimate,isFavorite:isFavorite??this.isFavorite,
+        consumedAt:clearConsumption?null:consumedAt??this.consumedAt,
       );
 
   Map<String, dynamic> toJson() => <String, dynamic>{
@@ -28,6 +32,7 @@ class NutritionHistoryEntry {
         'dishHint': dishHint,
         'estimate': estimate.toJson(),
         'isFavorite': isFavorite,
+        'consumedAt': consumedAt?.toIso8601String(),
       };
 
   factory NutritionHistoryEntry.fromJson(Map<String, dynamic> json) {
@@ -40,6 +45,7 @@ class NutritionHistoryEntry {
       analyzedAt: DateTime.parse(json['analyzedAt']?.toString() ?? ''),
       dishHint: json['dishHint']?.toString() ?? '',
       isFavorite: json['isFavorite'] == true,
+      consumedAt: DateTime.tryParse(json['consumedAt']?.toString()??''),
       estimate: FoodVisionEstimate.fromJson(
         Map<String, dynamic>.from(rawEstimate),
       ),

@@ -11,7 +11,7 @@ void main() {
   String core() => File(corePath).readAsStringSync();
   String mobile() => File(mobilePath).readAsStringSync();
 
-  test('food-first overview is exclusively opted in by the mobile route', () {
+  test('plan-first overview is exclusively opted in by the mobile route', () {
     final page = core();
     final wrapper = mobile();
     expect(wrapper, contains('mobileCompactLayout: true'));
@@ -30,13 +30,17 @@ void main() {
     final plan = mobileOverview.indexOf('_buildMobileAdultPlan(colors)');
     final history = mobileOverview.indexOf('_buildMobileHistorySummary(colors)');
     expect(food, greaterThanOrEqualTo(0));
-    expect(food, lessThan(goal));
+    expect(goal, lessThan(food));
     expect(goal, lessThan(plan));
-    expect(plan, lessThan(history));
+    expect(plan, lessThan(food));
+    expect(food, lessThan(history));
+    expect(mobileOverview, contains('_buildMobileWellness(colors, hasAdultAccess)'));
+    expect(mobileOverview, contains("'nutrition_mobile_plan_view'"));
     expect(mobileOverview, contains("'nutrition_mobile_overview'"));
-    expect(mobileOverview, contains('canPop: !_showMobileHistory'));
+    expect(mobileOverview, contains('canPop: !_showMobileHistory && !_showMobilePlanner'));
     expect(mobileOverview, contains('onPopInvokedWithResult:'));
-    expect(mobileOverview, contains('nutrition_mobile_history_appbar'));
+    expect(mobileOverview, isNot(contains('nutrition_mobile_history_appbar')));
+    expect(mobileOverview, contains('onOpenAdultPlanner: null'));
     expect(mobileOverview, contains('StkMobileNutritionAccessPanel('));
     expect(mobileOverview, isNot(contains('_HeroCard(colors: colors)')));
     expect(mobileOverview, isNot(contains('_buildWellnessSummary(colors)')));

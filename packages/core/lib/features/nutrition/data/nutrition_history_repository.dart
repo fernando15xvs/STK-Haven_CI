@@ -54,7 +54,7 @@ class NutritionHistoryRepository {
         final movedEntry=NutritionHistoryEntry(
           id:nextId,analyzedAt:old.analyzedAt,
           dishHint:old.dishHint,estimate:old.estimate,
-          isFavorite:old.isFavorite);
+          isFavorite:old.isFavorite,consumedAt:old.consumedAt);
         // Write owned copy first; remove legacy only after every write.
         await _box.put('$_prefix$nextId',
           movedEntry.toJson()..[_legacySourceKey]=key);
@@ -85,7 +85,7 @@ class NutritionHistoryRepository {
     return entries;
   }
 
-  /// User-saved dish names only, with no automatic food diary or image
+  /// User-saved dish names only, with no automatic consumption or image
   /// storage. Counts never cross account prefixes and are never uploaded.
   List<String> frequentDishes({int minimum=2,int limit=6}) {
     final counts=<String,int>{};
@@ -140,6 +140,16 @@ class NutritionHistoryRepository {
     if(data[_legacySourceKey] is String){
       next[_legacySourceKey]=data[_legacySourceKey];
     }
+    await _box.put(key,next);
+  }
+
+  Future<void> setConsumption(String id,DateTime? date) async {
+    final key='$_prefix$id';
+    final data=_box.get(key);
+    if(data is! Map)return;
+    final entry=NutritionHistoryEntry.fromJson(Map<String,dynamic>.from(data));
+    final next=entry.copyWith(consumedAt:date,clearConsumption:date==null).toJson();
+    if(data[_legacySourceKey] is String)next[_legacySourceKey]=data[_legacySourceKey];
     await _box.put(key,next);
   }
 
