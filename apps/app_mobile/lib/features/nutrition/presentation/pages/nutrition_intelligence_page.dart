@@ -28,7 +28,6 @@ import 'package:core/features/nutrition/data/food_vision_service.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
 import 'package:core/features/nutrition/data/nutrition_goal_plan_repository.dart';
 import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart';
-import 'package:core/features/nutrition/data/nutrition_development_config.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_goal_selector.dart';
 import 'package:flutter/material.dart';
