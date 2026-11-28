@@ -54,7 +54,8 @@ class NutritionHistoryRepository {
         final movedEntry=NutritionHistoryEntry(
           id:nextId,analyzedAt:old.analyzedAt,
           dishHint:old.dishHint,estimate:old.estimate,
-          isFavorite:old.isFavorite,consumedAt:old.consumedAt);
+          isFavorite:old.isFavorite,consumedAt:old.consumedAt,
+          consumedFraction:old.consumedFraction);
         // Write owned copy first; remove legacy only after every write.
         await _box.put('$_prefix$nextId',
           movedEntry.toJson()..[_legacySourceKey]=key);
@@ -143,12 +144,16 @@ class NutritionHistoryRepository {
     await _box.put(key,next);
   }
 
-  Future<void> setConsumption(String id,DateTime? date) async {
+  Future<void> setConsumption(String id,DateTime? date,{double fraction=1.0}) async {
+    if(date!=null && !NutritionHistoryEntry.validFraction(fraction)) {
+      throw ArgumentError.value(fraction,'fraction','Porción inválida');
+    }
     final key='$_prefix$id';
     final data=_box.get(key);
     if(data is! Map)return;
     final entry=NutritionHistoryEntry.fromJson(Map<String,dynamic>.from(data));
-    final next=entry.copyWith(consumedAt:date,clearConsumption:date==null).toJson();
+    final next=entry.copyWith(consumedAt:date,clearConsumption:date==null,
+      consumedFraction:fraction).toJson();
     if(data[_legacySourceKey] is String)next[_legacySourceKey]=data[_legacySourceKey];
     await _box.put(key,next);
   }

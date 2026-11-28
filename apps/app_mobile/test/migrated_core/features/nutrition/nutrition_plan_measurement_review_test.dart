@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../../support/nutrition_page_source.dart';
 
 import 'package:core/domain/models/body_measurement.dart';
 import 'package:core/domain/models/nutrition_goal_plan.dart';
@@ -77,9 +78,7 @@ void main() {
   });
 
   test('UI requires explicit recalc and keeps historical plan snapshot',(){
-    final code=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final code=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(code,contains('NutritionPlanMeasurementReview.compare('));
     expect(code,contains("ValueKey('nutrition_review_changed_measures')"));
     expect(code,contains('void _preparePlanReview(NutritionGoalPlan plan)'));

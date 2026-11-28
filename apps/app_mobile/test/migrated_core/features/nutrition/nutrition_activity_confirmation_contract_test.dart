@@ -1,12 +1,11 @@
 import 'dart:io';
+import '../../../support/nutrition_page_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('adult activity is selected explicitly, not inferred from gym days', () {
-    final page=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final page=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(page,contains('EnergyActivityLevel? _activity;'));
     expect(page,contains("hint: const Text('Selecciona tu actividad')"));
     expect(page,contains('if(activity==null){'));
@@ -17,9 +16,7 @@ void main() {
   });
 
   test('adult nutrition compares dated Medidas without its own weight storage', () {
-    final page=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final page=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(page,contains('NutritionWeightTrend.fromRecords(measurementRecords)'));
     expect(page,contains('if(trend!=null)'));
     expect(page,contains('Ver historial completo en Medidas'));
@@ -27,9 +24,7 @@ void main() {
   });
 
   test('saved plan discloses dated sources and server-check provenance',(){
-    final page=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final page=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(page,contains("ValueKey('nutrition_plan_snapshot_details')"));
     expect(page,contains('plan.weightRecordedAt'));
     expect(page,contains('plan.heightRecordedAt'));

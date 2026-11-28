@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../support/nutrition_page_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,7 +9,7 @@ void main() {
       'nutrition_intelligence_page.dart';
   final mobilePath = 'lib/features/nutrition/presentation/pages/'
       'nutrition_intelligence_page_mobile.dart';
-  String core() => File(corePath).readAsStringSync();
+  String core() => readNutritionPageSource(File(corePath));
   String mobile() => File(mobilePath).readAsStringSync();
 
   test('plan-first overview is exclusively opted in by the mobile route', () {

@@ -1,12 +1,11 @@
 import 'dart:io';
+import '../../../support/nutrition_page_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
   test('activity evidence stays behind the existing server-gated adult panel',(){
-    final ui=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final ui=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(ui,contains('if (!hasAdultAccess)'));
     expect(ui,contains('NutritionAccessStatusPanel('));
     expect(ui,contains('_buildEnergyPlanner(colors)'));

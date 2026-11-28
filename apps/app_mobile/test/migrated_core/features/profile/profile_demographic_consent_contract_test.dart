@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../../support/nutrition_page_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -30,9 +31,7 @@ void main(){
   });
 
   test('adult calculator never preloads unconsented legacy birthday or equation',(){
-    final nutrition=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final nutrition=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(nutrition,contains('optionalDemographicsConsented==true'));
     expect(nutrition,contains('permittedDemographics?.ageAt(DateTime.now())'));
     expect(nutrition,contains('permittedDemographics?.equationSexForEnergy'));

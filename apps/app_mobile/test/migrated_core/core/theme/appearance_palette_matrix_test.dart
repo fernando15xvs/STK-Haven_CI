@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../../support/nutrition_page_source.dart';
 
 import 'package:gym_tracker/core/theme/app_palette.dart';
 import 'package:gym_tracker/core/theme/appearance_theme.dart';
@@ -37,9 +38,7 @@ void main() {
   });
 
   test('nutrition status and error copy inherit the global Outfit text theme',(){
-    final source=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final source=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(source,contains('Theme.of(context).textTheme.bodyMedium?.copyWith('));
     expect(source,isNot(contains('style: TextStyle(color: colors.error)')));
     expect(source,isNot(contains('style: TextStyle(color: colors.onSurfaceVariant)')));

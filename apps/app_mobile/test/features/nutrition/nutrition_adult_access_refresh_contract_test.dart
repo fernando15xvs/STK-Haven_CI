@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../support/nutrition_page_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
@@ -55,9 +56,7 @@ void main(){
   });
 
   test('revoked grant hides formerly numeric cached results',(){
-    final core=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final core=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(core,contains('didUpdateWidget(covariant NutritionIntelligencePage'));
     expect(core,contains('oldWidget.verifiedAdultNutritionAccess'));
     expect(core,contains('_foodEstimate=null;'));

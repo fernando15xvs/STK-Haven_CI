@@ -65,12 +65,18 @@ void main() {
     await second.save(entry);
     expect(first.getEntries().single.consumedAt,isNull);
     final date=DateTime(2026,11,27,13);
-    await first.setConsumption('same',date);
+    await first.setConsumption('same',date,fraction:0.5);
     await first.setFavorite('same',true);
     expect(first.getEntries().single.consumedAt,date);
+    expect(first.getEntries().single.consumedFraction,0.5);
+    await first.setConsumption('same',date,fraction:0.75);
+    expect(first.getEntries().single.consumedFraction,0.75);
+    await expectLater(first.setConsumption('same',date,fraction:2),throwsArgumentError);
+    expect(first.getEntries().single.consumedFraction,0.75);
     expect(second.getEntries().single.consumedAt,isNull);
     await first.setConsumption('same',null);
     expect(first.getEntries().single.consumedAt,isNull);
+    expect(first.getEntries().single.consumedFraction,isNull);
   });
 
   test('entries can be deleted individually and cleared', () async {

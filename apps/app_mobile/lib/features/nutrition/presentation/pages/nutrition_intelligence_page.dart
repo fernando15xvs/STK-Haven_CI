@@ -24,6 +24,7 @@ import 'package:core/features/nutrition/application/wellness_goal_suggestions.da
 import 'package:core/features/nutrition/application/hydration_context_guidance.dart';
 import 'package:core/domain/models/wellness_goal_change.dart';
 import 'package:core/features/nutrition/application/food_vision_correction.dart';
+import 'package:core/features/nutrition/application/food_vision_daily_summary.dart';
 import 'package:core/features/nutrition/data/food_vision_service.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
 import 'package:core/features/nutrition/data/nutrition_goal_plan_repository.dart';
@@ -31,8 +32,6 @@ import 'package:core/features/nutrition/data/nutrition_adult_access_service.dart
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_access_panel.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/stk_mobile_nutrition_goal_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:core/features/nutrition/application/nutrition_daily_context.dart';
-import 'package:core/features/recovery/application/sleep_diary.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/nutrition_wellness_settings.dart';
 import 'package:gym_tracker/features/nutrition/presentation/widgets/nutrition_overview_sections.dart';
 import 'package:gym_tracker/core/theme/app_ui_styles.dart';
@@ -40,6 +39,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+part 'nutrition_energy_presentation.dart';
+part 'nutrition_food_presentation.dart';
+part 'nutrition_history_presentation.dart';
 
 enum NutritionPhotoSource { camera, gallery }
 
@@ -96,7 +99,7 @@ class NutritionIntelligencePage extends ConsumerStatefulWidget {
       _NutritionIntelligencePageState();
 }
 
-class _NutritionIntelligencePageState
+abstract class _NutritionPageStateBase
     extends ConsumerState<NutritionIntelligencePage> {
   // No demographic or measurement values are ever fabricated as defaults.
   final _ageController = TextEditingController();
@@ -508,397 +511,7 @@ class _NutritionIntelligencePageState
       duration:const Duration(milliseconds:300),alignment:0.04);
   }
 
-  Widget _buildEnergyPlanner(ColorScheme colors) {
-    final measurementRecords=ref.watch(bodyMeasurementProvider);
-    final body = LatestBodyMeasurements.fromRecords(measurementRecords);
-    final trend=NutritionWeightTrend.fromRecords(measurementRecords);
-    final dateFormat = DateFormat('dd/MM/yyyy');
-    final sourceIds = body.fingerprint;
-    final demographic = ref.watch(userExperienceProfileProvider).value;
-    final permittedDemographics=demographic?.optionalDemographicsConsented==true
-      ?demographic:null;
-    final recordedSessions=ref.watch(workoutHistoryProvider);
-    final activitySuggestion=AdultActivitySuggestionPolicy.suggest(
-      recordedSteps:ref.read(wellnessRepositoryProvider)
-        .recentRecordedSteps(days:14),
-      sessions:recordedSessions,
-      now:DateTime.now(),
-    );
-    final review=_activePlan==null?null:
-      NutritionPlanMeasurementReview.compare(_activePlan!,body);
-    return Card(
-      key:_energyFormKey,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.local_fire_department_outlined, color: colors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Plan energético para adultos',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800, fontVariations: const [FontVariation('wght', 800)]),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'STK Haven muestra un rango de referencia, no una cifra “perfecta”. '
-              'Los ajustes son graduales y no sustituyen orientación profesional.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: TextField(
-                    controller: _ageController,
-                    keyboardType: TextInputType.number,
-                    onChanged:(_)=>setState(_invalidateEnergyDraft),
-                    decoration: InputDecoration(
-                      labelText: 'Edad',
-                      hintText: permittedDemographics?.ageAt(DateTime.now())
-                        ?.toString(),
-                      helperText: 'De Perfil o para este cálculo.',
-                      helperMaxLines: 3,
-                    ),
-                  ),
-                ),
-
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              key: const ValueKey('nutrition_measurements_source'),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Datos de Medidas',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 6),
-                  Text(
-                    body.weightKg == null
-                        ? 'Peso: falta un registro válido'
-                        : 'Peso: ${body.weightKg!.value.toStringAsFixed(1)} kg · '
-                            '${dateFormat.format(body.weightKg!.recordedAt)}',
-                  ),
-                  Text(
-                    body.heightCm == null
-                        ? 'Altura: falta un registro válido'
-                        : 'Altura: ${body.heightCm!.value.toStringAsFixed(1)} cm · '
-                            '${dateFormat.format(body.heightCm!.recordedAt)}',
-                  ),
-                  if (widget.onOpenMeasurements != null)
-                    TextButton.icon(
-                      onPressed: widget.onOpenMeasurements,
-                      icon: const Icon(Icons.straighten_rounded),
-                      label: const Text('Actualizar en Medidas'),
-                    ),
-                ],
-              ),
-            ),
-            if (_energyEstimate != null &&
-                _calculationMeasurementIds != sourceIds)
-              Text(
-                'Hay medidas más recientes o modificadas. '
-                'El resultado anterior no se actualizará sin tu confirmación.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant),
-              ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<EnergyEquationSex>(
-              key: ValueKey('energy_equation_${_equationSex?.name ?? permittedDemographics?.equationSexForEnergy?.name ?? 'none'}'),
-              initialValue: _equationSex ??
-                permittedDemographics?.equationSexForEnergy,
-              decoration: const InputDecoration(
-                labelText: 'Parámetro fisiológico de la ecuación',
-                helperText: 'Solo para estimar energía; no define tu identidad.',
-                helperMaxLines: 3,
-              ),
-              items: const [
-                DropdownMenuItem(
-                  value: EnergyEquationSex.female,
-                  child: Text('Femenino'),
-                ),
-                DropdownMenuItem(
-                  value: EnergyEquationSex.male,
-                  child: Text('Masculino'),
-                ),
-              ],
-              onChanged: (value) {
-                if (value != null) setState(() {
-                  _equationSex = value;
-                  _invalidateEnergyDraft();
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<EnergyActivityLevel>(
-              key:ValueKey('nutrition_activity_${_activity?.name ?? 'none'}'),
-              initialValue: _activity,
-              hint: const Text('Selecciona tu actividad'),
-              decoration: const InputDecoration(
-                labelText: 'Actividad habitual',
-                helperText: 'Incluye también tu actividad fuera del entrenamiento.',
-                helperMaxLines: 3,
-              ),
-              items: const [
-                DropdownMenuItem(
-                  value: EnergyActivityLevel.sedentary,
-                  child: Text('Baja'),
-                ),
-                DropdownMenuItem(
-                  value: EnergyActivityLevel.light,
-                  child: Text('Ligera'),
-                ),
-                DropdownMenuItem(
-                  value: EnergyActivityLevel.moderate,
-                  child: Text('Moderada'),
-                ),
-                DropdownMenuItem(
-                  value: EnergyActivityLevel.high,
-                  child: Text('Alta'),
-                ),
-                DropdownMenuItem(
-                  value: EnergyActivityLevel.veryHigh,
-                  child: Text('Muy alta'),
-                ),
-              ],
-              onChanged: (value) {
-                if (value != null) setState(() {
-                  _activity = value;
-                  _invalidateEnergyDraft();
-                });
-              },
-            ),
-            if(activitySuggestion case final suggested?) ...[
-              const SizedBox(height:6),
-              Text('Sugerencia orientativa: ${suggested.label}. '
-                'Basada en ${suggested.recordedStepDays} días con sensor '
-                'y ${suggested.recordedTrainingDays} días con sesiones '
-                'completadas. No suma el entrenamiento a los pasos '
-                'ni conoce toda tu actividad diaria.',
-                key:const ValueKey('nutrition_activity_evidence'),
-                style:Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color:colors.onSurfaceVariant)),
-              Align(alignment:Alignment.centerLeft,
-                child:TextButton.icon(
-                  key:const ValueKey('nutrition_activity_suggest_apply'),
-                  onPressed:_activity==suggested.level?null:()=>setState((){
-                    _activity=suggested.level;
-                    _invalidateEnergyDraft();
-                  }),
-                  icon:const Icon(Icons.fact_check_outlined),
-                  label:const Text('Usar sugerencia y revisar'),
-                )),
-            ] else
-              Padding(
-                padding:const EdgeInsets.only(top:6),
-                child:Text('Sin 7 días de lecturas del sensor y 2 días '
-                  'de entrenamiento completado no sugerimos un nivel '
-                  'personalizado. Puedes elegirlo manualmente.',
-                  key:const ValueKey('nutrition_activity_no_evidence'),
-                  style:Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color:colors.onSurfaceVariant)),
-              ),
-            if(demographic?.trainingDaysPerWeek case final days?)
-              Padding(
-                padding:const EdgeInsets.only(top:6),
-                child:Text('Tu perfil indica $days días de entrenamiento a la '
-                  'semana. Eso no determina por sí solo tu actividad diaria; '
-                  'selecciona el nivel que mejor te represente.',
-                  style:Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color:colors.onSurfaceVariant)),
-              ),
-            const SizedBox(height: 12),
-            if(widget.mobileCompactLayout)
-              Text('Objetivo: ${StkAgeAwareNutritionPlans.label(_stkGoal)}',style:Theme.of(context).textTheme.titleMedium)
-            else DropdownButtonFormField<EnergyGoal>(
-              value: _goal,
-              decoration: const InputDecoration(labelText: 'Objetivo'),
-              items: const [
-                DropdownMenuItem(
-                  value: EnergyGoal.maintenance,
-                  child: Text('Mantenimiento'),
-                ),
-                DropdownMenuItem(
-                  value: EnergyGoal.gradualLoss,
-                  child: Text('Ajuste gradual hacia pérdida'),
-                ),
-                DropdownMenuItem(
-                  value: EnergyGoal.gradualGain,
-                  child: Text('Ajuste gradual hacia ganancia'),
-                ),
-              ],
-              onChanged: (value) {
-                if (value == null) return;
-                _chooseStkGoal(switch (value) {
-                  EnergyGoal.maintenance => StkNutritionIntent.maintenance,
-                  EnergyGoal.gradualGain => StkNutritionIntent.volume,
-                  EnergyGoal.gradualLoss => StkNutritionIntent.deficit,
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: _calculateEnergy,
-              icon: const Icon(Icons.calculate_outlined),
-              label: const Text('Calcular rango'),
-            ),
-            if (_energyEstimate case final estimate?) ...[
-              const SizedBox(height: 16),
-              _EnergyResultCard(estimate: estimate),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                key:const ValueKey('nutrition_adult_macro_guide'),
-                onPressed:()=>_showAdultMacroGuide(estimate),
-                icon:const Icon(Icons.donut_small_outlined),
-                label:const Text('Consultar macros de referencia (opcional)'),
-              ),
-              const SizedBox(height:8),
-              FilledButton.icon(
-                onPressed: _saveEnergyPlan,
-                icon: const Icon(Icons.bookmark_add_outlined),
-                label: const Text('Guardar este plan'),
-              ),
-            ],
-            if (_activePlan case final plan?) ...[
-              const SizedBox(height: 16),
-              Text('Mi plan guardado',
-                style:Theme.of(context).textTheme.titleMedium),
-              Text(plan.isPaused
-                  ? 'Sin objetivo activo · plan pausado'
-                  : 'Objetivo: ${plan.estimate.targetLow}–'
-                    '${plan.estimate.targetHigh} kcal estimadas',
-                style:Theme.of(context).textTheme.bodyMedium),
-              Text('Guardado el ${DateFormat('dd/MM/yyyy').format(plan.savedAt)}. '
-                'Peso ${plan.weightKg.toStringAsFixed(1)} kg y altura '
-                '${plan.heightCm.toStringAsFixed(1)} cm de Medidas.',
-                style:Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color:colors.onSurfaceVariant)),
-              ExpansionTile(
-                key:const ValueKey('nutrition_plan_snapshot_details'),
-                tilePadding:EdgeInsets.zero,
-                title:const Text('Origen de mi cálculo'),
-                children:[
-                  Text('Peso: ${plan.weightKg.toStringAsFixed(1)} kg, '
-                    'registro del ${dateFormat.format(plan.weightRecordedAt)}. '
-                    'Altura: ${plan.heightCm.toStringAsFixed(1)} cm, '
-                    'registro del ${dateFormat.format(plan.heightRecordedAt)}.'),
-                  const SizedBox(height:6),
-                  Text('Edad indicada: ${plan.ageYears} años · '
-                    'actividad: ${plan.activityLevel.name} · '
-                    'objetivo: ${plan.goal.name}.'),
-                  const SizedBox(height:6),
-                  Text('Método: ${plan.estimate.method}. '
-                    'Versión de fórmula: ${plan.formulaVersion}.'),
-                  const SizedBox(height:6),
-                  Text(plan.accessCheckedAt==null
-                    ?'El registro anterior no conservaba fecha de '
-                      'comprobación de acceso adulto.'
-                    :'Acceso adulto consultado en servidor al guardar: '
-                      '${DateFormat('dd/MM/yyyy HH:mm').format(plan.accessCheckedAt!.toLocal())}. '
-                      'Esto no concede ni mantiene un permiso actual.'),
-                  const SizedBox(height:8),
-                ],
-              ),
-              if(review!=null && review.needsReview) ...[
-                const SizedBox(height:8),
-                Text(review.canRecalculate
-                  ?'Tus registros de Medidas cambiaron desde que guardaste '
-                    'este plan. Puedes revisar un nuevo cálculo; el plan '
-                    'anterior no se modificará hasta que lo guardes.'
-                  :'Faltan medidas válidas para revisar el plan. '
-                    'El plan guardado se conserva sin cambios.',
-                  style:Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color:colors.onSurfaceVariant)),
-                if(review.canRecalculate)
-                  TextButton.icon(
-                    key:const ValueKey('nutrition_review_changed_measures'),
-                    onPressed:()=>_preparePlanReview(plan),
-                    icon:const Icon(Icons.refresh_rounded),
-                    label:const Text('Recalcular con Medidas actuales'),
-                  )
-                else if(widget.onOpenMeasurements!=null)
-                  TextButton.icon(
-                    onPressed:widget.onOpenMeasurements,
-                    icon:const Icon(Icons.straighten_outlined),
-                    label:const Text('Registrar medidas faltantes'),
-                  ),
-              ],
-              if(plan.nextReviewAt!=null)
-                Text('Revisión voluntaria: '
-                  '${DateFormat('dd/MM/yyyy').format(plan.nextReviewAt!)}. '
-                  'Nunca actualiza calorías por sí sola.',
-                  style:Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color:colors.onSurfaceVariant)),
-              Wrap(spacing:8,runSpacing:6,children:[
-                TextButton.icon(
-                  key:const ValueKey('nutrition_pause_resume_plan'),
-                  onPressed:()=>_togglePlanPaused(plan),
-                  icon:Icon(plan.isPaused?Icons.play_circle_outline:
-                    Icons.pause_circle_outline),
-                  label:Text(plan.isPaused?'Retomar objetivo':
-                    'Pausar objetivo'),
-                ),
-                TextButton.icon(
-                  key:const ValueKey('nutrition_review_plan'),
-                  onPressed:()=>_chooseReviewInterval(plan),
-                  icon:const Icon(Icons.event_outlined),
-                  label:const Text('Programar revisión'),
-                ),
-                TextButton.icon(
-                  onPressed:()=>_confirmRemoveEnergyPlan(),
-                  icon:const Icon(Icons.delete_outline),
-                  label:const Text('Quitar plan'),
-                ),
-              ]),
-            ],
-            if(trend!=null) ...[
-              const SizedBox(height:12),
-              const Divider(),
-              Text('Cambio entre registros de Medidas',
-                style:Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height:6),
-              Text(
-                '${dateFormat.format(trend.previousDate)}: '
-                '${trend.previousWeightKg.toStringAsFixed(1)} kg · '
-                '${dateFormat.format(trend.latestDate)}: '
-                '${trend.latestWeightKg.toStringAsFixed(1)} kg',
-                style:Theme.of(context).textTheme.bodyMedium),
-              Text('Diferencia: ${trend.differenceKg.toStringAsFixed(1)} kg. '
-                'No representa por sí sola éxito o fracaso.',
-                style:Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color:colors.onSurfaceVariant)),
-              if(widget.onOpenMeasurements!=null)
-                TextButton.icon(
-                  onPressed:widget.onOpenMeasurements,
-                  icon:const Icon(Icons.show_chart_rounded),
-                  label:const Text('Ver historial completo en Medidas'),
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildEnergyPlanner(ColorScheme colors);
 
   Widget _buildWellnessSummary(ColorScheme colors) {
     final hydration=ref.watch(hydrationProvider);
@@ -1237,223 +850,7 @@ class _NutritionIntelligencePageState
         source:WellnessGoalChangeSource.nutritionReview);
   }
 
-  Widget _buildFoodVision(ColorScheme colors) {
-    return Card(
-      key:_foodFormKey,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.camera_alt_outlined, color: colors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Food Vision',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800, fontVariations: const [FontVariation('wght', 800)]),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              widget.mobileCompactLayout
-                  ? 'Analiza tu comida con una foto.'
-                  : _hasAdultNumericAccess
-                      ? 'Toma o sube una foto. La IA devuelve rangos, ingredientes, '
-                          'porciones y nivel de confianza.'
-                  : _isDeclaredTeen
-                      ? 'Desde los 15 años puedes fotografiar tus comidas: '
-                          'la IA reconoce ingredientes y porciones. '
-                          'Las cifras por plato para adolescentes necesitan '
-                          'revisión adicional antes de habilitarse.'
-                      : 'Toma o sube una foto. La IA identifica alimentos '
-                          'y porciones sin cifras cuando el acceso numérico '
-                          'adulto no está confirmado.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-            ),
-            if (!widget.mobileCompactLayout) ...[
-              const SizedBox(height: 14),
-              TextField(
-                controller: _dishHintController,
-                maxLength: 160,
-                decoration: const InputDecoration(
-                  labelText: 'Contexto opcional',
-                  hintText: 'Ej.: arroz con pollo, usé una cucharada de aceite',
-                ),
-              ),
-              const SizedBox(height: 8),
-            ] else
-              const SizedBox(height: 12),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                if (widget.cameraAvailable)
-                  widget.mobileCompactLayout
-                      ? FilledButton.icon(
-                          key: const ValueKey('nutrition_mobile_take_photo'),
-                          onPressed: _analyzing || _pickingPhoto
-                              ? null
-                              : () => _pickAndAnalyze(NutritionPhotoSource.camera),
-                          icon: const Icon(Icons.photo_camera_outlined),
-                          label: const Text('Tomar foto'),
-                        )
-                      : OutlinedButton.icon(
-                          onPressed: _analyzing
-                              ? null
-                              : () => _pickAndAnalyze(NutritionPhotoSource.camera),
-                          icon: const Icon(Icons.photo_camera_outlined),
-                          label: const Text('Tomar foto'),
-                        ),
-                OutlinedButton.icon(
-                  key: widget.mobileCompactLayout
-                      ? const ValueKey('nutrition_mobile_choose_photo')
-                      : null,
-                  onPressed: _analyzing || (widget.mobileCompactLayout && _pickingPhoto)
-                      ? null
-                      : () => _pickAndAnalyze(NutritionPhotoSource.gallery),
-                  icon: const Icon(Icons.photo_library_outlined),
-                  label: const Text('Elegir foto'),
-                ),
-                if (_photo != null && !widget.mobileCompactLayout)
-                  FilledButton.tonalIcon(
-                    onPressed: _analyzing ? null : () => _analyzePhoto(_photo!),
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Reanalizar con contexto'),
-                  ),
-              ],
-            ),
-            if (_photo case final photo?) ...[
-              const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 260),
-                  child: Image.memory(
-                    photo.bytes,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                photo.name,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-              ),
-              if (widget.mobileCompactLayout) ...[
-                ExpansionTile(
-                  key: const ValueKey('nutrition_mobile_photo_details'),
-                  tilePadding: EdgeInsets.zero,
-                  initiallyExpanded: _showPhotoDetails,
-                  onExpansionChanged: (value) => _showPhotoDetails = value,
-                  title: const Text('Añadir detalles (opcional)'),
-                  children: [
-                    TextField(
-                      controller: _dishHintController,
-                      maxLength: 160,
-                      decoration: const InputDecoration(
-                        hintText: 'Ej.: arroz, pollo y una cucharada de aceite',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      key: const ValueKey('nutrition_mobile_analyze_photo'),
-                      onPressed: _analyzing ? null : () => _analyzePhoto(photo),
-                      icon: Icon(_foodEstimate == null
-                          ? Icons.auto_awesome_outlined
-                          : Icons.refresh_rounded),
-                      label: Text(_foodEstimate == null
-                          ? 'Analizar foto'
-                          : 'Volver a analizar'),
-                    ),
-                    TextButton.icon(
-                      key: const ValueKey('nutrition_mobile_discard_photo'),
-                      onPressed: () => setState(() {
-                        _analysisEpoch++;
-                        _photo = null;
-                        _foodEstimate = null;
-                        _analyzing = false;
-                        _message = null;
-                        _showPhotoDetails = false;
-                      }),
-                      icon: const Icon(Icons.close_rounded),
-                      label: const Text('Descartar'),
-                    ),
-                  ],
-                ),
-              ],
-            ],
-            if (_analyzing) ...[
-              const SizedBox(height: 16),
-              const LinearProgressIndicator(),
-              const SizedBox(height: 8),
-              const Text('Analizando plato…'),
-            ],
-            if (_message != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                _message!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colors.error),
-              ),
-            ],
-            if (_foodEstimate case final estimate?
-                when !estimate.numericNutritionAvailable ||
-                     _hasAdultNumericAccess) ...[
-              const SizedBox(height: 16),
-              _FoodVisionResultCard(estimate: estimate),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  FilledButton.tonalIcon(
-                    onPressed: () => _saveCurrentEstimate(estimate),
-                    icon: const Icon(Icons.bookmark_add_outlined),
-                    label: const Text('Guardar resultado local'),
-                  ),
-                  if(_hasAdultNumericAccess && _activePlan!=null &&
-                     !_activePlan!.isPaused && estimate.numericNutritionAvailable &&
-                     estimate.caloriesLow!=null && estimate.caloriesHigh!=null)
-                    OutlinedButton.icon(
-                      key:const ValueKey('foodvision_plan_context'),
-                      onPressed:()=>_showFoodPlanContext(estimate),
-                      icon:const Icon(Icons.compare_arrows_rounded),
-                      label:const Text('Ver en contexto de mi plan'),
-                    ),
-                  if (_photo != null)
-                    OutlinedButton.icon(
-                      onPressed: _analyzing
-                          ? null
-                          : () => _editStructuredCorrection(estimate),
-                      icon: const Icon(Icons.edit_note_rounded),
-                      label: const Text('Corregir ingredientes/porciones'),
-                    ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildFoodVision(ColorScheme colors);
 
   Future<void> _showFoodPlanContext(FoodVisionEstimate estimate) async {
     final plan=_activePlan;
@@ -1504,178 +901,40 @@ class _NutritionIntelligencePageState
     });
   }
 
-  Widget _buildHistory(ColorScheme colors) {
-    final frequent=_historyRepository.frequentDishes();
-    final content = Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.history_rounded, color: colors.primary),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Historial local',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w800, fontVariations: const [FontVariation('wght', 800)]),
-                  ),
-                ),
-                if (_history.isNotEmpty)
-                  TextButton(
-                    onPressed: _confirmClearHistory,
-                    child: const Text('Borrar todo'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Solo se guarda cuando tú lo eliges. Las fotos nunca se almacenan.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 10),
-            if(widget.mobileCompactLayout && _hasAdultNumericAccess)
-              _buildConfirmedMeals(colors),
-            if (_history.isNotEmpty)
-              Wrap(spacing:8,runSpacing:8,children:[
-                ChoiceChip(
-                  label:const Text('Todos los análisis'),
-                  selected:!_showFavoriteMealsOnly,
-                  onSelected:(_)=>setState(()=>_showFavoriteMealsOnly=false),
-                ),
-                ChoiceChip(
-                  key:const ValueKey('nutrition_favorite_meals_filter'),
-                  label:const Text('Favoritos'),
-                  selected:_showFavoriteMealsOnly,
-                  onSelected:(_)=>setState(()=>_showFavoriteMealsOnly=true),
-                ),
-              ]),
-            if(frequent.isNotEmpty) ...[
-              const SizedBox(height:12),
-              Text('Comidas frecuentes de tu historial',
-                style:Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height:4),
-              Text('Son nombres de análisis que elegiste guardar. '
-                'Usar uno no inicia una foto ni un conteo de comidas.',
-                style:Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color:colors.onSurfaceVariant)),
-              const SizedBox(height:8),
-              Wrap(spacing:8,runSpacing:6,children:[
-                for(final dish in frequent)
-                  ActionChip(
-                    key:ValueKey('nutrition_frequent_${dish.toLowerCase()}'),
-                    label:Text(dish,maxLines:1,
-                      overflow:TextOverflow.ellipsis),
-                    tooltip:'Usar $dish como contexto opcional',
-                    onPressed:_analyzing?null:()=>_useFrequentDish(dish),
-                  ),
-              ]),
-            ],
-            const SizedBox(height:8),
-            if (_historyRepository.hasLegacyEntries)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.inventory_2_outlined),
-                title: const Text('Historial anterior en este dispositivo'),
-                subtitle: const Text('Hay análisis antiguos sin cuenta asignada. '
-                  'Puedes trasladarlos a esta cuenta voluntariamente.'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _importLegacyHistory,
-              ),
-            if (_history.isEmpty)
-              const Text('Aún no has guardado análisis.')
-            else if(_showFavoriteMealsOnly &&
-                !_history.any((entry)=>entry.isFavorite))
-              const Text('Todavía no tienes comidas favoritas.')
-            else
-              for (final entry in _history.where(
-                (entry)=>!_showFavoriteMealsOnly || entry.isFavorite).take(20))
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.restaurant_outlined),
-                  title: Text(
-                    entry.estimate.dishName.isEmpty
-                        ? 'Plato analizado'
-                        : entry.estimate.dishName,
-                  ),
-                  subtitle: Text(_historySubtitle(entry)),
-                  onTap: () => setState(() {
-                    if (widget.mobileCompactLayout) _showMobileHistory = false;
-                    if(entry.estimate.numericNutritionAvailable &&
-                        !_hasAdultNumericAccess){
-                      _foodEstimate=null;
-                      _message='Este análisis contiene cifras de una sesión '
-                        'adulta anterior. Verifica acceso para consultarlas.';
-                    }else{
-                      _foodEstimate = entry.estimate;
-                      _message = null;
-                    }
-                    _dishHintController.text = entry.dishHint;
-                    _photo = null;
-                  }),
-                  trailing: Row(mainAxisSize:MainAxisSize.min,children:[
-                    IconButton(
-                      tooltip:entry.isFavorite
-                        ?'Quitar de favoritos':'Añadir a favoritos',
-                      onPressed:()=>_setHistoryFavorite(entry),
-                      icon:Icon(entry.isFavorite
-                        ?Icons.favorite_rounded:Icons.favorite_border_rounded,
-                        color:entry.isFavorite?colors.primary:null),
-                    ),
-                    PopupMenuButton<String>(
-                      tooltip:'Opciones de análisis',
-                      onSelected:(action){
-                        if(action=='delete')_deleteHistoryEntry(entry.id);
-                        if(action=='consumed')_setMealConsumption(entry);
-                      },
-                      itemBuilder:(_)=>[
-                        if(widget.mobileCompactLayout && _hasAdultNumericAccess && entry.estimate.numericNutritionAvailable)
-                          PopupMenuItem(value:'consumed',child:Text(entry.consumedAt==null?'Registrar comida consumida':'Quitar registro de consumo')),
-                        const PopupMenuItem(value:'delete',child:Text('Eliminar')),
-                      ],
-                    ),
-                  ]),
-                ),
-          ],
-        ),
-      );
-    if (widget.mobileCompactLayout) return content;
-    return Card(child: content);
-  }
+  Widget _buildHistory(ColorScheme colors);
 
-  Widget _buildConfirmedMeals(ColorScheme colors) {
-    final now=DateTime.now();
-    final confirmed=_history.where((e)=>e.consumedAt!=null &&
-      SleepDiary.dayKey(e.consumedAt!.toLocal())==SleepDiary.dayKey(now)).toList();
-    return Card(color:colors.surface,child:Padding(padding:const EdgeInsets.all(12),child:Column(
-      crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Text('Comidas confirmadas hoy',style:Theme.of(context).textTheme.titleMedium),
-        Text('${confirmed.length} registros voluntarios · historial parcial'),
-        const Text('Analizar una foto no registra consumo. Confirma solo el plato y porción realmente consumidos. No se calcula un saldo de calorías.'),
-      ])));
-  }
-
-  Future<void> _setMealConsumption(NutritionHistoryEntry entry) async {
+  Future<void> _setMealConsumption(NutritionHistoryEntry entry,{bool remove=false}) async {
     final token=_currentNutritionToken;
     if(!_hasAdultNumericAccess||!_sameMutationSession(token)||!entry.estimate.numericNutritionAvailable)return;
-    final remove=entry.consumedAt!=null;
-    final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
-      title:Text(remove?'Quitar registro de consumo':'Registrar comida de hoy'),
-      content:Text(remove?'Se conserva el análisis de Food Vision.':
-        'Confirma que consumiste hoy el plato y la porción descrita. Si no coincide, corrige el análisis antes de registrar. La estimación no es una medición.'),
-      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancelar')),
-        FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:Text(remove?'Quitar registro':'Confirmar consumo'))],
-    ));
-    if(confirmed!=true||!mounted||!_sameMutationSession(token))return;
+    double? portion;
+    if(remove){
+      final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+        title:const Text('Quitar registro de consumo'),
+        content:const Text('Se conserva el análisis de Food Vision.'),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('Cancelar')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('Quitar registro'))],
+      ));
+      if(confirmed!=true)return;
+    }else{
+      portion=await showDialog<double>(context:context,builder:(ctx)=>SimpleDialog(
+        title:const Text('¿Qué parte de la porción analizada consumiste?'),
+        children:[
+          const Padding(padding:EdgeInsets.fromLTRB(24,0,24,12),
+            child:Text('Confirma solo lo que realmente comiste. Si los ingredientes son distintos, corrige y vuelve a analizar antes de registrar.')),
+          for(final option in const <double,String>{0.25:'Un cuarto',0.5:'La mitad',0.75:'Tres cuartos',1.0:'Toda la porción'}.entries)
+            SimpleDialogOption(onPressed:()=>Navigator.pop(ctx,option.key),
+              child:Text('Confirmar: ${option.value}')),
+          SimpleDialogOption(onPressed:()=>Navigator.pop(ctx),child:const Text('Cancelar')),
+        ],
+      ));
+      if(portion==null)return;
+    }
+    if(!mounted||!_sameMutationSession(token)||!_hasAdultNumericAccess)return;
     try{
       final allowed=await NutritionAdultAccessService(Supabase.instance.client).hasVerifiedAccess();
       if(!mounted||!allowed||!_hasAdultNumericAccess||!_sameMutationSession(token))return;
-      await _historyRepository.setConsumption(entry.id,remove?null:DateTime.now());
+      await _historyRepository.setConsumption(entry.id,
+         remove?null:(entry.consumedAt??DateTime.now()),fraction:portion??1.0);
       if(mounted&&_sameMutationSession(token))setState(()=>_history=_historyRepository.getEntries());
     }catch(_){
       if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('No se pudo actualizar el registro de consumo.')));
@@ -1704,13 +963,14 @@ class _NutritionIntelligencePageState
     final minute = date.minute.toString().padLeft(2, '0');
     final details = <String>['$day/$month/${date.year} $hour:$minute'];
     if(_hasAdultNumericAccess && entry.consumedAt!=null)
-      details.add('Consumo confirmado · ${DateFormat('dd/MM').format(entry.consumedAt!.toLocal())}');
+      details.add('Consumo confirmado · ${DateFormat('dd/MM').format(entry.consumedAt!.toLocal())}'
+        '${NutritionHistoryEntry.validFraction(entry.consumedFraction)?' · ${(entry.consumedFraction!*100).round()}% de la porción':''}');
     if (_hasAdultNumericAccess &&
         entry.estimate.numericNutritionAvailable &&
         entry.estimate.caloriesLow != null &&
         entry.estimate.caloriesHigh != null) {
       details.add(
-        '${entry.estimate.caloriesLow}–${entry.estimate.caloriesHigh} kcal',
+        'Plato analizado: ${entry.estimate.caloriesLow}–${entry.estimate.caloriesHigh} kcal',
       );
     }
     return details.join(' · ');
@@ -2179,6 +1439,9 @@ class _NutritionIntelligencePageState
   ) async {
     final photo = _photo;
     if (photo == null) return;
+    final sessionAtStart=_currentNutritionToken;
+    final epochAtStart=_analysisEpoch;
+    if(!_sameMutationSession(sessionAtStart))return;
 
     final draft = await showDialog<FoodVisionCorrectionDraft>(
       context: context,
@@ -2189,7 +1452,8 @@ class _NutritionIntelligencePageState
         ),
       ),
     );
-    if (!mounted || draft == null) return;
+    if (!mounted || draft == null || !_sameMutationSession(sessionAtStart) ||
+        epochAtStart!=_analysisEpoch || !identical(photo,_photo)) return;
 
     final correctionContext = draft.toReanalysisContext();
     setState(() {
@@ -2336,6 +1600,9 @@ class _NutritionIntelligencePageState
     }
   }
 }
+
+class _NutritionIntelligencePageState extends _NutritionPageStateBase
+    with _NutritionEnergyPresentation, _NutritionFoodPresentation, _NutritionHistoryPresentation {}
 
 class _FoodVisionCorrectionDialog extends StatefulWidget {
   final FoodVisionCorrectionDraft initial;

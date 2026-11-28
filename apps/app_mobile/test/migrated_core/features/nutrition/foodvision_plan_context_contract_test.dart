@@ -1,11 +1,10 @@
 import 'dart:io';
+import '../../../support/nutrition_page_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
   test('food and adult plan context is opt-in, never a calorie ledger',(){
-    final source=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final source=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(source,contains("ValueKey('foodvision_plan_context')"));
     expect(source,contains('_hasAdultNumericAccess && _activePlan!=null'));
     expect(source,contains('!_activePlan!.isPaused'));

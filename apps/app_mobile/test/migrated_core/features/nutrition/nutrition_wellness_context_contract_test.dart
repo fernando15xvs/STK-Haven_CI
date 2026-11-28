@@ -1,12 +1,11 @@
 import 'dart:io';
+import '../../../support/nutrition_page_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
 void main(){
   test('water selection is an opt-in manual goal with independent confirmation',(){
-    final source=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final source=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(source,contains("ValueKey('nutrition_review_water_target')"));
     expect(source,contains("ValueKey('nutrition_water_target_slider')"));
     expect(source,contains('CheckboxListTile('));
@@ -30,9 +29,7 @@ void main(){
   });
 
   test('steps provenance and existing voluntary baseline are retained',(){
-    final source=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final source=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(source,contains('steps.deviceSynced'));
     expect(source,contains('steps.lastSyncedAt'));
     expect(source,contains('Pasos registrados manualmente'));
@@ -43,9 +40,7 @@ void main(){
   });
 
   test('saving a nutrition plan never overrides water or steps',(){
-    final source=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final source=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(source,contains('await repo.save(plan);'));
     expect(source,contains('Plan guardado. Las metas de agua y pasos'));
     expect(source,contains('Revisar metas'));
@@ -57,9 +52,7 @@ void main(){
   });
 
   test('every confirmed change is inspectable with source and date',(){
-    final source=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final source=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(source,contains("ValueKey('nutrition_wellness_goal_history')"));
     expect(source,contains('Future<void> _showWellnessGoalHistory() async'));
     expect(source,contains('water.goalChanges.reversed'));
@@ -69,9 +62,7 @@ void main(){
   });
 
   test('draft energy values are invalidated if age, goal or activity changes',(){
-    final source=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final source=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(source,contains('void _invalidateEnergyDraft()'));
     expect(source,contains('onChanged:(_)=>setState(_invalidateEnergyDraft)'));
     expect(source.split('_invalidateEnergyDraft();').length-1,

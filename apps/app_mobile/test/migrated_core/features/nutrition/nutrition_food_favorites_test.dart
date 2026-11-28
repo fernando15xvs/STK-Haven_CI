@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../../support/nutrition_page_source.dart';
 import 'package:core/domain/models/nutrition_history_entry.dart';
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/data/nutrition_history_repository.dart';
@@ -85,7 +86,7 @@ void main(){
         'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
       );
       // The core package owns the UI source: no camera is triggered from chips.
-      final source=ui.readAsStringSync();
+      final source=readNutritionPageSource(ui);
       expect(source,contains('_historyRepository.frequentDishes()'));
       expect(source,contains('onPressed:_analyzing?null:()=>_useFrequentDish(dish)'));
       final begin=source.indexOf('void _useFrequentDish(');

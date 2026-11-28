@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../support/nutrition_page_source.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -84,9 +85,7 @@ void main() {
   });
 
   test('nutrition uses Medidas rather than 70 kg and 170 cm fabricated values', () {
-    final core = File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final core = readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     final mobile = File(
       'lib/features/nutrition/presentation/pages/nutrition_intelligence_page_mobile.dart',
     ).readAsStringSync();

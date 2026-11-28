@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../../support/nutrition_page_source.dart';
 
 import 'package:core/domain/models/nutrition_intelligence.dart';
 import 'package:core/features/nutrition/application/adult_macro_guide.dart';
@@ -38,9 +39,7 @@ void main(){
   });
 
   test('UI requires 19+, backend grant and explicit user action',(){
-    final source=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final source=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     expect(source,contains("ValueKey('nutrition_adult_macro_guide')"));
     expect(source,contains('if(age==null || age<19 || !_hasAdultNumericAccess)'));
     expect(source,contains('hasVerifiedAccess()'));

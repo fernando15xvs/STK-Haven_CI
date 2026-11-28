@@ -1,4 +1,5 @@
 import 'dart:io';
+import '../../../support/nutrition_page_source.dart';
 
 import 'package:gym_tracker/core/theme/appearance_theme.dart';
 import 'package:core/domain/models/appearance_settings.dart';
@@ -19,9 +20,7 @@ void main() {
   });
 
   test('B2 D1 Nutrition and Food Vision bold weights preserve variable axis', () {
-    final source=File(
-      'lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart',
-    ).readAsStringSync();
+    final source=readNutritionPageSource(File('lib/features/nutrition/presentation/pages/nutrition_intelligence_page.dart'));
     final overrides=RegExp(
       r'fontWeight:\s*FontWeight\.w(600|800|900)',
     ).allMatches(source).toList();
