@@ -4,6 +4,7 @@ import 'package:gym_tracker/core/theme/app_colors.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/features/workout/application/barbell_calculator.dart';
+import 'package:core/features/tools/application/training_tool_preferences.dart';
 
 class BarbellCalculatorModal extends ConsumerStatefulWidget {
   final double? initialTargetWeight;
@@ -47,13 +48,16 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
   late final List<double> _plates;
   final Map<double,int> _stock={};
   bool _limited=false;
+  bool _saving=false;
   @override void initState(){
     super.initState();
     _unit=ref.read(settingsProvider).weightUnit;
     final lb=_unit==WeightUnit.lb;
-    _plates=lb?const [45,35,25,10,5,2.5]:const [25,20,15,10,5,2.5,1.25];
-    for(final plate in _plates){_stock[plate]=2;}
-    _barCtrl=TextEditingController(text:lb?'45':'20');
+    final saved=ref.read(trainingToolPreferencesProvider).loadPlates(lb);
+    _plates=PlatePreferences.plates(lb);
+    _stock.addAll(saved.stock);
+    _limited=saved.limited;
+    _barCtrl=TextEditingController(text:_fmt(saved.barWeight));
     _weightCtrl=TextEditingController(text:widget.initialTargetWeight==null?'':_fmt(widget.initialTargetWeight!));
   }
   @override void dispose(){_weightCtrl.dispose();_barCtrl.dispose();super.dispose();}
@@ -61,6 +65,28 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
   double? _parse(String value){
     final number=double.tryParse(value.trim().replaceAll(',','.'));
     return number!=null&&number.isFinite&&number>0&&number<=2000?number:null;
+  }
+  Future<void> _saveConfiguration({bool reset=false}) async {
+    if(_saving)return;
+    final lb=_unit==WeightUnit.lb;
+    final bar=_parse(_barCtrl.text);
+    if(!reset&&bar==null)return;
+    final config=reset?PlatePreferences.defaults(lb):
+      PlatePreferences(barWeight:bar!,limited:_limited,stock:_stock);
+    setState(()=>_saving=true);
+    final ok=await ref.read(trainingToolPreferencesProvider).savePlates(lb,config);
+    if(!mounted)return;
+    setState((){
+      _saving=false;
+      if(ok&&reset){
+        _barCtrl.text=_fmt(config.barWeight);
+        _stock..clear()..addAll(config.stock);
+        _limited=config.limited;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(ok?
+      (reset?'Configuración restablecida':'Configuración guardada en este dispositivo'):
+      'No se pudo guardar la configuración.')));
   }
   @override Widget build(BuildContext context){
     final colors=AppColors.of(context);
@@ -128,6 +154,12 @@ class _BarbellCalculatorModalState extends ConsumerState<BarbellCalculatorModal>
                   IconButton(tooltip:'Añadir disco de ${_fmt(weight)}',onPressed:_stock[weight]==200?null:()=>setState(()=>_stock[weight]=_stock[weight]!+1),icon:const Icon(Icons.add)),
                 ]),
             ]),
+            FilledButton.tonalIcon(key:const ValueKey('plates_save_configuration'),
+              onPressed:_saving||bar==null?null:()=>_saveConfiguration(),
+              icon:const Icon(Icons.save_outlined),label:const Text('Guardar barra y discos')),
+            TextButton(onPressed:_saving?null:()=>_saveConfiguration(reset:true),
+              child:const Text('Restablecer configuración')),
+            const Text('Se guarda en este dispositivo por unidad kg/lb. No se guarda el peso objetivo.'),
             const Text('Referencia de carga, no modifica la serie. Comprueba el peso real del equipo.'),
             const SizedBox(height:16),
           ]),

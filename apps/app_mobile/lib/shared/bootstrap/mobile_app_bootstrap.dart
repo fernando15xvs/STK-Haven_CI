@@ -22,6 +22,7 @@ import 'package:core/features/habits/application/habit_task_notification_service
 import 'package:core/features/habits/application/focus_timer_notification_service.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
 import 'package:core/features/tools/application/training_timer.dart';
+import 'package:core/features/tools/application/training_tool_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -120,9 +121,14 @@ Future<void> bootstrapMobileApp({
     debugPrint('STK Motivation background initialization failed: $e');
   }
 
+  var toolPreferences=TrainingToolPreferences(null);
+  try { toolPreferences=TrainingToolPreferences(await openMobilePreferences()); } catch (_) {
+    // Tools remain available if local preferences cannot be opened.
+  }
   runApp(
     ProviderScope(
       overrides: [
+        trainingToolPreferencesProvider.overrideWithValue(toolPreferences),
         trainingTimerNativeProvider.overrideWithValue(const MobileTrainingTimerNative()),
         workoutNativeServicesProvider.overrideWithValue(
           const MobileWorkoutNativeServices(),
