@@ -16,7 +16,6 @@ import '../../../progress/presentation/pages/progress_page.dart';
 import '../../../motivation/presentation/motivation_page.dart';
 import '../../../motivation/presentation/widgets/motivation_home_mini_player.dart';
 import '../../../routines/presentation/pages/routines_page.dart';
-import '../../../tools/presentation/training_tools_page.dart';
 import 'program_dashboard_page.dart';
 import '../widgets/quick_access_menu.dart';
 import '../../application/home_tab_return_request.dart';
@@ -385,11 +384,6 @@ class _FloatingMenuButtonState extends State<_FloatingMenuButton>
                           icon: Icons.headphones_outlined,
                           label: 'Motivation',
                           onTap: () => _openPage(const MotivationPage()),
-                        ),
-                        QuickAccessOption(
-                          icon: Icons.build_circle_outlined,
-                          label: 'Herramientas',
-                          onTap: () => _openPage(const TrainingToolsPage()),
                         ),
                       ],
                     ),

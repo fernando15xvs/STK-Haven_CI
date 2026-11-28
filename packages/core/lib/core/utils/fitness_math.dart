@@ -11,9 +11,10 @@ class FitnessMath {
   ///
   /// Callers no longer need to guard with `if (reps > 0 && reps <= 10)`.
   static double? estimated1RM(double weightKg, int reps) {
-    if (weightKg <= 0 || reps <= 0 || reps > 10) return null;
+    if (!weightKg.isFinite || weightKg <= 0 || reps <= 0 || reps > 10) return null;
     if (reps == 1) return weightKg; // 1RM exact for 1 rep
-    return weightKg / (1.0278 - (0.0278 * reps));
+    final estimate = weightKg / (1.0278 - (0.0278 * reps));
+    return estimate.isFinite ? estimate : null;
   }
 
   /// Rounds [value] to the nearest 0.5.

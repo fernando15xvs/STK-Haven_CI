@@ -1,4 +1,6 @@
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/features/tools/application/training_tools.dart';
+import 'package:gym_tracker/features/tools/presentation/training_tools_page.dart';
 import 'package:gym_tracker/features/progress/presentation/pages/progress_intelligence_page.dart';
 import 'package:flutter/material.dart';
 import 'package:gym_tracker/core/theme/app_colors.dart';
@@ -18,6 +20,11 @@ class FocusedExerciseProgressPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
+          actions:[
+            if(ExerciseToolAdvisor.forExercise(exercise).primary.contains(TrainingToolKind.oneRm))
+              IconButton(tooltip:'Calcular 1RM',onPressed:()=>OneRmTool.show(context,exerciseId:exercise.id),
+                icon:const Icon(Icons.calculate_outlined)),
+          ],
           title: Text(
             'Rendimiento · ${exercise.name}',
             maxLines: 1,

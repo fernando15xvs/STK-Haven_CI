@@ -1,5 +1,8 @@
 import 'package:core/core/utils/fitness_formatter.dart';
-import 'package:core/core/utils/fitness_math.dart';
+import 'package:core/domain/models/exercise.dart';
+import 'package:core/features/exercises/application/providers/exercise_provider.dart';
+import 'package:core/features/tools/application/training_tools.dart';
+import 'package:gym_tracker/features/tools/presentation/training_tools_page.dart';
 import 'package:core/domain/models/settings_state.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/features/profile/application/providers/settings_provider.dart';
@@ -42,8 +45,6 @@ class ActiveWorkoutMemoryOverlay extends ConsumerStatefulWidget {
 
 class _ActiveWorkoutMemoryOverlayState
     extends ConsumerState<ActiveWorkoutMemoryOverlay> {
-  String? _oneRmMessage;
-  String? _oneRmExerciseId;
 
   /// A modal sheet keeps memory tools reachable without a floating panel
   /// covering the rest countdown, set inputs or the Finish action.
@@ -141,10 +142,6 @@ class _ActiveWorkoutMemoryOverlayState
                       settings: settings,
                       recommendedSide: recommendedSide,
                       canUndo: canUndo,
-                      visibleOneRmMessage:
-                          _oneRmExerciseId == exercise.exerciseId
-                              ? _oneRmMessage
-                              : null,
                       onRefresh: () => refreshSheet(() {}),
                     ),
                   ],
@@ -180,9 +177,15 @@ class _ActiveWorkoutMemoryOverlayState
     required SettingsState settings,
     required WorkoutSide? recommendedSide,
     required bool canUndo,
-    required String? visibleOneRmMessage,
     VoidCallback? onRefresh,
   }) {
+    Exercise definition=Exercise(id:exercise.exerciseId,name:exercise.exerciseNameSnapshot,
+      muscleGroup:exercise.muscleGroupSnapshot);
+    for(final item in ref.read(exerciseListProvider)){
+      if(item.id==exercise.exerciseId){definition=item;break;}
+    }
+    final advice=ExerciseToolAdvisor.forExercise(definition).primary;
+    final reference=TrainingToolReference.forExercise(exercise,memory);
     return Material(
       elevation: settings.performanceMode == PerformanceMode.savings ? 0 : 8,
       borderRadius: BorderRadius.circular(14),
@@ -265,21 +268,15 @@ class _ActiveWorkoutMemoryOverlayState
                           ),
                   icon: const Icon(Icons.keyboard_alt_outlined),
                 ),
-                Semantics(
+                if(advice.contains(TrainingToolKind.oneRm)) Semantics(
                   button: true,
                   label: '1RM del ejercicio activo',
                   child: IconButton(
                     visualDensity: VisualDensity.compact,
+                    tooltip:'Calculadora 1RM',
                     onPressed: () {
-                      final message = _oneRmResult(
-                        exercise,
-                        memory,
-                        settings.weightUnit,
-                      );
-                      setState(() {
-                        _oneRmExerciseId = exercise.exerciseId;
-                        _oneRmMessage = message;
-                      });
+                      OneRmTool.show(context,exerciseId:exercise.exerciseId,
+                        weightKg:reference?.performanceWeight,reps:reference?.performanceReps);
                       onRefresh?.call();
                     },
                     icon: const Icon(Icons.calculate_outlined),
@@ -298,95 +295,10 @@ class _ActiveWorkoutMemoryOverlayState
 
               ],
             ),
-            if (visibleOneRmMessage != null) ...[
-              const SizedBox(height: 6),
-              const Divider(height: 1),
-              const SizedBox(height: 6),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.calculate_outlined,
-                    size: 17,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: Text(
-                      visibleOneRmMessage,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
-                    ),
-                    padding: EdgeInsets.zero,
-                    onPressed: () {
-                      setState(() {
-                        _oneRmMessage = null;
-                        _oneRmExerciseId = null;
-                      });
-                      onRefresh?.call();
-                    },
-                    icon: const Icon(Icons.close, size: 17),
-                  ),
-                ],
-              ),
-            ],
           ],
         ),
       ),
     );
-  }
-
-  static String _oneRmResult(
-    WorkoutExercise exercise,
-    ExercisePerformanceMemoryEntry? memory,
-    WeightUnit unit,
-  ) {
-    WorkoutSet? reference;
-
-    for (final set in exercise.sets) {
-      if (set.setType == WorkoutSetType.working &&
-          set.performanceWeight > 0 &&
-          set.performanceReps > 0 &&
-          !set.completed) {
-        reference = set;
-        break;
-      }
-    }
-    if (reference == null) {
-      for (final set in exercise.sets.reversed) {
-        if (set.setType == WorkoutSetType.working &&
-            set.completed &&
-            set.performanceWeight > 0 &&
-            set.performanceReps > 0) {
-          reference = set;
-          break;
-        }
-      }
-    }
-    reference ??= memory?.latestRepresentativeSet;
-
-    final weight = reference?.performanceWeight ?? 0;
-    final reps = reference?.performanceReps ?? 0;
-    final estimate = FitnessMath.estimated1RM(weight, reps);
-
-    if (reference == null || weight <= 0 || reps <= 0) {
-      return 'Ingresa peso y repeticiones en una serie de trabajo para estimar el 1RM.';
-    }
-
-    final referenceText =
-        '${FitnessFormatter.formatWeight(weight, unit)} × $reps${reference.performanceRir == null ? '' : ' @RIR ${reference.performanceRir}'}';
-    final estimateText = estimate == null
-        ? 'Sin estimación válida para $reps repeticiones.'
-        : '1RM estimado: ${FitnessFormatter.formatWeight(estimate, unit)}';
-    return 'Referencia: $referenceText · $estimateText';
   }
 
   static WorkoutSide? _recommendedSide(

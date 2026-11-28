@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:gym_tracker/features/tools/presentation/training_tools_page.dart';
 import 'package:core/features/programs/application/training_day_decision.dart';
 import 'package:core/features/programs/application/program_plan_insights.dart';
 import 'package:core/features/programs/application/program_week_plan.dart';
@@ -170,16 +171,21 @@ class _RoutinesPageState extends ConsumerState<RoutinesPage> with WidgetsBinding
                             onTap: () => Navigator.push(context, MaterialPageRoute(
                                 builder: (_) => const ExerciseLibraryPage())),
                           ),
+                          _TrainingQuickLink(
+                            key: const ValueKey('train_open_tools'),
+                            label: 'Herramientas', icon: Icons.build_outlined,
+                            onTap: () => TrainingToolsPage.show(context),
+                          ),
                         ];
-                        if (constraints.maxWidth < 300 ||
-                            MediaQuery.textScalerOf(context).scale(14) > 21) {
-                          return Column(crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [links[0], const SizedBox(height: AppSpacing.xs), links[1]]);
-                        }
-                        return Row(children: [
-                          Expanded(child: links[0]), const SizedBox(width: AppSpacing.sm),
-                          Expanded(child: links[1]),
-                        ]);
+                        return PremiumCard(
+                          padding: const EdgeInsets.all(AppSpacing.xs),
+                          child: constraints.maxWidth < 270 ||
+                              MediaQuery.textScalerOf(context).scale(14) > 21
+                            ? Column(crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: links)
+                            : Row(crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [for(final link in links) Expanded(child:link)]),
+                        );
                       }),
                       const SizedBox(height: AppSpacing.md),
                       Row(
@@ -785,13 +791,22 @@ class _TrainingQuickLink extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => PremiumCard(
-    onTap: onTap,
-    child: Row(children: [
-      Icon(icon, color: AppColors.of(context).primary),
-      const SizedBox(width: AppSpacing.sm),
-      Expanded(child: Text(label, style: AppTypography.bodyMedium)),
-    ]),
+  Widget build(BuildContext context) => Semantics(
+    button:true, label:label,
+    child: InkWell(
+      onTap:onTap,
+      borderRadius:BorderRadius.circular(AppUiTokens.of(context).buttonRadius),
+      child:ConstrainedBox(
+        constraints:const BoxConstraints(minHeight:48),
+        child:Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:8),
+          child:Column(mainAxisSize:MainAxisSize.min,children:[
+            Icon(icon,color:AppColors.of(context).primary,size:24),
+            const SizedBox(height:4),
+            Text(label=='Biblioteca de ejercicios'?'Biblioteca':label,
+              textAlign:TextAlign.center,style:AppTypography.bodySmall),
+          ])),
+      ),
+    ),
   );
 }
 

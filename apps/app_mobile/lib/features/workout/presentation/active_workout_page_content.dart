@@ -19,6 +19,8 @@ import 'package:core/domain/models/progression_suggestion.dart';
 import 'package:core/domain/models/routine.dart';
 import 'package:core/domain/models/workout_session.dart';
 import 'package:core/domain/models/exercise.dart';
+import 'package:core/features/tools/application/training_tools.dart';
+import 'package:gym_tracker/features/tools/presentation/training_tools_page.dart';
 import 'package:gym_tracker/features/workout/presentation/workout_summary_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_library_page.dart';
 import 'package:gym_tracker/features/exercises/presentation/pages/exercise_detail_page.dart';
@@ -1213,6 +1215,12 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final memoryAccess = ActiveWorkoutMemoryAccess.maybeOf(context);
+    Exercise definition=Exercise(id:widget.workoutExercise.exerciseId,
+      name:widget.workoutExercise.exerciseNameSnapshot,muscleGroup:widget.workoutExercise.muscleGroupSnapshot);
+    for(final item in ref.watch(exerciseListProvider)){
+      if(item.id==definition.id){definition=item;break;}
+    }
+    final toolAdvice=ExerciseToolAdvisor.forExercise(definition).primary;
     final suggestions = ref.watch(activeWorkoutSuggestionsProvider);
     final suggestion = suggestions[widget.workoutExercise.exerciseId];
     final prevSession = ref.watch(activeWorkoutPreviousSessionProvider);
@@ -1401,6 +1409,13 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                             _replaceExercise();
                           } else if (action == 'unilateral') {
                             _configureUnilateral();
+                          } else if (action == 'exercise_plates') {
+                            final reference=TrainingToolReference.forExercise(widget.workoutExercise,null);
+                            BarbellCalculatorModal.show(context,
+                              initialTargetWeight:reference==null?null:WeightConverter.displayWeight(reference.performanceWeight,settings.weightUnit),
+                              contextLabel:widget.workoutExercise.exerciseNameSnapshot);
+                          } else if (action == 'exercise_timer') {
+                            TrainingTimerTool.show(context);
                           }
                         },
                         itemBuilder: (_) => [
@@ -1426,6 +1441,14 @@ class _ExerciseBlockState extends ConsumerState<_ExerciseBlock> {
                               label: 'Sustituir ejercicio',
                             ),
                           ),
+                          if(toolAdvice.contains(TrainingToolKind.plates))
+                            const PopupMenuItem<String>(
+                              value:'exercise_plates',child:_WorkoutExerciseActionLabel(
+                                icon:Icons.fitness_center,label:'Calculadora de discos')),
+                          if(toolAdvice.contains(TrainingToolKind.timer))
+                            const PopupMenuItem<String>(
+                              value:'exercise_timer',child:_WorkoutExerciseActionLabel(
+                                icon:Icons.timer_outlined,label:'Temporizador')),
                           PopupMenuItem<String>(
                             value: 'unilateral',
                             child: _WorkoutExerciseActionLabel(

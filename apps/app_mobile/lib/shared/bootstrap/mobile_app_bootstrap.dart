@@ -21,6 +21,7 @@ import 'package:core/features/coach/application/coach_task_notification_service.
 import 'package:core/features/habits/application/habit_task_notification_service.dart';
 import 'package:core/features/habits/application/focus_timer_notification_service.dart';
 import 'package:core/features/workout/application/active_workout_provider.dart';
+import 'package:core/features/tools/application/training_timer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -122,6 +123,7 @@ Future<void> bootstrapMobileApp({
   runApp(
     ProviderScope(
       overrides: [
+        trainingTimerNativeProvider.overrideWithValue(const MobileTrainingTimerNative()),
         workoutNativeServicesProvider.overrideWithValue(
           const MobileWorkoutNativeServices(),
         ),

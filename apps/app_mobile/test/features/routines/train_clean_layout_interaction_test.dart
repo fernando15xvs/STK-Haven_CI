@@ -239,12 +239,27 @@ void main() {
           expect(find.byKey(const ValueKey('train_open_planning')), findsOneWidget);
           expect(find.byKey(const ValueKey('train_open_manage')), findsOneWidget);
           expect(find.byKey(const ValueKey('train_open_library')), findsOneWidget);
+          expect(find.byKey(const ValueKey('train_open_tools')), findsOneWidget);
           expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
         },
       );
     }
   }
+
+  testWidgets('tools opens a compact sheet without starting a workout',(tester) async{
+    await _pumpTrain(tester);
+    await tester.tap(find.byKey(const ValueKey('train_open_tools')));
+    await tester.pumpAndSettle();
+    expect(find.text('Calculadora 1RM'),findsOneWidget);
+    expect(find.text('Calculadora de discos'),findsOneWidget);
+    expect(find.text('Temporizador'),findsOneWidget);
+    await tester.tap(find.byTooltip('Cerrar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Calculadora 1RM'),findsNothing);
+    expect(tester.takeException(),isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   testWidgets('ready hero and routine actions share one horizontal row', (tester) async {
     await _pumpTrain(tester);

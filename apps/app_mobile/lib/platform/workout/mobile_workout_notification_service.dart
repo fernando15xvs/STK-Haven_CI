@@ -1,4 +1,5 @@
 import 'package:core/database/hive/hive_boxes.dart';
+import 'package:core/features/tools/application/training_timer.dart';
 import 'package:core/features/workout/application/unfinished_workout_reminder_policy.dart';
 import 'package:core/features/profile/data/settings_repository.dart';
 import 'package:flutter/foundation.dart';
@@ -284,6 +285,38 @@ class MobileWorkoutNotificationService {
         await _endRestLiveActivity();
       });
 
+  // Independent one-shot completion; never cancels a rest or focus timer.
+  static const int _trainingTimerId=41922;
+  static Future<void> cancelTrainingTimer() async {
+    if(kIsWeb)return;
+    await initialize();
+    await _notificationsPlugin.cancel(id:_trainingTimerId);
+  }
+  static Future<void> scheduleTrainingTimer(DateTime deadline) async {
+    if(kIsWeb || !await requestNotificationPermission())return;
+    final mode=await _restScheduleMode();
+    if(!deadline.isAfter(DateTime.now()))return;
+    final settings=SettingsRepository(Hive.box(HiveBoxes.metadata)).getSettings();
+    final sound=settings.timerSoundEnabled;
+    final vibration=settings.vibrationEnabled;
+    await _notificationsPlugin.zonedSchedule(
+      id:_trainingTimerId,title:'Temporizador STK Haven',
+      body:'Tu intervalo ha terminado.',
+      scheduledDate:tz.TZDateTime.from(deadline,tz.local),
+      notificationDetails:NotificationDetails(
+        android:AndroidNotificationDetails(
+          'training_timer_v1_${sound?"sound":"silent"}_${vibration?"vibrate":"steady"}',
+          'Temporizador libre',
+          importance:Importance.defaultImportance,
+          audioAttributesUsage:AudioAttributesUsage.notificationEvent,
+          playSound:sound,enableVibration:vibration,
+          sound:sound?const RawResourceAndroidNotificationSound('stk_rest_complete'):null),
+        iOS:DarwinNotificationDetails(presentAlert:true,presentSound:sound,
+          presentBadge:false,sound:sound?'stk_rest_complete.wav':null)),
+      androidScheduleMode:mode,
+    );
+  }
+
   static Future<bool> scheduleDailyWorkoutReminder({
     required int hour,
     required int minute,
@@ -449,4 +482,11 @@ class MobileWorkoutNotificationBackend implements WorkoutNotificationBackend {
   @override
   Future<void> cancelDailyWorkoutReminder() =>
       MobileWorkoutNotificationService.cancelDailyWorkoutReminder();
+}
+
+class MobileTrainingTimerNative implements TrainingTimerNative {
+  const MobileTrainingTimerNative();
+  @override Future<void> schedule(DateTime deadline)=>
+      MobileWorkoutNotificationService.scheduleTrainingTimer(deadline);
+  @override Future<void> cancel()=>MobileWorkoutNotificationService.cancelTrainingTimer();
 }
